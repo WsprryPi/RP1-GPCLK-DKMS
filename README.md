@@ -15,11 +15,17 @@ clock operations.
 ## Current status
 
 Phase 2A public contracts and an inert kernel source skeleton are implemented.
-The canonical UAPI and compatibility-manifest schema are declarations only:
-the skeleton registers no platform driver or device, exposes no ioctl
+Phase 2B adds a portable lifecycle core and deterministic host tests for
+ownership, leases, generations, bounded request validation, finite work,
+STOP/RELEASE, stable terminal outcomes, stale-event rejection, and cleanup
+faults. The core consumes already-copied bounded inputs; it is not connected to
+an ioctl endpoint or any kernel resource.
+
+The skeleton still registers no platform driver or device, exposes no ioctl
 dispatcher, and performs no clock, DMA, pinctrl, device-tree, GPIO, or other
-hardware operation. No device-tree overlay, DKMS package, installer, or
-qualified GPIO output is implemented.
+hardware operation. No device-tree overlay, DKMS package, installer, kernel
+lifetime integration, or qualified GPIO output is implemented. Host lifecycle
+tests do not prove kernel concurrency or target cleanup.
 
 Nothing in this repository currently authorizes module installation, target
 binding, system configuration, GPIO operation, transmission, or RF activity.
@@ -71,6 +77,12 @@ The Phase 2A choices are frozen in
 [Decision 0002](docs/development/decisions/0002-phase2a-public-contracts.md),
 and the exact bounded slice is preserved in the
 [Phase 2A execution prompt](docs/contracts/phase2a-public-contracts-execution-prompt.md).
+The Phase 2B lifecycle choices are recorded in
+[Decision 0003](docs/development/decisions/0003-phase2b-portable-lifecycle.md),
+with its bounded work preserved in the
+[Phase 2B execution prompt](docs/contracts/phase2b-portable-lifecycle-execution-prompt.md).
+Its independent offline result is recorded in the
+[Phase 2B adversarial assessment](docs/reviews/phase2b-adversarial-assessment.md).
 
 The canonical header is
 [`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The strict,

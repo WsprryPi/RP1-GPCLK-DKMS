@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Fail if Phase 2A source grows a hardware or registration implementation."""
+"""Fail if offline source grows a hardware or registration implementation."""
 
 from pathlib import Path
 import re

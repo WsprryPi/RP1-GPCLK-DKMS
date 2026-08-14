@@ -63,3 +63,11 @@ required by `LICENSE.md`. Kernel-facing skeleton files are
 documentation are MIT. Future implementation work that imports or adapts a
 fragment must add a source identity and disposition to this record before the
 fragment is accepted.
+
+## Phase 2B clean implementation
+
+The portable lifecycle core, host-only fault injection, tests, decision, and
+review were authored cleanly in this repository from the Phase 2A contracts.
+No historical portable-core or provider implementation text was copied or
+adapted. Historical work informed only the already-recorded concepts of
+bounded ownership, generations, cancellation, and terminal outcomes.
