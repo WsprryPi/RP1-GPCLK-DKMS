@@ -14,11 +14,13 @@ python3 "$repo_dir/tests/check_phase2c_integration.py"
 python3 "$repo_dir/tests/check_phase2d_build.py"
 python3 "$repo_dir/tests/check_phase2e_target_assets.py"
 python3 "$repo_dir/tests/check_phase3_interface_freeze.py"
+python3 "$repo_dir/tests/check_phase3b_target_assets.py"
 python3 "$repo_dir/tests/test_phase2e_dmesg.py"
 python3 "$repo_dir/tests/check_doc_links.py"
 if command -v shellcheck >/dev/null 2>&1; then
-    shellcheck "$repo_dir/tests/run-offline-checks.sh" \
-        "$repo_dir/tests/phase2e-target-test.sh"
+	shellcheck "$repo_dir/tests/run-offline-checks.sh" \
+		"$repo_dir/tests/phase2e-target-test.sh" \
+		"$repo_dir/tests/phase3b-target-test.sh"
     echo "shellcheck: PASS"
 else
     echo "shellcheck: SKIP (not installed)"
@@ -34,9 +36,14 @@ if [ "$(uname -s)" = Linux ]; then
     ${CC:-cc} -std=c11 -Wall -Wextra -Werror \
         -I"$repo_dir/include/uapi" "$repo_dir/tests/phase2e_uapi_client.c" \
         -o "$tmp_dir/phase2e_uapi_client"
-    echo "Phase 2E UAPI client compile: PASS"
+	echo "Phase 2E UAPI client compile: PASS"
+	${CC:-cc} -std=c11 -Wall -Wextra -Werror \
+		-I"$repo_dir/include/uapi" "$repo_dir/tests/phase3b_uapi_client.c" \
+		-o "$tmp_dir/phase3b_uapi_client"
+	echo "Phase 3B UAPI client compile: PASS"
 else
-    echo "Phase 2E UAPI client compile: SKIP (Linux target only)"
+	echo "Phase 2E UAPI client compile: SKIP (Linux target only)"
+	echo "Phase 3B UAPI client compile: SKIP (Linux target only)"
 fi
 
 ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \

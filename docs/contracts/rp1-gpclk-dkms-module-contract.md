@@ -415,11 +415,12 @@ not qualify untested hardware behavior.
 Phase 2 is closed only for the exact GPIO4 clock-disabled identity recorded in
 `docs/evidence/phase2e-clock-disabled-target.md`. Phase 3 GPIO20 injection and
 the first public interface freeze are implemented offline under Decision 0006.
-The Phase 3 target exit remains open pending separate clock-disabled target
-authorization and evidence. GPIO20 uses an independent allowlisted route and
-compatibility record and must still prove on target that selecting either
-administrative route leaves the other safe and unclaimed.
+Phase 3B closes the Phase 3 target exit only for the exact clock-disabled
+identity recorded in `docs/evidence/phase3b-clock-disabled-route-closure.md`.
+GPIO4 and GPIO20 use independent allowlisted routes and evidence rows; the
+successful two-route matrix does not let either route inherit the other's
+qualification.
 
 Phase 3 does not authorize active pinctrl selection, clock preparation or
 enablement, DMA execution, GPIO output, transmission, or RF. Phase 4 live
-qualification retains its own separate authorization gate.
+qualification retains separately bounded GPIO and RF authorization gates.

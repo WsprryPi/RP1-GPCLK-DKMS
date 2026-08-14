@@ -76,6 +76,10 @@ exact target. Compilation alone does not satisfy the gate.
 
 ## Phase 3 - GPIO20 injection before interface freeze
 
+Status: complete for the exact `wspr5` Raspberry Pi 5 / stock
+`6.18.34+rpt-rpi-2712` clock-disabled identity recorded in the Phase 3B
+evidence. This does not authorize or qualify live output.
+
 This is the deliberate point to add GPIO20: after the central GPIO4
 stock-kernel feasibility result is known, but before freezing the UAPI, overlay
 format, compatibility manifest, installer configuration, persisted selector,
@@ -135,7 +139,7 @@ or qualification boundaries.
 | --- | --- | --- |
 | 1 - Contract and feasibility | Complete | Complete |
 | 2 - GPIO4 clock-disabled prototype | Partial implementation only | Complete for the exact recorded `wspr5` identity |
-| 3 - GPIO20 before interface freeze | Partial implementation only | Completable with exact target evidence |
+| 3 - GPIO20 before interface freeze | Implementation complete | Complete for the exact recorded `wspr5` identity |
 | 4 - Controlled live qualification | Not completable | Not completable |
 | 5 - Packaging and enablement | Partial implementation only | Mostly; representative lifecycle systems remain required |
 

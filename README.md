@@ -30,9 +30,11 @@ clock-disabled matrix passed on the recorded `wspr5` Pi 5 / stock
 identity while retaining the `Compatible-unqualified` compatibility ceiling.
 Phase 3 now injects GPIO20 as the second independently allowlisted route,
 requires exact route/pin pairs, adds a route-specific safe/default overlay, and
-freezes UAPI ABI 1 plus the first overlay/name/manifest contracts. Its offline
-gate passes; GPIO20 clock-disabled target administration and qualification are
-still pending separately authorized evidence.
+freezes UAPI ABI 1 plus the first overlay/name/manifest contracts. Phase 3B's
+complete clock-disabled target matrix passed independently for GPIO4 and
+GPIO20 on the recorded `wspr5` identity. This closes the Phase 3 target gate
+for that exact identity while retaining the `Compatible-unqualified` ceiling;
+neither route inherits evidence from the other.
 
 Clock-disabled `QUERY`, `ACQUIRE`, and `RELEASE` are implemented. Submission,
 STOP, and every live-output path remain unavailable. The code never selects the
@@ -114,11 +116,15 @@ with its exact [target evidence](docs/evidence/phase2e-clock-disabled-target.md)
 [Decision 0005](docs/development/decisions/0005-phase2e-gpio4-clock-disabled.md),
 and independent
 [Phase 2E adversarial assessment](docs/reviews/phase2e-adversarial-assessment.md).
-The Phase 3 offline implementation and remaining target gate are preserved in
+The Phase 3 implementation and interface freeze are preserved in
 the [Phase 3 execution prompt](docs/contracts/phase3-gpio20-interface-freeze-execution-prompt.md),
 [GPIO20 route evidence](docs/development/gpio20-route-evidence.md),
 [Decision 0006](docs/development/decisions/0006-phase3-interface-freeze.md),
 and [Phase 3 adversarial assessment](docs/reviews/phase3-adversarial-assessment.md).
+The separately authorized closure is recorded in the
+[Phase 3B execution prompt](docs/contracts/phase3b-clock-disabled-route-closure-execution-prompt.md),
+[target evidence](docs/evidence/phase3b-clock-disabled-route-closure.md), and
+[Phase 3B adversarial assessment](docs/reviews/phase3b-adversarial-assessment.md).
 
 The canonical header is
 [`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The strict,

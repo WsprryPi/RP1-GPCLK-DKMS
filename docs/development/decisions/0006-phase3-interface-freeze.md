@@ -2,7 +2,7 @@
 
 # Decision 0006: Phase 3 GPIO20 injection and first interface freeze
 
-- Status: Accepted for offline implementation; target gate pending
+- Status: Accepted; exact Phase 3B clock-disabled target gate passed
 - Date: 2026-08-14
 - Scope: route model and first public module-facing contracts
 
@@ -29,7 +29,9 @@ identity fields, and route-specific evidence. Evidence naming both routes does
 not allow one route's qualification classes to satisfy the other route's
 entry; each entry must be validated against evidence that contains its route.
 
-This decision freezes contracts, not implementation completeness or
-qualification. GPIO20 target pinctrl, conflict, cleanup, repeated route-change,
-timing, live-output, and RF gates remain independent and unresolved until exact
-target evidence passes. GPIO4 evidence does not satisfy them.
+This decision freezes contracts, not general compatibility or live-output
+qualification. The separately authorized Phase 3B matrix passed GPIO4 and
+GPIO20 pinctrl identity, conflict, cleanup, descriptor/process lifetime, and
+repeated route changes on the exact recorded target. Timing, active pinctrl,
+live-output, and RF gates remain unresolved and separately authorized. GPIO4
+and GPIO20 evidence remain distinct; neither satisfies the other's row.

@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/clock/rp1.h>
+#include <dt-bindings/mfd/rp1.h>
+
+&rp1_gpio {
+	rp1_gpclk_dma_conflict_active: rp1-gpclk-dma-conflict-active {
+		function = "gpclk0";
+		pins = "gpio20";
+		bias-disable;
+		drive-strength = <2>;
+	};
+};
+/* Empty default/safe states isolate duplicate composite-endpoint ownership. */
+&rp1 {
+	rp1_gpclk_dma_conflict: rp1-gpclk-dma-conflict {
+		compatible = "wsprrypi,rp1-gpclk-dkms-v1";
+		wsprrypi,route = <2>;
+		wsprrypi,pin = <20>;
+		clocks = <&rp1_clocks RP1_CLK_GP0>;
+		clock-names = "gpclk";
+		pinctrl-names = "default", "active", "safe";
+		pinctrl-0 = <>;
+		pinctrl-1 = <&rp1_gpclk_dma_conflict_active>;
+		pinctrl-2 = <>;
+		dmas = <&rp1_dma RP1_DMA_DMA_TICK_TICK0>;
+		dma-names = "tx";
+		status = "okay";
+	};
+};
