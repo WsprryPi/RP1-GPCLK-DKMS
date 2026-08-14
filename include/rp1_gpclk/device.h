@@ -18,6 +18,7 @@ struct rp1_gpclk_device {
 	struct mutex lock;
 	bool dead;
 	bool misc_registered;
+	bool endpoint_claimed;
 	bool rate_exclusive;
 	bool divider_mapped;
 	struct miscdevice miscdev;
@@ -29,7 +30,13 @@ struct rp1_gpclk_device {
 	struct pinctrl_state *pins_safe;
 	phys_addr_t divider_phys;
 	dma_addr_t divider_dma;
+	__u32 route;
 	struct rp1_gpclk_core core;
+};
+
+struct rp1_gpclk_file {
+	struct rp1_gpclk_device *device;
+	__u64 owner;
 };
 
 #endif /* RP1_GPCLK_DEVICE_H */

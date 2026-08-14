@@ -13,12 +13,24 @@
 #include "rp1_gpclk/uapi_dispatch.h"
 #include "rp1_gpclk/version.h"
 
-struct rp1_gpclk_file {
-	struct rp1_gpclk_device *device;
-	u64 owner;
-};
-
 static atomic64_t rp1_gpclk_next_owner = ATOMIC64_INIT(0);
+static atomic_t rp1_gpclk_endpoint_owner = ATOMIC_INIT(0);
+
+static int rp1_gpclk_endpoint_claim(struct rp1_gpclk_device *device)
+{
+	if (atomic_cmpxchg(&rp1_gpclk_endpoint_owner, 0, 1) != 0)
+		return -EBUSY;
+	device->endpoint_claimed = true;
+	return 0;
+}
+
+static void rp1_gpclk_endpoint_release(struct rp1_gpclk_device *device)
+{
+	if (!device->endpoint_claimed)
+		return;
+	device->endpoint_claimed = false;
+	atomic_set_release(&rp1_gpclk_endpoint_owner, 0);
+}
 
 static int rp1_gpclk_allocate_owner(u64 *owner)
 {
@@ -101,17 +113,35 @@ static int rp1_gpclk_probe(struct platform_device *pdev)
 		goto free_device;
 	rp1_gpclk_core_init(&device->core);
 	ret = rp1_gpclk_dt_validate(device);
-	if (ret)
+	if (ret) {
+		dev_err_probe(&pdev->dev, ret,
+			      "device-tree identity validation failed\n");
 		goto put_device;
+	}
+	ret = rp1_gpclk_endpoint_claim(device);
+	if (ret) {
+		dev_err_probe(&pdev->dev, ret,
+			      "endpoint resource ownership conflict\n");
+		goto put_device;
+	}
 	ret = rp1_gpclk_clock_acquire(device);
-	if (ret)
+	if (ret) {
+		dev_err_probe(&pdev->dev, ret,
+			      "clock resource acquisition failed\n");
 		goto release_resources;
+	}
 	ret = rp1_gpclk_pinctrl_acquire(device);
-	if (ret)
+	if (ret) {
+		dev_err_probe(&pdev->dev, ret,
+			      "pinctrl resource acquisition failed\n");
 		goto release_resources;
+	}
 	ret = rp1_gpclk_dma_acquire(device);
-	if (ret)
+	if (ret) {
+		dev_err_probe(&pdev->dev, ret,
+			      "DMA resource acquisition failed\n");
 		goto release_resources;
+	}
 
 	device->miscdev.minor = MISC_DYNAMIC_MINOR;
 	device->miscdev.name = "rp1-gpclk";
@@ -119,14 +149,18 @@ static int rp1_gpclk_probe(struct platform_device *pdev)
 	device->miscdev.parent = &pdev->dev;
 	device->miscdev.mode = 0600;
 	ret = misc_register(&device->miscdev);
-	if (ret)
+	if (ret) {
+		dev_err_probe(&pdev->dev, ret,
+			      "misc-device registration failed\n");
 		goto release_resources;
+	}
 	device->misc_registered = true;
 	platform_set_drvdata(pdev, device);
 	return 0;
 
 release_resources:
 	rp1_gpclk_resources_release(device);
+	rp1_gpclk_endpoint_release(device);
 put_device:
 	rp1_gpclk_lifetime_mark_dead(device);
 	rp1_gpclk_lifetime_put(device);
@@ -153,6 +187,7 @@ static void rp1_gpclk_remove(struct platform_device *pdev)
 	rp1_gpclk_quiesce(device);
 	mutex_unlock(&device->lock);
 	rp1_gpclk_resources_release(device);
+	rp1_gpclk_endpoint_release(device);
 	platform_set_drvdata(pdev, NULL);
 	rp1_gpclk_lifetime_put(device);
 }

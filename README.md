@@ -23,13 +23,19 @@ fail-closed discovery of the GPCLK0 DT, clock, pinctrl, and DMAengine resources.
 It derives and DMA-maps the divider target from the provider resource.
 Phase 2D adds an explicit prerelease module version, DKMS build configuration,
 and identity-specific representative stock Raspberry Pi kernel-header build
-evidence. Build success remains `Compatible-unqualified` at most.
+evidence. Phase 2E adds the GPIO4 safe/default overlay, exact resource and UAPI
+identity checks, and a bounded target lifecycle runner. The complete
+clock-disabled matrix passed on the recorded `wspr5` Pi 5 / stock
+`6.18.34+rpt-rpi-2712` identity; this closes the Phase 2 gate for that exact
+identity while retaining the `Compatible-unqualified` compatibility ceiling.
 
-Every ioctl remains unavailable. The code never selects a pinctrl state,
-prepares or enables a clock, changes a clock rate, prepares or submits DMA, or
-provides live output. No device-tree overlay, DKMS package, installer, or
-qualified GPIO output is implemented. Host tests do not prove module
-loadability, target resource identity, kernel concurrency, or target cleanup.
+Clock-disabled `QUERY`, `ACQUIRE`, and `RELEASE` are implemented. Submission,
+STOP, and every live-output path remain unavailable. The code never selects the
+active pinctrl state, prepares or enables a clock, changes a clock rate,
+prepares or submits DMA, or provides live output. The GPIO4 overlay keeps its
+default and safe states as input. No DKMS installer or qualified GPIO output is
+implemented, and the exact target result does not generalize to another
+kernel, DT, firmware, route, or host.
 
 Nothing in this repository currently authorizes module installation, target
 binding, system configuration, GPIO operation, transmission, or RF activity.
@@ -98,6 +104,12 @@ Its exact build identities and bounded result are in the
 [representative build evidence](docs/evidence/phase2d-representative-build-qualification.md),
 with the separate
 [Phase 2D adversarial assessment](docs/reviews/phase2d-adversarial-assessment.md).
+The separately authorized target slice is preserved in the
+[Phase 2E execution prompt](docs/contracts/phase2e-clock-disabled-target-execution-prompt.md),
+with its exact [target evidence](docs/evidence/phase2e-clock-disabled-target.md),
+[Decision 0005](docs/development/decisions/0005-phase2e-gpio4-clock-disabled.md),
+and independent
+[Phase 2E adversarial assessment](docs/reviews/phase2e-adversarial-assessment.md).
 
 The canonical header is
 [`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The strict,

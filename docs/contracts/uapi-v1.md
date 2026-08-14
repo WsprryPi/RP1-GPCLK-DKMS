@@ -5,9 +5,10 @@
 ## Authority and status
 
 The byte-authoritative header is `include/uapi/linux/rp1_gpclk.h`. This
-document defines its validation and state semantics. Phase 2A provides no
-device endpoint or functional dispatcher, so every operation remains a public
-contract for later implementation rather than implemented behavior.
+document defines its validation and state semantics. Phase 2E implements only
+clock-disabled `QUERY`, `ACQUIRE`, and `RELEASE`. Submission, STOP, and state
+progression remain unavailable and fail with `EOPNOTSUPP`; their layouts stay
+public contracts for later implementation rather than implemented behavior.
 
 ## Common validation
 

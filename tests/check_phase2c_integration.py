@@ -32,8 +32,8 @@ for label, token in required.items():
 
 if "RP1_GPCLK_CLOCK_ID 33U" not in policy or "0x17cU" not in policy:
     raise SystemExit("reviewed GPCLK0 identity is absent")
-if "return -EOPNOTSUPP" not in dispatch:
-    raise SystemExit("Phase 2C dispatcher is not fail-closed")
+if "default:" not in dispatch or "return -EOPNOTSUPP" not in dispatch:
+    raise SystemExit("runtime dispatcher does not reject unsupported commands")
 
 forbidden = {
     "live-output parameter": r"module_param|live_output",

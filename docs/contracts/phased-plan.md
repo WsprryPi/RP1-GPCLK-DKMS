@@ -52,6 +52,10 @@ explicit; and adversarial review finds no unresolved architectural blocker.
 
 ## Phase 2 - GPIO4 clock-disabled prototype
 
+Status: complete for the exact `wspr5` Raspberry Pi 5 / stock
+`6.18.34+rpt-rpi-2712` identity recorded in the Phase 2E evidence. This is not
+a general compatibility or live-output qualification.
+
 - Build an out-of-tree module against explicitly identified representative
   kernel headers and prepare it for DKMS integration.
 - Use DMAengine for DMA-channel allocation, pinctrl for GPIO4 routing, and
@@ -130,7 +134,7 @@ or qualification boundaries.
 | Phase | No RP1 Pi access | RP1 administration with output disabled |
 | --- | --- | --- |
 | 1 - Contract and feasibility | Complete | Complete |
-| 2 - GPIO4 clock-disabled prototype | Partial implementation only | Completable with exact target evidence |
+| 2 - GPIO4 clock-disabled prototype | Partial implementation only | Complete for the exact recorded `wspr5` identity |
 | 3 - GPIO20 before interface freeze | Partial implementation only | Completable with exact target evidence |
 | 4 - Controlled live qualification | Not completable | Not completable |
 | 5 - Packaging and enablement | Partial implementation only | Mostly; representative lifecycle systems remain required |

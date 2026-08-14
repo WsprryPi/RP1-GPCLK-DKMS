@@ -54,14 +54,37 @@ and the matching compatibility-manifest entry.
 
 Do not expose raw addresses to userspace merely for identity reporting.
 
+## Demonstrated Phase 2E clock-disabled identity
+
+- host `wspr5`, Raspberry Pi 5 Model B Rev 1.0
+- stock kernel and headers `6.18.34+rpt-rpi-2712`, package
+  `1:6.18.34-1+rpt1`
+- base FDT SHA-256
+  `2ec9e0006dc1f48b4e3cc919d6b58bdfe7bebbe6d01e54315809b7df50d0e058`
+- module `0.0.0-phase2e`, canonical UAPI ABI 1, route GPIO4
+- provider `raspberrypi,rp1-clocks`, GPCLK0 ID 33, provider resource start
+  `0x1f00018000`, size `0x10038`, derived divider target `0x1f0001817c`
+- DMA provider `snps,axi-dma-1.01a`, request `0x30`, under the same RP1 parent
+- signing policy `CONFIG_MODULE_SIG` unset; local PKCS#7 signing and signed
+  load passed, while cryptographic rejection was not applicable
+- GPIO4 remained input and GPCLK0 prepare/enable counts remained zero through
+  bind, conflicts, descriptor/process-death tests, partial-probe failures,
+  recovery, and cleanup
+- final result: `Compatible-unqualified`; the clock-disabled Phase 2 exit gate
+  is complete only for this exact identity
+
+See `docs/evidence/phase2e-clock-disabled-target.md` for artifact hashes,
+matrix results, exclusions, and the final state.
+
 ## Unknowns requiring target evidence
 
 - supported stock Raspberry Pi kernel range;
 - provider-layout stability across RP1/DT/firmware revisions;
 - stock ownership of DMA-tick resources;
 - authoritative GPIO20 GPCLK0 pinmux/overlay representation;
-- unbind and overlay removal with open descriptors;
-- representative signing/key-enrollment behavior;
+- unbind and overlay removal with open descriptors on identities other than the
+  exact Phase 2E target;
+- enforced-signature and key-enrollment behavior;
 - APT update, downgrade, rollback, and recovery; and
 - coexistence with cooperative consumers and common overlays.
 

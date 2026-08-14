@@ -13,9 +13,11 @@
 
 int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 {
-	struct of_phandle_args spec;
+	struct of_phandle_args clock_spec;
+	struct of_phandle_args dma_spec;
 	struct resource resource;
 	__u64 divider_phys;
+	__u32 route;
 	int ret;
 
 	if (!device || !device->dev || !device->dev->of_node)
@@ -27,22 +29,40 @@ int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 	if (of_property_match_string(device->dev->of_node, "clock-names",
 				     "gpclk") != 0)
 		return -EINVAL;
+	ret = of_property_read_u32(device->dev->of_node, "wsprrypi,route",
+				   &route);
+	if (ret || route != RP1_GPCLK_ROUTE_GPIO4)
+		return -EINVAL;
+	device->route = route;
 	ret = of_parse_phandle_with_args(device->dev->of_node, "clocks",
-					 "#clock-cells", 0, &spec);
+					 "#clock-cells", 0, &clock_spec);
 	if (ret)
 		return ret;
-	if (!of_device_is_compatible(spec.np,
+	if (!of_device_is_compatible(clock_spec.np,
 				     RP1_GPCLK_PROVIDER_COMPATIBLE) ||
-	    spec.args_count != 1 || spec.args[0] != RP1_GPCLK_CLOCK_ID) {
+	    clock_spec.args_count != 1 ||
+	    clock_spec.args[0] != RP1_GPCLK_CLOCK_ID) {
 		ret = -EINVAL;
-		goto put_node;
+		goto put_clock_node;
 	}
-	ret = of_address_to_resource(spec.np, 0, &resource);
+	ret = of_parse_phandle_with_args(device->dev->of_node, "dmas",
+					 "#dma-cells", 0, &dma_spec);
 	if (ret)
-		goto put_node;
+		goto put_clock_node;
+	if (!of_device_is_compatible(dma_spec.np,
+				     RP1_GPCLK_DMA_PROVIDER_COMPATIBLE) ||
+	    dma_spec.args_count != 1 ||
+	    dma_spec.args[0] != RP1_GPCLK_DMA_REQUEST ||
+	    dma_spec.np->parent != clock_spec.np->parent) {
+		ret = -EINVAL;
+		goto put_dma_node;
+	}
+	ret = of_address_to_resource(clock_spec.np, 0, &resource);
+	if (ret)
+		goto put_dma_node;
 	if (resource_type(&resource) != IORESOURCE_MEM) {
 		ret = -EINVAL;
-		goto put_node;
+		goto put_dma_node;
 	}
 	if (rp1_gpclk_derive_target(resource.start, resource.end,
 				    RP1_GPCLK_DIV_FRAC_OFFSET,
@@ -52,8 +72,10 @@ int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 	} else {
 		device->divider_phys = (phys_addr_t)divider_phys;
 	}
-put_node:
-	of_node_put(spec.np);
+put_dma_node:
+	of_node_put(dma_spec.np);
+put_clock_node:
+	of_node_put(clock_spec.np);
 	return ret;
 }
 
@@ -80,6 +102,7 @@ put_clock:
 
 int rp1_gpclk_dma_acquire(struct rp1_gpclk_device *device)
 {
+	struct device *dma_device;
 	int ret;
 
 	device->dma_chan = dma_request_chan(device->dev, "tx");
@@ -88,9 +111,15 @@ int rp1_gpclk_dma_acquire(struct rp1_gpclk_device *device)
 		device->dma_chan = NULL;
 		return ret;
 	}
-	device->divider_dma = dma_map_resource(device->dev,
+	if (!device->dma_chan->device || !device->dma_chan->device->dev) {
+		dma_release_channel(device->dma_chan);
+		device->dma_chan = NULL;
+		return -ENODEV;
+	}
+	dma_device = device->dma_chan->device->dev;
+	device->divider_dma = dma_map_resource(dma_device,
 		device->divider_phys, RP1_GPCLK_REGISTER_BYTES, DMA_TO_DEVICE, 0);
-	if (dma_mapping_error(device->dev, device->divider_dma)) {
+	if (dma_mapping_error(dma_device, device->divider_dma)) {
 		device->divider_dma = 0;
 		dma_release_channel(device->dma_chan);
 		device->dma_chan = NULL;
@@ -125,7 +154,7 @@ void rp1_gpclk_quiesce(struct rp1_gpclk_device *device)
 void rp1_gpclk_resources_release(struct rp1_gpclk_device *device)
 {
 	if (device->divider_mapped) {
-		dma_unmap_resource(device->dev, device->divider_dma,
+		dma_unmap_resource(device->dma_chan->device->dev, device->divider_dma,
 				   RP1_GPCLK_REGISTER_BYTES, DMA_TO_DEVICE, 0);
 		device->divider_mapped = false;
 		device->divider_dma = 0;
@@ -150,4 +179,5 @@ void rp1_gpclk_resources_release(struct rp1_gpclk_device *device)
 		device->clock = NULL;
 	}
 	device->divider_phys = 0;
+	device->route = RP1_GPCLK_ROUTE_INVALID;
 }

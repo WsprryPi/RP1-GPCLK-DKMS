@@ -412,17 +412,14 @@ not qualify untested hardware behavior.
 
 ## 18. Next implementation gate
 
-The next authorized slice should be offline-only Phase 2 foundation work:
+Phase 2 is closed only for the exact GPIO4 clock-disabled identity recorded in
+`docs/evidence/phase2e-clock-disabled-target.md`. The next implementation gate
+is Phase 3 GPIO20 injection before interface freeze. It requires a separately
+reviewed prompt and, before its target exit, separate clock-disabled target
+authorization and evidence. GPIO20 must use an independent allowlisted route
+and compatibility record and must prove that selecting either administrative
+route leaves the other safe and unclaimed.
 
-- route-neutral source layout;
-- additive canonical UAPI and capability contract;
-- GPLv2/MIT SPDX enforcement and provenance checks;
-- tagged-release compatibility-manifest schema;
-- automated UAPI identity verification for the userspace consumer;
-- exported-kernel-API adapter boundaries;
-- portable lifecycle and validation tests;
-- representative kernel-header builds; and
-- a clock-disabled target test plan.
-
-It stops before DKMS installation, module loading, binding, overlay application,
-target system changes, GPIO operation, transmission, or RF activity.
+Phase 3 does not authorize active pinctrl selection, clock preparation or
+enablement, DMA execution, GPIO output, transmission, or RF. Phase 4 live
+qualification retains its own separate authorization gate.
