@@ -10,7 +10,7 @@ trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
 python3 "$repo_dir/tests/check_spdx.py"
 python3 "$repo_dir/tests/check_uapi_identity.py"
 python3 "$repo_dir/tests/check_manifest.py"
-python3 "$repo_dir/tests/check_inert_skeleton.py"
+python3 "$repo_dir/tests/check_phase2c_integration.py"
 python3 "$repo_dir/tests/check_doc_links.py"
 if command -v shellcheck >/dev/null 2>&1; then
     shellcheck "$repo_dir/tests/run-offline-checks.sh"
@@ -33,6 +33,13 @@ ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
     -o "$tmp_dir/lifecycle_core"
 "$tmp_dir/lifecycle_core"
 "$tmp_dir/lifecycle_core"
+
+${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
+    -I"$repo_dir/tests/fixtures/linux" -I"$repo_dir/include" \
+    "$repo_dir/src/rp1_gpclk_resource_policy.c" \
+    "$repo_dir/tests/resource_policy.c" -o "$tmp_dir/resource_policy"
+"$tmp_dir/resource_policy"
+"$tmp_dir/resource_policy"
 
 if ${CC:-cc} -std=c11 -fsanitize=address,undefined \
     -DRP1_GPCLK_HOST_TEST \

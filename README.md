@@ -14,18 +14,19 @@ clock operations.
 
 ## Current status
 
-Phase 2A public contracts and an inert kernel source skeleton are implemented.
-Phase 2B adds a portable lifecycle core and deterministic host tests for
+Phase 2A public contracts and a kernel source skeleton are implemented. Phase
+2B adds a portable lifecycle core and deterministic host tests for
 ownership, leases, generations, bounded request validation, finite work,
 STOP/RELEASE, stable terminal outcomes, stale-event rejection, and cleanup
-faults. The core consumes already-copied bounded inputs; it is not connected to
-an ioctl endpoint or any kernel resource.
+faults. Phase 2C adds a platform driver, reference-counted misc endpoint, and
+fail-closed discovery of the GPCLK0 DT, clock, pinctrl, and DMAengine resources.
+It derives and DMA-maps the divider target from the provider resource.
 
-The skeleton still registers no platform driver or device, exposes no ioctl
-dispatcher, and performs no clock, DMA, pinctrl, device-tree, GPIO, or other
-hardware operation. No device-tree overlay, DKMS package, installer, kernel
-lifetime integration, or qualified GPIO output is implemented. Host lifecycle
-tests do not prove kernel concurrency or target cleanup.
+Every ioctl remains unavailable. The code never selects a pinctrl state,
+prepares or enables a clock, changes a clock rate, prepares or submits DMA, or
+provides live output. No device-tree overlay, DKMS package, installer, or
+qualified GPIO output is implemented. Host tests do not prove module
+loadability, target resource identity, kernel concurrency, or target cleanup.
 
 Nothing in this repository currently authorizes module installation, target
 binding, system configuration, GPIO operation, transmission, or RF activity.
@@ -83,12 +84,17 @@ with its bounded work preserved in the
 [Phase 2B execution prompt](docs/contracts/phase2b-portable-lifecycle-execution-prompt.md).
 Its independent offline result is recorded in the
 [Phase 2B adversarial assessment](docs/reviews/phase2b-adversarial-assessment.md).
+The Phase 2C slice is preserved in its
+[execution prompt](docs/contracts/phase2c-kernel-resource-integration-execution-prompt.md)
+and [Decision 0004](docs/development/decisions/0004-phase2c-resource-integration.md).
+Its bounded offline result is recorded in the
+[Phase 2C adversarial assessment](docs/reviews/phase2c-adversarial-assessment.md).
 
 The canonical header is
 [`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The strict,
 deny-by-default compatibility format is
 [`schema/rp1-gpclk-compatibility-manifest-v1.schema.json`](schema/rp1-gpclk-compatibility-manifest-v1.schema.json).
-Run the offline contract suite with `make check`. Building the inert module
+Run the offline contract suite with `make check`. Building the module source
 requires an explicitly supplied local kernel build directory, for example
 `make KERNEL_BUILD=/path/to/kernel/build`; it is never installed or loaded by
 the repository build.

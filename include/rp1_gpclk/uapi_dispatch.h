@@ -4,7 +4,7 @@
 
 struct file;
 
-/* No file operations or device node are registered in Phase 2A. */
+/* Phase 2C endpoint is lifetime-testable but all commands remain unavailable. */
 long rp1_gpclk_uapi_dispatch(struct file *file, unsigned int command,
                             unsigned long argument);
 
