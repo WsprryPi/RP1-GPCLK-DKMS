@@ -25,6 +25,7 @@
 	rp1_gpclk_bad_dma: rp1-gpclk-bad-dma {
 		compatible = "wsprrypi,rp1-gpclk-dkms-v1";
 		wsprrypi,route = <1>;
+		wsprrypi,pin = <4>;
 		clocks = <&rp1_clocks RP1_CLK_GP0>;
 		clock-names = "gpclk";
 		pinctrl-names = "default", "active", "safe";

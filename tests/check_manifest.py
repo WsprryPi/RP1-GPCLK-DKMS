@@ -11,6 +11,16 @@ example_path = ROOT / "schema/examples/unavailable-v1.json"
 schema = json.loads(schema_path.read_text(encoding="utf-8"))
 example = json.loads(example_path.read_text(encoding="utf-8"))
 
+
+def validate_route_evidence(manifest):
+    """Require every evidence record used by an entry to name that entry route."""
+    for entry in manifest["entries"]:
+        for evidence in entry["evidence"]:
+            if entry["route"] not in evidence["routes"]:
+                raise ValueError(
+                    f"entry {entry['id']} uses evidence without route {entry['route']}"
+                )
+
 assert schema["$schema"].endswith("2020-12/schema")
 assert schema["additionalProperties"] is False
 assert schema["properties"]["defaultState"]["const"] == "Unavailable"
@@ -36,6 +46,16 @@ assert example["schemaVersion"] == 1
 assert example["defaultState"] == "Unavailable"
 assert example["module"]["uapiAbi"] == 1
 assert example["entries"] == []
+validate_route_evidence(example)
+try:
+    validate_route_evidence({"entries": [{"id": "gpio20", "route": "GPIO20",
+                                          "evidence": [{"routes": ["GPIO4"]}]}]})
+except ValueError:
+    pass
+else:
+    raise AssertionError("GPIO4-only evidence satisfied a GPIO20 entry")
+validate_route_evidence({"entries": [{"id": "gpio20", "route": "GPIO20",
+                                      "evidence": [{"routes": ["GPIO20"]}]}]})
 
 try:
     import jsonschema

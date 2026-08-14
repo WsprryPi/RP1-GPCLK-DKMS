@@ -81,7 +81,9 @@ matrix results, exclusions, and the final state.
 - supported stock Raspberry Pi kernel range;
 - provider-layout stability across RP1/DT/firmware revisions;
 - stock ownership of DMA-tick resources;
-- authoritative GPIO20 GPCLK0 pinmux/overlay representation;
+- GPIO20 clock-disabled target pinctrl acceptance, conflict, cleanup, and
+  repeated administrative route-change behavior (source-level RP1 GPCLK0
+  pinmux and overlay representation are established in Phase 3);
 - unbind and overlay removal with open descriptors on identities other than the
   exact Phase 2E target;
 - enforced-signature and key-enrollment behavior;

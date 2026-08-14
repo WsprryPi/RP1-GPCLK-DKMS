@@ -193,8 +193,8 @@ RP1_GPCLK_ROUTE_GPIO4  = 1
 RP1_GPCLK_ROUTE_GPIO20 = 2
 ```
 
-The numeric values remain proposed until the canonical UAPI is reviewed and
-frozen. Once released, they are additive and must not be repurposed.
+The numeric values are frozen by Phase 3 Decision 0006. They are additive and
+must not be repurposed.
 
 Requirements:
 
@@ -413,12 +413,12 @@ not qualify untested hardware behavior.
 ## 18. Next implementation gate
 
 Phase 2 is closed only for the exact GPIO4 clock-disabled identity recorded in
-`docs/evidence/phase2e-clock-disabled-target.md`. The next implementation gate
-is Phase 3 GPIO20 injection before interface freeze. It requires a separately
-reviewed prompt and, before its target exit, separate clock-disabled target
-authorization and evidence. GPIO20 must use an independent allowlisted route
-and compatibility record and must prove that selecting either administrative
-route leaves the other safe and unclaimed.
+`docs/evidence/phase2e-clock-disabled-target.md`. Phase 3 GPIO20 injection and
+the first public interface freeze are implemented offline under Decision 0006.
+The Phase 3 target exit remains open pending separate clock-disabled target
+authorization and evidence. GPIO20 uses an independent allowlisted route and
+compatibility record and must still prove on target that selecting either
+administrative route leaves the other safe and unclaimed.
 
 Phase 3 does not authorize active pinctrl selection, clock preparation or
 enablement, DMA execution, GPIO output, transmission, or RF. Phase 4 live

@@ -19,6 +19,7 @@
 	rp1_gpclk_dma_conflict: rp1-gpclk-dma-conflict {
 		compatible = "wsprrypi,rp1-gpclk-dkms-v1";
 		wsprrypi,route = <1>;
+		wsprrypi,pin = <4>;
 		clocks = <&rp1_clocks RP1_CLK_GP0>;
 		clock-names = "gpclk";
 		pinctrl-names = "default", "active", "safe";

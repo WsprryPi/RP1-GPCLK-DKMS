@@ -6,16 +6,16 @@
 #include <dt-bindings/mfd/rp1.h>
 
 &rp1_gpio {
-	rp1_gpclk_gpio4_safe: rp1-gpclk-gpio4-safe {
+	rp1_gpclk_gpio20_safe: rp1-gpclk-gpio20-safe {
 		function = "gpio";
-		pins = "gpio4";
+		pins = "gpio20";
 		input-enable;
 		bias-disable;
 	};
 
-	rp1_gpclk_gpio4_active: rp1-gpclk-gpio4-active {
+	rp1_gpclk_gpio20_active: rp1-gpclk-gpio20-active {
 		function = "gpclk0";
-		pins = "gpio4";
+		pins = "gpio20";
 		bias-disable;
 		drive-strength = <2>;
 	};
@@ -24,14 +24,14 @@
 &rp1 {
 	rp1_gpclk_dkms: rp1-gpclk-dkms {
 		compatible = "wsprrypi,rp1-gpclk-dkms-v1";
-		wsprrypi,route = <1>;
-		wsprrypi,pin = <4>;
+		wsprrypi,route = <2>;
+		wsprrypi,pin = <20>;
 		clocks = <&rp1_clocks RP1_CLK_GP0>;
 		clock-names = "gpclk";
 		pinctrl-names = "default", "active", "safe";
-		pinctrl-0 = <&rp1_gpclk_gpio4_safe>;
-		pinctrl-1 = <&rp1_gpclk_gpio4_active>;
-		pinctrl-2 = <&rp1_gpclk_gpio4_safe>;
+		pinctrl-0 = <&rp1_gpclk_gpio20_safe>;
+		pinctrl-1 = <&rp1_gpclk_gpio20_active>;
+		pinctrl-2 = <&rp1_gpclk_gpio20_safe>;
 		dmas = <&rp1_dma RP1_DMA_DMA_TICK_TICK0>;
 		dma-names = "tx";
 		status = "okay";

@@ -17,6 +17,7 @@ int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 	struct of_phandle_args dma_spec;
 	struct resource resource;
 	__u64 divider_phys;
+	__u32 pin;
 	__u32 route;
 	int ret;
 
@@ -31,7 +32,11 @@ int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 		return -EINVAL;
 	ret = of_property_read_u32(device->dev->of_node, "wsprrypi,route",
 				   &route);
-	if (ret || route != RP1_GPCLK_ROUTE_GPIO4)
+	if (ret || (route != RP1_GPCLK_ROUTE_GPIO4 &&
+		    route != RP1_GPCLK_ROUTE_GPIO20))
+		return -EINVAL;
+	ret = of_property_read_u32(device->dev->of_node, "wsprrypi,pin", &pin);
+	if (ret || rp1_gpclk_route_pin_validate(route, pin))
 		return -EINVAL;
 	device->route = route;
 	ret = of_parse_phandle_with_args(device->dev->of_node, "clocks",

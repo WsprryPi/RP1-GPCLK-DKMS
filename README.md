@@ -28,12 +28,17 @@ identity checks, and a bounded target lifecycle runner. The complete
 clock-disabled matrix passed on the recorded `wspr5` Pi 5 / stock
 `6.18.34+rpt-rpi-2712` identity; this closes the Phase 2 gate for that exact
 identity while retaining the `Compatible-unqualified` compatibility ceiling.
+Phase 3 now injects GPIO20 as the second independently allowlisted route,
+requires exact route/pin pairs, adds a route-specific safe/default overlay, and
+freezes UAPI ABI 1 plus the first overlay/name/manifest contracts. Its offline
+gate passes; GPIO20 clock-disabled target administration and qualification are
+still pending separately authorized evidence.
 
 Clock-disabled `QUERY`, `ACQUIRE`, and `RELEASE` are implemented. Submission,
 STOP, and every live-output path remain unavailable. The code never selects the
 active pinctrl state, prepares or enables a clock, changes a clock rate,
-prepares or submits DMA, or provides live output. The GPIO4 overlay keeps its
-default and safe states as input. No DKMS installer or qualified GPIO output is
+prepares or submits DMA, or provides live output. Both route overlays keep their
+default and safe states as input and neither claims the other pin. No DKMS installer or qualified GPIO output is
 implemented, and the exact target result does not generalize to another
 kernel, DT, firmware, route, or host.
 
@@ -53,10 +58,9 @@ This project will own:
 - kernel-header, lifecycle, static-contract, and target safety tests; and
 - tagged source releases with checksums.
 
-The initial feasibility route is GPIO4. GPIO20 will be introduced as a separate
-allowlisted route after GPIO4 proves the stock-kernel path and before route,
-UAPI, packaging, or operator contracts are frozen. Neither route inherits the
-other's qualification.
+The allowlisted routes are GPIO4 and GPIO20. They share route-neutral module
+machinery but use separate one-route overlays and compatibility evidence.
+Neither route inherits the other's qualification.
 
 ## Project boundary
 
@@ -110,6 +114,11 @@ with its exact [target evidence](docs/evidence/phase2e-clock-disabled-target.md)
 [Decision 0005](docs/development/decisions/0005-phase2e-gpio4-clock-disabled.md),
 and independent
 [Phase 2E adversarial assessment](docs/reviews/phase2e-adversarial-assessment.md).
+The Phase 3 offline implementation and remaining target gate are preserved in
+the [Phase 3 execution prompt](docs/contracts/phase3-gpio20-interface-freeze-execution-prompt.md),
+[GPIO20 route evidence](docs/development/gpio20-route-evidence.md),
+[Decision 0006](docs/development/decisions/0006-phase3-interface-freeze.md),
+and [Phase 3 adversarial assessment](docs/reviews/phase3-adversarial-assessment.md).
 
 The canonical header is
 [`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The strict,

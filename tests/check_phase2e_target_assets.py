@@ -53,8 +53,8 @@ for token in required_overlay:
         raise SystemExit(f"production overlay is missing {token}")
 if re.search(r'pinctrl-[02]\s*=\s*<&rp1_gpclk_gpio4_active>', OVERLAY):
     raise SystemExit("production overlay activates GPCLK in default or safe state")
-if 'pins = "gpio20"' in OVERLAY + FIXTURES:
-    raise SystemExit("Phase 2E overlays contain GPIO20")
+if 'pins = "gpio20"' in OVERLAY:
+    raise SystemExit("GPIO4 production overlay contains GPIO20")
 
 for fixture in ("conflict", "dma-conflict", "missing-active", "bad-dma"):
     if fixture not in FIXTURES:

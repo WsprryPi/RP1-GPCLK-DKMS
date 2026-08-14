@@ -4,11 +4,11 @@
 
 ## Status
 
-This records historical semantics for continuity. The project has decided to
-start a clean DKMS UAPI; see
-[Decision 0001](decisions/0001-clean-dkms-uapi.md). This document does not yet
-freeze filenames, ioctl numbers, layouts, device-node names, route values, or
-the new ABI version.
+This records historical semantics for continuity. The project started a clean
+DKMS UAPI under [Decision 0001](decisions/0001-clean-dkms-uapi.md). Phase 3
+freezes the first public interface under
+[Decision 0006](decisions/0006-phase3-interface-freeze.md); the historical
+inventory below is not the byte authority.
 
 The compared source is
 [`rp1_gpclk_uapi.h` at `fe8a03b`](https://github.com/WsprryPi/WSPR-Transmitter/blob/fe8a03b17a817175553968f91508fccd48c78bdf/src/rp1_gpclk_uapi.h).
@@ -78,13 +78,14 @@ must not remux an arbitrary GPIO through the UAPI.
 - Design route and capability negotiation before freezing the first public
   ABI.
 
-## Decisions intentionally not frozen
+## Decisions frozen by Phase 3
 
-| Decision | Considerations | Latest safe decision point |
+| Decision | Frozen contract |
 | --- | --- | --- |
-| Capability query shape | Sized ioctl extensions versus read-only sysfs plus ioctls. | Phase 2 UAPI design. |
-| Device-node and module names | Historical `/dev/rp1-gpclk0` versus project-specific naming. | Before Kbuild, misc-device registration, packaging, and docs. |
-| Route values | Proposed GPIO4=1/GPIO20=2 versus namespaced capabilities. | Before first public ABI. |
-| Structure extensibility | Exact sizes by version versus minimum-size negotiation. | Before first public ABI. |
+| Capability query shape | Exact-size `RP1_GPCLK_IOC_QUERY` v1 structure. |
+| Device-node and module names | `/dev/rp1-gpclk` and `rp1_gpclk_dkms`. |
+| Route values | GPIO4 = 1 and GPIO20 = 2. |
+| Structure extensibility | Exact V1 sizes; additive commands or explicit new versions only. |
 
-Implementation must not infer the remaining choices from the old header.
+The canonical header, `uapi-identity.json`, UAPI contract, and Decision 0006
+jointly define the frozen identity.

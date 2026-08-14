@@ -53,6 +53,14 @@ int main(void)
 	__u64 target = 0xfeedU;
 	unsigned int fail;
 
+	CHECK(rp1_gpclk_route_pin_validate(RP1_GPCLK_ROUTE_GPIO4, 4) == 0);
+	CHECK(rp1_gpclk_route_pin_validate(RP1_GPCLK_ROUTE_GPIO20, 20) == 0);
+	CHECK(rp1_gpclk_route_pin_validate(RP1_GPCLK_ROUTE_INVALID, 4) != 0);
+	CHECK(rp1_gpclk_route_pin_validate(3, 20) != 0);
+	CHECK(rp1_gpclk_route_pin_validate(99, 99) != 0);
+	CHECK(rp1_gpclk_route_pin_validate(RP1_GPCLK_ROUTE_GPIO4, 20) != 0);
+	CHECK(rp1_gpclk_route_pin_validate(RP1_GPCLK_ROUTE_GPIO20, 4) != 0);
+
 	CHECK(rp1_gpclk_derive_target(0x10000000U, 0x100003ffU,
 		RP1_GPCLK_DIV_FRAC_OFFSET, RP1_GPCLK_REGISTER_BYTES,
 		&target) == 0);
@@ -103,6 +111,6 @@ int main(void)
 
 	if (failures)
 		return 1;
-	puts("resource policy: PASS (derivation, unwind, dead lifetime)");
+	puts("resource policy: PASS (routes, derivation, unwind, dead lifetime)");
 	return 0;
 }

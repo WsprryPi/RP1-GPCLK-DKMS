@@ -13,6 +13,7 @@ python3 "$repo_dir/tests/check_manifest.py"
 python3 "$repo_dir/tests/check_phase2c_integration.py"
 python3 "$repo_dir/tests/check_phase2d_build.py"
 python3 "$repo_dir/tests/check_phase2e_target_assets.py"
+python3 "$repo_dir/tests/check_phase3_interface_freeze.py"
 python3 "$repo_dir/tests/test_phase2e_dmesg.py"
 python3 "$repo_dir/tests/check_doc_links.py"
 if command -v shellcheck >/dev/null 2>&1; then
@@ -48,7 +49,8 @@ ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
 "$tmp_dir/lifecycle_core"
 
 ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
-    -I"$repo_dir/tests/fixtures/linux" -I"$repo_dir/include" \
+	-I"$repo_dir/tests/fixtures/linux" -I"$repo_dir/include" \
+	-I"$repo_dir/include/uapi" \
     "$repo_dir/src/rp1_gpclk_resource_policy.c" \
     "$repo_dir/tests/resource_policy.c" -o "$tmp_dir/resource_policy"
 "$tmp_dir/resource_policy"

@@ -5,7 +5,9 @@
 ## Authority and status
 
 The byte-authoritative header is `include/uapi/linux/rp1_gpclk.h`. This
-document defines its validation and state semantics. Phase 2E implements only
+document defines its validation and state semantics. Phase 3 freezes ABI v1 at
+the exact byte identity recorded in `uapi-identity.json`; see Decision 0006.
+Phase 3 implements only
 clock-disabled `QUERY`, `ACQUIRE`, and `RELEASE`. Submission, STOP, and state
 progression remain unavailable and fail with `EOPNOTSUPP`; their layouts stay
 public contracts for later implementation rather than implemented behavior.
@@ -91,3 +93,7 @@ An extended structure receives a new command number and explicit suffix; it
 does not enlarge an existing `_IOC_SIZE`. New capabilities, enum values, and
 reasons are additive. Reserved values and fields remain unavailable until a
 reviewed revision assigns them.
+
+The stable administrative routes are GPIO4 value 1 and GPIO20 value 2. A
+queried route reports the overlay-bound route; `ACQUIRE.expected_route` must
+match it and cannot remux or change the administrative route.
