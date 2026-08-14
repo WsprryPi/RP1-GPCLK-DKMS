@@ -15,6 +15,7 @@ EXPECTED = {
     ".sh": {"MIT"},
 }
 SCAN = ["docs", "include", "schema", "src", "tests"]
+ROOT_FILES = ["Kbuild", "Makefile", "dkms.conf"]
 
 
 def identifier(path: Path) -> str | None:
@@ -29,6 +30,11 @@ def identifier(path: Path) -> str | None:
 
 
 failures = []
+for name in ROOT_FILES:
+    path = ROOT / name
+    found = identifier(path)
+    if found != "MIT":
+        failures.append(f"{name}: unexpected SPDX {found!r}")
 for directory in SCAN:
     for path in (ROOT / directory).rglob("*"):
         if not path.is_file() or path.suffix not in EXPECTED:

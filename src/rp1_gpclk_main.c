@@ -11,6 +11,7 @@
 #include "rp1_gpclk/kernel_api.h"
 #include "rp1_gpclk/lifetime.h"
 #include "rp1_gpclk/uapi_dispatch.h"
+#include "rp1_gpclk/version.h"
 
 struct rp1_gpclk_file {
 	struct rp1_gpclk_device *device;
@@ -21,15 +22,15 @@ static atomic64_t rp1_gpclk_next_owner = ATOMIC64_INIT(0);
 
 static int rp1_gpclk_allocate_owner(u64 *owner)
 {
-	s64 current;
+	s64 owner_sequence;
 
 	for (;;) {
-		current = atomic64_read(&rp1_gpclk_next_owner);
-		if (current == S64_MAX)
+		owner_sequence = atomic64_read(&rp1_gpclk_next_owner);
+		if (owner_sequence == S64_MAX)
 			return -EOVERFLOW;
-		if (atomic64_cmpxchg(&rp1_gpclk_next_owner, current,
-				     current + 1) == current) {
-			*owner = (u64)(current + 1);
+		if (atomic64_cmpxchg(&rp1_gpclk_next_owner, owner_sequence,
+				     owner_sequence + 1) == owner_sequence) {
+			*owner = (u64)(owner_sequence + 1);
 			return 0;
 		}
 	}
@@ -84,7 +85,6 @@ static const struct file_operations rp1_gpclk_fops = {
 	.open = rp1_gpclk_open,
 	.release = rp1_gpclk_release,
 	.unlocked_ioctl = rp1_gpclk_ioctl,
-	.llseek = no_llseek,
 };
 
 static int rp1_gpclk_probe(struct platform_device *pdev)
@@ -149,7 +149,7 @@ static void rp1_gpclk_remove(struct platform_device *pdev)
 	rp1_gpclk_lifetime_mark_dead(device);
 	mutex_lock(&device->lock);
 	rp1_gpclk_core_mark_dead(&device->core,
-				 RP1_GPCLK_TERMINAL_PROVIDER_REMOVED);
+				 RP1_GPCLK_REASON_PROVIDER_REMOVED);
 	rp1_gpclk_quiesce(device);
 	mutex_unlock(&device->lock);
 	rp1_gpclk_resources_release(device);
@@ -177,3 +177,4 @@ module_platform_driver(rp1_gpclk_driver);
 MODULE_AUTHOR("Lee Bussy");
 MODULE_DESCRIPTION("Clock-disabled RP1 GPCLK DKMS resource prototype");
 MODULE_LICENSE("Dual MIT/GPL");
+MODULE_VERSION(RP1_GPCLK_MODULE_VERSION);

@@ -11,6 +11,7 @@ python3 "$repo_dir/tests/check_spdx.py"
 python3 "$repo_dir/tests/check_uapi_identity.py"
 python3 "$repo_dir/tests/check_manifest.py"
 python3 "$repo_dir/tests/check_phase2c_integration.py"
+python3 "$repo_dir/tests/check_phase2d_build.py"
 python3 "$repo_dir/tests/check_doc_links.py"
 if command -v shellcheck >/dev/null 2>&1; then
     shellcheck "$repo_dir/tests/run-offline-checks.sh"
@@ -62,6 +63,9 @@ if python3 "$repo_dir/tests/check_uapi_identity.py" "$tmp_dir/consumer.h" >/dev/
 fi
 echo "UAPI negative identity: PASS"
 
-if git -C "$repo_dir" diff --check; then
+if git -C "$repo_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git -C "$repo_dir" diff --check
     echo "whitespace: PASS"
+else
+    echo "whitespace: SKIP (source archive has no Git metadata)"
 fi

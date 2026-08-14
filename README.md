@@ -21,6 +21,9 @@ STOP/RELEASE, stable terminal outcomes, stale-event rejection, and cleanup
 faults. Phase 2C adds a platform driver, reference-counted misc endpoint, and
 fail-closed discovery of the GPCLK0 DT, clock, pinctrl, and DMAengine resources.
 It derives and DMA-maps the divider target from the provider resource.
+Phase 2D adds an explicit prerelease module version, DKMS build configuration,
+and identity-specific representative stock Raspberry Pi kernel-header build
+evidence. Build success remains `Compatible-unqualified` at most.
 
 Every ioctl remains unavailable. The code never selects a pinctrl state,
 prepares or enables a clock, changes a clock rate, prepares or submits DMA, or
@@ -89,6 +92,12 @@ The Phase 2C slice is preserved in its
 and [Decision 0004](docs/development/decisions/0004-phase2c-resource-integration.md).
 Its bounded offline result is recorded in the
 [Phase 2C adversarial assessment](docs/reviews/phase2c-adversarial-assessment.md).
+The Phase 2D build slice is preserved in its
+[execution prompt](docs/contracts/phase2d-representative-build-qualification-execution-prompt.md).
+Its exact build identities and bounded result are in the
+[representative build evidence](docs/evidence/phase2d-representative-build-qualification.md),
+with the separate
+[Phase 2D adversarial assessment](docs/reviews/phase2d-adversarial-assessment.md).
 
 The canonical header is
 [`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The strict,
