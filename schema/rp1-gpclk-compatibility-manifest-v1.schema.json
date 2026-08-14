@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/WsprryPi/RP1-GPCLK-DKMS/schema/rp1-gpclk-compatibility-manifest-v1.schema.json",
+  "$comment": "SPDX-License-Identifier: MIT",
+  "title": "RP1 GPCLK compatibility manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["SPDX-License-Identifier", "schemaVersion", "manifestId", "generatedAt", "module", "defaultState", "entries"],
+  "properties": {
+    "SPDX-License-Identifier": { "const": "MIT" },
+    "schemaVersion": { "const": 1 },
+    "manifestId": { "$ref": "#/$defs/nonempty" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "release", "sourceCommit", "sourceArchiveSha256", "uapiAbi", "uapiHeaderSha256"],
+      "properties": {
+        "name": { "const": "rp1_gpclk_dkms" },
+        "release": { "$ref": "#/$defs/nonempty" },
+        "sourceCommit": { "$ref": "#/$defs/sha1" },
+        "sourceArchiveSha256": { "$ref": "#/$defs/sha256" },
+        "uapiAbi": { "const": 1 },
+        "uapiHeaderSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "defaultState": { "const": "Unavailable" },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "nonempty": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "route": { "enum": ["GPIO4", "GPIO20"] },
+    "mode": { "enum": ["WSPR", "QRSS", "FSKCW", "DFCW"] },
+    "state": { "enum": ["Qualified", "Experimental", "Compatible-unqualified", "Unavailable", "Rejected"] },
+    "buildIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["architecture", "kernelRelease", "kernelConfigSha256", "compiler", "headers", "moduleVermagic", "moduleSha256"],
+      "properties": {
+        "architecture": { "enum": ["arm64"] },
+        "kernelRelease": { "$ref": "#/$defs/nonempty" },
+        "kernelConfigSha256": { "$ref": "#/$defs/sha256" },
+        "compiler": { "$ref": "#/$defs/nonempty" },
+        "headers": { "$ref": "#/$defs/nonempty" },
+        "moduleVermagic": { "$ref": "#/$defs/nonempty" },
+        "moduleSha256": { "$ref": "#/$defs/sha256" },
+        "signatureKeyFingerprint": { "$ref": "#/$defs/nonempty" }
+      }
+    },
+    "runtimeIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["piModel", "piRevision", "kernelRelease", "baseDtSha256", "overlaySha256", "providerCompatible", "clockId", "dmaController", "dmaRequest"],
+      "properties": {
+        "piModel": { "$ref": "#/$defs/nonempty" },
+        "piRevision": { "$ref": "#/$defs/nonempty" },
+        "kernelRelease": { "$ref": "#/$defs/nonempty" },
+        "firmwareIdentity": { "$ref": "#/$defs/nonempty" },
+        "baseDtSha256": { "$ref": "#/$defs/sha256" },
+        "overlaySha256": { "$ref": "#/$defs/sha256" },
+        "providerCompatible": { "const": "raspberrypi,rp1-clocks" },
+        "clockId": { "type": "integer", "minimum": 0 },
+        "dmaController": { "$ref": "#/$defs/nonempty" },
+        "dmaRequest": { "$ref": "#/$defs/nonempty" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sha256", "routes", "modes", "classes"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonempty" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "routes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/route" } },
+        "modes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/mode" } },
+        "classes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["build", "clock-disabled", "timing", "cleanup", "recovery", "rf"] }
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "state", "liveEligible", "reason", "route", "modes", "build", "runtime", "evidence"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonempty" },
+        "state": { "$ref": "#/$defs/state" },
+        "liveEligible": { "type": "boolean" },
+        "reason": { "$ref": "#/$defs/nonempty" },
+        "route": { "$ref": "#/$defs/route" },
+        "modes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/mode" } },
+        "build": { "$ref": "#/$defs/buildIdentity" },
+        "runtime": { "$ref": "#/$defs/runtimeIdentity" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "state": { "const": "Qualified" } }, "required": ["state"] },
+          "then": {
+            "properties": {
+              "liveEligible": { "const": true },
+              "evidence": {
+                "minItems": 1,
+                "allOf": [
+                  { "$ref": "#/$defs/hasBuildEvidence" },
+                  { "$ref": "#/$defs/hasClockDisabledEvidence" },
+                  { "$ref": "#/$defs/hasTimingEvidence" },
+                  { "$ref": "#/$defs/hasCleanupEvidence" },
+                  { "$ref": "#/$defs/hasRecoveryEvidence" },
+                  { "$ref": "#/$defs/hasRfEvidence" }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "state": { "enum": ["Compatible-unqualified", "Unavailable", "Rejected"] } }, "required": ["state"] },
+          "then": { "properties": { "liveEligible": { "const": false } } }
+        }
+      ]
+    },
+    "hasBuildEvidence": { "contains": { "$ref": "#/$defs/buildEvidence" } },
+    "hasClockDisabledEvidence": { "contains": { "$ref": "#/$defs/clockDisabledEvidence" } },
+    "hasTimingEvidence": { "contains": { "$ref": "#/$defs/timingEvidence" } },
+    "hasCleanupEvidence": { "contains": { "$ref": "#/$defs/cleanupEvidence" } },
+    "hasRecoveryEvidence": { "contains": { "$ref": "#/$defs/recoveryEvidence" } },
+    "hasRfEvidence": { "contains": { "$ref": "#/$defs/rfEvidence" } },
+    "buildEvidence": { "properties": { "classes": { "contains": { "const": "build" } } }, "required": ["classes"] },
+    "clockDisabledEvidence": { "properties": { "classes": { "contains": { "const": "clock-disabled" } } }, "required": ["classes"] },
+    "timingEvidence": { "properties": { "classes": { "contains": { "const": "timing" } } }, "required": ["classes"] },
+    "cleanupEvidence": { "properties": { "classes": { "contains": { "const": "cleanup" } } }, "required": ["classes"] },
+    "recoveryEvidence": { "properties": { "classes": { "contains": { "const": "recovery" } } }, "required": ["classes"] },
+    "rfEvidence": { "properties": { "classes": { "contains": { "const": "rf" } } }, "required": ["classes"] }
+  }
+}

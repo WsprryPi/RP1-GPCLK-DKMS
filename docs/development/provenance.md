@@ -47,3 +47,19 @@ no-successor cancellation, terminal states, divider packing, translation
 failures, and test scenarios may guide a clean implementation.
 
 No historical implementation source was copied during this intake.
+
+## Phase 2A clean implementation
+
+The Phase 2A UAPI, schema, Kbuild/source skeleton, test fixtures, and checks
+were authored cleanly in this repository on 2026-08-14 from the project
+contracts and documented semantic requirements. No historical provider,
+portable-core, overlay, KUnit, or UAPI implementation text was copied or
+adapted. The historical numeric ioctl namespace and byte layouts were not
+reused.
+
+The canonical UAPI is dual-licensed with the Linux syscall exception as
+required by `LICENSE.md`. Kernel-facing skeleton files are
+`GPL-2.0-only OR MIT`; independent schema, build metadata, tests, fixtures, and
+documentation are MIT. Future implementation work that imports or adapts a
+fragment must add a source identity and disposition to this record before the
+fragment is accepted.

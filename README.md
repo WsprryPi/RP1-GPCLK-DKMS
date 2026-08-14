@@ -14,9 +14,12 @@ clock operations.
 
 ## Current status
 
-Repository foundation and engineering contracts only. No kernel module,
-device-tree overlay, DKMS package, installer, or qualified GPIO output is
-implemented here yet.
+Phase 2A public contracts and an inert kernel source skeleton are implemented.
+The canonical UAPI and compatibility-manifest schema are declarations only:
+the skeleton registers no platform driver or device, exposes no ioctl
+dispatcher, and performs no clock, DMA, pinctrl, device-tree, GPIO, or other
+hardware operation. No device-tree overlay, DKMS package, installer, or
+qualified GPIO output is implemented.
 
 Nothing in this repository currently authorizes module installation, target
 binding, system configuration, GPIO operation, transmission, or RF activity.
@@ -64,6 +67,19 @@ Phase 2 preparation is documented in the
 [historical artifact inventory](docs/development/historical-artifact-inventory.md).
 The first accepted architecture decision is to
 [start a clean DKMS UAPI](docs/development/decisions/0001-clean-dkms-uapi.md).
+The Phase 2A choices are frozen in
+[Decision 0002](docs/development/decisions/0002-phase2a-public-contracts.md),
+and the exact bounded slice is preserved in the
+[Phase 2A execution prompt](docs/contracts/phase2a-public-contracts-execution-prompt.md).
+
+The canonical header is
+[`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The strict,
+deny-by-default compatibility format is
+[`schema/rp1-gpclk-compatibility-manifest-v1.schema.json`](schema/rp1-gpclk-compatibility-manifest-v1.schema.json).
+Run the offline contract suite with `make check`. Building the inert module
+requires an explicitly supplied local kernel build directory, for example
+`make KERNEL_BUILD=/path/to/kernel/build`; it is never installed or loaded by
+the repository build.
 
 ## Safety model
 
