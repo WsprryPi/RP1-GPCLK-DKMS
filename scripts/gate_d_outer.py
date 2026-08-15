@@ -682,10 +682,20 @@ def default_internal(operation: str, document: dict, root: pathlib.Path) -> None
             raise ValueError("foreign or stale RP1 GPCLK resource exists")
         tool_hashes = {}
         for name, item in inputs["tooling"].items():
+            required_tool_keys = {"sourcePath", "installedPath", "sourceSha256", "installedSha256",
+                                  "installKind", "candidateArchiveMember"}
+            if set(item) != required_tool_keys or item["installKind"] not in {"copied", "target-built"}:
+                raise ValueError(f"legacy or malformed permanent tool identity: {name}")
+            if item["installKind"] == "copied" and item["sourceSha256"] != item["installedSha256"]:
+                raise ValueError(f"copied permanent tool identities differ: {name}")
+            expected_kind = "target-built" if item["sourcePath"].endswith(".c") else "copied"
+            if item["installKind"] != expected_kind:
+                raise ValueError(f"permanent tool install kind differs: {name}")
             installed = rooted(root, item["installedPath"])
-            if installed.is_symlink() or not installed.is_file() or digest(installed) != item["sha256"]:
+            if installed.is_symlink() or not installed.is_file() or digest(installed) != item["installedSha256"]:
                 raise ValueError(f"installed permanent tool differs: {name}")
-            tool_hashes[name] = {"path": item["installedPath"], "sha256": item["sha256"]}
+            tool_hashes[name] = {"path": item["installedPath"], "sha256": item["installedSha256"],
+                                 "installKind": item["installKind"]}
         atomic_json(evidence / "preflight.json", {"hostId": document["hostId"],
                     "runningKernel": running_kernel, "bootId": boot_id,
                     "moduleSigEnforce": signing, "activeOverlays": overlays.splitlines(),

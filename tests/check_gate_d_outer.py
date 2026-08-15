@@ -200,7 +200,11 @@ with tempfile.TemporaryDirectory() as temporary:
         installed.parent.mkdir(parents=True, exist_ok=True)
         source = ROOT / item["sourcePath"]
         installed.write_bytes(source.read_bytes())
-        item["sha256"] = hashlib.sha256(installed.read_bytes()).hexdigest()
+        source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+        item.pop("sha256")
+        item["sourceSha256"] = source_sha
+        item["installKind"] = "target-built" if item["sourcePath"].endswith(".c") else "copied"
+        item["installedSha256"] = hashlib.sha256(installed.read_bytes()).hexdigest()
 
     original_run = outer.subprocess.run
     def preflight_run(argv, **kwargs):
@@ -222,6 +226,15 @@ with tempfile.TemporaryDirectory() as temporary:
             assert "installed permanent tool differs" in str(error)
         else:
             raise AssertionError("changed installed permanent tool passed preflight")
+        victim_path = outer.rooted(root, victim["installedPath"])
+        victim_path.unlink()
+        victim_path.symlink_to("/nonexistent")
+        try:
+            outer.default_internal("capture-preflight", preflight_doc, root)
+        except ValueError as error:
+            assert "symlink in controlled path" in str(error)
+        else:
+            raise AssertionError("symlinked installed permanent tool passed preflight")
     finally:
         outer.subprocess.run = original_run
 

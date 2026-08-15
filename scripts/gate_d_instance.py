@@ -96,7 +96,10 @@ def validate(value: dict, *, require_ready: bool = False,
     # remain inspectable after permanent tools advance.
     validate_target_plan(target_plan, verify_tools=False)
     from gate_d_attempts import generate as generate_attempts, validate_index
-    if validate_attempt_bundle:
+    # A superseded control set remains structurally inspectable. Its sealed
+    # executor/index hashes intentionally cease to be live-executable when the
+    # permanent executor advances for a successor.
+    if validate_attempt_bundle and not superseded:
         attempt_result = validate_index(ROOT / policy_ref["attemptIndex"],
                                         expected_documents=generate_attempts(value, target_plan))
         if attempt_result["attemptCount"] != 38:

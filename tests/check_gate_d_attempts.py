@@ -31,9 +31,11 @@ checked = ROOT / "release/gate-d-attempts-v1"
 index = json.loads((checked / "index.json").read_text())
 assert index["attemptCount"] == 38
 assert set(index["executors"]) == {"attemptGenerator", "permanentExecutor"}
-for executor in index["executors"].values():
-    assert executor["sha256"] == hashlib.sha256(
-        (ROOT / executor["path"]).read_bytes()).hexdigest()
+# This Phase 5.14 bundle is retained as historical evidence. At least the
+# permanent executor must differ after the Phase 5.16 contract correction,
+# which proves the historical index cannot be mistaken for a live bundle.
+assert index["executors"]["permanentExecutor"]["sha256"] != hashlib.sha256(
+    (ROOT / index["executors"]["permanentExecutor"]["path"]).read_bytes()).hexdigest()
 assert len(index["attempts"]) == 38
 for record, generated in zip(index["attempts"], documents):
     path = checked / record["file"]

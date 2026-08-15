@@ -17,10 +17,10 @@ result = tool.validate(plan, verify_tools=False)
 assert result == {"valid": True, "readOnly": True, "rowCount": 10, "attemptCount": 38, "liveOutput": False}
 try:
     tool.validate(plan)
-except ValueError:
-    pass
+except ValueError as error:
+    assert "legacy target plan" in str(error)
 else:
-    raise AssertionError("superseded Phase 5.14 plan matched advanced Phase 5.15 tools")
+    raise AssertionError("superseded Phase 5.14 plan was accepted for execution")
 assert plan["artifacts"]["successor"] == {
     "version": "0.0.0-phase5.14",
     "archive": "/home/pi/gate-d-inputs/phase5.14-7bbdfe1b5c83/rp1-gpclk-dkms-0.0.0-phase5.14.tar.gz",
@@ -45,5 +45,33 @@ for mutation in (
         pass
     else:
         raise AssertionError("unsafe or incomplete Gate D target plan accepted")
+
+# Schema 2 separates immutable source bytes from installed executable bytes.
+current = copy.deepcopy(plan)
+current["schemaVersion"] = 2
+for item in current["tooling"].values():
+    source_sha = __import__("hashlib").sha256((ROOT / item["sourcePath"]).read_bytes()).hexdigest()
+    item.pop("sha256")
+    item["sourceSha256"] = source_sha
+    item["installKind"] = "target-built" if item["sourcePath"].endswith(".c") else "copied"
+    item["installedSha256"] = "a" * 64 if item["installKind"] == "target-built" else source_sha
+assert tool.validate(current)["attemptCount"] == 38
+for mutation in (
+    lambda value: value["tooling"]["bootSelector"].pop("sourceSha256"),
+    lambda value: value["tooling"]["bootSelector"].pop("installedSha256"),
+    lambda value: value["tooling"]["bootSelector"].update(installKind="target-built"),
+    lambda value: value["tooling"]["busyInjector"].update(installKind="copied"),
+    lambda value: value["tooling"]["bootSelector"].update(installedSha256="b" * 64),
+    lambda value: value["tooling"]["bootSelector"].update(sourceSha256="c" * 64,
+                                                               installedSha256="c" * 64),
+):
+    bad = copy.deepcopy(current)
+    mutation(bad)
+    try:
+        tool.validate(bad)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("split tooling identity mutation accepted")
 
 print("Gate D complete target operation plan: PASS")

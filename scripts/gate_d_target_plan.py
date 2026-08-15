@@ -53,8 +53,11 @@ def load(path: pathlib.Path) -> dict:
 def validate(value: dict, *, verify_tools: bool = True) -> dict:
     required = {"SPDX-License-Identifier", "schemaVersion", "kind", "hostId", "tooling", "invariants",
                 "services", "artifacts", "boot", "attemptEnvelope", "rows"}
-    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or value.get("schemaVersion") != 1 or value.get("kind") != "gate-d-output-disabled-target-operation-plan":
+    schema = value.get("schemaVersion")
+    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or schema not in {1, 2} or value.get("kind") != "gate-d-output-disabled-target-operation-plan":
         raise ValueError("invalid target-plan identity")
+    if schema == 1 and verify_tools:
+        raise ValueError("legacy target plan is inspectable but not executable")
     invariants = value["invariants"]
     expected_invariants = {"liveOutput": False, "si5351Disconnected": True,
                            "antennaConnected": False, "sdrPermitted": False,
@@ -69,15 +72,28 @@ def validate(value: dict, *, verify_tools: bool = True) -> dict:
     if not isinstance(tooling, dict) or set(tooling) != required_tools:
         raise ValueError("execution tooling identities are incomplete")
     for name, item in tooling.items():
-        if (not isinstance(item, dict) or set(item) != {"sourcePath", "installedPath", "sha256", "candidateArchiveMember"} or
+        keys = ({"sourcePath", "installedPath", "sha256", "candidateArchiveMember"} if schema == 1 else
+                {"sourcePath", "installedPath", "sourceSha256", "installedSha256", "installKind", "candidateArchiveMember"})
+        if (not isinstance(item, dict) or set(item) != keys or
                 not isinstance(item["sourcePath"], str) or pathlib.PurePosixPath(item["sourcePath"]).is_absolute() or
                 ".." in pathlib.PurePosixPath(item["sourcePath"]).parts or
                 not isinstance(item["installedPath"], str) or not pathlib.PurePosixPath(item["installedPath"]).is_absolute() or
-                ".." in pathlib.PurePosixPath(item["installedPath"]).parts or not SHA.fullmatch(item["sha256"]) or
+                ".." in pathlib.PurePosixPath(item["installedPath"]).parts or
                 type(item["candidateArchiveMember"]) is not bool):
             raise ValueError(f"invalid execution tool identity: {name}")
+        source_sha = item.get("sha256") if schema == 1 else item.get("sourceSha256")
+        if not isinstance(source_sha, str) or not SHA.fullmatch(source_sha):
+            raise ValueError(f"invalid execution tool source identity: {name}")
+        if schema == 2:
+            if item.get("installKind") not in {"copied", "target-built"} or not isinstance(item.get("installedSha256"), str) or not SHA.fullmatch(item["installedSha256"]):
+                raise ValueError(f"invalid installed execution tool identity: {name}")
+            if item["installKind"] == "copied" and item["installedSha256"] != source_sha:
+                raise ValueError(f"copied execution tool identities differ: {name}")
+            expected_kind = "target-built" if item["sourcePath"].endswith(".c") else "copied"
+            if item["installKind"] != expected_kind:
+                raise ValueError(f"execution tool install kind differs: {name}")
         path = ROOT / item["sourcePath"]
-        if verify_tools and (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != item["sha256"]):
+        if verify_tools and (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != source_sha):
             raise ValueError(f"execution tool identity mismatch: {name}")
     services = value["services"]
     if not isinstance(services, list) or {item.get("name") for item in services} != {
