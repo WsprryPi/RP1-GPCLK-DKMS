@@ -15,12 +15,14 @@ import json
 import os
 import pathlib
 import platform
+import pwd
 import re
 import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
+from datetime import datetime, timezone
 from typing import Callable
 
 PACKAGE = "rp1-gpclk-dkms"
@@ -35,6 +37,16 @@ STEPS = ["preflight", "stage", "verify-staged-hashes", "dkms-add", "dkms-build",
          "sign-if-required", "verify-module", "dkms-install", "install-overlay-inactive",
          "install-policy", "verify-output-disabled", "commit-state"]
 SAFE_PATH = re.compile(r"^/[A-Za-z0-9._+/-]+$")
+IDENTITY_FIELDS = ("compatibilityEntryId", "compatibilityManifestSha256",
+                   "moduleRelease", "moduleSha256", "uapiAbi", "uapiHeaderSha256",
+                   "kernelRelease", "kernelConfigSha256", "baseDtSha256",
+                   "firmwareIdentity", "overlaySourceSha256", "overlayDtboSha256",
+                   "route", "signingIdentity")
+ACKNOWLEDGEMENT = ("I accept Experimental RP1 GPCLK dedicated-host and "
+                   "software-cohabitation risk for this exact release, identity, and route.")
+HASH_IDENTITY_FIELDS = {"compatibilityManifestSha256", "moduleSha256", "uapiHeaderSha256",
+                        "kernelConfigSha256", "baseDtSha256", "overlaySourceSha256",
+                        "overlayDtboSha256"}
 
 
 def digest(path: pathlib.Path) -> str:
@@ -120,6 +132,113 @@ def atomic_json(path: pathlib.Path, value: dict) -> None:
         os.replace(temporary_name, path)
     finally:
         pathlib.Path(temporary_name).unlink(missing_ok=True)
+
+
+def evaluate_permission_state(snapshot: dict, enrollment: dict | None) -> dict:
+    """Pure, fail-closed evaluation of the five distinct operator states."""
+    required = {*IDENTITY_FIELDS, "packageFilesPresent", "dkmsEntryPresent",
+                "runtimePrerequisitesPass", "compatibilityState", "cleanupLatch",
+                "routeSelected", "operatorAuthorized", "devicePresent", "deviceUid",
+                "deviceGid", "deviceMode", "deviceType", "ownerCount"}
+    if set(snapshot) != required:
+        raise ValueError("permission snapshot fields are incomplete or unknown")
+    if snapshot["route"] not in {"GPIO4", "GPIO20"}:
+        raise ValueError("route is not allowlisted")
+    if snapshot["compatibilityState"] not in {"Qualified", "Experimental",
+                                                "Compatible-unqualified", "Unavailable", "Rejected"}:
+        raise ValueError("unknown compatibility state")
+    if not isinstance(snapshot["ownerCount"], int) or isinstance(snapshot["ownerCount"], bool) or snapshot["ownerCount"] not in {0, 1}:
+        raise ValueError("active ownership must be zero or one")
+    installed = snapshot["packageFilesPresent"] is True and snapshot["dkmsEntryPresent"] is True
+    permission_ok = (snapshot["devicePresent"] is True and snapshot["deviceUid"] == 0 and
+                     snapshot["deviceGid"] == 0 and snapshot["deviceMode"] == "0600" and
+                     snapshot["deviceType"] == "character")
+    compatible = snapshot["compatibilityState"] in {"Qualified", "Experimental"}
+    available = (installed and snapshot["runtimePrerequisitesPass"] is True and compatible and
+                 snapshot["cleanupLatch"] is False and permission_ok)
+    enrollment_current = False
+    enrollment_reason = "not-required-for-qualified" if snapshot["compatibilityState"] == "Qualified" else "absent"
+    if snapshot["compatibilityState"] == "Experimental" and enrollment is not None:
+        base_fields = {*IDENTITY_FIELDS, "schemaVersion", "kind", "administratorUid",
+                       "administratorName", "acceptedAt", "acknowledgement", "revoked"}
+        revoked_fields = {"revokedByUid", "revokedByName", "revokedAt"}
+        if frozenset(enrollment) not in {frozenset(base_fields), frozenset(base_fields | revoked_fields)}:
+            enrollment_reason = "malformed"
+        elif enrollment.get("revoked") is True:
+            enrollment_reason = "revoked"
+        elif (enrollment.get("schemaVersion") != 1 or enrollment.get("kind") != "Experimental" or
+              enrollment.get("administratorUid") != 0 or not enrollment.get("administratorName") or
+              enrollment.get("acknowledgement") != ACKNOWLEDGEMENT):
+            enrollment_reason = "invalid-attribution-or-acceptance"
+        elif all(enrollment.get(field) == snapshot.get(field) for field in IDENTITY_FIELDS):
+            enrollment_current = True
+            enrollment_reason = "current"
+        else:
+            enrollment_reason = "stale-identity"
+    normal_authority = snapshot["routeSelected"] is True and snapshot["operatorAuthorized"] is True
+    live_eligible = available and normal_authority and (
+        snapshot["compatibilityState"] == "Qualified" or enrollment_current)
+    active = snapshot["ownerCount"] == 1
+    reasons = []
+    if not installed:
+        reasons.append("not-installed")
+    if not permission_ok:
+        reasons.append("device-permission-or-type-mismatch")
+    if snapshot["cleanupLatch"] is not False:
+        reasons.append("cleanup-latched")
+    if not normal_authority:
+        reasons.append("route-or-operator-authorization-missing")
+    if snapshot["compatibilityState"] == "Experimental" and not enrollment_current:
+        reasons.append(f"experimental-enrollment-{enrollment_reason}")
+    return {"installed": installed, "available": available, "enrolled": enrollment_current,
+            "liveEligible": live_eligible, "active": active, "enrollmentReason": enrollment_reason,
+            "reasons": reasons, "readOnly": True}
+
+
+def write_experimental_enrollment(path: pathlib.Path, identity: dict, acknowledgement: str,
+                                  administrator_uid: int, administrator_name: str,
+                                  now: str | None = None) -> dict:
+    if administrator_uid != 0:
+        raise PermissionError("root administrator required")
+    if acknowledgement != ACKNOWLEDGEMENT:
+        raise ValueError("exact Experimental-risk acknowledgement required")
+    if set(identity) != set(IDENTITY_FIELDS) or identity.get("route") not in {"GPIO4", "GPIO20"}:
+        raise ValueError("complete allowlisted enrollment identity required")
+    if identity.get("uapiAbi") != 1:
+        raise ValueError("unsupported UAPI identity")
+    for field in IDENTITY_FIELDS:
+        value = identity[field]
+        if field == "uapiAbi":
+            continue
+        if not isinstance(value, str) or not value:
+            raise ValueError(f"invalid enrollment identity: {field}")
+        if field in HASH_IDENTITY_FIELDS and not re.fullmatch(r"[0-9a-f]{64}", value):
+            raise ValueError(f"invalid enrollment digest: {field}")
+    if path.is_symlink() or (path.exists() and (not path.is_file() or path.stat().st_uid != 0 or
+                                                path.stat().st_gid != 0 or path.stat().st_mode & 0o777 != 0o600)):
+        raise ValueError("existing enrollment is not a root-owned 0600 real file")
+    record = {**identity, "schemaVersion": 1, "kind": "Experimental",
+              "administratorUid": administrator_uid, "administratorName": administrator_name,
+              "acceptedAt": now or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+              "acknowledgement": acknowledgement, "revoked": False}
+    atomic_json(path, record)
+    path.chmod(0o600)
+    return record
+
+
+def revoke_enrollment(path: pathlib.Path, administrator_uid: int,
+                      administrator_name: str, now: str | None = None) -> dict:
+    if administrator_uid != 0:
+        raise PermissionError("root administrator required")
+    if path.is_symlink() or not path.is_file() or path.stat().st_mode & 0o777 != 0o600:
+        raise ValueError("enrollment record is absent or unsafe")
+    record = json.loads(path.read_text())
+    record.update({"revoked": True, "revokedByUid": administrator_uid,
+                   "revokedByName": administrator_name,
+                   "revokedAt": now or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")})
+    atomic_json(path, record)
+    path.chmod(0o600)
+    return record
 
 
 def command_runner(args: list[str]) -> str:
@@ -270,7 +389,9 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                          (source / "scripts/rp1-gpclk-diagnostics.py", libexec / "rp1-gpclk-diagnostics", 0o755),
                          (model_source, release_data / "installation-model-v1.json", 0o644),
                          (source / "release/overlay-contract-v1.json",
-                          release_data / "overlay-contract-v1.json", 0o644))
+                          release_data / "overlay-contract-v1.json", 0o644),
+                         (source / "release/permissions-enrollment-policy-v1.json",
+                          release_data / "permissions-enrollment-policy-v1.json", 0o644))
         for origin, destination, mode in package_files:
             if not origin.is_file() or origin.is_symlink() or destination.exists() or destination.is_symlink():
                 raise ValueError(f"unsafe or existing package file: {destination}")
@@ -349,7 +470,9 @@ def recover(state_path: pathlib.Path, runner: Callable[[list[str]], str] = comma
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=("plan", "route-change-plan", "install", "status", "recover"))
+    parser.add_argument("action", choices=("plan", "route-change-plan", "permission-status",
+                                            "enroll-experimental", "revoke-enrollment",
+                                            "install", "status", "recover"))
     parser.add_argument("--release-directory", type=pathlib.Path)
     parser.add_argument("--route", choices=tuple(ROUTES), default="gpio4")
     parser.add_argument("--signing-required", action="store_true")
@@ -357,6 +480,7 @@ def main() -> None:
     parser.add_argument("--certificate", type=pathlib.Path)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--snapshot", type=pathlib.Path)
+    parser.add_argument("--acknowledgement")
     args = parser.parse_args()
     state = pathlib.Path("/var/lib/rp1-gpclk-dkms/transaction.json")
     if args.action == "plan":
@@ -365,6 +489,32 @@ def main() -> None:
         if args.snapshot is None or args.snapshot.is_symlink() or not args.snapshot.is_file():
             raise SystemExit("--snapshot must name a real snapshot file")
         result = route_change_plan(json.loads(args.snapshot.read_text()), args.route)
+    elif args.action == "permission-status":
+        if args.snapshot is None or args.snapshot.is_symlink() or not args.snapshot.is_file():
+            raise SystemExit("--snapshot must name a real snapshot file")
+        enrollment_path = pathlib.Path("/etc/rp1-gpclk-dkms/enrollment.json")
+        enrollment = None
+        if enrollment_path.exists():
+            if (enrollment_path.is_symlink() or not enrollment_path.is_file() or
+                    enrollment_path.stat().st_uid != 0 or enrollment_path.stat().st_gid != 0 or
+                    enrollment_path.stat().st_mode & 0o777 != 0o600):
+                raise SystemExit("enrollment file ownership or mode is unsafe")
+            enrollment = json.loads(enrollment_path.read_text())
+        result = evaluate_permission_state(json.loads(args.snapshot.read_text()), enrollment)
+    elif args.action == "enroll-experimental":
+        if not args.execute or os.geteuid() != 0:
+            raise SystemExit("Experimental enrollment requires root and --execute")
+        if args.snapshot is None or args.snapshot.is_symlink() or not args.snapshot.is_file():
+            raise SystemExit("--snapshot must name a real identity file")
+        result = write_experimental_enrollment(
+            pathlib.Path("/etc/rp1-gpclk-dkms/enrollment.json"),
+            json.loads(args.snapshot.read_text()), args.acknowledgement or "",
+            os.geteuid(), pwd.getpwuid(os.geteuid()).pw_name)
+    elif args.action == "revoke-enrollment":
+        if not args.execute or os.geteuid() != 0:
+            raise SystemExit("enrollment revocation requires root and --execute")
+        result = revoke_enrollment(pathlib.Path("/etc/rp1-gpclk-dkms/enrollment.json"),
+                                   os.geteuid(), pwd.getpwuid(os.geteuid()).pw_name)
     elif args.action == "status":
         result = json.loads(state.read_text()) if state.is_file() and not state.is_symlink() else {"status": "absent", "readOnly": True}
     elif args.action == "recover":

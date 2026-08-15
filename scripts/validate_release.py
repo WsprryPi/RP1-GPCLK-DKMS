@@ -89,6 +89,7 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
                     "scripts/rp1-gpclk-lifecycle.sh", "scripts/rp1-gpclk-diagnostics.py", "docs/operator/signing.md",
                     "scripts/rp1-gpclk-admin.py", "release/installation-model-v1.json",
                     "release/overlay-contract-v1.json",
+                    "release/permissions-enrollment-policy-v1.json",
                     f"docs/releases/{layout['release']}-security.md", f"docs/releases/{layout['release']}-behavior.md",
                     "overlays/rp1-gpclk-gpio4.dts", "overlays/rp1-gpclk-gpio20.dts"}
         if not required <= set(names):

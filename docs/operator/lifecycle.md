@@ -45,6 +45,23 @@ Phase 5.2 packages the module for representative lifecycle validation. It does
 not make an operator release, enable output, or qualify another target. The
 only supported lifecycle gate in this phase is `live_output=0`.
 
+## Permissions, enrollment, and live eligibility
+
+`release/permissions-enrollment-policy-v1.json` freezes five independent
+states: installed, available, enrolled, live eligible, and active. The device
+node remains a root-owned `0600` character device. No udev group grant or other
+non-root shortcut is installed; such access requires a separate reviewed
+authorization design.
+
+Experimental enrollment is an explicit root-administrator record for one exact
+release, UAPI, module, kernel, DT, firmware, overlay, signer, compatibility
+manifest entry, and route. Any identity change makes it stale, and revocation
+is explicit and durable. A previous custom-kernel installation is not an
+enrollment source. Qualified identities do not require Experimental-risk
+acceptance, but still require deliberate route selection and ordinary operator
+authorization. Enrollment, availability, and live eligibility do not acquire
+the device; active means exactly one current owner.
+
 ## Preconditions
 
 Use a stock Raspberry Pi kernel, its exact running-kernel headers, DKMS,
