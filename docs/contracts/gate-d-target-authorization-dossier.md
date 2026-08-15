@@ -7,12 +7,12 @@
 On 2026-08-15 the operator granted the exact execution release requested below.
 The first authorized read-only target preflight found incomplete command-plan
 coverage. The offline blocker-resolution slice subsequently bound a validated
-38-attempt target-operation plan, exact execution-tool identities, and a
-digest-guarded reversible stock-kernel selector. All ten required-executable
-rows are again `ready`; the execution instance reports `inputsReady: true`,
-`targetExecutionApproved: true`, and `executionReady: true`. Its resealed
-SHA-256 is
-`fa0f70a3c2920c4dc18bf304979636d87e3d05ec52b54acd2fc4e6caa31b0b08`.
+38-attempt semantic plan and a reversible stock-kernel selector. Authorized
+pre-execution validation then proved that the plan has no executable command
+arrays or per-attempt operation documents. All ten required-executable rows are
+therefore `blocked-input-required`; the instance reports `inputsReady: false`,
+`targetExecutionApproved: true`, and `executionReady: false`. Its SHA-256 is
+`31c589fbf6482228565a82f396e510f01b2e80b15be325243682b8237a134703`.
 
 The five `deferred-environmental` rows remain unpassed and continue to block
 complete environmental coverage, publication, and qualification. They are not
@@ -54,6 +54,5 @@ upgrade, unreviewed persistent boot change, unrelated cleanup, and fallback to
 another physical backend remain prohibited.
 
 The operator's 2026-08-15 authorization makes this dossier the exact boundary
-for the required-executable run. The corrected plan is
-`release/gate-d-target-operation-plan-v1.json`; do not fill any future identity
-or per-attempt plan difference with ad-hoc target commands.
+for the required-executable run. The current target plan is semantic, not
+executable; do not fill the absent per-attempt documents with ad-hoc commands.

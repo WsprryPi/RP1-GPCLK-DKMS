@@ -156,10 +156,10 @@ and the validated `wspr5-rescue` SD-before-NVMe recovery path. Successor
 keeps five unavailable environmental rows explicitly deferred rather than
 simulated. Read-only route discovery plus the exact predecessor/current,
 predecessor/prior, and successor/prior builds supply all ten
-required-executable inputs. The hash-bound target-operation plan and fresh
-authorization now make `inputsReady: true` and `executionReady: true`.
-Deferred rows continue to block complete environmental coverage and
-publication.
+required-executable identities, but the target plan lacks executable command
+arrays and per-attempt operation documents. `inputsReady: false` and
+`executionReady: false`; fresh authorization remains recorded. Deferred rows
+also continue to block complete environmental coverage and publication.
 
 `inputsReady` and `executionReady` are separate. The former covers exact
 required-executable inputs; the latter additionally requires a fresh explicit

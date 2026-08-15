@@ -2,18 +2,18 @@
 
 # Gate D target runbook
 
-## Current execution release
+## Current execution hard stop
 
-The operator granted the exact target-execution authority on 2026-08-15. The
-offline blocker-resolution slice now binds the complete 38-attempt target plan
-and exact execution-tool identities. This command must pass before any target
-mutation is prepared:
+The operator granted exact target-execution authority on 2026-08-15, but
+authorized pre-execution validation found no executable command arrays or
+per-attempt operation documents behind the 38 semantic attempts. This command
+must fail before any target mutation is prepared:
 
 ```sh
 gate-d-instance release/gate-d-execution-instance-v1.json --require-ready
 ```
 
-Do not execute any row if that command fails. `gate-d-lifecycle` requires every
+Do not execute any row while that command fails. `gate-d-lifecycle` requires every
 `required-executable` row in the frozen 15-row instance to be ready. The five
 `deferred-environmental` rows remain unpassed and continue to block complete
 environmental coverage and publication; simulations cannot satisfy them.
