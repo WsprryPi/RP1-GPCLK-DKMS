@@ -73,6 +73,15 @@ production implementations exist; `LIVE_ELIGIBLE` additionally requires the
 parameter and an exact allowed compatibility identity. Phase 4A does not grant
 that identity.
 
+Phase 4B target execution corrected one Phase 2C assumption: RP1 DW AXI DMA
+expects the validated CPU-physical peripheral address in the slave
+configuration and performs its own RP1 bus translation. `dma_map_resource()`
+returned an invalid all-ones destination on the exact target. The live path
+therefore passes the DT-derived CPU-physical `DIV_FRAC` address directly to
+DMAengine, with checked representability, and never pretranslates it. This
+supersedes the mapping mechanism in Decision 0004 without changing the
+DT-derived ownership or containment rules.
+
 ## Divider and finite-work constraints
 
 All tones in one request must share the reviewed integer divider and differ

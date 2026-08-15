@@ -24,7 +24,8 @@ required = {
     "provider resource translation": "of_address_to_resource",
     "rate exclusion": "clk_rate_exclusive_get",
     "DMA channel": "dma_request_chan(device->dev, \"tx\")",
-    "DMA resource translation": "dma_map_resource",
+    "DMA CPU-physical peripheral address":
+        "device->divider_dma = (dma_addr_t)device->divider_phys",
     "pinctrl states": "pinctrl_lookup_state",
     "dead-open guard": "rp1_gpclk_lifetime_get_live(device)",
 }
@@ -57,8 +58,8 @@ for token in ("static bool live_output;",
         raise SystemExit(f"Phase 4A output-inhibit gate is missing {token}")
 
 release = api[api.index("void rp1_gpclk_resources_release"):]
-ordered = ["dma_unmap_resource", "dma_release_channel",
-           "pinctrl_put", "clk_rate_exclusive_put", "clk_put"]
+ordered = ["dma_release_channel", "pinctrl_put",
+           "clk_rate_exclusive_put", "clk_put"]
 positions = [release.index(token) for token in ordered]
 if positions != sorted(positions):
     raise SystemExit("resources are not released in reverse acquisition order")

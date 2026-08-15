@@ -5,6 +5,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
 #include <linux/jiffies.h>
+#include <linux/iopoll.h>
 #include <linux/kthread.h>
 #include <linux/math64.h>
 #include <linux/ktime.h>
@@ -141,7 +142,8 @@ static int rp1_gpclk_wait_dma(struct rp1_gpclk_device *device,
 		device->dma_submitted = false;
 		return -ETIMEDOUT;
 	}
-	dmaengine_synchronize(device->dma_chan);
+	/* RP1 DMA must reach a terminated channel state before direction change. */
+	dmaengine_terminate_sync(device->dma_chan);
 	device->dma_submitted = false;
 	return 0;
 }
@@ -160,11 +162,29 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 					      plan->drive_ma);
 	if (ret)
 		return ret;
-	if (readl(device->tick_dma0 + RP1_GPCLK_TICKS_DMA0_CTRL) ||
-	    readl(device->dma_tick0 + RP1_GPCLK_DMA_TICK0_EN))
+	device->initial_tick_dma0_ctrl =
+		readl(device->tick_dma0 + RP1_GPCLK_TICKS_DMA0_CTRL);
+	device->initial_tick_dma0_cycles =
+		readl(device->tick_dma0 + RP1_GPCLK_TICKS_DMA0_CYCLES);
+	device->initial_dma_tick0_en =
+		readl(device->dma_tick0 + RP1_GPCLK_DMA_TICK0_EN);
+	device->initial_dma_tick0_ctrl =
+		readl(device->dma_tick0 + RP1_GPCLK_DMA_TICK0_CTRL);
+	device->tick_state_captured = true;
+	if (device->initial_tick_dma0_ctrl || device->initial_dma_tick0_en) {
+		dev_err(device->dev,
+			"phase4b startup conflict: tick=%08x/%08x/%08x/%08x\n",
+			device->initial_tick_dma0_ctrl,
+			device->initial_tick_dma0_cycles,
+			device->initial_dma_tick0_en,
+			device->initial_dma_tick0_ctrl);
 		return -EBUSY;
-	if (__clk_is_enabled(device->clock))
+	}
+	if (__clk_is_enabled(device->clock)) {
+		dev_err(device->dev,
+			"phase4b startup conflict: common clock reports hardware enabled\n");
 		return -EBUSY;
+	}
 	device->initial_rate = clk_get_rate(device->clock);
 	parent = clk_get_parent(device->clock);
 	if (!parent)
@@ -225,6 +245,37 @@ static int rp1_gpclk_machine_terminate_dma(void *argument)
 		dmaengine_terminate_sync(device->dma_chan);
 		device->dma_submitted = false;
 	}
+	if (device->tick_state_captured) {
+		__u32 observed;
+		int ret;
+
+		writel(device->initial_tick_dma0_cycles,
+		       device->tick_dma0 + RP1_GPCLK_TICKS_DMA0_CYCLES);
+		writel(device->initial_dma_tick0_ctrl,
+		       device->dma_tick0 + RP1_GPCLK_DMA_TICK0_CTRL);
+		writel(device->initial_dma_tick0_en,
+		       device->dma_tick0 + RP1_GPCLK_DMA_TICK0_EN);
+		writel(device->initial_tick_dma0_ctrl,
+		       device->tick_dma0 + RP1_GPCLK_TICKS_DMA0_CTRL);
+		ret = readl_poll_timeout(
+			device->tick_dma0 + RP1_GPCLK_TICKS_DMA0_CTRL, observed,
+			observed == device->initial_tick_dma0_ctrl, 1, 1000);
+		ret = ret ?: readl_poll_timeout(
+			device->tick_dma0 + RP1_GPCLK_TICKS_DMA0_CYCLES, observed,
+			observed == device->initial_tick_dma0_cycles, 1, 1000);
+		ret = ret ?: readl_poll_timeout(
+			device->dma_tick0 + RP1_GPCLK_DMA_TICK0_EN, observed,
+			observed == device->initial_dma_tick0_en, 1, 1000);
+		ret = ret ?: readl_poll_timeout(
+			device->dma_tick0 + RP1_GPCLK_DMA_TICK0_CTRL, observed,
+			observed == device->initial_dma_tick0_ctrl, 1, 1000);
+		if (ret) {
+			dev_err(device->dev,
+				"phase4b cleanup: tick register restoration verification failed\n");
+			return ret;
+		}
+		device->tick_state_captured = false;
+	}
 	return 0;
 }
 
@@ -260,6 +311,9 @@ static int rp1_gpclk_machine_select_safe(void *argument)
 
 	if (device->pins_active_selected)
 		ret = pinctrl_select_state(device->pinctrl, device->pins_safe);
+	if (ret)
+		dev_err(device->dev, "phase4b cleanup: safe pinctrl failed: %d\n",
+			ret);
 	device->pins_active_selected = false;
 	return ret;
 }
@@ -271,7 +325,16 @@ static int rp1_gpclk_machine_restore_rate(void *argument)
 	unsigned long initial_rate = device->initial_rate;
 
 	device->initial_rate = 0;
-	return initial_rate ? clk_set_rate(device->clock, initial_rate) : 0;
+	if (initial_rate) {
+		int ret = clk_set_rate(device->clock, initial_rate);
+
+		if (ret)
+			dev_err(device->dev,
+				"phase4b cleanup: clock rate restore to %lu failed: %d current=%lu\n",
+				initial_rate, ret, clk_get_rate(device->clock));
+		return ret;
+	}
+	return 0;
 }
 
 static const struct rp1_gpclk_execution_ops rp1_gpclk_machine_ops = {
@@ -312,13 +375,17 @@ static int rp1_gpclk_readback(struct rp1_gpclk_device *device,
 	int ret;
 
 	*word = 0;
+	device->readback_expected = expected;
 	ret = rp1_gpclk_configure_dma(device, word_dma, sizeof(*word),
 				      DMA_DEV_TO_MEM);
 	if (ret)
 		return ret;
 	ret = rp1_gpclk_wait_dma(device, NSEC_PER_MSEC);
-	if (ret)
+	if (ret) {
+		device->readback_observed = *word;
 		return ret;
+	}
+	device->readback_observed = *word;
 	return *word == expected ? 0 : -EIO;
 }
 
@@ -488,8 +555,11 @@ static int rp1_gpclk_execution_thread(void *argument)
 			}
 		}
 		if (!enabled) {
-			rp1_gpclk_set_enabled(device, false);
-			ret = rp1_gpclk_sleep_or_stop(device, duration);
+			ret = rp1_gpclk_set_enabled(device, false);
+			if (!ret)
+				ret = rp1_gpclk_machine_select_safe(&context);
+			if (!ret)
+				ret = rp1_gpclk_sleep_or_stop(device, duration);
 		} else if (!writes) {
 			ret = -ERANGE;
 		} else {
@@ -527,8 +597,21 @@ static int rp1_gpclk_execution_thread(void *argument)
 			device->execution_lease, device->execution_generation);
 		mutex_unlock(&device->lock);
 	}
+	WRITE_ONCE(device->execution_finished_ns, ktime_get_boottime_ns());
+	dev_info(device->dev,
+		 "phase4b generation=%llu mode=%u start_ns=%llu finish_ns=%llu expected_div_frac=0x%08x observed_div_frac=0x%08x tick_initial=%08x/%08x/%08x/%08x tick_final=%08x/%08x/%08x/%08x cleanup=%d result=%d\n",
+		 device->execution_generation, plan->mode,
+		 device->execution_started_ns, device->execution_finished_ns,
+		 device->readback_expected, device->readback_observed,
+		 device->initial_tick_dma0_ctrl, device->initial_tick_dma0_cycles,
+		 device->initial_dma_tick0_en, device->initial_dma_tick0_ctrl,
+		 readl(device->tick_dma0 + RP1_GPCLK_TICKS_DMA0_CTRL),
+		 readl(device->tick_dma0 + RP1_GPCLK_TICKS_DMA0_CYCLES),
+		 readl(device->dma_tick0 + RP1_GPCLK_DMA_TICK0_EN),
+		 readl(device->dma_tick0 + RP1_GPCLK_DMA_TICK0_CTRL),
+		 cleanup_ret, ret);
 	dma_free_coherent(dma_device, maximum * sizeof(*words), words, words_dma);
-	kfree(plan);
+	kfree_sensitive(plan);
 	device->execution_plan = NULL;
 	WRITE_ONCE(device->worker, NULL);
 	complete_all(&device->execution_done);
@@ -547,7 +630,7 @@ fail:
 fail_without_buffer:
 	rp1_gpclk_publish_failure(device, ret, false);
 release_plan:
-	kfree(plan);
+	kfree_sensitive(plan);
 	device->execution_plan = NULL;
 	WRITE_ONCE(device->worker, NULL);
 	complete_all(&device->execution_done);
@@ -584,6 +667,10 @@ static int rp1_gpclk_start_thread(struct rp1_gpclk_device *device,
 	device->execution_lease = lease;
 	device->execution_generation = generation;
 	device->execution_started_ns = 0;
+	device->execution_finished_ns = 0;
+	device->readback_expected = 0;
+	device->readback_observed = 0;
+	device->tick_state_captured = false;
 	device->execution_total_ns = plan->mode == RP1_GPCLK_MODE_WSPR ?
 		plan->expected_frame_duration_ns : 0;
 	if (plan->mode != RP1_GPCLK_MODE_WSPR) {

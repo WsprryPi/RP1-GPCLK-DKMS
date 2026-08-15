@@ -30,9 +30,8 @@ forbidden_source = {
 for label, pattern in forbidden_source.items():
     if re.search(pattern, SOURCE):
         raise SystemExit(f"Phase 2E contains forbidden {label}")
-if "dma_map_resource(dma_device" not in SOURCE or \
-        "dma_unmap_resource(device->dma_chan->device->dev" not in SOURCE:
-    raise SystemExit("DMA resource mapping does not use the allocated controller device")
+if "device->divider_dma = (dma_addr_t)device->divider_phys" not in SOURCE:
+    raise SystemExit("DMAengine was not given the validated CPU-physical peripheral address")
 for token in ("rp1_gpclk_endpoint_owner", "endpoint resource ownership conflict",
               "rp1_gpclk_endpoint_release(device)",
               "atomic_set_release(&rp1_gpclk_endpoint_owner, 0)"):

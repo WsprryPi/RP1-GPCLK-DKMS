@@ -21,7 +21,6 @@ struct rp1_gpclk_device {
 	bool misc_registered;
 	bool endpoint_claimed;
 	bool rate_exclusive;
-	bool divider_mapped;
 	void __iomem *tick_dma0;
 	void __iomem *dma_tick0;
 	struct miscdevice miscdev;
@@ -54,7 +53,16 @@ struct rp1_gpclk_device {
 	bool clock_prepared;
 	bool clock_enabled;
 	bool pins_active_selected;
+	bool live_eligible;
+	bool tick_state_captured;
 	unsigned long initial_rate;
+	__u32 initial_tick_dma0_ctrl;
+	__u32 initial_tick_dma0_cycles;
+	__u32 initial_dma_tick0_en;
+	__u32 initial_dma_tick0_ctrl;
+	__u32 readback_expected;
+	__u32 readback_observed;
+	__u64 execution_finished_ns;
 	__u32 route;
 	struct rp1_gpclk_core core;
 };

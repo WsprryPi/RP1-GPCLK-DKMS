@@ -25,7 +25,7 @@ for function in ("rp1_gpclk_submit_wspr", "rp1_gpclk_submit_events"):
     start = DISPATCH.index(f"static long {function}")
     end = DISPATCH.index("\n}\n", start)
     body = DISPATCH[start:end]
-    gate = body.index("!rp1_gpclk_live_output_enabled()")
+    gate = body.index("!rp1_gpclk_live_output_eligible(context->device)")
     copy = body.index("memdup_user")
     execute = body.index("rp1_gpclk_execution_submit")
     if not gate < copy < execute:
@@ -43,7 +43,6 @@ for token in (
     "rp1_gpclk_execution_fill_words",
     "rp1_gpclk_execution_event_writes",
     "dmaengine_terminate_sync",
-    "dmaengine_synchronize",
     "pinctrl_select_state(device->pinctrl, device->pins_active)",
     "pinctrl_select_state(device->pinctrl, device->pins_safe)",
     "clk_prepare(device->clock)",
@@ -52,6 +51,10 @@ for token in (
     "clk_unprepare(device->clock)",
     "rp1_gpclk_core_cleanup_failed",
     "complete_all(&device->execution_done)",
+    "device->initial_tick_dma0_cycles",
+    "device->initial_dma_tick0_ctrl",
+    "device->readback_observed",
+    "kfree_sensitive(plan)",
 ):
     if token not in EXECUTION:
         raise SystemExit(f"live execution missing {token}")
@@ -65,7 +68,7 @@ for token in ("RP1_GPCLK_TICK_DMA0_OFFSET 0x174024U",
               "RP1_GPCLK_DMA_TICK0_OFFSET 0x158000U",
               "check_add_overflow(device->rp1_phys_start",
               "resource_overlaps(cycles, tick)",
-              "DMA_BIDIRECTIONAL"):
+              "device->divider_dma = (dma_addr_t)device->divider_phys"):
     if token not in POLICY + KERNEL_API:
         raise SystemExit(f"DT-derived pacing resource check missing {token}")
 

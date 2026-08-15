@@ -122,9 +122,9 @@ int main(int argc, char **argv)
 		    query.supported_drive_ma_mask !=
 			RP1_GPCLK_DRIVE_SUPPORT_2_MA ||
 		    strcmp(query.module_id, "rp1-gpclk-dkms") ||
-		    strcmp(query.build_id, "0.0.0-phase4a") ||
+		    strcmp(query.build_id, "0.0.0-phase4b-gpio4") ||
 		    strcmp(query.compatibility_id,
-			   "phase4a-stock-kernel-live-path")) {
+			   "phase4b-wspr5-gpio4-6.18.34")) {
 			fprintf(stderr, "Phase 4A query identity mismatch\n");
 			return EXIT_FAILURE;
 		}

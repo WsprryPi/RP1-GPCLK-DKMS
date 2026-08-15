@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only OR MIT
 #include <linux/clk.h>
-#include <linux/dma-mapping.h>
 #include <linux/dmaengine.h>
 #include <linux/err.h>
 #include <linux/of_address.h>
@@ -119,7 +118,6 @@ put_clock:
 
 int rp1_gpclk_dma_acquire(struct rp1_gpclk_device *device)
 {
-	struct device *dma_device;
 	int ret;
 
 	device->dma_chan = dma_request_chan(device->dev, "tx");
@@ -133,17 +131,14 @@ int rp1_gpclk_dma_acquire(struct rp1_gpclk_device *device)
 		device->dma_chan = NULL;
 		return -ENODEV;
 	}
-	dma_device = device->dma_chan->device->dev;
-	device->divider_dma = dma_map_resource(dma_device,
-		device->divider_phys, RP1_GPCLK_REGISTER_BYTES,
-		DMA_BIDIRECTIONAL, 0);
-	if (dma_mapping_error(dma_device, device->divider_dma)) {
+	/* DW AXI DMA translates this CPU-physical peripheral address itself. */
+	device->divider_dma = (dma_addr_t)device->divider_phys;
+	if ((phys_addr_t)device->divider_dma != device->divider_phys) {
 		device->divider_dma = 0;
 		dma_release_channel(device->dma_chan);
 		device->dma_chan = NULL;
-		return -EIO;
+		return -ERANGE;
 	}
-	device->divider_mapped = true;
 	return 0;
 }
 
@@ -216,16 +211,11 @@ void rp1_gpclk_quiesce(struct rp1_gpclk_device *device)
 
 void rp1_gpclk_resources_release(struct rp1_gpclk_device *device)
 {
-	if (device->divider_mapped) {
-		dma_unmap_resource(device->dma_chan->device->dev, device->divider_dma,
-				   RP1_GPCLK_REGISTER_BYTES, DMA_BIDIRECTIONAL, 0);
-		device->divider_mapped = false;
-		device->divider_dma = 0;
-	}
 	if (device->dma_chan) {
 		dma_release_channel(device->dma_chan);
 		device->dma_chan = NULL;
 	}
+	device->divider_dma = 0;
 	if (device->pinctrl && !IS_ERR(device->pinctrl)) {
 		pinctrl_put(device->pinctrl);
 		device->pinctrl = NULL;

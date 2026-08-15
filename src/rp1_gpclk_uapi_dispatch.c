@@ -91,9 +91,9 @@ static long rp1_gpclk_query(struct rp1_gpclk_file *context, void __user *user)
 	request.compatibility_reason =
 		RP1_GPCLK_COMPAT_REASON_ADMIN_ENROLLMENT_REQUIRED;
 	request.capabilities = RP1_GPCLK_PHASE4A_CAPABILITIES;
-	if (rp1_gpclk_live_output_enabled())
+	if (rp1_gpclk_live_output_eligible(context->device))
 		request.capabilities |= RP1_GPCLK_CAP_LIVE_ELIGIBLE;
-	if (rp1_gpclk_live_output_enabled())
+	if (rp1_gpclk_live_output_eligible(context->device))
 		request.compatibility_state = RP1_GPCLK_COMPAT_EXPERIMENTAL;
 	request.max_tones = RP1_GPCLK_MAX_TONES;
 	request.wspr_symbols = RP1_GPCLK_WSPR_SYMBOLS;
@@ -105,7 +105,7 @@ static long rp1_gpclk_query(struct rp1_gpclk_file *context, void __user *user)
 	strscpy(request.module_id, "rp1-gpclk-dkms", sizeof(request.module_id));
 	strscpy(request.build_id, RP1_GPCLK_MODULE_VERSION,
 		sizeof(request.build_id));
-	strscpy(request.compatibility_id, "phase4a-stock-kernel-live-path",
+	strscpy(request.compatibility_id, "phase4b-wspr5-gpio4-6.18.34",
 		sizeof(request.compatibility_id));
 	if (copy_to_user(user, &request, sizeof(request)))
 		return -EFAULT;
@@ -125,7 +125,7 @@ static long rp1_gpclk_acquire(struct rp1_gpclk_file *context, void __user *user)
 		!rp1_gpclk_reserved_zero(request.reserved, 4) ||
 		request.lease_id != 0 ||
 		(request.required_capabilities &
-		 ~(available | (rp1_gpclk_live_output_enabled() ?
+		 ~(available | (rp1_gpclk_live_output_eligible(context->device) ?
 		 RP1_GPCLK_CAP_LIVE_ELIGIBLE : 0))) != 0)
 		return -EINVAL;
 	mutex_lock(&context->device->lock);
@@ -175,7 +175,7 @@ static long rp1_gpclk_submit_wspr(struct rp1_gpclk_file *context,
 	    request.reserved0 != 0 || request.reserved1 != 0 ||
 	    !rp1_gpclk_reserved_zero(request.reserved, 4))
 		return -EINVAL;
-	if (!rp1_gpclk_live_output_enabled())
+	if (!rp1_gpclk_live_output_eligible(context->device))
 		return -EACCES;
 	if (request.tone_count != RP1_GPCLK_MAX_TONES ||
 	    request.symbol_count != RP1_GPCLK_WSPR_SYMBOLS)
@@ -229,7 +229,7 @@ static long rp1_gpclk_submit_events(struct rp1_gpclk_file *context,
 	    request.reserved0 != 0 || request.reserved1 != 0 ||
 	    !rp1_gpclk_reserved_zero(request.reserved, 4))
 		return -EINVAL;
-	if (!rp1_gpclk_live_output_enabled())
+	if (!rp1_gpclk_live_output_eligible(context->device))
 		return -EACCES;
 	if (!request.tone_count || request.tone_count > RP1_GPCLK_MAX_TONES ||
 	    !request.event_count || request.event_count > RP1_GPCLK_MAX_EVENTS)
