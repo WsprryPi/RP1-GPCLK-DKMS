@@ -336,6 +336,27 @@ controlling compatibility boundary; headers, kernel configuration, exported
 symbols, compiler expectations, architecture, vermagic, module ABI, signing,
 device tree, firmware, and runtime behavior are.
 
+The packaging gate requires the predeclared, machine-readable representative
+system matrix in
+[`release/representative-system-matrix-v1.json`](../../release/representative-system-matrix-v1.json).
+One Pi and one kernel cannot close it. Before target testing, the matrix must
+name at least: the current supported Raspberry Pi OS kernel; a prior supported
+kernel and downgrade; a newer unknown kernel and demotion; signing not enforced;
+signing enforced with an enrolled key; deliberate build failure; deliberate
+signature rejection; missing headers; an overlay or resource conflict; an
+interrupted upgrade; a stale manifest; corrupted archive and route-specific
+DTBO attempts; removal while inactive; refused removal while open or active;
+and reinstall after proved complete removal.
+
+Every row freezes the system selection, preconditions, injection, exact
+compatibility state and reason, live gate, transaction state, cleanup result,
+prior-version retention, required diagnostics, allowed changes, final state,
+and residue audit. Missing or indeterminate evidence, an unexplained delta, or
+cleanup ambiguity fails the row. Rows are independent: evidence for one
+kernel, signing policy, route, failure, or lifecycle transition cannot satisfy
+another. All representative lifecycle rows remain output-disabled and cannot
+create `Qualified` or RF evidence.
+
 Kernel updates may trigger a rebuild. Build success does not preserve
 qualification automatically. Build, signing, or load failure leaves the module
 unavailable and must not select another physical backend.

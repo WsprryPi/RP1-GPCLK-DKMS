@@ -377,7 +377,10 @@ attempt. Before mutation, record target access/recovery procedures and capture:
 - hashes and metadata for every file the transaction may alter, plus the exact
   baseline and expected final state.
 
-Use a predeclared representative matrix that includes, where authorized:
+Use the predeclared, machine-readable
+`release/representative-system-matrix-v1.json`. One Pi and one kernel are
+insufficient for the packaging gate. The matrix is frozen before target
+testing and includes all of these required rows:
 
 | Class | Required rows |
 | --- | --- |
@@ -389,9 +392,20 @@ Use a predeclared representative matrix that includes, where authorized:
 | Conflicts | pre-existing DKMS version, overlay/boot-marker conflict, busy/open endpoint, unrelated configuration and key ownership |
 | Removal | uninstall one version, unregister all test versions, complete removal, repeated removal, residue audit |
 
-For each row define the expected compatibility state/reason, live eligibility,
-files and system state allowed to change, maximum duration, failure injection,
-rollback/recovery result, cleanup proof, and evidence identity before execution.
+The required stable rows additionally make explicit: current supported
+Raspberry Pi OS kernel; prior supported kernel for downgrade; newer unknown
+kernel for demotion; signing not enforced; signing enforced with an enrolled
+key; deliberately failed build; deliberately rejected signature; missing
+headers; conflicting overlay or resource; interrupted upgrade; stale manifest;
+corrupted archive plus each route-specific DTBO; removal while inactive;
+attempted removal while open or active; and reinstall after proved complete
+removal.
+
+For each row define the system selection, preconditions, failure injection,
+expected compatibility state/reason, live eligibility, transaction state,
+retained prior version, cleanup result, diagnostics, files and system state
+allowed to change, final state, residue audit, maximum duration, and evidence
+identity before execution.
 Stop on an unexplained delta, identity mismatch, unclassified kernel diagnostic,
 unsafe state, cleanup ambiguity, or exceeded deadline.
 

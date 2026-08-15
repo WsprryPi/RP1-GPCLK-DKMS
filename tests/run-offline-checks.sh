@@ -25,6 +25,7 @@ python3 "$repo_dir/tests/check_phase5_6_compatibility.py"
 python3 "$repo_dir/tests/check_phase5_7_signing.py"
 python3 "$repo_dir/tests/check_phase5_8_diagnostics.py"
 python3 "$repo_dir/tests/check_phase5_9_lifecycle.py"
+python3 "$repo_dir/tests/check_phase5_10_matrix.py"
 python3 "$repo_dir/tests/test_phase2e_dmesg.py"
 python3 "$repo_dir/tests/check_doc_links.py"
 if command -v shellcheck >/dev/null 2>&1; then
