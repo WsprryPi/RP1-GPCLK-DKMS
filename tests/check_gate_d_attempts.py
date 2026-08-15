@@ -23,6 +23,9 @@ assert len({document["operationId"] for document in documents}) == 38
 assert len({document["evidenceDirectory"] for document in documents}) == 38
 assert sum(document["matrixRow"] == "interrupted-upgrade" for document in documents) == 15
 assert sum(document["matrixRow"] == "removal-open-or-active" for document in documents) == 4
+assert {document["inputs"]["candidateRelease"] for document in documents} == {"0.0.0-phase5.14"}
+assert {document["inputs"]["candidateArchiveSha256"] for document in documents} == {
+    "d0c17f2842716052bb49b1a4fc079d3d48a5674bae8610eee2ab9d17ac548bea"}
 
 checked = ROOT / "release/gate-d-attempts-v1"
 index = json.loads((checked / "index.json").read_text())

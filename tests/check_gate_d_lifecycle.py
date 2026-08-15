@@ -30,6 +30,10 @@ assert result["inputsReady"] is False
 assert len(result["blockedRows"]) == 10
 assert len(result["deferredRows"]) == 5
 assert result["environmentalCoverageComplete"] is False
+assert instance["candidate"]["release"] == "0.0.0-phase5.14"
+assert instance["authorization"]["targetExecutionApproved"] is False
+assert all(row["blockers"] == ["phase5.14-target-inputs-not-sealed"]
+           for row in instance["rows"] if row["status"] == "blocked-input-required")
 assert {row["id"] for row in instance["rows"] if row["status"] == "blocked-input-required"} == {
     "current-supported-kernel", "signing-not-enforced", "stale-manifest",
     "corrupted-archive-or-dtbo", "removal-inactive",

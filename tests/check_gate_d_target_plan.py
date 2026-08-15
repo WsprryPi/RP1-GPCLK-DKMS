@@ -16,12 +16,18 @@ plan = json.loads((ROOT / "release/gate-d-target-operation-plan-v1.json").read_t
 result = tool.validate(plan, verify_tools=False)
 assert result == {"valid": True, "readOnly": True, "rowCount": 10, "attemptCount": 38, "liveOutput": False}
 assert tool.validate(plan) == result
+assert plan["artifacts"]["successor"] == {
+    "version": "0.0.0-phase5.14",
+    "archive": "/home/pi/gate-d-inputs/phase5.14-7bbdfe1b5c83/rp1-gpclk-dkms-0.0.0-phase5.14.tar.gz",
+    "sha256": "d0c17f2842716052bb49b1a4fc079d3d48a5674bae8610eee2ab9d17ac548bea",
+}
 
 for mutation in (
     lambda value: value["invariants"].update(liveOutput=True),
     lambda value: value["boot"].update(tryboot="/boot/firmware/config.txt"),
     lambda value: value["services"].pop(),
     lambda value: value["tooling"]["bootSelector"].update(sha256="0" * 63),
+    lambda value: value["artifacts"]["successor"].update(version="0.0.0-phase5.2"),
     lambda value: value["rows"][4]["attempts"].pop(),
     lambda value: value["rows"][8]["actions"].remove("start-busy-injector-and-wait-ready"),
     lambda value: value["rows"][0]["actions"].append("live_output=1"),

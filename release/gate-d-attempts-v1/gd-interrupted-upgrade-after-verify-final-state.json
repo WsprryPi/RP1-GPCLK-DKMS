@@ -23,15 +23,15 @@
       "tryboot": "/boot/firmware/tryboot.txt",
       "trybootSha256": "c06b262332c145a0cfea594e020fced762a02eef269e4026fe84de71fb152b0a"
     },
-    "candidateArchive": "/home/pi/gate-c-evidence/phase5.13-61ee2ea592c2/rp1-gpclk-dkms-0.0.0-phase5.13.tar.gz",
-    "candidateArchiveSha256": "58cb12864b291380fefd31ea9a203f7ee308767790787e3fce0be352dab19b14",
-    "candidateRelease": "0.0.0-phase5.13",
-    "gpio20Dtbo": "/home/pi/gate-c-evidence/phase5.13-61ee2ea592c2/rp1-gpclk-gpio20.dtbo",
+    "candidateArchive": "/home/pi/gate-d-inputs/phase5.14-7bbdfe1b5c83/rp1-gpclk-dkms-0.0.0-phase5.14.tar.gz",
+    "candidateArchiveSha256": "d0c17f2842716052bb49b1a4fc079d3d48a5674bae8610eee2ab9d17ac548bea",
+    "candidateRelease": "0.0.0-phase5.14",
+    "gpio20Dtbo": "/home/pi/gate-d-inputs/phase5.14-7bbdfe1b5c83/rp1-gpclk-gpio20.dtbo",
     "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
-    "gpio4Dtbo": "/home/pi/gate-c-evidence/phase5.13-61ee2ea592c2/rp1-gpclk-gpio4.dtbo",
+    "gpio4Dtbo": "/home/pi/gate-d-inputs/phase5.14-7bbdfe1b5c83/rp1-gpclk-gpio4.dtbo",
     "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
-    "manifestSha256": "1817bbc56512c0b6adb77bb4d1341eae71615489fd511486229b699b62616eda",
-    "matrixPolicySha256": "f0373c626530b9e3d58a0f0c057d877c6693a7cb7df63de7a409e64b1b9245a8",
+    "manifestSha256": "2961272b62120a979d1f2483c87ca5df3dbca38acff9d29fac51b94e27a59587",
+    "matrixPolicySha256": "31cfe5c8c1756067b9ba8f8cc31823ba1ee33d95db5149f1877e439a6f40f994",
     "ownedPaths": [
       "/var/lib/rp1-gpclk-dkms/gate-d/staging/gd-interrupted-upgrade-after-verify-final-state",
       "/var/lib/rp1-gpclk-dkms/gate-d/interrupted-upgrade/gd-interrupted-upgrade-after-verify-final-state"
@@ -39,8 +39,8 @@
     "predecessorArchive": "/home/pi/gate-c-evidence/predecessor-6.18.34-a1aed8cbb3e7/rp1-gpclk-dkms-0.0.0-phase5.2.tar.gz",
     "predecessorArchiveSha256": "f334853d9c94d733ea22e9b7b93961a005e63442ec4efc4edbe2b12d6321aaf4",
     "predecessorVersion": "0.0.0-phase5.2",
-    "routeDecisionSha256": "15fce4c7f94bb916b8d0d55e29a488aa6ef1ec39b1411d8793266b24e9ad56ca",
-    "sourceCommit": "61ee2ea592c2551eca56fd0566fef43097b8c682",
+    "routeDecisionSha256": "a312f511d1d495a72d8796ff1f07f6da366122e3555aa8ea3c72e5000dc37697",
+    "sourceCommit": "7bbdfe1b5c83e1417e9dc5e0c4a7385136fd094a",
     "stagingDirectory": "/var/lib/rp1-gpclk-dkms/gate-d/staging/gd-interrupted-upgrade-after-verify-final-state",
     "subordinateLifecycle": {
       "checkpoint": "verify-final-state",
@@ -82,9 +82,9 @@
           "workActive": false
         },
         "schemaVersion": 1,
-        "successorVersion": "0.0.0-phase5.13",
+        "successorVersion": "0.0.0-phase5.14",
         "testVersions": [
-          "0.0.0-phase5.13"
+          "0.0.0-phase5.14"
         ]
       },
       "transition": {
@@ -125,13 +125,13 @@
           "workActive": false
         },
         "schemaVersion": 1,
-        "successorVersion": "0.0.0-phase5.13",
+        "successorVersion": "0.0.0-phase5.14",
         "testVersions": [
-          "0.0.0-phase5.13"
+          "0.0.0-phase5.14"
         ]
       }
     },
-    "targetPlanSha256": "8b50e9e1d957d4f87162caddfaa8760c041cffbc8eb3c527d010969f8289ab27",
+    "targetPlanSha256": "30db26b9008964d27265eff45a42f209527346c143e7a59dd4eaede52e4dda0a",
     "tooling": {
       "bootSelector": {
         "candidateArchiveMember": true,
@@ -334,7 +334,7 @@
         "argv": [
           "/usr/bin/dtoverlay",
           "-d",
-          "/home/pi/gate-c-evidence/phase5.13-61ee2ea592c2",
+          "/home/pi/gate-d-inputs/phase5.14-7bbdfe1b5c83",
           "rp1-gpclk-gpio4"
         ],
         "expectedStatus": [

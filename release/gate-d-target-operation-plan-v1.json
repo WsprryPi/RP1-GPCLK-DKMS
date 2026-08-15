@@ -30,7 +30,7 @@
   ],
   "artifacts": {
     "predecessor":{"version":"0.0.0-phase5.2","archive":"/home/pi/gate-c-evidence/predecessor-6.18.34-a1aed8cbb3e7/rp1-gpclk-dkms-0.0.0-phase5.2.tar.gz","sha256":"f334853d9c94d733ea22e9b7b93961a005e63442ec4efc4edbe2b12d6321aaf4"},
-    "successor":{"version":"0.0.0-phase5.13","archive":"/home/pi/gate-c-evidence/phase5.13-61ee2ea592c2/rp1-gpclk-dkms-0.0.0-phase5.13.tar.gz","sha256":"58cb12864b291380fefd31ea9a203f7ee308767790787e3fce0be352dab19b14"},
+    "successor":{"version":"0.0.0-phase5.14","archive":"/home/pi/gate-d-inputs/phase5.14-7bbdfe1b5c83/rp1-gpclk-dkms-0.0.0-phase5.14.tar.gz","sha256":"d0c17f2842716052bb49b1a4fc079d3d48a5674bae8610eee2ab9d17ac548bea"},
     "gpio4":{"sha256":"c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6"},
     "gpio20":{"sha256":"8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"}
   },

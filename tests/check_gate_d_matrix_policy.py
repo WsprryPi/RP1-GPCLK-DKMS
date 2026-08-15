@@ -56,11 +56,12 @@ assert boundary == {
     "outputDisabled": True,
     "positiveExecutionCompatibilityDecisionEstablished": True,
     "installationOrBindingAuthorized": False,
-    "readOnlyTargetIdentityRefreshRequired": False,
+    "readOnlyTargetIdentityRefreshRequired": True,
     "immediateFailClosedPreflightRequired": True,
 }
 assert route["candidate"]["representativeBuildManifestSha256"] == digest(
-    ROOT / "release/gate-c-representative-build-manifest-v1.json")
+    ROOT / "release/gate-c-representative-build-manifest-phase5.14-v1.json")
+assert route["candidate"]["release"] == policy["baseMatrixRelease"] == "0.0.0-phase5.14"
 assert route["evidence"]["routeIdentityEvidenceSha256"] == digest(
     ROOT / "docs/evidence/gate-d-wspr5-read-only-route-identity-20260815.md")
 assert instance["executionPolicy"]["matrixPolicySha256"] == digest(policy_path)

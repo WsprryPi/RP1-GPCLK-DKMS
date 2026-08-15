@@ -3,7 +3,7 @@
   "schemaVersion": 2,
   "kind": "gate-d-matrix-execution-policy",
   "policyId": "single-pi5-execution-with-deferred-environmental-coverage",
-  "baseMatrixRelease": "0.0.0-phase5.13",
+  "baseMatrixRelease": "0.0.0-phase5.14",
   "executionReadinessRule": "Every required-executable row must be ready; deferred-environmental rows do not authorize execution and do not satisfy environmental coverage.",
   "qualificationRule": "All fifteen base-matrix rows require genuine representative evidence before complete environmental qualification or publication may pass.",
   "simulationRule": "Fixtures and injected identities may test fail-closed policy but never satisfy a deferred-environmental row.",
