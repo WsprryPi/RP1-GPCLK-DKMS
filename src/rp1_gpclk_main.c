@@ -8,10 +8,21 @@
 #include <linux/slab.h>
 
 #include "rp1_gpclk/device.h"
+#include "rp1_gpclk/execution.h"
 #include "rp1_gpclk/kernel_api.h"
 #include "rp1_gpclk/lifetime.h"
 #include "rp1_gpclk/uapi_dispatch.h"
 #include "rp1_gpclk/version.h"
+
+static bool live_output;
+module_param(live_output, bool, 0444);
+MODULE_PARM_DESC(live_output,
+	"Permit live GPCLK output for an exactly qualified compatibility identity");
+
+bool rp1_gpclk_live_output_enabled(void)
+{
+	return live_output;
+}
 
 static atomic64_t rp1_gpclk_next_owner = ATOMIC64_INIT(0);
 static atomic_t rp1_gpclk_endpoint_owner = ATOMIC_INIT(0);
@@ -79,7 +90,10 @@ static int rp1_gpclk_release(struct inode *inode, struct file *file)
 	struct rp1_gpclk_file *context = file->private_data;
 
 	mutex_lock(&context->device->lock);
-	rp1_gpclk_core_owner_close(&context->device->core, context->owner);
+	if (rp1_gpclk_core_owner_close(&context->device->core,
+					context->owner) == RP1_GPCLK_CORE_OK)
+		rp1_gpclk_execution_request_stop(context->device,
+			RP1_GPCLK_REASON_OWNER_CLOSED);
 	mutex_unlock(&context->device->lock);
 	rp1_gpclk_lifetime_put(context->device);
 	kfree(context);
@@ -112,6 +126,9 @@ static int rp1_gpclk_probe(struct platform_device *pdev)
 	if (ret)
 		goto free_device;
 	rp1_gpclk_core_init(&device->core);
+	ret = rp1_gpclk_execution_init(device);
+	if (ret)
+		goto put_device;
 	ret = rp1_gpclk_dt_validate(device);
 	if (ret) {
 		dev_err_probe(&pdev->dev, ret,
@@ -134,6 +151,12 @@ static int rp1_gpclk_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err_probe(&pdev->dev, ret,
 			      "pinctrl resource acquisition failed\n");
+		goto release_resources;
+	}
+	ret = rp1_gpclk_tick_resources_acquire(pdev, device);
+	if (ret) {
+		dev_err_probe(&pdev->dev, ret,
+			      "DMA-tick resource acquisition failed\n");
 		goto release_resources;
 	}
 	ret = rp1_gpclk_dma_acquire(device);
@@ -184,8 +207,10 @@ static void rp1_gpclk_remove(struct platform_device *pdev)
 	mutex_lock(&device->lock);
 	rp1_gpclk_core_mark_dead(&device->core,
 				 RP1_GPCLK_REASON_PROVIDER_REMOVED);
-	rp1_gpclk_quiesce(device);
 	mutex_unlock(&device->lock);
+	rp1_gpclk_execution_quiesce(device,
+				    RP1_GPCLK_REASON_PROVIDER_REMOVED);
+	rp1_gpclk_quiesce(device);
 	rp1_gpclk_resources_release(device);
 	rp1_gpclk_endpoint_release(device);
 	platform_set_drvdata(pdev, NULL);

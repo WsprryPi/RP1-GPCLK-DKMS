@@ -34,15 +34,19 @@ freezes UAPI ABI 1 plus the first overlay/name/manifest contracts. Phase 3B's
 complete clock-disabled target matrix passed independently for GPIO4 and
 GPIO20 on the recorded `wspr5` identity. This closes the Phase 3 target gate
 for that exact identity while retaining the `Compatible-unqualified` ceiling;
-neither route inherits evidence from the other.
+neither route inherits evidence from the other. Phase 4A implements the bounded
+stock-kernel submission, state, STOP, DMA-pacing, exact-readback, and restoration
+path behind an immutable-at-load `live_output` gate. Its complete two-route
+clock-disabled regression passed on the same exact `wspr5` identity with the
+gate false.
 
-Clock-disabled `QUERY`, `ACQUIRE`, and `RELEASE` are implemented. Submission,
-STOP, and every live-output path remain unavailable. The code never selects the
-active pinctrl state, prepares or enables a clock, changes a clock rate,
-prepares or submits DMA, or provides live output. Both route overlays keep their
-default and safe states as input and neither claims the other pin. No DKMS installer or qualified GPIO output is
-implemented, and the exact target result does not generalize to another
-kernel, DT, firmware, route, or host.
+`QUERY`, `ACQUIRE`, `SUBMIT_WSPR`, `SUBMIT_EVENTS`, `STOP`, `GET_STATE`, and
+`RELEASE` now have production dispatch. With `live_output=false`, submission is
+rejected before plan allocation or any pinctrl, clock, tick, or DMA mutation;
+`LIVE_ELIGIBLE` is not reported. The implementation and build evidence do not
+qualify GPIO output, timing, a mode, or RF, and do not generalize to another
+kernel, DT, firmware, route, or host. No DKMS installer or qualified GPIO
+output is implemented.
 
 Nothing in this repository currently authorizes module installation, target
 binding, system configuration, GPIO operation, transmission, or RF activity.

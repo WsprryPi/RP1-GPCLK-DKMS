@@ -101,6 +101,12 @@ administrative route changes.
 
 This phase requires separately authorized target GPIO and RF operation.
 
+Phase 4A has implemented and clock-disabled-tested the gated stock-kernel live
+path on the exact recorded `wspr5` identity. That result is prerequisite
+engineering evidence only: it does not qualify a route, timing, mode, GPIO
+output, or RF. Controlled output begins only in a separately reviewed Phase 4B
+slice.
+
 - Measure scheduled common-clock enable/disable latency and jitter.
 - Validate DMA divider sequencing and neighboring-register integrity.
 - Exercise initially enabled clocks and competing cooperative consumers; reject
@@ -140,7 +146,7 @@ or qualification boundaries.
 | 1 - Contract and feasibility | Complete | Complete |
 | 2 - GPIO4 clock-disabled prototype | Partial implementation only | Complete for the exact recorded `wspr5` identity |
 | 3 - GPIO20 before interface freeze | Implementation complete | Complete for the exact recorded `wspr5` identity |
-| 4 - Controlled live qualification | Not completable | Not completable |
+| 4 - Controlled live qualification | Live path implemented offline | Phase 4A clock-disabled prerequisite complete; live qualification incomplete |
 | 5 - Packaging and enablement | Partial implementation only | Mostly; representative lifecycle systems remain required |
 
 Module binding and every target-Pi operation require explicit authorization,

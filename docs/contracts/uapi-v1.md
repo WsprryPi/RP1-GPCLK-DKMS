@@ -7,10 +7,10 @@
 The byte-authoritative header is `include/uapi/linux/rp1_gpclk.h`. This
 document defines its validation and state semantics. Phase 3 freezes ABI v1 at
 the exact byte identity recorded in `uapi-identity.json`; see Decision 0006.
-Phase 3 implements only
-clock-disabled `QUERY`, `ACQUIRE`, and `RELEASE`. Submission, STOP, and state
-progression remain unavailable and fail with `EOPNOTSUPP`; their layouts stay
-public contracts for later implementation rather than implemented behavior.
+Phase 4A implements every frozen ABI v1 operation. Submission remains
+administratively fail-closed unless the immutable-at-load live-output gate and
+the exact compatibility policy both permit it. Implemented-operation
+capabilities therefore remain distinct from `LIVE_ELIGIBLE`.
 
 ## Common validation
 

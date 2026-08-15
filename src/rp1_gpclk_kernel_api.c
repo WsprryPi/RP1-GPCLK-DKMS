@@ -5,6 +5,8 @@
 #include <linux/err.h>
 #include <linux/of_address.h>
 #include <linux/of_clk.h>
+#include <linux/overflow.h>
+#include <linux/platform_device.h>
 #include <linux/pinctrl/consumer.h>
 
 #include "rp1_gpclk/device.h"
@@ -16,6 +18,7 @@ int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 	struct of_phandle_args clock_spec;
 	struct of_phandle_args dma_spec;
 	struct resource resource;
+	struct resource rp1_resource;
 	__u64 divider_phys;
 	__u32 pin;
 	__u32 route;
@@ -69,6 +72,15 @@ int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 		ret = -EINVAL;
 		goto put_dma_node;
 	}
+	ret = of_range_to_resource(clock_spec.np->parent, 0, &rp1_resource);
+	if (ret || resource_type(&rp1_resource) != IORESOURCE_MEM ||
+	    resource.start < rp1_resource.start ||
+	    resource.end > rp1_resource.end) {
+		ret = ret ?: -EINVAL;
+		goto put_dma_node;
+	}
+	device->rp1_phys_start = rp1_resource.start;
+	device->rp1_phys_end = rp1_resource.end;
 	if (rp1_gpclk_derive_target(resource.start, resource.end,
 				    RP1_GPCLK_DIV_FRAC_OFFSET,
 				    RP1_GPCLK_REGISTER_BYTES, &divider_phys)) {
@@ -123,7 +135,8 @@ int rp1_gpclk_dma_acquire(struct rp1_gpclk_device *device)
 	}
 	dma_device = device->dma_chan->device->dev;
 	device->divider_dma = dma_map_resource(dma_device,
-		device->divider_phys, RP1_GPCLK_REGISTER_BYTES, DMA_TO_DEVICE, 0);
+		device->divider_phys, RP1_GPCLK_REGISTER_BYTES,
+		DMA_BIDIRECTIONAL, 0);
 	if (dma_mapping_error(dma_device, device->divider_dma)) {
 		device->divider_dma = 0;
 		dma_release_channel(device->dma_chan);
@@ -151,6 +164,51 @@ int rp1_gpclk_pinctrl_acquire(struct rp1_gpclk_device *device)
 	return 0;
 }
 
+int rp1_gpclk_tick_resources_acquire(struct platform_device *pdev,
+				     struct rp1_gpclk_device *device)
+{
+	struct resource *cycles;
+	struct resource *tick;
+	resource_size_t expected_cycles;
+	resource_size_t expected_tick;
+
+	cycles = platform_get_resource_byname(pdev, IORESOURCE_MEM,
+					       "tick-dma0");
+	tick = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dma-tick0");
+	if (!cycles || !tick ||
+	    resource_size(cycles) != RP1_GPCLK_TICK_RESOURCE_BYTES ||
+	    resource_size(tick) != RP1_GPCLK_TICK_RESOURCE_BYTES ||
+	    resource_overlaps(cycles, tick) ||
+	    check_add_overflow(device->rp1_phys_start,
+			       (resource_size_t)RP1_GPCLK_TICK_DMA0_OFFSET,
+			       &expected_cycles) ||
+	    check_add_overflow(device->rp1_phys_start,
+			       (resource_size_t)RP1_GPCLK_DMA_TICK0_OFFSET,
+			       &expected_tick))
+		return -EINVAL;
+	if (cycles->start != expected_cycles || tick->start != expected_tick ||
+	    cycles->end > device->rp1_phys_end ||
+	    tick->end > device->rp1_phys_end)
+		return -EINVAL;
+	device->tick_dma0 = devm_ioremap_resource(&pdev->dev, cycles);
+	if (IS_ERR(device->tick_dma0)) {
+		int ret = PTR_ERR(device->tick_dma0);
+
+		device->tick_dma0 = NULL;
+		return ret;
+	}
+	device->dma_tick0 = devm_ioremap_resource(&pdev->dev, tick);
+	if (IS_ERR(device->dma_tick0)) {
+		int ret = PTR_ERR(device->dma_tick0);
+
+		device->dma_tick0 = NULL;
+		return ret;
+	}
+	device->tick_dma0_phys = cycles->start;
+	device->dma_tick0_phys = tick->start;
+	return 0;
+}
+
 void rp1_gpclk_quiesce(struct rp1_gpclk_device *device)
 {
 	/* Phase 2C cannot create a descriptor, callback, clock, or pin transition. */
@@ -160,7 +218,7 @@ void rp1_gpclk_resources_release(struct rp1_gpclk_device *device)
 {
 	if (device->divider_mapped) {
 		dma_unmap_resource(device->dma_chan->device->dev, device->divider_dma,
-				   RP1_GPCLK_REGISTER_BYTES, DMA_TO_DEVICE, 0);
+				   RP1_GPCLK_REGISTER_BYTES, DMA_BIDIRECTIONAL, 0);
 		device->divider_mapped = false;
 		device->divider_dma = 0;
 	}
@@ -184,5 +242,11 @@ void rp1_gpclk_resources_release(struct rp1_gpclk_device *device)
 		device->clock = NULL;
 	}
 	device->divider_phys = 0;
+	device->rp1_phys_start = 0;
+	device->rp1_phys_end = 0;
+	device->tick_dma0 = NULL;
+	device->dma_tick0 = NULL;
+	device->tick_dma0_phys = 0;
+	device->dma_tick0_phys = 0;
 	device->route = RP1_GPCLK_ROUTE_INVALID;
 }

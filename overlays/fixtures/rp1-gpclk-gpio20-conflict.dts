@@ -24,6 +24,9 @@
 &rp1 {
 	rp1_gpclk_conflict: rp1-gpclk-conflict {
 		compatible = "wsprrypi,rp1-gpclk-dkms-v1";
+		reg = <0xc0 0x40174024 0x0 0x8>,
+		      <0xc0 0x40158000 0x0 0x8>;
+		reg-names = "tick-dma0", "dma-tick0";
 		wsprrypi,route = <2>;
 		wsprrypi,pin = <20>;
 		clocks = <&rp1_clocks RP1_CLK_GP0>;

@@ -51,6 +51,13 @@ if strings(node / "clock-names") != ["gpclk"]:
     raise SystemExit("unexpected clock name")
 if strings(node / "dma-names") != ["tx"]:
     raise SystemExit("unexpected DMA name")
+if strings(node / "reg-names") != ["tick-dma0", "dma-tick0"]:
+    raise SystemExit("unexpected DMA-tick resource names")
+if cells(node / "reg") != (
+    0xC0, 0x40174024, 0, 8,
+    0xC0, 0x40158000, 0, 8,
+):
+    raise SystemExit("unexpected DMA-tick resource identity")
 if strings(node / "pinctrl-names") != ["default", "active", "safe"]:
     raise SystemExit("unexpected pinctrl states")
 clock = cells(node / "clocks")
@@ -85,5 +92,6 @@ print(
     f"clock_provider={clock_provider} "
     f"resource_start=0x{resource_start:x} resource_size=0x{resource_size:x} "
     f"divider_target=0x{divider_target:x} dma_map=proved-by-bound-endpoint "
-    f"dma_request=0x30 dma_provider={dma_provider}"
+    f"dma_request=0x30 dma_provider={dma_provider} "
+    "tick_dma0=rp1+0x174024 dma_tick0=rp1+0x158000"
 )

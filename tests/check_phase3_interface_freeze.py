@@ -10,7 +10,10 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 GPIO4 = (ROOT / "overlays/rp1-gpclk-gpio4.dts").read_text(encoding="utf-8")
 GPIO20 = (ROOT / "overlays/rp1-gpclk-gpio20.dts").read_text(encoding="utf-8")
-SOURCE = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "src").glob("*.c"))
+SOURCE = "\n".join(
+    p.read_text(encoding="utf-8") for p in (ROOT / "src").glob("*.c")
+    if p.name != "rp1_gpclk_execution.c"
+)
 HEADER_PATH = ROOT / "include/uapi/linux/rp1_gpclk.h"
 HEADER = HEADER_PATH.read_text(encoding="utf-8")
 IDENTITY = json.loads((ROOT / "uapi-identity.json").read_text(encoding="utf-8"))

@@ -15,9 +15,16 @@ kernel_build="/usr/src/linux-headers-$kernel_release"
 kernel_common="/usr/src/linux-headers-${kernel_release%+rpt-rpi-2712}+rpt-common-rpi"
 dt_include="$kernel_common/include"
 module_name=rp1_gpclk_dkms
+phase_name=${RP1_GPCLK_TARGET_PHASE:-phase3b}
+client_source=${RP1_GPCLK_TARGET_CLIENT_SOURCE:-phase3b_uapi_client.c}
+client_name=${RP1_GPCLK_TARGET_CLIENT_NAME:-phase3b_uapi_client}
+expected_version=${RP1_GPCLK_TARGET_VERSION:-0.0.0-phase3b}
+authorization_text=${RP1_GPCLK_TARGET_AUTHORIZATION:-User directed execution of Phase 3B prompt on documented exact target wspr5; clock-disabled administration only}
+run_inert=${RP1_GPCLK_TARGET_RUN_INERT:-0}
+module_parameters=${RP1_GPCLK_TARGET_MODULE_PARAMETERS:-}
 driver_dir=/sys/bus/platform/drivers/rp1-gpclk-dkms
 installed_module="/lib/modules/$kernel_release/updates/dkms/$module_name.ko"
-work_dir=$(mktemp -d /tmp/rp1-gpclk-phase3b.XXXXXX)
+work_dir=$(mktemp -d "/tmp/rp1-gpclk-$phase_name.XXXXXX")
 overlay_dir="$work_dir/overlays"
 log_file="$evidence_dir/target-run.log"
 declare -a applied_overlays=()
@@ -100,7 +107,7 @@ assert_absent()
 	lsmod | grep -Eq '^rp1_gpclk_dkms\b' && loaded=1
 	[[ -e /dev/rp1-gpclk ]] && device=1
 	[[ -e $installed_module ]] && installed=1
-	clients=$(pgrep -f "$work_dir/phase3b_uapi_client" || true)
+	clients=$(pgrep -f "$work_dir/$client_name" || true)
 	bound=$(bound_devices)
 	printf '[%s] ABSENT %s overlays=%q loaded=%d device=%d installed=%d bound=%q clients=%q\n' \
 		"$(date --iso-8601=ns)" "$label" "$overlays" "$loaded" "$device" \
@@ -172,7 +179,7 @@ cleanup()
 trap cleanup EXIT HUP INT TERM
 
 step "authorization, exact target, and baseline"
-echo "authorization=User directed execution of Phase 3B prompt on documented exact target wspr5; clock-disabled administration only" |
+echo "authorization=$authorization_text" |
 	tee "$evidence_dir/authorization.txt"
 [[ $(hostname) == wspr5 ]]
 grep -aFq 'Raspberry Pi 5 Model B Rev 1.0' /proc/device-tree/model
@@ -219,7 +226,7 @@ done
 record_command python3 "$source_dir/tests/check_built_module.py" \
 	"$source_dir/$module_name.ko" --kernel-release "$kernel_release"
 record_command cc -std=c11 -Wall -Wextra -Werror -I"$source_dir/include/uapi" \
-	"$source_dir/tests/phase3b_uapi_client.c" -o "$work_dir/phase3b_uapi_client"
+	"$source_dir/tests/$client_source" -o "$work_dir/$client_name"
 sha256sum "$source_dir/$module_name.ko" "$overlay_dir"/*.dtbo |
 	tee "$evidence_dir/artifact-sha256.txt"
 
@@ -234,8 +241,14 @@ record_command depmod -a "$kernel_release"
 [[ $(modinfo -n "$module_name") == "$installed_module" ]]
 cmp "$work_dir/$module_name.ko" "$installed_module"
 modinfo "$installed_module" | tee "$evidence_dir/module-signed.txt"
-record_command modprobe "$module_name"
-[[ $(cat "/sys/module/$module_name/version") == 0.0.0-phase3b ]]
+if [[ -n $module_parameters ]]; then
+	read -r -a module_parameter_args <<<"$module_parameters"
+	record_command modprobe "$module_name" "${module_parameter_args[@]}"
+else
+	record_command modprobe "$module_name"
+fi
+[[ $(cat "/sys/module/$module_name/version") == "$expected_version" ]]
+[[ $(cat "/sys/module/$module_name/parameters/live_output") == N ]]
 assert_safe load-no-overlay 0
 
 route_matrix()
@@ -248,10 +261,14 @@ route_matrix()
 	device=$(only_bound_device)
 	[[ -c /dev/rp1-gpclk && $(stat -c '%a:%U:%G' /dev/rp1-gpclk) == 600:root:root ]]
 	assert_safe "gpio$pin-bind" 1
-	record_command "$work_dir/phase3b_uapi_client" query "$route"
-	record_command "$work_dir/phase3b_uapi_client" once "$route"
-	record_command "$work_dir/phase3b_uapi_client" expect-mismatch "$route"
-	record_command "$work_dir/phase3b_uapi_client" once "$route"
+	record_command "$work_dir/$client_name" query "$route"
+	record_command "$work_dir/$client_name" once "$route"
+	if [[ $run_inert == 1 ]]; then
+		record_command "$work_dir/$client_name" inert "$route"
+		assert_safe "gpio$pin-inert-submit" 1
+	fi
+	record_command "$work_dir/$client_name" expect-mismatch "$route"
+	record_command "$work_dir/$client_name" once "$route"
 	record_command python3 "$source_dir/tests/phase3b_dt_identity.py" \
 		"/sys/bus/platform/devices/$device/of_node" "$route" "$pin"
 	find -L "/sys/bus/platform/devices/$device/of_node" -maxdepth 1 -type f -print -exec sh -c \
@@ -271,18 +288,18 @@ route_matrix()
 		remove_overlay "$fixture"
 	done
 	marker="$work_dir/gpio$pin-holder.pid"
-	"$work_dir/phase3b_uapi_client" hold "$route" "$marker" &
+	"$work_dir/$client_name" hold "$route" "$marker" &
 	holder=$!
 	for _ in $(seq 1 50); do [[ -s $marker ]] && break; sleep 0.1; done
 	[[ -s $marker ]]
-	record_command "$work_dir/phase3b_uapi_client" expect-busy "$route"
+	record_command "$work_dir/$client_name" expect-busy "$route"
 	record_command kill -KILL "$holder"
 	set +e; wait "$holder" 2>/dev/null; holder_status=$?; set -e
 	printf '[%s] EXPECTED_FAILURE_STATUS gpio%s-holder-sigkill-wait %d\n' \
 		"$(date --iso-8601=ns)" "$pin" "$holder_status"
 	[[ $holder_status -eq 137 ]]
 	holder=
-	record_command "$work_dir/phase3b_uapi_client" once "$route"
+	record_command "$work_dir/$client_name" once "$route"
 	remove_overlay "$overlay"
 	assert_safe "gpio$pin-removed" 0
 	for fixture in "rp1-gpclk-gpio$pin-missing-active" \
@@ -318,9 +335,9 @@ for order in '1 4 2 20' '2 20 1 4'; do
 			sleep 1
 			only_bound_device >/dev/null
 			assert_safe "cycle-$cycle-gpio$pin-bind" 1
-			record_command "$work_dir/phase3b_uapi_client" query "$route"
-			record_command "$work_dir/phase3b_uapi_client" expect-mismatch "$route"
-			record_command "$work_dir/phase3b_uapi_client" once "$route"
+			record_command "$work_dir/$client_name" query "$route"
+			record_command "$work_dir/$client_name" expect-mismatch "$route"
+			record_command "$work_dir/$client_name" once "$route"
 			remove_overlay "rp1-gpclk-gpio$pin"
 			[[ -z $(bound_devices) && ! -e /dev/rp1-gpclk ]]
 			assert_safe "cycle-$cycle-gpio$pin-absent" 0

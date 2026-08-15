@@ -12,6 +12,9 @@
 #define RP1_GPCLK_DMA_REQUEST 0x30U
 #define RP1_GPCLK_DIV_FRAC_OFFSET 0x17cU
 #define RP1_GPCLK_REGISTER_BYTES 4U
+#define RP1_GPCLK_TICK_DMA0_OFFSET 0x174024U
+#define RP1_GPCLK_DMA_TICK0_OFFSET 0x158000U
+#define RP1_GPCLK_TICK_RESOURCE_BYTES 8U
 
 int rp1_gpclk_derive_target(__u64 resource_start, __u64 resource_end,
 			    __u64 offset, __u64 bytes, __u64 *target);

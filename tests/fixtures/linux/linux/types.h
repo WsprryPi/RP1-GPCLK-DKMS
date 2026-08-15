@@ -3,6 +3,7 @@
 #define RP1_GPCLK_TEST_LINUX_TYPES_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef uint16_t __u16;
 typedef uint32_t __u32;

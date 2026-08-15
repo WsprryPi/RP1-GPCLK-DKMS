@@ -10,7 +10,7 @@
     (RP1_GPCLK_CAP_SUBMIT_WSPR | RP1_GPCLK_CAP_SUBMIT_EVENTS | \
      RP1_GPCLK_CAP_STOP_DRAIN | RP1_GPCLK_CAP_STABLE_STATE | \
      RP1_GPCLK_CAP_ROUTE_IDENTITY | RP1_GPCLK_CAP_COMPAT_IDENTITY | \
-     RP1_GPCLK_CAP_CLEANUP_FAULT_LATCH)
+     RP1_GPCLK_CAP_CLEANUP_FAULT_LATCH | RP1_GPCLK_CAP_LIVE_ELIGIBLE)
 
 enum rp1_gpclk_core_result {
     RP1_GPCLK_CORE_OK = 0,
@@ -91,6 +91,9 @@ int rp1_gpclk_core_stop(struct rp1_gpclk_core *core, __u64 owner_id,
                        __u64 lease_id, __u64 generation);
 int rp1_gpclk_core_fail(struct rp1_gpclk_core *core, __u64 owner_id,
                        __u64 lease_id, __u64 generation, __u32 reason);
+int rp1_gpclk_core_cleanup_failed(struct rp1_gpclk_core *core,
+				  __u64 owner_id, __u64 lease_id,
+				  __u64 generation);
 int rp1_gpclk_core_release(struct rp1_gpclk_core *core, __u64 owner_id,
                           __u64 lease_id);
 int rp1_gpclk_core_owner_close(struct rp1_gpclk_core *core, __u64 owner_id);

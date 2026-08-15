@@ -11,7 +11,9 @@ api = (ROOT / "src/rp1_gpclk_kernel_api.c").read_text(encoding="utf-8")
 dispatch = (ROOT / "src/rp1_gpclk_uapi_dispatch.c").read_text(encoding="utf-8")
 policy = (ROOT / "include/rp1_gpclk/resource_policy.h").read_text(encoding="utf-8")
 all_source = "\n".join(
-    path.read_text(encoding="utf-8") for path in (ROOT / "src").glob("*.c")
+    path.read_text(encoding="utf-8")
+    for path in (ROOT / "src").glob("*.c")
+    if path.name != "rp1_gpclk_execution.c"
 )
 
 required = {
@@ -36,18 +38,23 @@ if "default:" not in dispatch or "return -EOPNOTSUPP" not in dispatch:
     raise SystemExit("runtime dispatcher does not reject unsupported commands")
 
 forbidden = {
-    "live-output parameter": r"module_param|live_output",
     "clock prepare or enable": r"clk_prepare|clk_enable|clk_prepare_enable",
     "clock rate change": r"clk_set_rate|clk_set_parent",
     "pinctrl selection": r"pinctrl_select_state",
     "DMA descriptor": r"dmaengine_prep|dmaengine_submit|dma_async_issue_pending",
     "DMA termination": r"dmaengine_terminate|dmaengine_synchronize",
-    "raw MMIO": r"\b(?:readl|writel|ioremap|of_iomap)\b",
+    "raw MMIO write": r"\b(?:readl|writel|of_iomap)\b",
     "private symbol": r"kallsyms|kprobe",
 }
 for label, pattern in forbidden.items():
     if re.search(pattern, all_source):
         raise SystemExit(f"Phase 2C contains {label}")
+
+for token in ("static bool live_output;",
+              "module_param(live_output, bool, 0444)",
+              "rp1_gpclk_live_output_enabled"):
+    if token not in main:
+        raise SystemExit(f"Phase 4A output-inhibit gate is missing {token}")
 
 release = api[api.index("void rp1_gpclk_resources_release"):]
 ordered = ["dma_unmap_resource", "dma_release_channel",

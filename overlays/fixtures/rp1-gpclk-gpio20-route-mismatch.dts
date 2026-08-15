@@ -24,6 +24,9 @@
 &rp1 {
 	rp1-gpclk-gpio20-route-mismatch {
 		compatible = "wsprrypi,rp1-gpclk-dkms-v1";
+		reg = <0xc0 0x40174024 0x0 0x8>,
+		      <0xc0 0x40158000 0x0 0x8>;
+		reg-names = "tick-dma0", "dma-tick0";
 		/* Deliberately inconsistent: GPIO20 pinctrl with GPIO4 route ID. */
 		wsprrypi,route = <1>;
 		wsprrypi,pin = <20>;

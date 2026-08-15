@@ -9,7 +9,10 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNNER = (ROOT / "tests/phase3b-target-test.sh").read_text(encoding="utf-8")
 CLIENT = (ROOT / "tests/phase3b_uapi_client.c").read_text(encoding="utf-8")
 DT_CHECK = (ROOT / "tests/phase3b_dt_identity.py").read_text(encoding="utf-8")
-SOURCE = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "src").glob("*.c"))
+SOURCE = "\n".join(
+    p.read_text(encoding="utf-8") for p in (ROOT / "src").glob("*.c")
+    if p.name != "rp1_gpclk_execution.c"
+)
 PROMPT = (ROOT / "docs/contracts/phase3b-clock-disabled-route-closure-execution-prompt.md").read_text(encoding="utf-8")
 
 for asset in (
@@ -61,11 +64,12 @@ for forbidden in ("pinctrl set", "pinctrl_select", "dmaengine_submit"):
         raise SystemExit(f"Phase 3B runner contains forbidden {forbidden}")
 
 for token in ("expect-mismatch", "route != RP1_GPCLK_ROUTE_GPIO20",
-              '"0.0.0-phase3b"', '"phase3b-clock-disabled"'):
+              '"0.0.0-phase3b"'):
     if token not in CLIENT:
         raise SystemExit(f"Phase 3B client missing {token}")
 for token in ("expected_route", "expected_pin", "wsprrypi,pin", "clock[1] != 33",
-              "dma[1] != 0x30"):
+              "dma[1] != 0x30", '"tick-dma0", "dma-tick0"',
+              "0x40174024", "0x40158000"):
     if token not in DT_CHECK:
         raise SystemExit(f"Phase 3B DT checker missing {token}")
 if "No findings yet" in PROMPT:

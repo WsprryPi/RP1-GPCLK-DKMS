@@ -15,12 +15,14 @@ python3 "$repo_dir/tests/check_phase2d_build.py"
 python3 "$repo_dir/tests/check_phase2e_target_assets.py"
 python3 "$repo_dir/tests/check_phase3_interface_freeze.py"
 python3 "$repo_dir/tests/check_phase3b_target_assets.py"
+python3 "$repo_dir/tests/check_phase4a_live_path.py"
 python3 "$repo_dir/tests/test_phase2e_dmesg.py"
 python3 "$repo_dir/tests/check_doc_links.py"
 if command -v shellcheck >/dev/null 2>&1; then
 	shellcheck "$repo_dir/tests/run-offline-checks.sh" \
 		"$repo_dir/tests/phase2e-target-test.sh" \
-		"$repo_dir/tests/phase3b-target-test.sh"
+		"$repo_dir/tests/phase3b-target-test.sh" \
+		"$repo_dir/tests/phase4a-target-test.sh"
     echo "shellcheck: PASS"
 else
     echo "shellcheck: SKIP (not installed)"
@@ -41,9 +43,14 @@ if [ "$(uname -s)" = Linux ]; then
 		-I"$repo_dir/include/uapi" "$repo_dir/tests/phase3b_uapi_client.c" \
 		-o "$tmp_dir/phase3b_uapi_client"
 	echo "Phase 3B UAPI client compile: PASS"
+	${CC:-cc} -std=c11 -Wall -Wextra -Werror \
+		-I"$repo_dir/include/uapi" "$repo_dir/tests/phase4a_uapi_client.c" \
+		-o "$tmp_dir/phase4a_uapi_client"
+	echo "Phase 4A UAPI client compile: PASS"
 else
 	echo "Phase 2E UAPI client compile: SKIP (Linux target only)"
 	echo "Phase 3B UAPI client compile: SKIP (Linux target only)"
+	echo "Phase 4A UAPI client compile: SKIP (Linux target only)"
 fi
 
 ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
@@ -62,6 +69,22 @@ ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
     "$repo_dir/tests/resource_policy.c" -o "$tmp_dir/resource_policy"
 "$tmp_dir/resource_policy"
 "$tmp_dir/resource_policy"
+
+${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
+	-DRP1_GPCLK_HOST_TEST \
+	-I"$repo_dir/tests/fixtures/linux" -I"$repo_dir/include" \
+	-I"$repo_dir/include/uapi" \
+	"$repo_dir/src/rp1_gpclk_execution_policy.c" \
+	"$repo_dir/tests/execution_policy.c" -o "$tmp_dir/execution_policy"
+"$tmp_dir/execution_policy"
+"$tmp_dir/execution_policy"
+
+${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
+	-I"$repo_dir/tests/fixtures/linux" -I"$repo_dir/include" \
+	"$repo_dir/src/rp1_gpclk_execution_machine.c" \
+	"$repo_dir/tests/execution_machine.c" -o "$tmp_dir/execution_machine"
+"$tmp_dir/execution_machine"
+"$tmp_dir/execution_machine"
 
 if ${CC:-cc} -std=c11 -fsanitize=address,undefined \
     -DRP1_GPCLK_HOST_TEST \
