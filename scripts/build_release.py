@@ -171,6 +171,7 @@ def generate(output: pathlib.Path, development: bool) -> None:
             build_dtbo(source, dtbo, dtc_executable)
             overlay_hashes[route.upper()] = {"sourceSha256": sha256(source), "dtboSha256": sha256(dtbo)}
         uapi_hash = sha256(ROOT / "include/uapi/linux/rp1_gpclk.h")
+        decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_text(encoding="utf-8"))
         compatibility = {
             "SPDX-License-Identifier": "MIT",
             "schemaVersion": 1,
@@ -179,7 +180,7 @@ def generate(output: pathlib.Path, development: bool) -> None:
             "module": {"name": layout["module"], "release": layout["release"], "sourceCommit": commit,
                        "sourceArchiveSha256": sha256(archive), "uapiAbi": layout["uapiAbi"], "uapiHeaderSha256": uapi_hash},
             "defaultState": "Unavailable",
-            "entries": []
+            "entries": decisions["entries"]
         }
         compatibility_path = output / "rp1-gpclk-compatibility-manifest.json"
         json_write(compatibility_path, compatibility)

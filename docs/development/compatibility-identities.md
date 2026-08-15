@@ -119,3 +119,18 @@ results, exclusions, and final state.
   `Qualified`.
 - Relevant kernel, DT, firmware, overlay, module, or UAPI changes demote the
   result unless an explicit manifest rule recognizes them.
+
+## Phase 5.6 release decisions
+
+The populated `0.0.0-phase5.2` release manifest records the historical GPIO4
+and GPIO20 Phase 4 identities as `Unavailable`, with `liveEligible=false`.
+Their module version and DTBO bytes differ from this release; firmware identity
+was not recorded; and the receiver-relative evidence is not calibrated
+absolute RF evidence. These entries are explicit exclusions, not wildcards or
+positive compatibility claims.
+
+Update handling is frozen by Decision 0008. New-kernel build success reaches at
+most `Compatible-unqualified`; build and signing failures are unavailable while
+retaining the prior bootable installation; module and overlay mismatch prohibit
+use/binding; cleanup failure latches `Rejected`; malformed manifests are
+unavailable; and stale Experimental enrollment revokes live eligibility.

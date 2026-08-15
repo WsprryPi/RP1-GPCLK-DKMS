@@ -63,8 +63,22 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
                                     "sourceArchiveSha256": metadata["archiveSha256"], "uapiAbi": layout["uapiAbi"],
                                     "uapiHeaderSha256": metadata["uapiHeaderSha256"]}:
         fail("compatibility module identity differs")
-    if compatibility["defaultState"] != "Unavailable" or compatibility["entries"]:
-        fail("Phase 5.2 compatibility manifest must be populated deny-by-default with no positive entries")
+    decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_text())
+    if compatibility["defaultState"] != "Unavailable" or compatibility["entries"] != decisions["entries"]:
+        fail("compatibility manifest does not contain the reviewed populated decisions")
+    if not compatibility["entries"] or any(entry["liveEligible"] or entry["state"] != "Unavailable"
+                                           for entry in compatibility["entries"]):
+        fail("Phase 5.6 historical entries must remain unavailable and non-live")
+    ids = [entry["id"] for entry in compatibility["entries"]]
+    if len(ids) != len(set(ids)):
+        fail("compatibility entry IDs are not unique")
+    for entry in compatibility["entries"]:
+        if entry["uapiAbi"] != metadata["uapiAbi"] or entry["uapiHeaderSha256"] != metadata["uapiHeaderSha256"]:
+            fail("compatibility entry UAPI identity differs")
+        if any(entry["route"] not in evidence["routes"] or
+               not set(entry["supportedModes"]) <= set(evidence["modes"])
+               for evidence in entry["evidence"]):
+            fail("compatibility evidence does not cover its entry route and modes")
     schema = json.loads((ROOT / "schema/rp1-gpclk-compatibility-manifest-v1.schema.json").read_text())
     if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema" or schema.get("additionalProperties") is not False:
         fail("compatibility schema identity differs")
@@ -90,6 +104,7 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
                     "scripts/rp1-gpclk-admin.py", "release/installation-model-v1.json",
                     "release/overlay-contract-v1.json",
                     "release/permissions-enrollment-policy-v1.json",
+                    "release/compatibility-decisions-v1.json", "scripts/compatibility_policy.py",
                     f"docs/releases/{layout['release']}-security.md", f"docs/releases/{layout['release']}-behavior.md",
                     "overlays/rp1-gpclk-gpio4.dts", "overlays/rp1-gpclk-gpio20.dts"}
         if not required <= set(names):
