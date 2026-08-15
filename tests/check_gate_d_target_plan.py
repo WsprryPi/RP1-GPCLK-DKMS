@@ -13,8 +13,9 @@ assert spec and spec.loader
 tool = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(tool)
 plan = json.loads((ROOT / "release/gate-d-target-operation-plan-v1.json").read_text())
-result = tool.validate(plan)
+result = tool.validate(plan, verify_tools=False)
 assert result == {"valid": True, "readOnly": True, "rowCount": 10, "attemptCount": 38, "liveOutput": False}
+assert tool.validate(plan) == result
 
 for mutation in (
     lambda value: value["invariants"].update(liveOutput=True),
@@ -28,7 +29,7 @@ for mutation in (
     bad = copy.deepcopy(plan)
     mutation(bad)
     try:
-        tool.validate(bad)
+        tool.validate(bad, verify_tools=False)
     except ValueError:
         pass
     else:

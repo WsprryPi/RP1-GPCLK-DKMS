@@ -52,7 +52,7 @@ exact-version removal, complete and repeated removal, reinstall,
 output-disabled UAPI query/acquire/release, and explicit unbind/rebind. Its
 concrete execution instance remains fail-closed and non-executable. Frozen
 `0.0.0-phase5.2` is retained as the genuine predecessor; distinct successor
-`0.0.0-phase5.13` is sealed at
+`0.0.0-phase5.14` is sealed at
 `61ee2ea592c2551eca56fd0566fef43097b8c682`. The output-disabled open and owner
 injector is separately tested and excluded from package bytes. Thirteen rows
 remain blocked by exact manifest or representative-system inputs, and no

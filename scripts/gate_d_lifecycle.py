@@ -19,6 +19,7 @@ import os
 import pathlib
 import re
 import subprocess
+import shutil
 import sys
 import time
 from datetime import datetime, timezone
@@ -31,6 +32,7 @@ OPERATIONS = {
     "output-disabled-cycle", "upgrade", "downgrade", "rollback", "recover",
     "uninstall-version", "remove-all-test-versions", "complete-removal",
     "repeated-removal", "reinstall-after-removal", "refuse-removal",
+    "qualification-transition",
 }
 CHECKPOINTS = (
     "preflight", "retain-predecessor", "dkms-add", "dkms-build", "dkms-install",
@@ -40,6 +42,7 @@ CHECKPOINTS = (
 VERSION = re.compile(r"[0-9A-Za-z][0-9A-Za-z.+_-]*")
 SHA256 = re.compile(r"[0-9a-f]{64}")
 SAFE_RELATIVE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+/-]*")
+INSTANCE_VALIDATOR_OVERRIDE = None  # offline unit-test dependency injection only
 
 
 def digest(path: pathlib.Path) -> str:
@@ -168,10 +171,11 @@ def validate_operation(value: dict) -> dict:
         "remove-all-test-versions": "package-absent", "complete-removal": "package-absent",
         "repeated-removal": "package-absent", "reinstall-after-removal": "package-absent",
         "refuse-removal": "installation-retained",
+        "qualification-transition": "predecessor-inactive",
     }
     if value["expectedFinalState"] != expected_by_operation[value["operation"]]:
         raise ValueError("expected final state differs from lifecycle operation")
-    if value["operation"] in {"upgrade", "downgrade", "rollback", "recover"}:
+    if value["operation"] in {"upgrade", "downgrade", "rollback", "recover", "qualification-transition"}:
         if predecessor is None or successor is None or predecessor == successor:
             raise ValueError("transition requires distinct predecessor and successor")
     if value["operation"] == "recover":
@@ -193,13 +197,13 @@ def validate_operation(value: dict) -> dict:
     return value
 
 
-def bind_instance(spec: dict, instance: dict) -> dict:
+def bind_instance(spec: dict, instance: dict, *, validator=None) -> dict:
     scripts = pathlib.Path(__file__).resolve().parent
     if str(scripts) not in sys.path:
         sys.path.insert(0, str(scripts))
     from gate_d_instance import validate as validate_instance
 
-    validate_instance(instance, require_ready=True)
+    (validator or INSTANCE_VALIDATOR_OVERRIDE or validate_instance)(instance, require_ready=True)
     rows = {row["id"]: row for row in instance["rows"]}
     row = rows.get(spec["matrixRow"])
     if row is None or row["status"] != "ready":
@@ -226,6 +230,90 @@ def command_runner(command: list[str], deadline: int) -> str:
                             timeout=deadline, check=True,
                             env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin"})
     return result.stdout
+
+
+def dispatch_primitive(arguments: list[str], *, runner=command_runner,
+                       root: pathlib.Path = pathlib.Path("/"), administrator_uid: int | None = None) -> dict:
+    """Execute one outer-executor primitive; never accepts an arbitrary argv."""
+    uid = os.geteuid() if administrator_uid is None else administrator_uid
+    if not arguments or arguments[-1] != "--execute" or uid != 0:
+        raise PermissionError("primitive dispatch requires root and --execute")
+    values = arguments[:-1]
+    operation = values[0]
+    if operation not in {"stage", "dkms-install", "expect-build-failure", "recover",
+                         "dkms-remove", "complete-removal"}:
+        raise ValueError("unknown lifecycle primitive")
+    expected_counts = {"stage": 3, "dkms-install": 4, "expect-build-failure": 4,
+                       "recover": 5, "dkms-remove": 4, "complete-removal": 5}
+    if len(values) != expected_counts[operation]:
+        raise ValueError("lifecycle primitive arguments are incomplete")
+    versions = ([values[1]] if operation in {"stage", "dkms-install", "expect-build-failure", "dkms-remove"}
+                else values[1:3])
+    if not versions or any(not VERSION.fullmatch(value) for value in versions):
+        raise ValueError("invalid primitive version")
+    staging = pathlib.Path(values[-1])
+    if not staging.is_absolute() or ".." in staging.parts:
+        raise ValueError("unsafe primitive staging directory")
+    commands: list[list[str]] = []
+
+    def staged_source(version: str) -> pathlib.Path:
+        matches = []
+        for label in ("candidate", "predecessor"):
+            base = _rooted(root, str(staging / label))
+            roots = list(base.iterdir()) if base.is_dir() and not base.is_symlink() else []
+            if len(roots) == 1 and roots[0].name == f"{PACKAGE}-{version}":
+                matches.append(roots[0])
+        if len(matches) != 1 or matches[0].is_symlink() or not matches[0].is_dir():
+            raise ValueError("staged versioned archive root differs")
+        return matches[0]
+
+    def ensure_source(version: str) -> None:
+        destination = _rooted(root, f"/usr/src/{PACKAGE}-{version}")
+        source = staged_source(version)
+        if destination.exists() or destination.is_symlink():
+            if destination.is_symlink() or not destination.is_dir():
+                raise ValueError("DKMS source destination is unsafe")
+            return
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(source, destination, symlinks=False)
+
+    if operation == "stage":
+        ensure_source(values[1])
+    elif operation == "dkms-install":
+        version, kernel = values[1], values[2]
+        ensure_source(version)
+        commands = [dkms("add", version, kernel), dkms("build", version, kernel),
+                    dkms("install", version, kernel)]
+    elif operation == "expect-build-failure":
+        version, kernel = values[1], values[2]
+        ensure_source(version)
+        wrapper = _rooted(root, str(staging / "compiler-failure"))
+        if wrapper.is_symlink() or not wrapper.is_file():
+            raise ValueError("compiler failure wrapper is absent")
+        command = dkms("build", version, kernel)
+        result = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, timeout=1800,
+                                env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C",
+                                     "LC_ALL": "C", "CC": str(wrapper)}, check=False)
+        if result.returncode == 0:
+            raise ValueError("deliberate DKMS build unexpectedly succeeded")
+        raise SystemExit(1)
+    elif operation == "recover":
+        predecessor, successor, kernel = values[1], values[2], values[3]
+        ensure_source(predecessor)
+        commands = [dkms("uninstall", successor, kernel), dkms("remove", successor, kernel),
+                    dkms("install", predecessor, kernel)]
+    elif operation == "dkms-remove":
+        version, kernel = values[1], values[2]
+        commands = [dkms("uninstall", version, kernel), dkms("remove", version, kernel)]
+    else:
+        predecessor, successor, kernel = values[1], values[2], values[3]
+        commands = [dkms("uninstall", successor, kernel), dkms("remove", successor, kernel),
+                    dkms("uninstall", predecessor, kernel), dkms("remove", predecessor, kernel)]
+    outputs = []
+    for command in commands:
+        outputs.append({"argv": command, "output": runner(command, 1800)[:65536]})
+    return {"operation": operation, "commands": outputs, "liveOutput": False}
 
 
 def dkms(action: str, version: str, kernel: str) -> list[str]:
@@ -293,6 +381,21 @@ def operation_commands(spec: dict) -> list[tuple[str, list[str]]]:
     elif operation == "reinstall-after-removal":
         version = spec["testVersions"][0]
         commands += install_sequence(version) + remove_sequence(version)
+    elif operation == "qualification-transition":
+        commands += [
+            ("dkms-add", dkms("add", successor, kernel)),
+            ("dkms-build", dkms("build", successor, kernel)),
+            ("dkms-install", dkms("install", successor, kernel)),
+            ("load-disabled", ["modprobe", MODULE, "live_output=0"]),
+            ("query-disabled", ["cat", f"/sys/module/{MODULE}/parameters/live_output"]),
+            ("uapi-query-release", ["/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe",
+                                    spec["route"], successor]),
+            ("unbind-bind", ["/usr/libexec/rp1-gpclk-dkms/gate-d-platform",
+                             "unbind-bind-cycle", "--execute"]),
+            ("unload", ["modprobe", "-r", MODULE]),
+            ("dkms-uninstall", dkms("uninstall", successor, kernel)),
+            ("dkms-remove", dkms("remove", successor, kernel)),
+        ]
     return commands
 
 
@@ -339,6 +442,15 @@ def verify_final_state(spec: dict, root: pathlib.Path,
             if runner(["dkms", "status", "-m", PACKAGE, "-v", version],
                       spec["deadlineSeconds"]).strip():
                 raise ValueError(f"test DKMS version remains installed: {version}")
+    if operation == "qualification-transition":
+        successor = spec["successorVersion"]
+        predecessor = spec["predecessorVersion"]
+        if runner(["dkms", "status", "-m", PACKAGE, "-v", successor],
+                  spec["deadlineSeconds"]).strip():
+            raise ValueError("transition successor remains present")
+        if not runner(["dkms", "status", "-m", PACKAGE, "-v", predecessor],
+                      spec["deadlineSeconds"]).strip():
+            raise ValueError("retained predecessor is absent")
     module = root / f"sys/module/{MODULE}"
     endpoint = root / "dev/rp1-gpclk"
     if operation != "refuse-removal" and (module.exists() or module.is_symlink() or
@@ -364,9 +476,9 @@ def verify_final_state(spec: dict, root: pathlib.Path,
 def execute(spec: dict, instance: dict, journal: pathlib.Path, *, root: pathlib.Path = pathlib.Path("/"),
             runner: Callable[[list[str], int], str] = command_runner,
             stop_after: str | None = None,
-            recover_from: pathlib.Path | None = None) -> dict:
+            recover_from: pathlib.Path | None = None, instance_validator=None) -> dict:
     validate_operation(spec)
-    bind_instance(spec, instance)
+    bind_instance(spec, instance, validator=instance_validator)
     if stop_after is not None and stop_after not in CHECKPOINTS:
         raise ValueError("unknown interruption checkpoint")
     if journal.exists() or journal.is_symlink():
@@ -449,7 +561,7 @@ def execute(spec: dict, instance: dict, journal: pathlib.Path, *, root: pathlib.
     try:
         if stop_after == "preflight":
             raise InterruptedError("preflight")
-        if spec["operation"] in {"upgrade", "downgrade"}:
+        if spec["operation"] in {"upgrade", "downgrade", "qualification-transition"}:
             state["checkpoint"] = "retain-predecessor"
             atomic_json(journal, state)
             if stop_after == "retain-predecessor":
@@ -460,6 +572,13 @@ def execute(spec: dict, instance: dict, journal: pathlib.Path, *, root: pathlib.
             try:
                 output = run(command, checkpoint)
             except subprocess.CalledProcessError:
+                if (spec["operation"] == "recover" and command[:2] == ["dkms", "install"]):
+                    version = command[command.index("-v") + 1]
+                    status = run(["dkms", "status", "-m", PACKAGE, "-v", version],
+                                 "verify-predecessor-after-install-error")
+                    if status.strip():
+                        output = "already installed"
+                        continue
                 if (spec["operation"] not in {"recover", "repeated-removal"} or
                         len(command) < 2 or command[0] != "dkms" or
                         command[1] not in {"uninstall", "remove"}):
@@ -478,7 +597,7 @@ def execute(spec: dict, instance: dict, journal: pathlib.Path, *, root: pathlib.
                 raise ValueError("output-disabled unbind/rebind verification failed")
             if stop_after == checkpoint:
                 raise InterruptedError(checkpoint)
-        if spec["operation"] in {"complete-removal", "repeated-removal", "reinstall-after-removal"}:
+        if spec["operation"] in {"complete-removal", "repeated-removal", "reinstall-after-removal", "qualification-transition"}:
             state["checkpoint"] = "owned-residue-remove"
             atomic_json(journal, state)
             remove_owned_paths(spec, root)
@@ -521,6 +640,9 @@ def execute(spec: dict, instance: dict, journal: pathlib.Path, *, root: pathlib.
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "dispatch":
+        print(json.dumps(dispatch_primitive(sys.argv[2:]), indent=2, sort_keys=True))
+        return
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=("validate", "plan", "execute"))
     parser.add_argument("operation", type=pathlib.Path)

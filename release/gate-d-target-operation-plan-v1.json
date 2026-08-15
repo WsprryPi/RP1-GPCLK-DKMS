@@ -4,11 +4,14 @@
   "kind": "gate-d-output-disabled-target-operation-plan",
   "hostId": "wspr5-stock",
   "tooling": {
-    "bootSelector":{"path":"scripts/gate_d_boot.py","sha256":"d618a8f46710e672a9b56d62468c5431b38498b0077f6afbf5be5179aba73e73","candidateArchiveMember":false},
-    "targetPlanValidator":{"path":"scripts/gate_d_target_plan.py","sha256":"12bdf3230482015ad791b268baa2865ee83474cf01fd019a619cde66747061de","candidateArchiveMember":false},
-    "lifecycleCoordinator":{"path":"scripts/gate_d_lifecycle.py","sha256":"8b43547c643564bac4154ae2e5107b50934ce114a2c2e2ba514dd9a7d21f2bca","candidateArchiveMember":false},
-    "busyInjectorSource":{"path":"tools/gate_d_busy_injector.c","sha256":"1bebe7cd10be210a2dcedb9de3db701888f40c38f3210470d777b69bcf5b7582","candidateArchiveMember":false},
-    "uapiProbeSource":{"path":"tools/gate_d_uapi_probe.c","sha256":"178de464eeed875fc0906f7c19b7e2d1ac0e33313d1d1074c57616a4e7fa1133","candidateArchiveMember":true}
+    "bootSelector":{"sourcePath":"scripts/gate_d_boot.py","installedPath":"/usr/libexec/rp1-gpclk-dkms/gate-d-boot","sha256":"731b122fbc154e4945397bf844bdb093865175f16b92376972fd72e352893bf3","candidateArchiveMember":true},
+    "targetPlanValidator":{"sourcePath":"scripts/gate_d_target_plan.py","installedPath":"/usr/libexec/rp1-gpclk-dkms/gate-d-target-plan","sha256":"ff9040ef0534f75263f44fe2cc3320560da7298963908308cd2902bd7cbb9b45","candidateArchiveMember":true},
+    "instanceValidator":{"sourcePath":"scripts/gate_d_instance.py","installedPath":"/usr/libexec/rp1-gpclk-dkms/gate-d-instance","sha256":"236127207806d18530287c3f6f887b5a2534b645ad279f2bd01e82ec78fc3452","candidateArchiveMember":true},
+    "lifecycleCoordinator":{"sourcePath":"scripts/gate_d_lifecycle.py","installedPath":"/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle","sha256":"c55dee9ce430b30b52972a9d6312b593b5d3c9ab15b8c17a270a6b7066a7480d","candidateArchiveMember":true},
+    "platformCoordinator":{"sourcePath":"scripts/gate_d_platform.py","installedPath":"/usr/libexec/rp1-gpclk-dkms/gate-d-platform","sha256":"d749859b0c915c4cfde8df85aa088359f7ed87d77183ae927c82bc1f149afb3c","candidateArchiveMember":true},
+    "permanentExecutor":{"sourcePath":"scripts/gate_d_outer.py","installedPath":"/usr/libexec/rp1-gpclk-dkms/gate-d-executor","sha256":"bc8a651da0803168abfcd1f008a6a86701825fd2e17ae95f5dee8815f3f993ac","candidateArchiveMember":true},
+    "busyInjector":{"sourcePath":"tools/gate_d_busy_injector.c","installedPath":"/usr/libexec/rp1-gpclk-dkms/gate-d-busy-injector","sha256":"1bebe7cd10be210a2dcedb9de3db701888f40c38f3210470d777b69bcf5b7582","candidateArchiveMember":true},
+    "uapiProbe":{"sourcePath":"tools/gate_d_uapi_probe.c","installedPath":"/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe","sha256":"178de464eeed875fc0906f7c19b7e2d1ac0e33313d1d1074c57616a4e7fa1133","candidateArchiveMember":true}
   },
   "invariants": {
     "liveOutput": false,

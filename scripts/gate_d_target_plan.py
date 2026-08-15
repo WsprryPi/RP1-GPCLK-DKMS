@@ -50,7 +50,7 @@ def load(path: pathlib.Path) -> dict:
     return value
 
 
-def validate(value: dict) -> dict:
+def validate(value: dict, *, verify_tools: bool = True) -> dict:
     required = {"SPDX-License-Identifier", "schemaVersion", "kind", "hostId", "tooling", "invariants",
                 "services", "artifacts", "boot", "attemptEnvelope", "rows"}
     if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or value.get("schemaVersion") != 1 or value.get("kind") != "gate-d-output-disabled-target-operation-plan":
@@ -63,18 +63,21 @@ def validate(value: dict) -> dict:
     if invariants != expected_invariants:
         raise ValueError("target safety invariants differ")
     tooling = value["tooling"]
-    required_tools = {"bootSelector", "targetPlanValidator", "lifecycleCoordinator",
-                      "busyInjectorSource", "uapiProbeSource"}
+    required_tools = {"bootSelector", "targetPlanValidator", "instanceValidator",
+                      "lifecycleCoordinator", "platformCoordinator",
+                      "permanentExecutor", "busyInjector", "uapiProbe"}
     if not isinstance(tooling, dict) or set(tooling) != required_tools:
         raise ValueError("execution tooling identities are incomplete")
     for name, item in tooling.items():
-        if (not isinstance(item, dict) or set(item) != {"path", "sha256", "candidateArchiveMember"} or
-                not isinstance(item["path"], str) or pathlib.PurePosixPath(item["path"]).is_absolute() or
-                ".." in pathlib.PurePosixPath(item["path"]).parts or not SHA.fullmatch(item["sha256"]) or
+        if (not isinstance(item, dict) or set(item) != {"sourcePath", "installedPath", "sha256", "candidateArchiveMember"} or
+                not isinstance(item["sourcePath"], str) or pathlib.PurePosixPath(item["sourcePath"]).is_absolute() or
+                ".." in pathlib.PurePosixPath(item["sourcePath"]).parts or
+                not isinstance(item["installedPath"], str) or not pathlib.PurePosixPath(item["installedPath"]).is_absolute() or
+                ".." in pathlib.PurePosixPath(item["installedPath"]).parts or not SHA.fullmatch(item["sha256"]) or
                 type(item["candidateArchiveMember"]) is not bool):
             raise ValueError(f"invalid execution tool identity: {name}")
-        path = ROOT / item["path"]
-        if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != item["sha256"]:
+        path = ROOT / item["sourcePath"]
+        if verify_tools and (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != item["sha256"]):
             raise ValueError(f"execution tool identity mismatch: {name}")
     services = value["services"]
     if not isinstance(services, list) or {item.get("name") for item in services} != {

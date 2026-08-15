@@ -27,7 +27,7 @@ from typing import Callable
 
 PACKAGE = "rp1-gpclk-dkms"
 MODULE = "rp1_gpclk_dkms"
-VERSION = "0.0.0-phase5.13"
+VERSION = "0.0.0-phase5.14"
 ROUTES = {"gpio4": "rp1-gpclk-gpio4.dtbo", "gpio20": "rp1-gpclk-gpio20.dtbo"}
 ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
                       "remove-old-binding-proven-cleanup", "verify-both-pins-safe",
@@ -405,6 +405,22 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
         transaction["ownedFiles"].append({"path": str(probe_destination),
                                            "sha256": digest(probe_destination)})
         atomic_json(state_path, transaction)
+        busy_source = source / "tools/gate_d_busy_injector.c"
+        busy_destination = libexec / "gate-d-busy-injector"
+        if not busy_source.is_file() or busy_source.is_symlink() or busy_destination.exists() or busy_destination.is_symlink():
+            raise ValueError("unsafe or existing Gate D busy injector")
+        busy_command = ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror",
+                        f"-I{source / 'include/uapi'}", str(busy_source),
+                        "-o", str(busy_destination)]
+        transaction["commands"].append(busy_command)
+        atomic_json(state_path, transaction)
+        runner(busy_command)
+        if not busy_destination.is_file() or busy_destination.is_symlink():
+            raise ValueError("Gate D busy injector build produced no real binary")
+        busy_destination.chmod(0o755)
+        transaction["ownedFiles"].append({"path": str(busy_destination),
+                                           "sha256": digest(busy_destination)})
+        atomic_json(state_path, transaction)
         package_files = ((source / "scripts/rp1-gpclk-admin.py", libexec / "rp1-gpclk-admin", 0o755),
                          (source / "scripts/rp1-gpclk-diagnostics.py", libexec / "rp1-gpclk-diagnostics", 0o755),
                          (model_source, release_data / "installation-model-v1.json", 0o644),
@@ -425,7 +441,15 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                          (source / "scripts/gate_d_lifecycle.py",
                           libexec / "gate-d-lifecycle", 0o755),
                          (source / "scripts/gate_d_platform.py",
-                          libexec / "gate-d-platform", 0o755))
+                          libexec / "gate-d-platform", 0o755),
+                         (source / "scripts/gate_d_boot.py",
+                          libexec / "gate-d-boot", 0o755),
+                         (source / "scripts/gate_d_target_plan.py",
+                          libexec / "gate-d-target-plan", 0o755),
+                         (source / "scripts/gate_d_attempts.py",
+                          libexec / "gate-d-attempts", 0o755),
+                         (source / "scripts/gate_d_outer.py",
+                          libexec / "gate-d-executor", 0o755))
         for origin, destination, mode in package_files:
             if not origin.is_file() or origin.is_symlink() or destination.exists() or destination.is_symlink():
                 raise ValueError(f"unsafe or existing package file: {destination}")

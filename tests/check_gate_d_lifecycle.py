@@ -134,8 +134,39 @@ def ready_instance() -> dict:
     value["inputsReady"] = True
     value["authorization"]["targetExecutionApproved"] = True
     value["authorization"]["approvalScope"] = "unit-test execution release"
-    instance_tool.validate(value, require_ready=True)
+    instance_tool.validate(value, require_ready=True, validate_attempt_bundle=False,
+                           enforce_candidate_status=False)
     return value
+
+
+def unit_instance_validator(value, *, require_ready=False):
+    return instance_tool.validate(value, require_ready=require_ready,
+                                  validate_attempt_bundle=False,
+                                  enforce_candidate_status=False)
+
+
+lifecycle.INSTANCE_VALIDATOR_OVERRIDE = unit_instance_validator
+
+
+with tempfile.TemporaryDirectory() as temporary:
+    primitive_root = pathlib.Path(temporary)
+    source = primitive_root / "stage/candidate/rp1-gpclk-dkms-0.0.0-new"
+    source.mkdir(parents=True)
+    (source / "dkms.conf").write_text('PACKAGE_VERSION="0.0.0-new"\n')
+    primitive_commands = []
+    primitive = lifecycle.dispatch_primitive(
+        ["dkms-install", "0.0.0-new", "6.18.34+rpt-rpi-2712", "/stage", "--execute"],
+        runner=lambda command, deadline: primitive_commands.append(command) or "",
+        root=primitive_root, administrator_uid=0)
+    assert primitive["liveOutput"] is False and len(primitive_commands) == 3
+    assert (primitive_root / "usr/src/rp1-gpclk-dkms-0.0.0-new/dkms.conf").is_file()
+    try:
+        lifecycle.dispatch_primitive(["arbitrary", "--execute"], root=primitive_root,
+                                     administrator_uid=0)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("arbitrary lifecycle primitive accepted")
 
 
 def operation(name: str, *, op_id: str | None = None, owned=None) -> dict:
@@ -159,6 +190,7 @@ def operation(name: str, *, op_id: str | None = None, owned=None) -> dict:
         "testVersions": ["0.0.0-new"], "ownedPaths": owned or [],
         "safety": snapshot,
         "expectedFinalState": ("predecessor-inactive" if name in {"rollback", "recover"} else
+                               "predecessor-inactive" if name == "qualification-transition" else
                                "package-absent" if name in {"uninstall-version", "remove-all-test-versions", "complete-removal", "repeated-removal", "reinstall-after-removal"} else
                                "installation-retained" if name == "refuse-removal" else
                                "successor-inactive"),
@@ -171,11 +203,13 @@ awaiting_authorization = ready_instance()
 awaiting_authorization["authorization"]["targetExecutionApproved"] = False
 awaiting_authorization["authorization"]["approvalScope"] = "inputs complete; fresh execution release absent"
 awaiting_authorization["executionReady"] = False
-authorization_result = instance_tool.validate(awaiting_authorization)
+authorization_result = instance_tool.validate(awaiting_authorization, validate_attempt_bundle=False,
+                                               enforce_candidate_status=False)
 assert authorization_result["inputsReady"] is True
 assert authorization_result["executionReady"] is False
 try:
-    instance_tool.validate(awaiting_authorization, require_ready=True)
+    instance_tool.validate(awaiting_authorization, require_ready=True, validate_attempt_bundle=False,
+                           enforce_candidate_status=False)
 except ValueError:
     pass
 else:
@@ -192,6 +226,11 @@ for name in lifecycle.OPERATIONS:
         assert prohibited not in flat
     if name in {"rollback", "recover"}:
         assert sum(command[0].endswith("gate-d-uapi-probe") for _, command in commands) == 2
+
+transition = operation("qualification-transition")
+assert [checkpoint for checkpoint, _ in lifecycle.operation_commands(transition)] == [
+    "dkms-add", "dkms-build", "dkms-install", "load-disabled", "query-disabled",
+    "uapi-query-release", "unbind-bind", "unload", "dkms-uninstall", "dkms-remove"]
 
 for field, value in (("liveOutput", True), ("clockEnabled", True), ("dmaActive", True),
                      ("si5351Disconnected", False), ("ownershipKnown", False)):

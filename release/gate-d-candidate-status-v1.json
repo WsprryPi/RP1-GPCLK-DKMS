@@ -1,0 +1,27 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-candidate-status",
+  "historicalCandidate": {
+    "release": "0.0.0-phase5.13",
+    "sourceCommit": "61ee2ea592c2551eca56fd0566fef43097b8c682",
+    "archiveSha256": "58cb12864b291380fefd31ea9a203f7ee308767790787e3fce0be352dab19b14",
+    "status": "superseded-before-gate-d-execution",
+    "reason": "candidate archive lacks the adopted permanent Gate D outer executor"
+  },
+  "successor": {
+    "release": "0.0.0-phase5.14",
+    "status": "selected-offline-identity-pending",
+    "qualification": "none",
+    "representativeBuild": "not-performed"
+  },
+  "successorSelectionGate": "passed-after-permanent-executor-offline-adversarial-review",
+  "reuseProhibited": [
+    "representative-build-promotion",
+    "route-decision",
+    "target-plan",
+    "attempt-bundle",
+    "execution-instance",
+    "target-authorization"
+  ]
+}

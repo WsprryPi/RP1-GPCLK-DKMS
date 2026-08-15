@@ -28,7 +28,7 @@ required_ids = {"source-archive", "module-source", "module-headers", "kbuild", "
                 "compatibility-schema", "compatibility-manifest", "provenance", "checksums", "release-metadata",
                 "installation-model", "overlay-contract", "permissions-enrollment-policy", "compatibility-decisions", "compatibility-policy", "signing-policy-data", "signing-policy-tool", "diagnostics-contract", "administration-tool", "administration-command", "diagnostics-command",
                 "configuration-directory", "transaction-state", "lifecycle-tool", "lifecycle-removal-contract",
-                "representative-system-matrix", "gate-d-execution-schema", "gate-d-instance-validator", "gate-d-lifecycle-tool", "gate-d-platform-tool", "gate-d-uapi-probe-source", "gate-d-uapi-probe", "release-integration-gates", "calibrated-review-release-policy", "lifecycle-policy-tool", "diagnostic-tool", "operator-docs",
+                "representative-system-matrix", "gate-d-execution-schema", "gate-d-instance-validator", "gate-d-lifecycle-tool", "gate-d-platform-tool", "gate-d-boot-tool", "gate-d-target-plan-tool", "gate-d-attempt-generator", "gate-d-permanent-executor", "gate-d-busy-injector-source", "gate-d-busy-injector", "gate-d-uapi-probe-source", "gate-d-uapi-probe", "release-integration-gates", "calibrated-review-release-policy", "lifecycle-policy-tool", "diagnostic-tool", "operator-docs",
                 "security-notes", "behavioral-notes", "signing-guidance"}
 assert required_ids == set(artifact_ids)
 for item in layout["artifacts"]:
@@ -76,7 +76,6 @@ sha256sum "$input" | awk '{print $1}' >"$out"
         "release/gate-d-version-pair-v1.json",
         "release/gate-d-matrix-policy-v2.json",
         "release/gate-d-route-compatibility-decision-v1.json",
-        "tools/gate_d_busy_injector.c",
         "tools/gate_d_busy_injector.h",
         "tests/gate_d_busy_injector_test.c",
     ):

@@ -1,0 +1,47 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wsprrypi.org/schemas/gate-d-attempt-v1.schema.json",
+  "title": "Gate D executable attempt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["SPDX-License-Identifier","schemaVersion","kind","operationId","matrixRow","attempt","hostId","kernelRelease","route","deadlineSeconds","evidenceDirectory","journal","inputs","services","safety","expectedFinalState","steps"],
+  "properties": {
+    "SPDX-License-Identifier":{"const":"MIT"},
+    "schemaVersion":{"const":1},
+    "kind":{"const":"gate-d-executable-attempt"},
+    "operationId":{"type":"string","pattern":"^[a-z0-9][a-z0-9._-]+$"},
+    "matrixRow":{"type":"string","minLength":1},
+    "attempt":{"type":"string","minLength":1},
+    "hostId":{"const":"wspr5-stock"},
+    "kernelRelease":{"type":"string","minLength":1},
+    "route":{"enum":["gpio4","gpio20","route-neutral"]},
+    "deadlineSeconds":{"type":"integer","minimum":1,"maximum":1800},
+    "evidenceDirectory":{"type":"string","pattern":"^/var/lib/rp1-gpclk-dkms/gate-d/[A-Za-z0-9._+/-]+$"},
+    "journal":{"type":"string","pattern":"^/var/lib/rp1-gpclk-dkms/gate-d/[A-Za-z0-9._+/-]+/transaction.json$"},
+    "inputs":{
+      "type":"object","additionalProperties":false,
+      "required":["candidateRelease","candidateArchive","candidateArchiveSha256","predecessorVersion","predecessorArchive","predecessorArchiveSha256","sourceCommit","uapiSha256","manifestSha256","gpio4DtboSha256","gpio20DtboSha256","gpio4Dtbo","gpio20Dtbo","matrixPolicySha256","routeDecisionSha256","targetPlanSha256","boot","tooling","stagingDirectory","ownedPaths"],
+      "properties":{
+        "candidateRelease":{"type":"string","minLength":1},"candidateArchive":{"type":"string","pattern":"^/"},"candidateArchiveSha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+        "predecessorVersion":{"type":"string","minLength":1},"predecessorArchive":{"type":"string","pattern":"^/"},"predecessorArchiveSha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+        "sourceCommit":{"type":"string","pattern":"^[0-9a-f]{40}$"},"uapiSha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},"manifestSha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+        "gpio4DtboSha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},"gpio20DtboSha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},"gpio4Dtbo":{"type":"string","pattern":"^/"},"gpio20Dtbo":{"type":"string","pattern":"^/"},
+        "matrixPolicySha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},"routeDecisionSha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},"targetPlanSha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+        "boot":{"type":"object"},"tooling":{"type":"object"},"stagingDirectory":{"type":"string","pattern":"^/var/lib/rp1-gpclk-dkms/gate-d/staging/"},"ownedPaths":{"type":"array","minItems":2,"uniqueItems":true,"items":{"type":"string","pattern":"^/"}}
+      }
+    },
+    "services":{"type":"array","minItems":4,"maxItems":4},
+    "safety":{"type":"object"},
+    "expectedFinalState":{"type":"string","minLength":1},
+    "steps":{"type":"array","minItems":1,"items":{
+      "type":"object","additionalProperties":false,
+      "required":["id","operation","deadlineScope","action"],
+      "properties":{
+        "id":{"type":"string","minLength":1},"operation":{"type":"string","minLength":1},
+        "deadlineScope":{"const":"attempt-total"},
+        "action":{"type":"object","additionalProperties":false,"required":["kind","name","argv","expectedStatus"],"properties":{"kind":{"enum":["internal","command","service-transaction"]},"name":{"type":"string","minLength":1},"argv":{"type":"array","items":{"type":"string"}},"expectedStatus":{"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"integer","minimum":0,"maximum":255}}}}
+      }
+    }}
+  }
+}

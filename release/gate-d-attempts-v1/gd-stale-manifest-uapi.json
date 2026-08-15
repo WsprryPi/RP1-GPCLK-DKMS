@@ -1,0 +1,354 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "attempt": "uapi",
+  "deadlineSeconds": 900,
+  "evidenceDirectory": "/var/lib/rp1-gpclk-dkms/gate-d/stale-manifest/gd-stale-manifest-uapi",
+  "expectedFinalState": "empty-inactive-baseline",
+  "hostId": "wspr5-stock",
+  "inputs": {
+    "boot": {
+      "assistanceSeconds": 1800,
+      "automaticRecoverySeconds": 900,
+      "config": "/boot/firmware/config.txt",
+      "configSha256": "b6218fd92bd231151f177029b0dfd84a2af1e92f94dac768bd9501af087d43e2",
+      "normalKernel": "6.18.34+rpt-rpi-2712",
+      "priorInitramfsSha256": "e3d47bcb88e0a0ed9cb338832fc1ac503d423692ab49842134c68677dc505068",
+      "priorInitramfsSource": "/boot/initrd.img-6.12.75+rpt-rpi-2712",
+      "priorKernel": "6.12.75+rpt-rpi-2712",
+      "priorKernelSha256": "c194093a665071826ff94fb014b574de8ad896584b7317bbeafefe94154b0b44",
+      "priorKernelSource": "/boot/vmlinuz-6.12.75+rpt-rpi-2712",
+      "rebootNoticeRequired": true,
+      "selector": "scripts/gate_d_boot.py",
+      "sshReturnSeconds": 600,
+      "tryboot": "/boot/firmware/tryboot.txt",
+      "trybootSha256": "c06b262332c145a0cfea594e020fced762a02eef269e4026fe84de71fb152b0a"
+    },
+    "candidateArchive": "/home/pi/gate-c-evidence/phase5.13-61ee2ea592c2/rp1-gpclk-dkms-0.0.0-phase5.13.tar.gz",
+    "candidateArchiveSha256": "58cb12864b291380fefd31ea9a203f7ee308767790787e3fce0be352dab19b14",
+    "candidateRelease": "0.0.0-phase5.13",
+    "gpio20Dtbo": "/home/pi/gate-c-evidence/phase5.13-61ee2ea592c2/rp1-gpclk-gpio20.dtbo",
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "gpio4Dtbo": "/home/pi/gate-c-evidence/phase5.13-61ee2ea592c2/rp1-gpclk-gpio4.dtbo",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "manifestSha256": "1817bbc56512c0b6adb77bb4d1341eae71615489fd511486229b699b62616eda",
+    "matrixPolicySha256": "f0373c626530b9e3d58a0f0c057d877c6693a7cb7df63de7a409e64b1b9245a8",
+    "ownedPaths": [
+      "/var/lib/rp1-gpclk-dkms/gate-d/staging/gd-stale-manifest-uapi",
+      "/var/lib/rp1-gpclk-dkms/gate-d/stale-manifest/gd-stale-manifest-uapi"
+    ],
+    "predecessorArchive": "/home/pi/gate-c-evidence/predecessor-6.18.34-a1aed8cbb3e7/rp1-gpclk-dkms-0.0.0-phase5.2.tar.gz",
+    "predecessorArchiveSha256": "f334853d9c94d733ea22e9b7b93961a005e63442ec4efc4edbe2b12d6321aaf4",
+    "predecessorVersion": "0.0.0-phase5.2",
+    "routeDecisionSha256": "15fce4c7f94bb916b8d0d55e29a488aa6ef1ec39b1411d8793266b24e9ad56ca",
+    "sourceCommit": "61ee2ea592c2551eca56fd0566fef43097b8c682",
+    "stagingDirectory": "/var/lib/rp1-gpclk-dkms/gate-d/staging/gd-stale-manifest-uapi",
+    "subordinateLifecycle": null,
+    "targetPlanSha256": "8b50e9e1d957d4f87162caddfaa8760c041cffbc8eb3c527d010969f8289ab27",
+    "tooling": {
+      "bootSelector": {
+        "candidateArchiveMember": true,
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-boot",
+        "sha256": "731b122fbc154e4945397bf844bdb093865175f16b92376972fd72e352893bf3",
+        "sourcePath": "scripts/gate_d_boot.py"
+      },
+      "busyInjector": {
+        "candidateArchiveMember": true,
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-busy-injector",
+        "sha256": "1bebe7cd10be210a2dcedb9de3db701888f40c38f3210470d777b69bcf5b7582",
+        "sourcePath": "tools/gate_d_busy_injector.c"
+      },
+      "instanceValidator": {
+        "candidateArchiveMember": true,
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-instance",
+        "sha256": "236127207806d18530287c3f6f887b5a2534b645ad279f2bd01e82ec78fc3452",
+        "sourcePath": "scripts/gate_d_instance.py"
+      },
+      "lifecycleCoordinator": {
+        "candidateArchiveMember": true,
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle",
+        "sha256": "c55dee9ce430b30b52972a9d6312b593b5d3c9ab15b8c17a270a6b7066a7480d",
+        "sourcePath": "scripts/gate_d_lifecycle.py"
+      },
+      "permanentExecutor": {
+        "candidateArchiveMember": true,
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-executor",
+        "sha256": "bc8a651da0803168abfcd1f008a6a86701825fd2e17ae95f5dee8815f3f993ac",
+        "sourcePath": "scripts/gate_d_outer.py"
+      },
+      "platformCoordinator": {
+        "candidateArchiveMember": true,
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-platform",
+        "sha256": "d749859b0c915c4cfde8df85aa088359f7ed87d77183ae927c82bc1f149afb3c",
+        "sourcePath": "scripts/gate_d_platform.py"
+      },
+      "targetPlanValidator": {
+        "candidateArchiveMember": true,
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-target-plan",
+        "sha256": "ff9040ef0534f75263f44fe2cc3320560da7298963908308cd2902bd7cbb9b45",
+        "sourcePath": "scripts/gate_d_target_plan.py"
+      },
+      "uapiProbe": {
+        "candidateArchiveMember": true,
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe",
+        "sha256": "178de464eeed875fc0906f7c19b7e2d1ac0e33313d1d1074c57616a4e7fa1133",
+        "sourcePath": "tools/gate_d_uapi_probe.c"
+      }
+    },
+    "uapiSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb"
+  },
+  "journal": "/var/lib/rp1-gpclk-dkms/gate-d/stale-manifest/gd-stale-manifest-uapi/transaction.json",
+  "kernelRelease": "6.18.34+rpt-rpi-2712",
+  "kind": "gate-d-executable-attempt",
+  "matrixRow": "stale-manifest",
+  "operationId": "gd-stale-manifest-uapi",
+  "route": "route-neutral",
+  "safety": {
+    "antennaConnected": false,
+    "clockEnabled": false,
+    "dmaActive": false,
+    "endpointOpen": false,
+    "forcedRemoval": false,
+    "gpioOutput": false,
+    "historicalArtifactMutation": false,
+    "liveOutput": false,
+    "moduleLoaded": false,
+    "ownerPresent": false,
+    "platformBound": false,
+    "sdrPermitted": false,
+    "si5351Disconnected": true,
+    "trybootMutation": false
+  },
+  "schemaVersion": 1,
+  "services": [
+    {
+      "action": "stop-then-restore-exact",
+      "name": "wsprrypi",
+      "requiredPreState": "active"
+    },
+    {
+      "action": "stop-then-restore-exact",
+      "name": "sdrplay",
+      "requiredPreState": "active"
+    },
+    {
+      "action": "preserve",
+      "name": "sdrconnect-server",
+      "requiredPreState": "inactive"
+    },
+    {
+      "action": "stop-then-restore-exact",
+      "name": "SoapySDRServer",
+      "requiredPreState": "active"
+    }
+  ],
+  "steps": [
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "create-evidence"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "01-create-evidence",
+      "operation": "create-evidence"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "capture-preflight"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "02-capture-preflight",
+      "operation": "capture-preflight"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "verify-input-hashes"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "03-verify-input-hashes",
+      "operation": "verify-input-hashes"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "snapshot-services"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "04-snapshot-services",
+      "operation": "snapshot-services"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "service-transaction",
+        "name": "quiesce-services"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "05-quiesce-services",
+      "operation": "quiesce-services"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "stage-source"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "06-stage-source",
+      "operation": "stage-source"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "copy-candidate"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "07-copy-candidate",
+      "operation": "copy-candidate"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "inject-stale-identity"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "08-inject-stale-identity",
+      "operation": "inject-stale-identity"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "expect-preload-rejection"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "09-expect-preload-rejection",
+      "operation": "expect-preload-rejection"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "remove-injected-copy"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "10-remove-injected-copy",
+      "operation": "remove-injected-copy"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "verify-baseline-unchanged"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "11-verify-baseline-unchanged",
+      "operation": "verify-baseline-unchanged"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "service-transaction",
+        "name": "restore-services"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "12-restore-services",
+      "operation": "restore-services"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "audit-residue"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "13-audit-residue",
+      "operation": "audit-residue"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "capture-kernel-log-delta"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "14-capture-kernel-log-delta",
+      "operation": "capture-kernel-log-delta"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "verify-final-safety"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "15-verify-final-safety",
+      "operation": "verify-final-safety"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "seal-evidence"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "16-seal-evidence",
+      "operation": "seal-evidence"
+    }
+  ]
+}

@@ -26,7 +26,6 @@ EXCLUDED_EXACT = {
     "release/gate-d-version-pair-v1.json",
     "release/gate-d-matrix-policy-v2.json",
     "release/gate-d-route-compatibility-decision-v1.json",
-    "tools/gate_d_busy_injector.c",
     "tools/gate_d_busy_injector.h",
     "tests/gate_d_busy_injector_test.c",
 }

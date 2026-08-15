@@ -15,6 +15,7 @@ import json
 import os
 import pathlib
 import tempfile
+import platform
 
 SHA_LEN = 64
 MARKER_BEGIN = "# BEGIN RP1-GPCLK-DKMS GATE-D TEST-OWNED"
@@ -197,18 +198,30 @@ def restore(spec: dict, root: pathlib.Path) -> dict:
     return state
 
 
+def verify_running(expected: str, *, running: str | None = None) -> dict:
+    actual = platform.release() if running is None else running
+    if actual != expected:
+        raise ValueError(f"running kernel differs: expected {expected}, got {actual}")
+    return {"runningKernel": actual, "verified": True, "readOnly": True,
+            "liveOutput": False}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=("validate", "plan", "select", "restore"))
-    parser.add_argument("operation", type=pathlib.Path)
+    parser.add_argument("action", choices=("validate", "plan", "select", "restore", "verify-running"))
+    parser.add_argument("operation")
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
-    spec = load(args.operation)
-    if args.action == "validate":
+    if args.action == "verify-running":
+        result = verify_running(args.operation)
+    elif args.action == "validate":
+        spec = load(pathlib.Path(args.operation))
         result = {"valid": True, "readOnly": True, "operationId": spec["operationId"]}
     elif args.action == "plan":
+        spec = load(pathlib.Path(args.operation))
         result = plan(spec)
     else:
+        spec = load(pathlib.Path(args.operation))
         if not args.execute or os.geteuid() != 0:
             raise SystemExit("boot mutation requires root and --execute")
         result = select(spec, pathlib.Path("/")) if args.action == "select" else restore(spec, pathlib.Path("/"))

@@ -41,7 +41,9 @@ def load(path: pathlib.Path) -> dict:
     return value
 
 
-def validate(value: dict, *, require_ready: bool = False) -> dict:
+def validate(value: dict, *, require_ready: bool = False,
+             validate_attempt_bundle: bool = True,
+             enforce_candidate_status: bool = True) -> dict:
     required = {"SPDX-License-Identifier", "schemaVersion", "kind", "matrixRelease",
                 "executionPolicy", "candidate", "authorization", "systems", "recovery",
                 "rows", "inputsReady", "executionReady"}
@@ -50,12 +52,14 @@ def validate(value: dict, *, require_ready: bool = False) -> dict:
     policy_ref = value["executionPolicy"]
     policy_fields = {"matrixPolicy", "matrixPolicySha256", "routeDecision",
                      "routeDecisionSha256", "targetPlan", "targetPlanSha256",
+                     "attemptIndex", "attemptIndexSha256",
                      "environmentalCoverageComplete"}
     if not isinstance(policy_ref, dict) or set(policy_ref) != policy_fields:
         raise ValueError("execution-policy references are incomplete")
     for path_field, hash_field in (("matrixPolicy", "matrixPolicySha256"),
                                    ("routeDecision", "routeDecisionSha256"),
-                                   ("targetPlan", "targetPlanSha256")):
+                                   ("targetPlan", "targetPlanSha256"),
+                                   ("attemptIndex", "attemptIndexSha256")):
         relative = policy_ref[path_field]
         if (not isinstance(relative, str) or pathlib.PurePosixPath(relative).is_absolute() or
                 ".." in pathlib.PurePosixPath(relative).parts):
@@ -75,7 +79,24 @@ def validate(value: dict, *, require_ready: bool = False) -> dict:
         __import__("sys").path.insert(0, str(scripts))
     from gate_d_target_plan import validate as validate_target_plan
     target_plan = json.loads((ROOT / policy_ref["targetPlan"]).read_text(encoding="utf-8"))
-    validate_target_plan(target_plan)
+    status_path = ROOT / "release/gate-d-candidate-status-v1.json"
+    superseded = False
+    if status_path.is_file() and not status_path.is_symlink():
+        candidate_status = json.loads(status_path.read_text(encoding="utf-8"))
+        historical = candidate_status.get("historicalCandidate", {})
+        superseded = (enforce_candidate_status and
+                      historical.get("release") == value.get("candidate", {}).get("release") and
+                      historical.get("status") == "superseded-before-gate-d-execution")
+    # The policy hash binds the sealed plan bytes. Live workspace tool identity
+    # is validated by the attempt index/executor bundle; historical plans must
+    # remain inspectable after permanent tools advance.
+    validate_target_plan(target_plan, verify_tools=False)
+    from gate_d_attempts import generate as generate_attempts, validate_index
+    if validate_attempt_bundle:
+        attempt_result = validate_index(ROOT / policy_ref["attemptIndex"],
+                                        expected_documents=generate_attempts(value, target_plan))
+        if attempt_result["attemptCount"] != 38:
+            raise ValueError("attempt bundle is incomplete")
     if target_plan.get("hostId") not in {system.get("id") for system in value.get("systems", [])}:
         raise ValueError("target plan host differs from execution instance")
     route_decision = json.loads((ROOT / policy_ref["routeDecision"]).read_text(encoding="utf-8"))
@@ -191,7 +212,7 @@ def validate(value: dict, *, require_ready: bool = False) -> dict:
             raise ValueError(f"environmental row is not deferred: {row['id']}")
         elif row["status"] != "ready":
             blocked.append(row["id"])
-    expected_inputs = candidate["status"] == "frozen" and not blocked
+    expected_inputs = candidate["status"] == "frozen" and not blocked and not superseded
     if value["inputsReady"] is not expected_inputs:
         raise ValueError("inputsReady disagrees with candidate and required rows")
     expected_ready = expected_inputs and authorization["targetExecutionApproved"]
@@ -206,7 +227,8 @@ def validate(value: dict, *, require_ready: bool = False) -> dict:
         raise ValueError("environmentalCoverageComplete disagrees with deferred rows")
     return {"valid": True, "inputsReady": expected_inputs, "executionReady": expected_ready,
             "environmentalCoverageComplete": expected_environmental,
-            "blockedRows": blocked, "deferredRows": deferred, "readOnly": True}
+            "blockedRows": blocked, "deferredRows": deferred, "candidateSuperseded": superseded,
+            "readOnly": True}
 
 
 def main() -> None:
