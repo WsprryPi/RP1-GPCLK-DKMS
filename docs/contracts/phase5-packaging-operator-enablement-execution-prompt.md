@@ -469,6 +469,13 @@ authorized, only with the truthful lesser state and limitations.
 
 ## Phase 5F: release-candidate freeze and module publication
 
+A candidate is an exact commit plus a sealed archive checksum that may be used
+for authorized testing. It is not a consumable product release. A published
+release exists for consumers only after Gate F publication completes and fresh
+downloads of every public artifact pass outer and inner identity verification.
+Neither an expected/local tag nor locally reproducible bytes cross that
+boundary.
+
 Before publication:
 
 1. begin from a clean, synchronized worktree and reviewed committed candidate;
@@ -492,6 +499,16 @@ outer/inner checksum, provenance, archive-layout, signature where applicable,
 and install-input verification. Publication is unconfirmed until this
 post-download verification passes. Do not replace a published artifact under
 the same version; publish a new reviewed version for any changed byte.
+
+The machine-readable release and integration ordering contract is
+`release/release-integration-gates-v1.json`. Its prerequisites may not be
+skipped: all offline checks, representative lifecycle rows, adversarial
+closure, reproduction, version/tag agreement, post-download checksum
+verification, a real populated compatibility manifest, verified operator
+instructions, documented limitations, and evidence-bounded claims precede a
+consumable module release. Only then may canonical-UAPI adapter integration,
+cross-repository byte and semantic checks, exact WsprryPi pinning, application
+qualification, and dependent releases proceed in their owning repositories.
 
 ## Phase 5G: exact-release WSPR-Transmitter integration
 

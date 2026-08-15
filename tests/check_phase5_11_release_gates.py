@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+from __future__ import annotations
+
+import copy
+import json
+import pathlib
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+PATH = ROOT / "release/release-integration-gates-v1.json"
+document = json.loads(PATH.read_text())
+
+ORDER = [
+    "candidate-freeze", "offline-checks-twice", "representative-lifecycle-matrix",
+    "independent-adversarial-review", "artifact-reproduction",
+    "tag-and-internal-version-match", "real-compatibility-manifest",
+    "operator-instructions-verification", "limitations-and-claim-audit",
+    "module-publication", "public-download-verification",
+    "wspr-transmitter-integration", "cross-repository-uapi-checks",
+    "wsprrypi-exact-pin", "application-integration-qualification",
+    "dependent-release-publication",
+]
+GATE_KEYS = {"id", "owner", "requires", "status", "evidence", "claimCeiling"}
+
+
+def validate(value: dict) -> None:
+    if value.get("schemaVersion") != 1:
+        raise ValueError("invalid release-gate schema identity")
+    if value.get("currentClassification") != "candidate":
+        raise ValueError("current non-published identity must remain a candidate")
+    if value.get("modulePublicationConfirmed") is not False:
+        raise ValueError("module publication is not confirmed")
+    if value.get("publishedReleaseRequiresPostDownloadVerification") is not True:
+        raise ValueError("public download verification is mandatory")
+    if value.get("gateOrder") != ORDER:
+        raise ValueError("release or integration gate order changed")
+    gates = value.get("gates")
+    if not isinstance(gates, list) or [gate.get("id") for gate in gates] != ORDER:
+        raise ValueError("gates missing, extra, duplicated, or reordered")
+    for index, gate in enumerate(gates):
+        if set(gate) != GATE_KEYS:
+            raise ValueError(f"invalid fields for {gate.get('id')}")
+        if gate["status"] not in {"planned", "blocked", "passed"}:
+            raise ValueError(f"invalid status for {gate['id']}")
+        if not isinstance(gate["evidence"], list) or not gate["evidence"]:
+            raise ValueError(f"missing evidence contract for {gate['id']}")
+        if not all(isinstance(item, str) and item.strip() for item in gate["evidence"]):
+            raise ValueError(f"invalid evidence contract for {gate['id']}")
+        if not isinstance(gate["claimCeiling"], str) or not gate["claimCeiling"].strip():
+            raise ValueError(f"missing claim ceiling for {gate['id']}")
+        expected_requires = [] if index == 0 else [ORDER[index - 1]]
+        if gate["requires"] != expected_requires:
+            raise ValueError(f"gate dependency is not strict for {gate['id']}")
+        if index and gate["status"] == "passed" and gates[index - 1]["status"] != "passed":
+            raise ValueError(f"gate passed before its prerequisite: {gate['id']}")
+
+    by_id = {gate["id"]: gate for gate in gates}
+    if "downloaded to a fresh location" not in " ".join(by_id["public-download-verification"]["evidence"]):
+        raise ValueError("fresh public download evidence missing")
+    public_evidence = " ".join(by_id["public-download-verification"]["evidence"])
+    if not all(term in public_evidence for term in ("outer SHA-256", "inner checksum", "distinct path")):
+        raise ValueError("outer and inner public artifact verification incomplete")
+    uapi_evidence = " ".join(by_id["cross-repository-uapi-checks"]["evidence"])
+    if "byte equality" not in uapi_evidence or "semantic ABI equality" not in uapi_evidence:
+        raise ValueError("cross-repository UAPI checks incomplete")
+    pin_evidence = " ".join(by_id["wsprrypi-exact-pin"]["evidence"])
+    for term in ("module tag", "archive SHA-256", "UAPI", "compatibility-manifest", "adapter identity"):
+        if term not in pin_evidence:
+            raise ValueError(f"WsprryPi exact pin lacks {term}")
+    if "module-before-adapter-before-application" not in " ".join(by_id["dependent-release-publication"]["evidence"]):
+        raise ValueError("dependent release order is not explicit")
+
+
+validate(document)
+layout = json.loads((ROOT / "release/release-layout-v1.json").read_text())
+assert document["release"] == layout["release"]
+assert document["expectedTag"] == layout["expectedTag"]
+assert any(item["path"] == "release/release-integration-gates-v1.json" for item in layout["artifacts"])
+decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_text())
+assert decisions["entries"]
+assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False for entry in decisions["entries"])
+assert set(document["candidateSnapshot"]["knownBlockers"]) == {
+    "representative-lifecycle-matrix-not-executed",
+    "public-artifact-download-verification-not-performed",
+    "module-release-not-published",
+}
+
+for mutation in (
+    lambda value: value.update(currentClassification="published-release"),
+    lambda value: value.update(modulePublicationConfirmed=True),
+    lambda value: value.update(publishedReleaseRequiresPostDownloadVerification=False),
+    lambda value: value["gates"].pop(),
+    lambda value: value["gates"][1].update(requires=[]),
+    lambda value: value["gates"][1].update(status="passed"),
+    lambda value: value["gates"][10].update(evidence=["checksums passed before upload"]),
+    lambda value: value["gates"][12].update(evidence=["header looks compatible"]),
+):
+    invalid = copy.deepcopy(document)
+    mutation(invalid)
+    try:
+        validate(invalid)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("invalid release or integration gate contract accepted")
+
+print("Phase 5.11 release and integration gates: PASS")

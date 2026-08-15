@@ -374,10 +374,37 @@ Every consumable release must be tagged and include:
 - installation, rollback, and complete-removal instructions; and
 - security and behavioral release notes.
 
+A release candidate is not a consumable release. A candidate is one exact
+reviewed commit plus a sealed deterministic archive and its checksum; it may be
+used for authorized qualification before a release exists. An expected tag, a
+local tag, reproducible bytes, or locally verified checksums do not establish
+publication. A published release exists for consumers only after the module
+publication gate passes, the reviewed tag and immutable artifacts are public,
+and every downloaded public artifact passes fresh outer and inner checksum,
+provenance, archive-layout, and install-input verification.
+
+The module publication gate requires the full offline suite, complete
+representative lifecycle matrix, closed independent adversarial review,
+independent artifact reproduction, exact tag/internal-version agreement,
+post-download checksum verification, a real populated compatibility manifest,
+verified install/rollback/recovery/removal instructions, documented known
+limitations, and a claim-to-evidence audit with no over-broad statement. A
+missing, failed, stale, or indeterminate prerequisite leaves the identity a
+candidate. Published bytes are immutable under their version and tag.
+
 WsprryPi consumes only an explicitly allowed release artifact through its
 compatibility manifest. Module publication precedes the dependent WsprryPi
 release, which records the allowed module/UAPI range and exact artifact
 identity.
+
+After confirmed module publication, `WSPR-Transmitter` first consumes the
+canonical UAPI and exact module release and passes byte-for-byte and semantic
+ABI checks. WsprryPi then pins the exact downloaded archive/tag/checksum,
+compatibility-manifest identity, UAPI identity, and reviewed adapter identity.
+Application integration qualification follows under separate authority;
+dependent adapter and application releases follow only after their respective
+evidence and reviews pass. Each repository retains separate commits, reviews,
+tags, releases, and qualification claims.
 
 ## 13. Security and operator responsibility
 

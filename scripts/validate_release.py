@@ -106,6 +106,7 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
                     "release/permissions-enrollment-policy-v1.json",
                     "release/compatibility-decisions-v1.json", "scripts/compatibility_policy.py",
                     "release/signing-policy-v1.json", "scripts/signing_policy.py",
+                    "release/release-integration-gates-v1.json",
                     f"docs/releases/{layout['release']}-security.md", f"docs/releases/{layout['release']}-behavior.md",
                     "overlays/rp1-gpclk-gpio4.dts", "overlays/rp1-gpclk-gpio20.dts"}
         if not required <= set(names):

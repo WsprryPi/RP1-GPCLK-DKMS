@@ -1,0 +1,55 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "release": "0.0.0-phase5.2",
+  "expectedTag": "v0.0.0-phase5.2",
+  "currentClassification": "candidate",
+  "publishedReleaseRequiresPostDownloadVerification": true,
+  "modulePublicationConfirmed": false,
+  "candidateSnapshot": {
+    "archiveIdentity": "must-bind-exact-commit-name-and-sha256-before-execution",
+    "sealedArchiveMayBeTested": true,
+    "consumableByDependentRelease": false,
+    "knownBlockers": [
+      "representative-lifecycle-matrix-not-executed",
+      "public-artifact-download-verification-not-performed",
+      "module-release-not-published"
+    ]
+  },
+  "gateOrder": [
+    "candidate-freeze",
+    "offline-checks-twice",
+    "representative-lifecycle-matrix",
+    "independent-adversarial-review",
+    "artifact-reproduction",
+    "tag-and-internal-version-match",
+    "real-compatibility-manifest",
+    "operator-instructions-verification",
+    "limitations-and-claim-audit",
+    "module-publication",
+    "public-download-verification",
+    "wspr-transmitter-integration",
+    "cross-repository-uapi-checks",
+    "wsprrypi-exact-pin",
+    "application-integration-qualification",
+    "dependent-release-publication"
+  ],
+  "gates": [
+    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"planned","evidence":["exact source commit","sealed archive name and SHA-256","UAPI ABI and header SHA-256","GPIO4 and GPIO20 source and DTBO SHA-256","compatibility-manifest SHA-256","expected tag"],"claimCeiling":"exact test candidate only; not a consumable release"},
+    {"id":"offline-checks-twice","owner":"RP1-GPCLK-DKMS","requires":["candidate-freeze"],"status":"blocked","evidence":["two complete clean-output offline-suite transcripts bound to the candidate","representative-header results and identified skips"],"claimCeiling":"offline and build compatibility only"},
+    {"id":"representative-lifecycle-matrix","owner":"RP1-GPCLK-DKMS","requires":["offline-checks-twice"],"status":"blocked","evidence":["every predeclared matrix row passed with independent sealed evidence","baseline cleanup and residue audits","output-disabled proof"],"claimCeiling":"representative lifecycle compatibility only; no calibrated or RF claim"},
+    {"id":"independent-adversarial-review","owner":"RP1-GPCLK-DKMS","requires":["representative-lifecycle-matrix"],"status":"blocked","evidence":["all packaging lifecycle compatibility integrity and claim findings closed","affected evidence invalidated and rerun"],"claimCeiling":"reviewed evidence only"},
+    {"id":"artifact-reproduction","owner":"RP1-GPCLK-DKMS","requires":["independent-adversarial-review"],"status":"blocked","evidence":["independent archive reproduction byte match","independent GPIO4 and GPIO20 DTBO byte matches","tool identities and commands"],"claimCeiling":"reproducible candidate artifacts only"},
+    {"id":"tag-and-internal-version-match","owner":"RP1-GPCLK-DKMS","requires":["artifact-reproduction"],"status":"blocked","evidence":["tag resolves to exact candidate commit","module DKMS archive root and name metadata notes UAPI overlays and manifest agree"],"claimCeiling":"release identity consistency only"},
+    {"id":"real-compatibility-manifest","owner":"RP1-GPCLK-DKMS","requires":["tag-and-internal-version-match"],"status":"blocked","evidence":["populated exact identities states reasons routes modes and live flags","exact evidence references for every non-default claim","schema and state-ceiling validation"],"claimCeiling":"only states and live eligibility supported by exact evidence"},
+    {"id":"operator-instructions-verification","owner":"RP1-GPCLK-DKMS","requires":["real-compatibility-manifest"],"status":"blocked","evidence":["install instructions verified from candidate artifact","rollback and recovery verified","complete removal and repeated-removal residue audit verified"],"claimCeiling":"verified representative operator lifecycle only"},
+    {"id":"limitations-and-claim-audit","owner":"RP1-GPCLK-DKMS","requires":["operator-instructions-verification"],"status":"blocked","evidence":["known limitations and exclusions published with candidate","claim-to-evidence audit has no over-broad statement"],"claimCeiling":"no claim broader than exact evidence"},
+    {"id":"module-publication","owner":"RP1-GPCLK-DKMS","requires":["limitations-and-claim-audit"],"status":"blocked","evidence":["explicit Gate F authority","reviewed tag pushed","immutable artifacts checksums provenance and manifest published"],"claimCeiling":"publication uploaded but not yet confirmed for consumption"},
+    {"id":"public-download-verification","owner":"RP1-GPCLK-DKMS","requires":["module-publication"],"status":"blocked","evidence":["every public artifact downloaded to a fresh location","outer SHA-256 verified","archive extracted to a distinct path","every inner checksum provenance and install input verified"],"claimCeiling":"published module release confirmed and consumable at exact identity"},
+    {"id":"wspr-transmitter-integration","owner":"WSPR-Transmitter","requires":["public-download-verification"],"status":"blocked","evidence":["separate repository authority commit review and tests","canonical UAPI consumed from exact published module release"],"claimCeiling":"adapter integration only; no product qualification"},
+    {"id":"cross-repository-uapi-checks","owner":"WSPR-Transmitter","requires":["wspr-transmitter-integration"],"status":"blocked","evidence":["canonical header byte equality","semantic ABI equality for ioctls layouts offsets enums flags routes capabilities states reasons and limits","fail-closed mismatch tests"],"claimCeiling":"adapter ABI compatibility with exact module release"},
+    {"id":"wsprrypi-exact-pin","owner":"WsprryPi","requires":["cross-repository-uapi-checks"],"status":"blocked","evidence":["exact module tag and downloaded archive SHA-256","exact UAPI and compatibility-manifest SHA-256","exact reviewed adapter identity"],"claimCeiling":"application dependency identity only"},
+    {"id":"application-integration-qualification","owner":"WsprryPi","requires":["wsprrypi-exact-pin"],"status":"blocked","evidence":["separately authorized exact-identity application qualification","mode scheduling cleanup recovery and applicable calibrated evidence"],"claimCeiling":"only qualified application routes modes kernels and identities"},
+    {"id":"dependent-release-publication","owner":"WSPR-Transmitter then WsprryPi","requires":["application-integration-qualification"],"status":"blocked","evidence":["separate reviewed adapter release","separate reviewed application release","module-before-adapter-before-application order"],"claimCeiling":"dependent releases only at their exact reviewed evidence scope"}
+  ]
+}
