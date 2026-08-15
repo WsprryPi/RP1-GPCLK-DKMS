@@ -28,7 +28,7 @@ required_ids = {"source-archive", "module-source", "module-headers", "kbuild", "
                 "compatibility-schema", "compatibility-manifest", "provenance", "checksums", "release-metadata",
                 "installation-model", "overlay-contract", "permissions-enrollment-policy", "compatibility-decisions", "compatibility-policy", "signing-policy-data", "signing-policy-tool", "diagnostics-contract", "administration-tool", "administration-command", "diagnostics-command",
                 "configuration-directory", "transaction-state", "lifecycle-tool", "lifecycle-removal-contract",
-                "representative-system-matrix", "release-integration-gates", "lifecycle-policy-tool", "diagnostic-tool", "operator-docs",
+                "representative-system-matrix", "release-integration-gates", "calibrated-review-release-policy", "lifecycle-policy-tool", "diagnostic-tool", "operator-docs",
                 "security-notes", "behavioral-notes", "signing-guidance"}
 assert required_ids == set(artifact_ids)
 for item in layout["artifacts"]:
