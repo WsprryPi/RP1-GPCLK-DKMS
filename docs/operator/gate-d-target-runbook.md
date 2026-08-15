@@ -2,32 +2,32 @@
 
 # Gate D target runbook
 
-## Current execution hard stop
+## Current execution release
 
-The operator granted the exact target-execution authority on 2026-08-15, but
-the first authorized read-only target preflight found that the reviewed command
-plans do not implement the complete row contracts. All ten required-executable
-rows are therefore `blocked-input-required`. This command must fail before any
-target mutation is prepared:
+The operator granted the exact target-execution authority on 2026-08-15. The
+offline blocker-resolution slice now binds the complete 38-attempt target plan
+and exact execution-tool identities. This command must pass before any target
+mutation is prepared:
 
 ```sh
 gate-d-instance release/gate-d-execution-instance-v1.json --require-ready
 ```
 
-Do not execute any row while that command fails. `gate-d-lifecycle` requires every
+Do not execute any row if that command fails. `gate-d-lifecycle` requires every
 `required-executable` row in the frozen 15-row instance to be ready. The five
 `deferred-environmental` rows remain unpassed and continue to block complete
 environmental coverage and publication; simulations cannot satisfy them.
 
-## Preconditions for a corrected authorized run
+## Preconditions for the authorized run
 
 Confirm all required-executable inputs, the hashed matrix-policy and
 route-decision sidecars, full JSON Schema and semantic validation, and the
-sealed instance digest. The existing approval remains limited to the exact
-required-executable subset in the authorization dossier, but it does not permit
-improvised commands outside reviewed operation plans. Correct and independently
-review every target plan, then require `inputsReady`,
-`targetExecutionApproved`, and `executionReady` to all be true.
+sealed instance digest and validate
+`release/gate-d-target-operation-plan-v1.json` with
+`scripts/gate_d_target_plan.py`. The existing approval remains limited to the
+exact required-executable subset and does not permit improvised commands.
+Require `inputsReady`, `targetExecutionApproved`, and `executionReady` to all
+be true.
 Confirm the Si5351 leads are disconnected from
 GPIO4 and GPIO20, no antenna is connected, SDRplay is unused, rescue SD and
 physical power access remain available, and the candidate artifact hashes match
@@ -45,7 +45,7 @@ gate-d-lifecycle plan OPERATION.json
 ```
 
 Reject any plan containing `live_output=1`, an unallowlisted route, boot or
-service mutation, forced removal, `/dev/mem`, raw MMIO, GPIO output, clock
+service mutation outside the hash-bound target plan, forced removal, `/dev/mem`, raw MMIO, GPIO output, clock
 enablement, DMA submission, transmitter, SDR, or RF activity.
 
 ## Per-attempt dispatch

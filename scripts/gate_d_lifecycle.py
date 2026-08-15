@@ -457,8 +457,6 @@ def execute(spec: dict, instance: dict, journal: pathlib.Path, *, root: pathlib.
         for checkpoint, command in operation_commands(spec):
             state["checkpoint"] = checkpoint
             atomic_json(journal, state)
-            if stop_after == checkpoint:
-                raise InterruptedError(checkpoint)
             try:
                 output = run(command, checkpoint)
             except subprocess.CalledProcessError:
@@ -478,19 +476,21 @@ def execute(spec: dict, instance: dict, journal: pathlib.Path, *, root: pathlib.
                 raise ValueError("output-disabled UAPI query/acquire/release verification failed")
             if checkpoint == "unbind-bind" and '"unbindBind": true' not in output and "unbind_bind=1" not in output:
                 raise ValueError("output-disabled unbind/rebind verification failed")
+            if stop_after == checkpoint:
+                raise InterruptedError(checkpoint)
         if spec["operation"] in {"complete-removal", "repeated-removal", "reinstall-after-removal"}:
             state["checkpoint"] = "owned-residue-remove"
             atomic_json(journal, state)
+            remove_owned_paths(spec, root)
             if stop_after == "owned-residue-remove":
                 raise InterruptedError("owned-residue-remove")
-            remove_owned_paths(spec, root)
         state["checkpoint"] = "verify-final-state"
         atomic_json(journal, state)
-        if stop_after == "verify-final-state":
-            raise InterruptedError("verify-final-state")
         validate_safety(spec["safety"], removal_refusal=spec["operation"] == "refuse-removal")
         verify_final_state(spec, root,
                            lambda command, deadline: run(command, "verify-final-state"))
+        if stop_after == "verify-final-state":
+            raise InterruptedError("verify-final-state")
         state["checkpoint"] = "commit-state"
         atomic_json(journal, state)
         if stop_after == "commit-state":

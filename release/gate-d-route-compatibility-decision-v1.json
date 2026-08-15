@@ -15,7 +15,7 @@
     "kernelRelease": "6.18.34+rpt-rpi-2712",
     "kernelConfigSha256": "d5ba966d17d456a6f29e53baf53464e1fd53f9f8e31481da18f2221f1da2593d",
     "moduleSymversSha256": "681e9fe5710e43c785b39c9e9f410a860cba6a6037e51af23a408cb5ccbe2426",
-    "routeIdentityEvidenceSha256": "6e8522aa2472e26c31d2457d27e4152f2a61b1f44e3de3352772b0a8df16c80f",
+    "routeIdentityEvidenceSha256": "ac4ed1661fcaa5c938c45c0592df365a6afb77b09f00236a6ec0dfaecb0be2fa",
     "firmwareIdentity": "2025-05-08 release 69471177 commit 69471177ba7e4cb7597cb2496f2a0b23f19c1113",
     "baseDtSha256": "e67017e5d45b97af478ebc93d651a086f2adcb6a650fe453eb9f1cf47e66473f",
     "liveDeviceTreePropertySetSha256": "c18f993d24dc67ba118d459cc30292b80b8caf9d56eb08600443251b09f19f71"

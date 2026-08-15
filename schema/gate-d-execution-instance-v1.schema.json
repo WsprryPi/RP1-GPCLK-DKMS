@@ -13,12 +13,14 @@
     "matrixRelease": {"type": "string", "minLength": 1},
     "executionPolicy": {
       "type": "object", "additionalProperties": false,
-      "required": ["matrixPolicy", "matrixPolicySha256", "routeDecision", "routeDecisionSha256", "environmentalCoverageComplete"],
+      "required": ["matrixPolicy", "matrixPolicySha256", "routeDecision", "routeDecisionSha256", "targetPlan", "targetPlanSha256", "environmentalCoverageComplete"],
       "properties": {
         "matrixPolicy": {"type": "string", "minLength": 1},
         "matrixPolicySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "routeDecision": {"type": "string", "minLength": 1},
         "routeDecisionSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "targetPlan": {"type": "string", "minLength": 1},
+        "targetPlanSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "environmentalCoverageComplete": {"type": "boolean"}
       }
     },

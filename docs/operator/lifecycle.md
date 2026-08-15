@@ -156,15 +156,16 @@ and the validated `wspr5-rescue` SD-before-NVMe recovery path. Successor
 keeps five unavailable environmental rows explicitly deferred rather than
 simulated. Read-only route discovery plus the exact predecessor/current,
 predecessor/prior, and successor/prior builds supply all ten
-required-executable inputs. `inputsReady: true`, but `executionReady: false`
-and `--require-ready` still fail because fresh target-execution authority is
-absent. Deferred rows continue to block complete environmental coverage and
+required-executable inputs. The hash-bound target-operation plan and fresh
+authorization now make `inputsReady: true` and `executionReady: true`.
+Deferred rows continue to block complete environmental coverage and
 publication.
 
 `inputsReady` and `executionReady` are separate. The former covers exact
 required-executable inputs; the latter additionally requires a fresh explicit
-target-execution release. The previously approved mutation envelope alone is
-not authority to dispatch the revised subset.
+target-execution release. The target-operation plan and exact execution-tool
+identities are hash-bound by the execution instance; a difference is not
+authority to improvise a replacement command.
 
 The execution instance is repository evidence, not package content. It is
 excluded from the candidate source archive and installation because it contains

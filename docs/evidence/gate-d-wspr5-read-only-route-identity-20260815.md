@@ -88,3 +88,24 @@ preflight; it does not satisfy the genuine pre-existing-conflict row.
 Retained `kernel_2712_phase6h.img` and `kernel_2712_phase6x.img` files also
 exist but are not selected by the active configuration. They are historical
 administrator artifacts, not Gate D inputs or test-owned residue.
+
+## Authorized stock-kernel boot discovery
+
+A later read-only discovery on 2026-08-15 resolved the exact reversible
+stock-kernel inputs. Normal `config.txt` has SHA-256
+`b6218fd92bd231151f177029b0dfd84a2af1e92f94dac768bd9501af087d43e2`.
+The unrelated historical `tryboot.txt` has SHA-256
+`c06b262332c145a0cfea594e020fced762a02eef269e4026fe84de71fb152b0a`
+and selects the custom `kernel_2712_phase6h.img` plus provider overlay; Gate D
+must preserve it and never use tryboot.
+
+The package-owned prior stock kernel is
+`/boot/vmlinuz-6.12.75+rpt-rpi-2712`, SHA-256
+`c194093a665071826ff94fb014b574de8ad896584b7317bbeafefe94154b0b44`.
+Its generated initramfs is `/boot/initrd.img-6.12.75+rpt-rpi-2712`, SHA-256
+`e3d47bcb88e0a0ed9cb338832fc1ac503d423692ab49842134c68677dc505068`.
+The current normal firmware kernel and initramfs hashes match the versioned
+`6.18.34` files. The reviewed selector therefore stages only digest-bound
+test-owned copies on the firmware partition, atomically appends a marked
+temporary selection to `config.txt`, restores its exact original bytes after
+the prior-kernel row, and removes only those copies. Discovery made no change.

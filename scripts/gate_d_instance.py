@@ -49,11 +49,13 @@ def validate(value: dict, *, require_ready: bool = False) -> dict:
         raise ValueError("invalid execution-instance identity")
     policy_ref = value["executionPolicy"]
     policy_fields = {"matrixPolicy", "matrixPolicySha256", "routeDecision",
-                     "routeDecisionSha256", "environmentalCoverageComplete"}
+                     "routeDecisionSha256", "targetPlan", "targetPlanSha256",
+                     "environmentalCoverageComplete"}
     if not isinstance(policy_ref, dict) or set(policy_ref) != policy_fields:
         raise ValueError("execution-policy references are incomplete")
     for path_field, hash_field in (("matrixPolicy", "matrixPolicySha256"),
-                                   ("routeDecision", "routeDecisionSha256")):
+                                   ("routeDecision", "routeDecisionSha256"),
+                                   ("targetPlan", "targetPlanSha256")):
         relative = policy_ref[path_field]
         if (not isinstance(relative, str) or pathlib.PurePosixPath(relative).is_absolute() or
                 ".." in pathlib.PurePosixPath(relative).parts):
@@ -68,6 +70,14 @@ def validate(value: dict, *, require_ready: bool = False) -> dict:
     classifications = {row["id"]: row.get("classification") for row in matrix_policy["rows"]}
     if not set(classifications.values()).issubset({"required-executable", "deferred-environmental"}):
         raise ValueError("unknown matrix execution classification")
+    scripts = ROOT / "scripts"
+    if str(scripts) not in __import__("sys").path:
+        __import__("sys").path.insert(0, str(scripts))
+    from gate_d_target_plan import validate as validate_target_plan
+    target_plan = json.loads((ROOT / policy_ref["targetPlan"]).read_text(encoding="utf-8"))
+    validate_target_plan(target_plan)
+    if target_plan.get("hostId") not in {system.get("id") for system in value.get("systems", [])}:
+        raise ValueError("target plan host differs from execution instance")
     route_decision = json.loads((ROOT / policy_ref["routeDecision"]).read_text(encoding="utf-8"))
     if (route_decision.get("kind") != "gate-d-route-compatibility-decision" or
             route_decision.get("candidate", {}).get("release") != value.get("candidate", {}).get("release") or

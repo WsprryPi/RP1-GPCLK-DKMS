@@ -1,0 +1,69 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-output-disabled-target-operation-plan",
+  "hostId": "wspr5-stock",
+  "tooling": {
+    "bootSelector":{"path":"scripts/gate_d_boot.py","sha256":"d618a8f46710e672a9b56d62468c5431b38498b0077f6afbf5be5179aba73e73","candidateArchiveMember":false},
+    "targetPlanValidator":{"path":"scripts/gate_d_target_plan.py","sha256":"12bdf3230482015ad791b268baa2865ee83474cf01fd019a619cde66747061de","candidateArchiveMember":false},
+    "lifecycleCoordinator":{"path":"scripts/gate_d_lifecycle.py","sha256":"8b43547c643564bac4154ae2e5107b50934ce114a2c2e2ba514dd9a7d21f2bca","candidateArchiveMember":false},
+    "busyInjectorSource":{"path":"tools/gate_d_busy_injector.c","sha256":"1bebe7cd10be210a2dcedb9de3db701888f40c38f3210470d777b69bcf5b7582","candidateArchiveMember":false},
+    "uapiProbeSource":{"path":"tools/gate_d_uapi_probe.c","sha256":"178de464eeed875fc0906f7c19b7e2d1ac0e33313d1d1074c57616a4e7fa1133","candidateArchiveMember":true}
+  },
+  "invariants": {
+    "liveOutput": false,
+    "si5351Disconnected": true,
+    "antennaConnected": false,
+    "sdrPermitted": false,
+    "forcedRemoval": false,
+    "trybootMutation": false,
+    "historicalArtifactMutation": false
+  },
+  "services": [
+    {"name":"wsprrypi","requiredPreState":"active","action":"stop-then-restore-exact"},
+    {"name":"sdrplay","requiredPreState":"active","action":"stop-then-restore-exact"},
+    {"name":"sdrconnect-server","requiredPreState":"inactive","action":"preserve"},
+    {"name":"SoapySDRServer","requiredPreState":"active","action":"stop-then-restore-exact"}
+  ],
+  "artifacts": {
+    "predecessor":{"version":"0.0.0-phase5.2","archive":"/home/pi/gate-c-evidence/predecessor-6.18.34-a1aed8cbb3e7/rp1-gpclk-dkms-0.0.0-phase5.2.tar.gz","sha256":"f334853d9c94d733ea22e9b7b93961a005e63442ec4efc4edbe2b12d6321aaf4"},
+    "successor":{"version":"0.0.0-phase5.13","archive":"/home/pi/gate-c-evidence/phase5.13-61ee2ea592c2/rp1-gpclk-dkms-0.0.0-phase5.13.tar.gz","sha256":"58cb12864b291380fefd31ea9a203f7ee308767790787e3fce0be352dab19b14"},
+    "gpio4":{"sha256":"c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6"},
+    "gpio20":{"sha256":"8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"}
+  },
+  "boot": {
+    "normalKernel":"6.18.34+rpt-rpi-2712",
+    "priorKernel":"6.12.75+rpt-rpi-2712",
+    "config":"/boot/firmware/config.txt",
+    "configSha256":"b6218fd92bd231151f177029b0dfd84a2af1e92f94dac768bd9501af087d43e2",
+    "tryboot":"/boot/firmware/tryboot.txt",
+    "trybootSha256":"c06b262332c145a0cfea594e020fced762a02eef269e4026fe84de71fb152b0a",
+    "priorKernelSource":"/boot/vmlinuz-6.12.75+rpt-rpi-2712",
+    "priorKernelSha256":"c194093a665071826ff94fb014b574de8ad896584b7317bbeafefe94154b0b44",
+    "priorInitramfsSource":"/boot/initrd.img-6.12.75+rpt-rpi-2712",
+    "priorInitramfsSha256":"e3d47bcb88e0a0ed9cb338832fc1ac503d423692ab49842134c68677dc505068",
+    "selector":"scripts/gate_d_boot.py",
+    "rebootNoticeRequired":true,
+    "sshReturnSeconds":600,
+    "automaticRecoverySeconds":900,
+    "assistanceSeconds":1800
+  },
+  "attemptEnvelope": [
+    "new-evidence-directory", "capture-live-preflight", "verify-artifacts",
+    "snapshot-services", "quiesce-exact-services", "stage-test-owned-source",
+    "execute-row-actions", "restore-exact-services", "audit-owned-residue",
+    "capture-scoped-kernel-log-delta", "seal-evidence-read-only"
+  ],
+  "rows": [
+    {"id":"current-supported-kernel","attempts":["gpio4","gpio20"],"actions":["install-successor","apply-route-runtime-output-disabled","load-disabled","query-release","unbind-rebind","unload","remove-route-runtime","complete-test-owned-removal"]},
+    {"id":"prior-supported-kernel-downgrade","attempts":["gpio4","gpio20"],"actions":["select-prior-stock-kernel","noticed-reboot-to-prior","verify-prior-kernel","install-predecessor","install-successor-as-downgrade-target","apply-route-runtime-output-disabled","load-disabled","query-release","unbind-rebind","unload","complete-test-owned-removal","restore-normal-boot-selection","noticed-reboot-to-normal","verify-normal-kernel"]},
+    {"id":"signing-not-enforced","attempts":["gpio4","gpio20"],"actions":["verify-signing-not-enforced","install-successor","apply-route-runtime-output-disabled","load-disabled","query-release","unload","remove-route-runtime","complete-test-owned-removal","verify-signing-policy-unchanged"]},
+    {"id":"deliberate-build-failure","attempts":["compiler-wrapper"],"actions":["install-predecessor","stage-successor","inject-compiler-exit-nonzero","expect-dkms-build-failure","recover-predecessor","remove-failed-successor"]},
+    {"id":"interrupted-upgrade","attempts":["after-preflight","after-retain-predecessor","after-dkms-add","after-dkms-build","after-dkms-install","after-load-disabled","after-query-disabled","after-uapi-query-release","after-unbind-bind","after-unload","after-dkms-uninstall","after-dkms-remove","after-owned-residue-remove","after-verify-final-state","after-commit-state"],"actions":["install-predecessor","interrupt-after-durable-checkpoint","write-immutable-failed-journal","recover-in-new-attempt","verify-one-complete-inactive-version","remove-attempt-owned-residue"]},
+    {"id":"stale-manifest","attempts":["release","kernel","uapi","gpio4-overlay","gpio20-overlay","enrollment"],"actions":["copy-successor-attempt-owned","inject-one-stale-identity","expect-rejection-before-load","remove-attempt-owned-copy","verify-baseline-unchanged"]},
+    {"id":"corrupted-archive-or-dtbo","attempts":["archive","gpio4-dtbo","gpio20-dtbo"],"actions":["copy-artifact-attempt-owned","flip-one-byte","expect-hash-rejection-before-install","remove-corrupt-copy","verify-baseline-unchanged"]},
+    {"id":"removal-inactive","attempts":["complete-removal"],"actions":["install-successor","prove-live-inactive-state","inventory-exact-owned-paths","complete-test-owned-removal","verify-package-runtime-overlay-and-residue-absent"]},
+    {"id":"removal-open-or-active","attempts":["open-gpio4","owner-gpio4","open-gpio20","owner-gpio20"],"actions":["install-successor","apply-route-runtime-output-disabled","load-disabled","start-busy-injector-and-wait-ready","expect-removal-refusal-without-mutation","stop-injector-and-verify-release-close","unload","remove-route-runtime","complete-test-owned-removal"]},
+    {"id":"reinstall-after-removal","attempts":["gpio4","gpio20"],"actions":["prove-empty-package-baseline","install-successor","apply-route-runtime-output-disabled","load-disabled","query-release","unload","remove-route-runtime","complete-test-owned-removal","verify-second-empty-baseline"]}
+  ]
+}

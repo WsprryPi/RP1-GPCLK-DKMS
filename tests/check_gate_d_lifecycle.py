@@ -24,25 +24,19 @@ lifecycle = module("gate_d_lifecycle", "scripts/gate_d_lifecycle.py")
 instance_tool = module("gate_d_instance", "scripts/gate_d_instance.py")
 platform_tool = module("gate_d_platform", "scripts/gate_d_platform.py")
 instance = json.loads((ROOT / "release/gate-d-execution-instance-v1.json").read_text())
-result = instance_tool.validate(instance)
-assert result["valid"] and not result["executionReady"]
-assert result["inputsReady"] is False
-assert len(result["blockedRows"]) == 10
+result = instance_tool.validate(instance, require_ready=True)
+assert result["valid"] and result["executionReady"]
+assert result["inputsReady"] is True
+assert len(result["blockedRows"]) == 0
 assert len(result["deferredRows"]) == 5
 assert result["environmentalCoverageComplete"] is False
-assert {row["id"] for row in instance["rows"] if row["status"] == "blocked-input-required"} == {
+assert {row["id"] for row in instance["rows"] if row["status"] == "ready"} == {
     "current-supported-kernel", "signing-not-enforced", "stale-manifest",
     "corrupted-archive-or-dtbo", "removal-inactive",
     "removal-open-or-active", "reinstall-after-removal",
     "prior-supported-kernel-downgrade", "deliberate-build-failure",
     "interrupted-upgrade",
 }
-try:
-    instance_tool.validate(instance, require_ready=True)
-except ValueError as error:
-    assert str(error) == "execution instance is blocked-input-required"
-else:
-    raise AssertionError("command-plan-blocked execution instance accepted as ready")
 assert set(result["deferredRows"]) == {
     "newer-unknown-kernel", "signing-enforced-enrolled-key",
     "deliberate-signature-rejection", "missing-headers",
@@ -251,8 +245,10 @@ with tempfile.TemporaryDirectory() as temporary:
     root = pathlib.Path(temporary)
     journal = root / "transaction.json"
     interrupted = operation("upgrade", op_id="recover-me")
+    interrupted_commands = []
 
     def runner(command: list[str], deadline: int) -> str:
+        interrupted_commands.append(command)
         if command[0] == "cat":
             return "N\n"
         if command[0].endswith("gate-d-uapi-probe"):
@@ -268,6 +264,7 @@ with tempfile.TemporaryDirectory() as temporary:
         failed = json.loads(journal.read_text())
         assert failed["status"] == "inactive-recovery-required"
         assert failed["checkpoint"] == "dkms-build" and failed["liveOutput"] is False
+        assert [command[1] for command in interrupted_commands if command[0] == "dkms"][:2] == ["add", "build"]
     else:
         raise AssertionError("checkpoint interruption did not stop")
     failed_bytes = journal.read_bytes()

@@ -52,3 +52,30 @@ boundary. A separate adversarial review must then reinject all failures. Only
 after every required row returns to `ready` and `--require-ready` passes may the
 already authorized target subset be reconsidered; any materially expanded
 command or mutation envelope requires fresh authorization.
+
+## Offline closure
+
+The blocker-resolution slice added the machine-validated 38-attempt plan in
+`release/gate-d-target-operation-plan-v1.json` and bound it by hash to the
+execution instance. The plan names exact artifacts, routes, services, failure
+attempts, interruption checkpoints, evidence gates, recovery deadlines, and
+execution-only tool identities. `scripts/gate_d_boot.py` implements the missing
+stock-kernel selector without touching the unrelated `tryboot.txt` or
+historical custom images.
+
+The first offline adversarial pass found that the initial boot selector could
+leave an unjournaled staged kernel after interruption. That finding was
+reinjected: state is the first mutation, before even the configuration backup,
+every checkpoint
+updates it, and restore accepts partial, selected, or restoring states while
+refusing changed configuration, tryboot, backup, kernel, or initramfs bytes.
+Deterministic tests cover success, partial recovery, unrelated tryboot
+preservation, and tamper refusal. No unresolved offline finding remains.
+
+A final pass also found that lifecycle interruption was occurring before the
+named command rather than after its durable checkpoint. The coordinator now
+dispatches and verifies the command first; the deterministic test proves both
+DKMS add and build completed before the `after-dkms-build` interruption. This
+corrected coordinator, the boot selector, plan validator, and busy injector are
+separately hash-bound execution-only inputs and do not rewrite the frozen
+candidate archive.
