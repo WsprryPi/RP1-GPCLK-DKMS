@@ -28,7 +28,7 @@ required_ids = {"source-archive", "module-source", "module-headers", "kbuild", "
                 "compatibility-schema", "compatibility-manifest", "provenance", "checksums", "release-metadata",
                 "installation-model", "overlay-contract", "permissions-enrollment-policy", "compatibility-decisions", "compatibility-policy", "signing-policy-data", "signing-policy-tool", "diagnostics-contract", "administration-tool", "administration-command", "diagnostics-command",
                 "configuration-directory", "transaction-state", "lifecycle-tool", "lifecycle-removal-contract",
-                "representative-system-matrix", "release-integration-gates", "calibrated-review-release-policy", "lifecycle-policy-tool", "diagnostic-tool", "operator-docs",
+                "representative-system-matrix", "gate-d-execution-schema", "gate-d-instance-validator", "gate-d-lifecycle-tool", "gate-d-platform-tool", "gate-d-uapi-probe-source", "gate-d-uapi-probe", "release-integration-gates", "calibrated-review-release-policy", "lifecycle-policy-tool", "diagnostic-tool", "operator-docs",
                 "security-notes", "behavioral-notes", "signing-guidance"}
 assert required_ids == set(artifact_ids)
 for item in layout["artifacts"]:
@@ -69,6 +69,9 @@ sha256sum "$input" | awk '{print $1}' >"$out"
     for destination in (first, second):
         subprocess.run([str(ROOT / "scripts/build_release.py"), destination, "--development"], check=True, env=environment)
         subprocess.run([str(ROOT / "scripts/validate_release.py"), destination, "--allow-development"], check=True, env=environment)
+    archive = pathlib.Path(first) / f"rp1-gpclk-dkms-{release}.tar.gz"
+    listing = subprocess.check_output(["tar", "-tzf", archive], text=True)
+    assert "release/gate-d-execution-instance-v1.json" not in listing
     names = sorted(path.name for path in pathlib.Path(first).iterdir())
     assert names == sorted(path.name for path in pathlib.Path(second).iterdir())
     for name in names:

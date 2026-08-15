@@ -389,6 +389,22 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
             directory.chmod(0o755)
             if created:
                 transaction["ownedDirectories"].append(str(directory))
+        probe_source = source / "tools/gate_d_uapi_probe.c"
+        probe_destination = libexec / "gate-d-uapi-probe"
+        if not probe_source.is_file() or probe_source.is_symlink() or probe_destination.exists() or probe_destination.is_symlink():
+            raise ValueError("unsafe or existing Gate D UAPI probe")
+        probe_command = ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror",
+                         f"-I{source / 'include/uapi'}", str(probe_source),
+                         "-o", str(probe_destination)]
+        transaction["commands"].append(probe_command)
+        atomic_json(state_path, transaction)
+        runner(probe_command)
+        if not probe_destination.is_file() or probe_destination.is_symlink():
+            raise ValueError("Gate D UAPI probe build produced no real binary")
+        probe_destination.chmod(0o755)
+        transaction["ownedFiles"].append({"path": str(probe_destination),
+                                           "sha256": digest(probe_destination)})
+        atomic_json(state_path, transaction)
         package_files = ((source / "scripts/rp1-gpclk-admin.py", libexec / "rp1-gpclk-admin", 0o755),
                          (source / "scripts/rp1-gpclk-diagnostics.py", libexec / "rp1-gpclk-diagnostics", 0o755),
                          (model_source, release_data / "installation-model-v1.json", 0o644),
@@ -400,8 +416,16 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                           release_data / "diagnostics-contract-v1.json", 0o644),
                          (source / "release/lifecycle-removal-contract-v1.json",
                           release_data / "lifecycle-removal-contract-v1.json", 0o644),
+                         (source / "schema/gate-d-execution-instance-v1.schema.json",
+                          release_data / "gate-d-execution-instance-v1.schema.json", 0o644),
                          (source / "scripts/lifecycle_policy.py",
-                          libexec / "lifecycle-policy", 0o755))
+                          libexec / "lifecycle-policy", 0o755),
+                         (source / "scripts/gate_d_instance.py",
+                          libexec / "gate-d-instance", 0o755),
+                         (source / "scripts/gate_d_lifecycle.py",
+                          libexec / "gate-d-lifecycle", 0o755),
+                         (source / "scripts/gate_d_platform.py",
+                          libexec / "gate-d-platform", 0o755))
         for origin, destination, mode in package_files:
             if not origin.is_file() or origin.is_symlink() or destination.exists() or destination.is_symlink():
                 raise ValueError(f"unsafe or existing package file: {destination}")

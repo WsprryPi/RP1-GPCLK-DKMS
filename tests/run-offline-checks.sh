@@ -28,6 +28,7 @@ python3 "$repo_dir/tests/check_phase5_9_lifecycle.py"
 python3 "$repo_dir/tests/check_phase5_10_matrix.py"
 python3 "$repo_dir/tests/check_phase5_11_release_gates.py"
 python3 "$repo_dir/tests/check_phase5_12_calibrated_review.py"
+python3 "$repo_dir/tests/check_gate_d_lifecycle.py"
 python3 "$repo_dir/tests/test_phase2e_dmesg.py"
 python3 "$repo_dir/tests/check_doc_links.py"
 if command -v shellcheck >/dev/null 2>&1; then
@@ -46,6 +47,12 @@ ${CC:-cc} -std=c11 -Wall -Wextra -Werror \
     -I"$repo_dir/include/uapi" "$repo_dir/tests/uapi_contract.c" \
     -o "$tmp_dir/uapi_contract"
 "$tmp_dir/uapi_contract"
+
+${CC:-cc} -std=c11 -Wall -Wextra -Werror \
+    -I"$repo_dir/tests/fixtures/linux" \
+    -I"$repo_dir/include/uapi" "$repo_dir/tools/gate_d_uapi_probe.c" \
+    -o "$tmp_dir/gate_d_uapi_probe"
+echo "Gate D UAPI probe compile: PASS"
 
 if [ "$(uname -s)" = Linux ]; then
     ${CC:-cc} -std=c11 -Wall -Wextra -Werror \

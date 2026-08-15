@@ -46,9 +46,14 @@ rejected before plan allocation or any pinctrl, clock, tick, or DMA mutation;
 `LIVE_ELIGIBLE` is not reported. The implementation and build evidence do not
 qualify GPIO output, timing, a mode, or RF, and do not generalize to another
 kernel, DT, firmware, route, or host. Phase 5 includes a guarded
-output-disabled DKMS install transaction, but the complete upgrade, downgrade,
-rollback, removal, and representative-system lifecycle gate is not implemented
-or executed. No qualified GPIO output is implemented.
+output-disabled DKMS install transaction and an offline-tested Gate D
+coordinator for upgrade, downgrade, rollback, checkpoint recovery,
+exact-version removal, complete and repeated removal, reinstall,
+output-disabled UAPI query/acquire/release, and explicit unbind/rebind. Its
+concrete execution instance remains fail-closed and non-executable: the
+candidate is unfrozen, all 15 rows retain named input blockers, and no
+representative-system lifecycle row has executed. No qualified GPIO output is
+implemented.
 
 Phase 5.2 adds a deterministic, machine-verified release unit and an explicit
 output-disabled DKMS, signing, overlay, and diagnostic tool surface. The

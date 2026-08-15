@@ -143,6 +143,58 @@ An exclusively package-created private key is removable only with an explicit
 nonshared ownership record. An open descriptor, active work, cleanup latch, or
 unproven state rejects removal; no forced teardown is permitted.
 
+## Gate D lifecycle coordinator
+
+`gate-d-instance` validates the concrete
+`release/gate-d-execution-instance-v1.json` against the frozen 15-row matrix.
+The checked-in instance records the approved `wspr5` output-disabled mutation
+envelope, its two installed stock kernels, both independent routes, deadlines,
+and the validated `wspr5-rescue` SD-before-NVMe recovery path. It deliberately
+remains `executionReady: false`: an unfrozen candidate or any blocked row makes
+`--require-ready` fail.
+
+The execution instance is repository evidence, not package content. It is
+excluded from the candidate source archive and installation because it contains
+host-specific authorization and can name the sealed archive only after that
+archive exists. The generic schema, validator, coordinator, and probes are
+package artifacts; the separately sealed instance is supplied at execution.
+
+`gate-d-lifecycle validate OPERATION` and `plan OPERATION` are offline and
+read-only. Actual dispatch requires root plus all of `execute --execute`, a
+fresh journal path, and a fully ready execution instance. Before dispatch the
+coordinator binds the operation to the exact matrix row, host, kernel, route,
+deadline, unique attempt evidence directory, and frozen successor version.
+Existing journals are immutable. The explicit `recover` operation reads a
+matching failed journal but writes a distinct recovery-attempt journal, so the
+failed evidence is never replaced.
+
+The coordinator implements output-disabled load, parameter verification,
+UAPI QUERY/ACQUIRE/RELEASE without submission, explicit unbind/rebind, unload,
+upgrade, downgrade, rollback, checkpoint recovery, exact-version uninstall,
+removal of a declared test-version set, complete removal of only digest-bound
+owned paths, repeated removal with exact DKMS absence verification, and
+reinstall after proved removal. Every external command has the row deadline.
+Interruption leaves `inactive-recovery-required`; a changed owned byte refuses
+removal. An ordinary upgrade or downgrade failure automatically removes the
+failed successor and restores the retained predecessor; a rollback failure
+remains recovery-required. A removal request with an exact open/active blocker
+is recorded as `installation-retained` without dispatching a mutation command.
+Final removal independently checks every named DKMS version plus runtime,
+endpoint, binding, and owned-path absence. Each command record includes its
+deadline, UTC and monotonic timing, exit status, and bounded combined output.
+
+`gate-d-uapi-probe` rejects a route, build, ABI, module ID, or
+`LIVE_ELIGIBLE` mismatch and never submits work. `gate-d-platform` requires
+exactly one bound device and verifies `live_output` disabled both before and
+after explicit unbind/rebind. A route must already have been selected through
+the separately reviewed inactive overlay procedure; the operation safety
+snapshot requires `routeSelectedInactive: true`.
+
+The coordinator is executable tooling, not target evidence. A green offline
+test cannot change a row from `blocked-input-required`, freeze a candidate,
+authorize target work, or prove installation, cleanup, timing, GPIO, DMA,
+transmission, SDR, or RF behavior.
+
 ## Persistent prohibitions
 
 There is no custom-kernel, `/dev/mem`, raw userspace MMIO, arbitrary-route, or

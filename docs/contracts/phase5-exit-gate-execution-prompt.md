@@ -155,10 +155,12 @@ the affected checks. Ordinary green tests never waive a finding.
 
 ### Reinjected findings
 
-1. At the starting identity, executable install and failed-install recovery do
-   not demonstrate executable upgrade, downgrade, rollback, complete removal,
-   repeated removal, or the 15-row representative lifecycle matrix. Pure policy
-   evaluators and matrix-schema tests do not close those gates.
+1. Gate D now has an offline-tested executable lifecycle coordinator and a
+   concrete fail-closed execution instance. This closes the earlier tooling
+   absence only. The instance is deliberately non-executable because the
+   candidate is unfrozen and every row retains named input blockers; no target
+   lifecycle, cleanup, residue, or representative-system result is inferred
+   from coordinator, schema, or mock-runner tests.
 2. `release/release-integration-gates-v1.json` truthfully marks candidate freeze,
    representative lifecycle, publication/download verification, and consumer
    integration blocked. Do not publish or rewrite those statuses without exact
@@ -174,6 +176,12 @@ the affected checks. Ordinary green tests never waive a finding.
 6. Operator-facing status text must distinguish the implemented guarded install
    transaction from the still-missing complete lifecycle surface; describing
    either the installer as absent or Phase 5 lifecycle as complete is false.
+7. A concrete Gate D execution instance cannot be an installed candidate
+   artifact while containing that candidate archive's digest: this is
+   self-referential and would distribute host-specific authorization. Exclude
+   the instance from the archive and installation. Package only its generic
+   schema and tools; seal and supply the concrete instance as separate evidence
+   after the candidate archive exists.
 
 Repeat the assessment until no objective finding remains within the authorized
 and executable slice. Phase 5 itself remains open if an external gate is

@@ -5,7 +5,16 @@
   "operations": {
     "rollback": "restore-immediately-prior-recorded-complete-package-state",
     "recovery": "resolve-one-recognized-incomplete-transaction-to-safe-checkpoint-or-inactive-state",
-    "completeRemoval": "remove-all-and-only-exclusively-package-owned-state"
+    "completeRemoval": "remove-all-and-only-exclusively-package-owned-state",
+    "refuseRemoval": "retain-installation-without-mutation-when-exact-open-or-active-blocker-exists"
+  },
+  "executionCoordinator": {
+    "path": "scripts/gate_d_lifecycle.py",
+    "outputGate": "live_output=0",
+    "failedJournalPolicy": "immutable-separate-recovery-attempt",
+    "ordinarySuccessorFailure": "automatic-exact-predecessor-rollback",
+    "commandEvidence": ["checkpoint", "command", "deadline", "utc-time", "monotonic-time", "exit-status", "bounded-output"],
+    "finalRemovalAudit": ["exact-dkms-version-absence", "module-absence", "endpoint-absence", "platform-binding-absence", "owned-path-absence"]
   },
   "failClosedOn": ["open-endpoint", "active-work", "active-dma", "pending-callback", "busy-owner", "cleanup-latched", "unsafe-pin", "unrestored-clock", "unknown-ownership", "changed-owned-file", "changed-rollback-target", "unclassified-residue", "modified-boot-entry", "incomplete-evidence"],
   "keyOwnership": {"packageExclusive":"remove-after-nonshared-proof", "administratorOrShared":"retain-and-report", "unknown":"retain-and-reject-complete-removal"},

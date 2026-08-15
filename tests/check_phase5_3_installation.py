@@ -61,7 +61,12 @@ with tempfile.TemporaryDirectory() as temporary:
                          "release/installation-model-v1.json", "release/overlay-contract-v1.json",
                          "release/permissions-enrollment-policy-v1.json",
                          "release/diagnostics-contract-v1.json",
-                         "release/lifecycle-removal-contract-v1.json", "scripts/lifecycle_policy.py",
+                         "release/lifecycle-removal-contract-v1.json",
+                         "schema/gate-d-execution-instance-v1.schema.json",
+                         "scripts/lifecycle_policy.py", "scripts/gate_d_instance.py",
+                         "scripts/gate_d_lifecycle.py",
+                         "scripts/gate_d_platform.py",
+                         "tools/gate_d_uapi_probe.c",
                          "docs/operator/lifecycle.md", "docs/operator/signing.md"):
             fixtures.append((relative, (ROOT / relative).read_bytes(), 0o755 if relative.startswith("scripts/") else 0o644))
         for name, data, mode in fixtures:
@@ -83,6 +88,9 @@ with tempfile.TemporaryDirectory() as temporary:
     commands: list[list[str]] = []
     def fake_runner(command: list[str]) -> str:
         commands.append(command)
+        if command[0] == "cc":
+            pathlib.Path(command[-1]).write_bytes(b"gate-d-probe")
+            return ""
         if command[:3] == ["modinfo", "-F", "version"]:
             return admin.VERSION
         if command[:3] == ["modinfo", "-F", "vermagic"]:
@@ -100,6 +108,12 @@ with tempfile.TemporaryDirectory() as temporary:
     assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.2/diagnostics-contract-v1.json").is_file()
     assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.2/lifecycle-removal-contract-v1.json").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/lifecycle-policy").is_file()
+    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.2/gate-d-execution-instance-v1.json").exists()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.2/gate-d-execution-instance-v1.schema.json").is_file()
+    assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-instance").is_file()
+    assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle").is_file()
+    assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-platform").is_file()
+    assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe").is_file()
     assert (target / "usr/sbin/rp1-gpclk-admin").is_symlink()
     assert (target / "etc/rp1-gpclk-dkms").is_dir()
     assert not (target / "etc/rp1-gpclk-dkms/enrollment.json").exists()

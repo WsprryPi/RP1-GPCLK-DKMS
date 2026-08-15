@@ -21,6 +21,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 LAYOUT_PATH = ROOT / "release/release-layout-v1.json"
 KEY_SUFFIXES = {".key", ".pem", ".p12", ".pfx", ".der"}
 EXCLUDED_PREFIXES = (".git/", "dist/", "build/", "build-")
+EXCLUDED_EXACT = {"release/gate-d-execution-instance-v1.json"}
 VERSION_RE = re.compile(r'^#define RP1_GPCLK_MODULE_VERSION "([0-9A-Za-z][0-9A-Za-z._+-]*)"$', re.M)
 
 
@@ -78,7 +79,8 @@ def source_files(development: bool) -> tuple[list[pathlib.Path], bool]:
             continue
         rel = pathlib.Path(raw)
         posix = rel.as_posix()
-        if posix.startswith(EXCLUDED_PREFIXES) or any(part in {"__pycache__", ".pytest_cache"} for part in rel.parts):
+        if (posix in EXCLUDED_EXACT or posix.startswith(EXCLUDED_PREFIXES) or
+                any(part in {"__pycache__", ".pytest_cache"} for part in rel.parts)):
             continue
         path = ROOT / rel
         if path.is_symlink() or not path.is_file():
