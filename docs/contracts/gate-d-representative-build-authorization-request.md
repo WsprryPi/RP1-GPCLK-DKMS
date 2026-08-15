@@ -1,9 +1,11 @@
 <!-- SPDX-License-Identifier: MIT -->
 
-# Proposed Gate C successor build authorization
+# Gate C successor build authorization and disposition
 
-This is a proposed authorization dossier, not authority to contact `wspr5`.
-Obtain an explicit operator approval before SSH or build work.
+The operator explicitly approved this exact dossier on 2026-08-15. The build
+completed under that authority; its durable disposition is recorded in
+[`../evidence/gate-c-representative-build-wspr5-phase5.13.md`](../evidence/gate-c-representative-build-wspr5-phase5.13.md)
+and `release/gate-c-representative-build-manifest-v1.json`.
 
 The proposed operation is a disposable, output-disabled representative build
 on `wspr5` using stock kernel `6.18.34+rpt-rpi-2712`, matching installed headers,

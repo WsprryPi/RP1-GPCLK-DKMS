@@ -41,3 +41,11 @@ remains within the authorized offline slice.
 This does not close a target row. Thirteen rows and `--require-ready` remain
 blocked by the exact positive manifest and genuinely unavailable representative
 identities. Any new evidence or changed candidate byte reopens this assessment.
+
+## Gate C follow-up
+
+The later exact successor build passed. Its separate adversarial review is
+[`gate-c-representative-build-adversarial-assessment.md`](gate-c-representative-build-adversarial-assessment.md).
+That evidence resolves the representative build itself, but deliberately does
+not erase the route-specific compatibility-manifest blocker or substitute for
+the four unavailable representative-system classes.

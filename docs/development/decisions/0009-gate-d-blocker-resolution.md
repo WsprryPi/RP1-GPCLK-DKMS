@@ -33,3 +33,12 @@ The version-pair and removal-refusal tooling blockers can close offline after
 sealing. The current-supported-kernel and four distinct-system classes cannot.
 Therefore `executionReady` must remain false and complete Gate D target
 authorization cannot yet be requested as executable authority.
+
+## Gate C follow-up
+
+The authorized 2026-08-15 `wspr5` successor build subsequently passed and is
+recorded in `release/gate-c-representative-build-manifest-v1.json`. It closes
+the route-neutral build prerequisite at `Compatible-unqualified` and
+`liveEligible: false`; it does not create a route-specific compatibility entry
+or satisfy any lifecycle row. The distinct external evidence classes above
+remain unchanged.
