@@ -173,7 +173,7 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 	device->tick_state_captured = true;
 	if (device->initial_tick_dma0_ctrl || device->initial_dma_tick0_en) {
 		dev_err(device->dev,
-			"phase4b startup conflict: tick=%08x/%08x/%08x/%08x\n",
+			"phase4c startup conflict: tick=%08x/%08x/%08x/%08x\n",
 			device->initial_tick_dma0_ctrl,
 			device->initial_tick_dma0_cycles,
 			device->initial_dma_tick0_en,
@@ -182,7 +182,7 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 	}
 	if (__clk_is_enabled(device->clock)) {
 		dev_err(device->dev,
-			"phase4b startup conflict: common clock reports hardware enabled\n");
+			"phase4c startup conflict: common clock reports hardware enabled\n");
 		return -EBUSY;
 	}
 	device->initial_rate = clk_get_rate(device->clock);
@@ -271,7 +271,7 @@ static int rp1_gpclk_machine_terminate_dma(void *argument)
 			observed == device->initial_dma_tick0_ctrl, 1, 1000);
 		if (ret) {
 			dev_err(device->dev,
-				"phase4b cleanup: tick register restoration verification failed\n");
+				"phase4c cleanup: tick register restoration verification failed\n");
 			return ret;
 		}
 		device->tick_state_captured = false;
@@ -312,7 +312,7 @@ static int rp1_gpclk_machine_select_safe(void *argument)
 	if (device->pins_active_selected)
 		ret = pinctrl_select_state(device->pinctrl, device->pins_safe);
 	if (ret)
-		dev_err(device->dev, "phase4b cleanup: safe pinctrl failed: %d\n",
+		dev_err(device->dev, "phase4c cleanup: safe pinctrl failed: %d\n",
 			ret);
 	device->pins_active_selected = false;
 	return ret;
@@ -330,7 +330,7 @@ static int rp1_gpclk_machine_restore_rate(void *argument)
 
 		if (ret)
 			dev_err(device->dev,
-				"phase4b cleanup: clock rate restore to %lu failed: %d current=%lu\n",
+				"phase4c cleanup: clock rate restore to %lu failed: %d current=%lu\n",
 				initial_rate, ret, clk_get_rate(device->clock));
 		return ret;
 	}
@@ -599,7 +599,7 @@ static int rp1_gpclk_execution_thread(void *argument)
 	}
 	WRITE_ONCE(device->execution_finished_ns, ktime_get_boottime_ns());
 	dev_info(device->dev,
-		 "phase4b generation=%llu mode=%u start_ns=%llu finish_ns=%llu expected_div_frac=0x%08x observed_div_frac=0x%08x tick_initial=%08x/%08x/%08x/%08x tick_final=%08x/%08x/%08x/%08x cleanup=%d result=%d\n",
+		 "phase4c generation=%llu mode=%u start_ns=%llu finish_ns=%llu expected_div_frac=0x%08x observed_div_frac=0x%08x tick_initial=%08x/%08x/%08x/%08x tick_final=%08x/%08x/%08x/%08x cleanup=%d result=%d\n",
 		 device->execution_generation, plan->mode,
 		 device->execution_started_ns, device->execution_finished_ns,
 		 device->readback_expected, device->readback_observed,

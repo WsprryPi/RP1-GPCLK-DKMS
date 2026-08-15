@@ -105,7 +105,7 @@ static long rp1_gpclk_query(struct rp1_gpclk_file *context, void __user *user)
 	strscpy(request.module_id, "rp1-gpclk-dkms", sizeof(request.module_id));
 	strscpy(request.build_id, RP1_GPCLK_MODULE_VERSION,
 		sizeof(request.build_id));
-	strscpy(request.compatibility_id, "phase4b-wspr5-gpio4-6.18.34",
+	strscpy(request.compatibility_id, "phase4c-wspr5-gpio20-6.18.34",
 		sizeof(request.compatibility_id));
 	if (copy_to_user(user, &request, sizeof(request)))
 		return -EFAULT;

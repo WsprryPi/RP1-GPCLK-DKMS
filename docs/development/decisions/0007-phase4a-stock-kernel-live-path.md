@@ -82,6 +82,11 @@ DMAengine, with checked representability, and never pretranslates it. This
 supersedes the mapping mechanism in Decision 0004 without changing the
 DT-derived ownership or containment rules.
 
+Phase 4C changes only the exact live enrollment identity from the completed
+GPIO4 slice to the separately wired GPIO20 slice. GPIO4 must reject live probe
+under the Phase 4C bytes; this is deliberate route isolation, not a regression
+of the retained GPIO4 evidence at its accepted commit.
+
 ## Divider and finite-work constraints
 
 All tones in one request must share the reviewed integer divider and differ
