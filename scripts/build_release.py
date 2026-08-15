@@ -93,7 +93,11 @@ def source_files(development: bool) -> tuple[list[pathlib.Path], bool]:
             continue
         rel = pathlib.Path(raw)
         posix = rel.as_posix()
-        if (posix in EXCLUDED_EXACT or posix.startswith(EXCLUDED_PREFIXES) or
+        qualification_sidecar = (
+            re.fullmatch(r"release/gate-d-attempts-phase[^/]+/.*", posix) or
+            re.fullmatch(r"release/gate-d-(?:execution-instance|route-compatibility-decision|successor-offline-identities|target-operation-plan|version-pair)-phase[^/]+\.json", posix) or
+            re.fullmatch(r"release/gate-c-representative-build-manifest-phase[^/]+\.json", posix))
+        if (posix in EXCLUDED_EXACT or posix.startswith(EXCLUDED_PREFIXES) or qualification_sidecar or
                 any(part in {"__pycache__", ".pytest_cache"} for part in rel.parts)):
             continue
         path = ROOT / rel

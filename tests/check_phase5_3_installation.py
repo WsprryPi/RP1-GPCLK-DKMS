@@ -7,6 +7,7 @@ import importlib.util
 import io
 import json
 import pathlib
+import subprocess
 import tarfile
 import tempfile
 
@@ -18,7 +19,7 @@ spec.loader.exec_module(admin)
 
 model = json.loads((ROOT / "release/installation-model-v1.json").read_text())
 layout = json.loads((ROOT / "release/release-layout-v1.json").read_text())
-assert model["release"] == layout["release"] == "0.0.0-phase5.16"
+assert model["release"] == layout["release"] == "0.0.0-phase5.17"
 assert model["dkmsModule"] == layout["package"]
 assert model["kernelModule"] == layout["module"]
 assert model["transaction"] == admin.STEPS
@@ -79,7 +80,8 @@ with tempfile.TemporaryDirectory() as temporary:
     artifacts = {archive.name: archive.read_bytes(), "rp1-gpclk-gpio4.dtbo": b"gpio4",
                  "rp1-gpclk-gpio20.dtbo": b"gpio20", "PROVENANCE.json": b"{}\n",
                  "rp1-gpclk-compatibility-manifest.json": b"{}\n"}
-    metadata = {"release": admin.VERSION, "publishable": True, "archive": archive.name,
+    metadata = {"release": admin.VERSION, "publishable": True, "tagPresent": True,
+                "sourceCommit": "1" * 40, "archive": archive.name,
                 "archiveSha256": hashlib.sha256(archive.read_bytes()).hexdigest()}
     artifacts["release-metadata.json"] = (json.dumps(metadata) + "\n").encode()
     for name, data in artifacts.items():
@@ -106,13 +108,13 @@ with tempfile.TemporaryDirectory() as temporary:
     assert (target / "boot/firmware/overlays/rp1-gpclk-gpio4.dtbo").read_bytes() == b"gpio4"
     assert not (target / "boot/firmware/overlays/rp1-gpclk-gpio20.dtbo").exists()
     assert (target / "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.16/overlay-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.16/permissions-enrollment-policy-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.16/diagnostics-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.16/lifecycle-removal-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.17/overlay-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.17/permissions-enrollment-policy-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.17/diagnostics-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.17/lifecycle-removal-contract-v1.json").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/lifecycle-policy").is_file()
-    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.16/gate-d-execution-instance-v1.json").exists()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.16/gate-d-execution-instance-v1.schema.json").is_file()
+    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.17/gate-d-execution-instance-v1.json").exists()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.17/gate-d-execution-instance-v1.schema.json").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-instance").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-platform").is_file()
@@ -145,6 +147,62 @@ with tempfile.TemporaryDirectory() as temporary:
         assert (second / "boot/firmware/overlays/rp1-gpclk-gpio4.dtbo").read_bytes() == b"foreign"
     else:
         raise AssertionError("foreign overlay replacement unexpectedly succeeded")
+
+    # Qualification bootstrap is a separate, exact, unpublished-candidate path.
+    metadata.update(publishable=False, tagPresent=False)
+    artifacts["release-metadata.json"] = (json.dumps(metadata) + "\n").encode()
+    (release / "release-metadata.json").write_bytes(artifacts["release-metadata.json"])
+    (release / "SHA256SUMS").write_text("".join(
+        f"{hashlib.sha256(artifacts[name]).hexdigest()}  {name}\n" for name in checksum_names))
+    identity = {
+        "SPDX-License-Identifier": "MIT", "schemaVersion": 1,
+        "kind": "rp1-gpclk-gate-d-qualification-install-identity",
+        "release": admin.VERSION, "sourceCommit": "1" * 40,
+        "archiveSha256": metadata["archiveSha256"], "publishable": False,
+        "tagPresent": False, "outputDisabled": True, "liveOutput": False,
+        "purpose": "gate-d-representative-system-qualification",
+    }
+    identity_path = base / "qualification-identity.json"
+    identity_path.write_text(json.dumps(identity) + "\n")
+    qualification_target = base / "qualification-target"
+    (qualification_target / "boot/firmware/overlays").mkdir(parents=True)
+    (qualification_target / f"lib/modules/{admin.platform.release()}/build").mkdir(parents=True)
+    result = admin.execute(release, "gpio4", False, None, None,
+                           root=qualification_target, runner=fake_runner,
+                           qualification_identity=identity_path)
+    assert result["status"] == "complete" and result["liveOutput"] is False
+
+    for field, replacement in (("archiveSha256", "0" * 64),
+                               ("sourceCommit", "2" * 40),
+                               ("liveOutput", True), ("outputDisabled", False),
+                               ("purpose", "general-install")):
+        bad = dict(identity); bad[field] = replacement
+        bad_path = base / f"bad-{field}.json"; bad_path.write_text(json.dumps(bad))
+        try:
+            admin.execute(release, "gpio4", False, None, None,
+                          root=base / f"bad-target-{field}", runner=fake_runner,
+                          qualification_identity=bad_path)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"unsafe qualification identity accepted: {field}")
+    symlink_identity = base / "qualification-link.json"
+    symlink_identity.symlink_to(identity_path)
+    try:
+        admin.validate_qualification_identity(symlink_identity, metadata,
+                                              metadata["archiveSha256"])
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("symlinked qualification identity accepted")
+    for extra in (("--qualification-install",),
+                  ("--qualification-identity", str(identity_path))):
+        command = [str(ROOT / "scripts/rp1-gpclk-admin.py"), "install", "--execute",
+                   "--release-directory", str(release), *extra]
+        outcome = subprocess.run(command, stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.PIPE, text=True, check=False)
+        assert outcome.returncode != 0
+        assert "requires both --qualification-install and --qualification-identity" in outcome.stderr
 
 source = (ROOT / "scripts/rp1-gpclk-admin.py").read_text()
 for prohibited in ("live_output=1", "dtoverlay", "update-initramfs", "/dev/mem", "blacklist"):

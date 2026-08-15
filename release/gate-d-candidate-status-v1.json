@@ -17,8 +17,7 @@
     "qualification": "Compatible-unqualified",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; liveEligible false",
     "blocker": "Frozen archive omits tools/gate_d_busy_injector.h, so the release-owned installer cannot compile the permanent busy injector from sealed inputs."
-  }],
-  "supersededSuccessor": {
+  }, {
     "release": "0.0.0-phase5.15",
     "sourceCommit": "123a94c46a2fb068a5e83c42b440f6b8a07545f6",
     "archiveSha256": "6a767723a9cbbf32b68d95c67221b0a56430a037508254aa8c3a65a9cd1bbb24",
@@ -26,8 +25,7 @@
     "qualification": "Compatible-unqualified",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; liveEligible false",
     "blocker": "Frozen target-plan schema uses one sha256 for both helper source and installed compiled ELF bytes; the permanent executor therefore cannot validate the sealed busy-injector and UAPI-probe binary identities."
-  },
-  "successor": {
+  }, {
     "release": "0.0.0-phase5.16",
     "sourceCommit": "ff92ffcbc588494dd89f303b73c31fe24554583a",
     "archiveSha256": "7c7b7c4741717796b0a128c3f163f2921a25ea646d815b6ba59aae3fedd3ae8d",
@@ -36,8 +34,14 @@
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; liveEligible false",
     "purpose": "separate source and installed tooling identities and bind copied versus target-built installation semantics",
     "blocker": "The sealed administrator rejects publishable=false development candidates before installing the permanent Gate D executor, so the exact qualification candidate cannot bootstrap its reviewed execution tooling."
+  }],
+  "successor": {
+    "release": "0.0.0-phase5.17",
+    "status": "unfrozen",
+    "qualification": "not-yet-representative-built",
+    "purpose": "add an exact output-disabled qualification-install bootstrap without weakening normal release installation"
   },
-  "successorSelectionGate": "selected-to-correct-phase5.15-single-tooling-digest-defect",
+  "successorSelectionGate": "selected-to-correct-phase5.16-qualification-bootstrap-defect",
   "reuseProhibited": [
     "representative-build-promotion",
     "route-decision",

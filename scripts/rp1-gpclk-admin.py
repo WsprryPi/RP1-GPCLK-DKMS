@@ -27,7 +27,7 @@ from typing import Callable
 
 PACKAGE = "rp1-gpclk-dkms"
 MODULE = "rp1_gpclk_dkms"
-VERSION = "0.0.0-phase5.16"
+VERSION = "0.0.0-phase5.17"
 ROUTES = {"gpio4": "rp1-gpclk-gpio4.dtbo", "gpio20": "rp1-gpclk-gpio20.dtbo"}
 ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
                       "remove-old-binding-proven-cleanup", "verify-both-pins-safe",
@@ -246,17 +246,56 @@ def command_runner(args: list[str]) -> str:
                                    env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin"}).strip()
 
 
+def validate_qualification_identity(path: pathlib.Path, metadata: dict,
+                                    archive_sha256: str) -> dict:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("qualification identity must be a real file")
+    value = json.loads(path.read_text(encoding="utf-8"))
+    required = {"SPDX-License-Identifier", "schemaVersion", "kind", "release",
+                "sourceCommit", "archiveSha256", "publishable", "tagPresent",
+                "outputDisabled", "liveOutput", "purpose"}
+    if (not isinstance(value, dict) or set(value) != required or
+            value.get("SPDX-License-Identifier") != "MIT" or
+            value.get("schemaVersion") != 1 or
+            value.get("kind") != "rp1-gpclk-gate-d-qualification-install-identity" or
+            value.get("publishable") is not False or value.get("tagPresent") is not False or
+            value.get("outputDisabled") is not True or value.get("liveOutput") is not False or
+            value.get("purpose") != "gate-d-representative-system-qualification" or
+            not isinstance(value.get("sourceCommit"), str) or
+            not re.fullmatch(r"[0-9a-f]{40}", value["sourceCommit"]) or
+            not isinstance(value.get("archiveSha256"), str) or
+            not re.fullmatch(r"[0-9a-f]{64}", value["archiveSha256"]) or
+            value.get("release") != metadata.get("release") or
+            value.get("sourceCommit") != metadata.get("sourceCommit") or
+            value.get("archiveSha256") != archive_sha256):
+        raise ValueError("qualification identity differs from sealed candidate")
+    return value
+
+
 def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path | None,
             certificate: pathlib.Path | None, root: pathlib.Path = pathlib.Path("/"),
             runner: Callable[[list[str]], str] = command_runner,
-            expected_signer: str | None = None, expected_key_id: str | None = None) -> dict:
+            expected_signer: str | None = None, expected_key_id: str | None = None,
+            qualification_identity: pathlib.Path | None = None) -> dict:
     transaction = plan(route, signing)
     if release.is_symlink() or not release.is_dir():
         raise ValueError("release must be a real directory")
     metadata = json.loads((release / "release-metadata.json").read_text())
-    if metadata.get("release") != VERSION or not metadata.get("publishable"):
-        raise ValueError("only the exact publishable release is installable")
+    if metadata.get("release") != VERSION:
+        raise ValueError("release identity differs")
     checksums = load_checksums(release)
+    archive_path = release / metadata.get("archive", "")
+    if (archive_path.is_symlink() or not archive_path.is_file() or
+            digest(archive_path) != metadata.get("archiveSha256")):
+        raise ValueError("staged archive hash mismatch")
+    if qualification_identity is None:
+        if metadata.get("publishable") is not True:
+            raise ValueError("only the exact publishable release is installable")
+    else:
+        if metadata.get("publishable") is not False or metadata.get("tagPresent") is not False:
+            raise ValueError("qualification mode accepts only an unpublished development candidate")
+        validate_qualification_identity(qualification_identity, metadata,
+                                        metadata["archiveSha256"])
     if ROUTES[route] not in checksums:
         raise ValueError("selected overlay is absent from checksums")
     if key is not None or certificate is not None:
@@ -293,9 +332,6 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
         source.chmod(0o755)
         transaction["ownedDirectories"].append(str(source))
         atomic_json(state_path, transaction)
-        archive_path = release / metadata["archive"]
-        if digest(archive_path) != metadata["archiveSha256"]:
-            raise ValueError("staged archive hash mismatch")
         prefix = f"{PACKAGE}-{VERSION}/"
         with tarfile.open(archive_path, "r:gz") as archive:
             members = archive.getmembers()
@@ -541,6 +577,8 @@ def main() -> None:
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--snapshot", type=pathlib.Path)
     parser.add_argument("--acknowledgement")
+    parser.add_argument("--qualification-install", action="store_true")
+    parser.add_argument("--qualification-identity", type=pathlib.Path)
     args = parser.parse_args()
     state = pathlib.Path("/var/lib/rp1-gpclk-dkms/transaction.json")
     if args.action == "plan":
@@ -588,10 +626,19 @@ def main() -> None:
             raise SystemExit("install mutation requires --execute")
         if args.release_directory is None:
             raise SystemExit("--release-directory is required")
-        result = execute(args.release_directory.resolve(), args.route, args.signing_required,
+        if args.qualification_install != (args.qualification_identity is not None):
+            raise SystemExit("qualification install requires both --qualification-install and --qualification-identity")
+        release_directory = (args.release_directory if args.release_directory.is_absolute()
+                             else pathlib.Path.cwd() / args.release_directory)
+        qualification_identity = args.qualification_identity
+        if qualification_identity is not None and not qualification_identity.is_absolute():
+            qualification_identity = pathlib.Path.cwd() / qualification_identity
+        result = execute(release_directory, args.route, args.signing_required,
                          args.private_key, args.certificate,
                          expected_signer=args.expected_signer,
-                         expected_key_id=args.expected_signature_key_id)
+                         expected_key_id=args.expected_signature_key_id,
+                         qualification_identity=(qualification_identity
+                                                 if args.qualification_install else None))
     print(json.dumps(result, indent=2, sort_keys=True))
 
 
