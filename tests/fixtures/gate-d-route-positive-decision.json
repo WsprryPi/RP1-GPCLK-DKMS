@@ -11,6 +11,6 @@
     {"route":"GPIO20","state":"Compatible-unqualified","liveEligible":false}
   ],
   "decisionBoundary": {
-    "positiveReleaseManifestEntryEstablished": true
+    "positiveExecutionCompatibilityDecisionEstablished": true
   }
 }

@@ -81,7 +81,7 @@ def validate(value: dict, *, require_ready: bool = False) -> dict:
     positive_routes = {entry["route"].lower() for entry in route_entries
                        if entry.get("state") == "Compatible-unqualified"}
     boundary = route_decision.get("decisionBoundary", {})
-    if bool(positive_routes) != (boundary.get("positiveReleaseManifestEntryEstablished") is True):
+    if bool(positive_routes) != (boundary.get("positiveExecutionCompatibilityDecisionEstablished") is True):
         raise ValueError("route decision positive-entry boundary disagrees with entries")
     candidate = value["candidate"]
     candidate_fields = {"status", "sourceCommit", "release", "archiveSha256", "uapiSha256",

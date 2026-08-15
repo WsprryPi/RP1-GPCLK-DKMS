@@ -4,9 +4,9 @@
 
 ## Current hard stop
 
-The frozen candidate and two negative-integrity rows are ready, but the
-required executable subset is not. This command must fail before any target
-command is prepared:
+The frozen candidate and seven required-executable rows are ready, but three
+predecessor-dependent rows remain blocked. This command must fail before any
+target command is prepared:
 
 ```sh
 gate-d-instance release/gate-d-execution-instance-v1.json --require-ready

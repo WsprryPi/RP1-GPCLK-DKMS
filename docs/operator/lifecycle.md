@@ -154,10 +154,11 @@ and the validated `wspr5-rescue` SD-before-NVMe recovery path. Successor
 `0.0.0-phase5.13` is sealed at
 `61ee2ea592c2551eca56fd0566fef43097b8c682`. The single-Pi execution policy
 keeps five unavailable environmental rows explicitly deferred rather than
-simulated. Eight required-executable rows still lack exact route or predecessor
-inputs, so `executionReady: false` and `--require-ready` still fail. Two
-negative-integrity rows are ready. Deferred rows continue to block complete
-environmental coverage and publication.
+simulated. Read-only route discovery supports non-live GPIO4 and GPIO20
+execution decisions, so seven required-executable rows are ready. Three
+predecessor-dependent rows remain blocked; therefore `inputsReady: false`,
+`executionReady: false`, and `--require-ready` still fail. Deferred rows
+continue to block complete environmental coverage and publication.
 
 `inputsReady` and `executionReady` are separate. The former covers exact
 required-executable inputs; the latter additionally requires a fresh explicit

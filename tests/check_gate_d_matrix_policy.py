@@ -45,18 +45,24 @@ assert "All fifteen" in policy["qualificationRule"]
 
 assert route["kind"] == "gate-d-route-compatibility-decision"
 assert {entry["route"] for entry in route["routes"]} == {"GPIO4", "GPIO20"}
-assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False
+assert all(entry["state"] == "Compatible-unqualified" and entry["liveEligible"] is False
            for entry in route["routes"])
+for entry in route["routes"]:
+    lower = entry["route"].lower()
+    assert entry["overlaySourceSha256"] == digest(ROOT / f"overlays/rp1-gpclk-{lower}.dts")
 boundary = route["decisionBoundary"]
 assert boundary == {
     "routeSpecific": True,
     "outputDisabled": True,
-    "positiveReleaseManifestEntryEstablished": False,
+    "positiveExecutionCompatibilityDecisionEstablished": True,
     "installationOrBindingAuthorized": False,
-    "readOnlyTargetIdentityRefreshRequired": True,
+    "readOnlyTargetIdentityRefreshRequired": False,
+    "immediateFailClosedPreflightRequired": True,
 }
 assert route["candidate"]["representativeBuildManifestSha256"] == digest(
     ROOT / "release/gate-c-representative-build-manifest-v1.json")
+assert route["evidence"]["routeIdentityEvidenceSha256"] == digest(
+    ROOT / "docs/evidence/gate-d-wspr5-read-only-route-identity-20260815.md")
 assert instance["executionPolicy"]["matrixPolicySha256"] == digest(policy_path)
 assert instance["executionPolicy"]["routeDecisionSha256"] == digest(route_path)
 

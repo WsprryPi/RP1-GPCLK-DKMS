@@ -47,3 +47,12 @@ required-executable rows, five deferred environmental rows,
 `environmentalCoverageComplete: false`. The next permissible step is a
 separately authorized read-only identity refresh and predecessor-input review;
 target mutation remains prohibited.
+
+## Read-only identity follow-up
+
+Later authorized read-only discovery reopened the route decision and readiness
+counts without changing the policy classifications. The new evidence and
+reinjected findings are reviewed separately in
+[`gate-d-wspr5-read-only-route-identity-adversarial-assessment.md`](gate-d-wspr5-read-only-route-identity-adversarial-assessment.md).
+The current instance has seven ready required-executable rows, three blocked
+predecessor-dependent rows, and five deferred environmental rows.

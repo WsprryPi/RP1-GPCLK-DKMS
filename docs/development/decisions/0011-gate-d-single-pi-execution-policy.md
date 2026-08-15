@@ -48,3 +48,16 @@ set `targetExecutionApproved: true` before `executionReady` or
 required-executable subset;
 `environmentalCoverageComplete: false` will continue to prohibit claims of
 complete matrix coverage, publication readiness, or qualification.
+
+## Read-only identity follow-up
+
+The subsequently authorized read-only `wspr5` discovery recorded the current
+firmware, base device tree, stock RP1 clock/DMA/pinctrl providers, route groups,
+static conflict state, signing policy, installed kernels, and headers. GPIO4
+and GPIO20 now have separate `Compatible-unqualified`, non-live execution
+decisions. These decisions are Gate D sidecars, not a rewritten published
+release manifest and not target-mutation authority. Immediate fail-closed
+preflight remains mandatory.
+
+Seven required-executable rows are now ready. Three predecessor-dependent rows
+remain blocked, and the five environmental rows remain deferred.
