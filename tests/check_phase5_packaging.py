@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import pathlib
+import platform
 import re
 import subprocess
 import tempfile
@@ -28,7 +29,7 @@ required_ids = {"source-archive", "module-source", "module-headers", "kbuild", "
                 "compatibility-schema", "compatibility-manifest", "provenance", "checksums", "release-metadata",
                 "installation-model", "overlay-contract", "permissions-enrollment-policy", "compatibility-decisions", "compatibility-policy", "signing-policy-data", "signing-policy-tool", "diagnostics-contract", "administration-tool", "administration-command", "diagnostics-command",
                 "configuration-directory", "transaction-state", "lifecycle-tool", "lifecycle-removal-contract",
-                "representative-system-matrix", "gate-d-execution-schema", "gate-d-instance-validator", "gate-d-lifecycle-tool", "gate-d-platform-tool", "gate-d-boot-tool", "gate-d-target-plan-tool", "gate-d-attempt-generator", "gate-d-permanent-executor", "gate-d-busy-injector-source", "gate-d-busy-injector", "gate-d-uapi-probe-source", "gate-d-uapi-probe", "release-integration-gates", "calibrated-review-release-policy", "lifecycle-policy-tool", "diagnostic-tool", "operator-docs",
+                "representative-system-matrix", "gate-d-execution-schema", "gate-d-instance-validator", "gate-d-lifecycle-tool", "gate-d-platform-tool", "gate-d-boot-tool", "gate-d-target-plan-tool", "gate-d-attempt-generator", "gate-d-permanent-executor", "gate-d-busy-injector-source", "gate-d-busy-injector-header", "gate-d-busy-injector", "gate-d-uapi-probe-source", "gate-d-uapi-probe", "release-integration-gates", "calibrated-review-release-policy", "lifecycle-policy-tool", "diagnostic-tool", "operator-docs",
                 "security-notes", "behavioral-notes", "signing-guidance"}
 assert required_ids == set(artifact_ids)
 for item in layout["artifacts"]:
@@ -76,7 +77,11 @@ sha256sum "$input" | awk '{print $1}' >"$out"
         "release/gate-d-version-pair-v1.json",
         "release/gate-d-matrix-policy-v2.json",
         "release/gate-d-route-compatibility-decision-v1.json",
-        "tools/gate_d_busy_injector.h",
+        "release/gate-d-target-operation-plan-v1.json",
+        "release/gate-d-candidate-status-v1.json",
+        "release/gate-d-attempts-v1/index.json",
+        "release/gate-c-representative-build-manifest-phase5.14-v1.json",
+        "docs/evidence/gate-c-representative-build-wspr5-phase5.14.md",
         "tests/gate_d_busy_injector_test.c",
     ):
         assert excluded not in listing
@@ -86,6 +91,16 @@ sha256sum "$input" | awk '{print $1}' >"$out"
         left = hashlib.sha256((pathlib.Path(first) / name).read_bytes()).hexdigest()
         right = hashlib.sha256((pathlib.Path(second) / name).read_bytes()).hexdigest()
         assert left == right, f"release artifact is not reproducible: {name}"
+    with tempfile.TemporaryDirectory() as extracted:
+        subprocess.run(["tar", "-xzf", archive, "-C", extracted], check=True)
+        source = pathlib.Path(extracted) / f"rp1-gpclk-dkms-{release}"
+        assert (source / "tools/gate_d_busy_injector.h").is_file()
+        if platform.system() == "Linux":
+            for source_name, output_name in (("gate_d_busy_injector.c", "gate-d-busy-injector"),
+                                             ("gate_d_uapi_probe.c", "gate-d-uapi-probe")):
+                subprocess.run(["cc", "-std=c11", "-Wall", "-Wextra", "-Werror",
+                                f"-I{source / 'include/uapi'}", str(source / "tools" / source_name),
+                                "-o", str(pathlib.Path(extracted) / output_name)], check=True)
     metadata = json.loads((pathlib.Path(first) / "release-metadata.json").read_text())
     expected_dirty = bool(subprocess.check_output(["git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=all"], text=True))
     assert metadata["publishable"] is False and metadata["tagPresent"] is False

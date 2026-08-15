@@ -83,10 +83,14 @@ def validate(value: dict, *, require_ready: bool = False,
     superseded = False
     if status_path.is_file() and not status_path.is_symlink():
         candidate_status = json.loads(status_path.read_text(encoding="utf-8"))
-        historical = candidate_status.get("historicalCandidate", {})
-        superseded = (enforce_candidate_status and
-                      historical.get("release") == value.get("candidate", {}).get("release") and
-                      historical.get("status") == "superseded-before-gate-d-execution")
+        historical = [candidate_status.get("historicalCandidate", {})]
+        historical.extend(candidate_status.get("supersededCandidates", []))
+        candidate_release = value.get("candidate", {}).get("release")
+        superseded = (enforce_candidate_status and any(
+            item.get("release") == candidate_release and
+            (str(item.get("status", "")).startswith("superseded") or
+             str(item.get("status", "")).startswith("blocked-before-gate-d"))
+            for item in historical))
     # The policy hash binds the sealed plan bytes. Live workspace tool identity
     # is validated by the attempt index/executor bundle; historical plans must
     # remain inspectable after permanent tools advance.

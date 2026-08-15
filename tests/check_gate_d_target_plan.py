@@ -15,7 +15,12 @@ spec.loader.exec_module(tool)
 plan = json.loads((ROOT / "release/gate-d-target-operation-plan-v1.json").read_text())
 result = tool.validate(plan, verify_tools=False)
 assert result == {"valid": True, "readOnly": True, "rowCount": 10, "attemptCount": 38, "liveOutput": False}
-assert tool.validate(plan) == result
+try:
+    tool.validate(plan)
+except ValueError:
+    pass
+else:
+    raise AssertionError("superseded Phase 5.14 plan matched advanced Phase 5.15 tools")
 assert plan["artifacts"]["successor"] == {
     "version": "0.0.0-phase5.14",
     "archive": "/home/pi/gate-d-inputs/phase5.14-7bbdfe1b5c83/rp1-gpclk-dkms-0.0.0-phase5.14.tar.gz",

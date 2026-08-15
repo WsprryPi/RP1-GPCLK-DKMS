@@ -11,7 +11,7 @@
     "targetPlan": "release/gate-d-target-operation-plan-v1.json",
     "targetPlanSha256": "30db26b9008964d27265eff45a42f209527346c143e7a59dd4eaede52e4dda0a",
     "attemptIndex": "release/gate-d-attempts-v1/index.json",
-    "attemptIndexSha256": "883c36d0013d2f624b853e65d8bd55717759331117f5e3c1ef5e8492520fa555",
+    "attemptIndexSha256": "183d7172044c2d53436a91041a5725f7ac0e7aea9c55d47a4d5966551bc72968",
     "environmentalCoverageComplete": false
   },
   "candidate": {

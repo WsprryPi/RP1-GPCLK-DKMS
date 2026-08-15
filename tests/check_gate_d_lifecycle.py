@@ -30,6 +30,7 @@ assert result["inputsReady"] is False
 assert len(result["blockedRows"]) == 10
 assert len(result["deferredRows"]) == 5
 assert result["environmentalCoverageComplete"] is False
+assert result["candidateSuperseded"] is True
 assert instance["candidate"]["release"] == "0.0.0-phase5.14"
 assert instance["authorization"]["targetExecutionApproved"] is False
 assert all(row["blockers"] == ["phase5.14-candidate-packaging-defect"]

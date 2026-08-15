@@ -9,7 +9,7 @@
     "status": "superseded-before-gate-d-execution",
     "reason": "candidate archive lacks the adopted permanent Gate D outer executor"
   },
-  "successor": {
+  "supersededCandidates": [{
     "release": "0.0.0-phase5.14",
     "sourceCommit": "7bbdfe1b5c83e1417e9dc5e0c4a7385136fd094a",
     "archiveSha256": "d0c17f2842716052bb49b1a4fc079d3d48a5674bae8610eee2ab9d17ac548bea",
@@ -17,8 +17,14 @@
     "qualification": "Compatible-unqualified",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; liveEligible false",
     "blocker": "Frozen archive omits tools/gate_d_busy_injector.h, so the release-owned installer cannot compile the permanent busy injector from sealed inputs."
+  }],
+  "successor": {
+    "release": "0.0.0-phase5.15",
+    "status": "selected-offline-identity-pending",
+    "qualification": "none",
+    "representativeBuild": "not-performed"
   },
-  "successorSelectionGate": "passed-after-permanent-executor-offline-adversarial-review",
+  "successorSelectionGate": "selected-to-correct-phase5.14-sealed-archive-helper-defect",
   "reuseProhibited": [
     "representative-build-promotion",
     "route-decision",

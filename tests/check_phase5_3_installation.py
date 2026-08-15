@@ -18,7 +18,7 @@ spec.loader.exec_module(admin)
 
 model = json.loads((ROOT / "release/installation-model-v1.json").read_text())
 layout = json.loads((ROOT / "release/release-layout-v1.json").read_text())
-assert model["release"] == layout["release"] == "0.0.0-phase5.14"
+assert model["release"] == layout["release"] == "0.0.0-phase5.15"
 assert model["dkmsModule"] == layout["package"]
 assert model["kernelModule"] == layout["module"]
 assert model["transaction"] == admin.STEPS
@@ -106,13 +106,13 @@ with tempfile.TemporaryDirectory() as temporary:
     assert (target / "boot/firmware/overlays/rp1-gpclk-gpio4.dtbo").read_bytes() == b"gpio4"
     assert not (target / "boot/firmware/overlays/rp1-gpclk-gpio20.dtbo").exists()
     assert (target / "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.14/overlay-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.14/permissions-enrollment-policy-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.14/diagnostics-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.14/lifecycle-removal-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.15/overlay-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.15/permissions-enrollment-policy-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.15/diagnostics-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.15/lifecycle-removal-contract-v1.json").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/lifecycle-policy").is_file()
-    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.14/gate-d-execution-instance-v1.json").exists()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.14/gate-d-execution-instance-v1.schema.json").is_file()
+    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.15/gate-d-execution-instance-v1.json").exists()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.15/gate-d-execution-instance-v1.schema.json").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-instance").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-platform").is_file()

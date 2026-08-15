@@ -20,13 +20,18 @@ import tempfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LAYOUT_PATH = ROOT / "release/release-layout-v1.json"
 KEY_SUFFIXES = {".key", ".pem", ".p12", ".pfx", ".der"}
-EXCLUDED_PREFIXES = (".git/", "dist/", "build/", "build-")
+EXCLUDED_PREFIXES = (".git/", "dist/", "build/", "build-",
+                     "release/gate-d-attempts-v1/", "docs/evidence/")
 EXCLUDED_EXACT = {
     "release/gate-d-execution-instance-v1.json",
     "release/gate-d-version-pair-v1.json",
     "release/gate-d-matrix-policy-v2.json",
     "release/gate-d-route-compatibility-decision-v1.json",
-    "tools/gate_d_busy_injector.h",
+    "release/gate-d-target-operation-plan-v1.json",
+    "release/gate-d-candidate-status-v1.json",
+    "release/gate-d-successor-offline-identities-v1.json",
+    "release/gate-c-representative-build-manifest-v1.json",
+    "release/gate-c-representative-build-manifest-phase5.14-v1.json",
     "tests/gate_d_busy_injector_test.c",
 }
 VERSION_RE = re.compile(r'^#define RP1_GPCLK_MODULE_VERSION "([0-9A-Za-z][0-9A-Za-z._+-]*)"$', re.M)
