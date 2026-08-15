@@ -22,5 +22,5 @@
     "qualificationIdentitySha256": "692d9d33143db9c702c9e277aed4df430ebeee5a1021ee61d27cb666a7223303",
     "evidenceManifestSha256": "0a5ac2f833f412621203d3dc21a45ade453386dc5e90b2d62fc25203bc0191b0"
   },
-  "claimCeiling": "offline reproducible and representative-build compatible only; no installation, lifecycle execution, or GPIO evidence"
+  "claimCeiling": "offline reproducible and representative-build compatible only; blocked before Gate D plan construction because bootstrap is not bound by frozen contracts"
 }
