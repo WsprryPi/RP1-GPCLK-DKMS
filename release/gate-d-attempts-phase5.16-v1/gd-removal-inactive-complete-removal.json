@@ -1,0 +1,387 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "attempt": "complete-removal",
+  "deadlineSeconds": 1800,
+  "evidenceDirectory": "/var/lib/rp1-gpclk-dkms/gate-d/removal-inactive/gd-removal-inactive-complete-removal",
+  "expectedFinalState": "empty-inactive-baseline",
+  "hostId": "wspr5-stock",
+  "inputs": {
+    "boot": {
+      "assistanceSeconds": 1800,
+      "automaticRecoverySeconds": 900,
+      "config": "/boot/firmware/config.txt",
+      "configSha256": "b6218fd92bd231151f177029b0dfd84a2af1e92f94dac768bd9501af087d43e2",
+      "normalKernel": "6.18.34+rpt-rpi-2712",
+      "priorInitramfsSha256": "e3d47bcb88e0a0ed9cb338832fc1ac503d423692ab49842134c68677dc505068",
+      "priorInitramfsSource": "/boot/initrd.img-6.12.75+rpt-rpi-2712",
+      "priorKernel": "6.12.75+rpt-rpi-2712",
+      "priorKernelSha256": "c194093a665071826ff94fb014b574de8ad896584b7317bbeafefe94154b0b44",
+      "priorKernelSource": "/boot/vmlinuz-6.12.75+rpt-rpi-2712",
+      "rebootNoticeRequired": true,
+      "selector": "scripts/gate_d_boot.py",
+      "sshReturnSeconds": 600,
+      "tryboot": "/boot/firmware/tryboot.txt",
+      "trybootSha256": "c06b262332c145a0cfea594e020fced762a02eef269e4026fe84de71fb152b0a"
+    },
+    "candidateArchive": "/home/pi/gate-d-inputs/phase5.16-ff92ffcbc588/rp1-gpclk-dkms-0.0.0-phase5.16.tar.gz",
+    "candidateArchiveSha256": "7c7b7c4741717796b0a128c3f163f2921a25ea646d815b6ba59aae3fedd3ae8d",
+    "candidateRelease": "0.0.0-phase5.16",
+    "gpio20Dtbo": "/home/pi/gate-d-inputs/phase5.16-ff92ffcbc588/rp1-gpclk-gpio20.dtbo",
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "gpio4Dtbo": "/home/pi/gate-d-inputs/phase5.16-ff92ffcbc588/rp1-gpclk-gpio4.dtbo",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "manifestSha256": "e92f3dbdd2b97730ee01b6c72f526a7af196854bc2a0815f4b1091f473053b2d",
+    "matrixPolicySha256": "31cfe5c8c1756067b9ba8f8cc31823ba1ee33d95db5149f1877e439a6f40f994",
+    "ownedPaths": [
+      "/var/lib/rp1-gpclk-dkms/gate-d/staging/gd-removal-inactive-complete-removal",
+      "/var/lib/rp1-gpclk-dkms/gate-d/removal-inactive/gd-removal-inactive-complete-removal"
+    ],
+    "predecessorArchive": "/home/pi/gate-c-evidence/predecessor-6.18.34-a1aed8cbb3e7/rp1-gpclk-dkms-0.0.0-phase5.2.tar.gz",
+    "predecessorArchiveSha256": "f334853d9c94d733ea22e9b7b93961a005e63442ec4efc4edbe2b12d6321aaf4",
+    "predecessorVersion": "0.0.0-phase5.2",
+    "routeDecisionSha256": "5845794ac14809138235b44037fe41c0f3301f76f469ab89e7df84e6135a8d7a",
+    "sourceCommit": "ff92ffcbc588494dd89f303b73c31fe24554583a",
+    "stagingDirectory": "/var/lib/rp1-gpclk-dkms/gate-d/staging/gd-removal-inactive-complete-removal",
+    "subordinateLifecycle": null,
+    "targetPlanSha256": "ae05a31e00890e477b556b20bb591990f8dd7c5953c8bf5557e84b88df6bf9ca",
+    "tooling": {
+      "bootSelector": {
+        "candidateArchiveMember": true,
+        "installKind": "copied",
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-boot",
+        "installedSha256": "731b122fbc154e4945397bf844bdb093865175f16b92376972fd72e352893bf3",
+        "sourcePath": "scripts/gate_d_boot.py",
+        "sourceSha256": "731b122fbc154e4945397bf844bdb093865175f16b92376972fd72e352893bf3"
+      },
+      "busyInjector": {
+        "candidateArchiveMember": true,
+        "installKind": "target-built",
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-busy-injector",
+        "installedSha256": "c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd",
+        "sourcePath": "tools/gate_d_busy_injector.c",
+        "sourceSha256": "1bebe7cd10be210a2dcedb9de3db701888f40c38f3210470d777b69bcf5b7582"
+      },
+      "instanceValidator": {
+        "candidateArchiveMember": true,
+        "installKind": "copied",
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-instance",
+        "installedSha256": "e817705b145c21194cfd75adce2de60fca879f7a54356682867a5bcc34c21070",
+        "sourcePath": "scripts/gate_d_instance.py",
+        "sourceSha256": "e817705b145c21194cfd75adce2de60fca879f7a54356682867a5bcc34c21070"
+      },
+      "lifecycleCoordinator": {
+        "candidateArchiveMember": true,
+        "installKind": "copied",
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle",
+        "installedSha256": "c55dee9ce430b30b52972a9d6312b593b5d3c9ab15b8c17a270a6b7066a7480d",
+        "sourcePath": "scripts/gate_d_lifecycle.py",
+        "sourceSha256": "c55dee9ce430b30b52972a9d6312b593b5d3c9ab15b8c17a270a6b7066a7480d"
+      },
+      "permanentExecutor": {
+        "candidateArchiveMember": true,
+        "installKind": "copied",
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-executor",
+        "installedSha256": "303fd6f5df2db53ce84cbbcbfbabbe59d76038ac4e99446a9f47bedbdf2e5e5a",
+        "sourcePath": "scripts/gate_d_outer.py",
+        "sourceSha256": "303fd6f5df2db53ce84cbbcbfbabbe59d76038ac4e99446a9f47bedbdf2e5e5a"
+      },
+      "platformCoordinator": {
+        "candidateArchiveMember": true,
+        "installKind": "copied",
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-platform",
+        "installedSha256": "d749859b0c915c4cfde8df85aa088359f7ed87d77183ae927c82bc1f149afb3c",
+        "sourcePath": "scripts/gate_d_platform.py",
+        "sourceSha256": "d749859b0c915c4cfde8df85aa088359f7ed87d77183ae927c82bc1f149afb3c"
+      },
+      "targetPlanValidator": {
+        "candidateArchiveMember": true,
+        "installKind": "copied",
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-target-plan",
+        "installedSha256": "4b7af44c59da24678fe87c634c4c966573e53ca7303edf83286cceaf05ce80bf",
+        "sourcePath": "scripts/gate_d_target_plan.py",
+        "sourceSha256": "4b7af44c59da24678fe87c634c4c966573e53ca7303edf83286cceaf05ce80bf"
+      },
+      "uapiProbe": {
+        "candidateArchiveMember": true,
+        "installKind": "target-built",
+        "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe",
+        "installedSha256": "1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742",
+        "sourcePath": "tools/gate_d_uapi_probe.c",
+        "sourceSha256": "178de464eeed875fc0906f7c19b7e2d1ac0e33313d1d1074c57616a4e7fa1133"
+      }
+    },
+    "uapiSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb"
+  },
+  "journal": "/var/lib/rp1-gpclk-dkms/gate-d/removal-inactive/gd-removal-inactive-complete-removal/transaction.json",
+  "kernelRelease": "6.18.34+rpt-rpi-2712",
+  "kind": "gate-d-executable-attempt",
+  "matrixRow": "removal-inactive",
+  "operationId": "gd-removal-inactive-complete-removal",
+  "route": "route-neutral",
+  "safety": {
+    "antennaConnected": false,
+    "clockEnabled": false,
+    "dmaActive": false,
+    "endpointOpen": false,
+    "forcedRemoval": false,
+    "gpioOutput": false,
+    "historicalArtifactMutation": false,
+    "liveOutput": false,
+    "moduleLoaded": false,
+    "ownerPresent": false,
+    "platformBound": false,
+    "sdrPermitted": false,
+    "si5351Disconnected": true,
+    "trybootMutation": false
+  },
+  "schemaVersion": 1,
+  "services": [
+    {
+      "action": "stop-then-restore-exact",
+      "name": "wsprrypi",
+      "requiredPreState": "active"
+    },
+    {
+      "action": "stop-then-restore-exact",
+      "name": "sdrplay",
+      "requiredPreState": "active"
+    },
+    {
+      "action": "preserve",
+      "name": "sdrconnect-server",
+      "requiredPreState": "inactive"
+    },
+    {
+      "action": "stop-then-restore-exact",
+      "name": "SoapySDRServer",
+      "requiredPreState": "active"
+    }
+  ],
+  "steps": [
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "create-evidence"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "01-create-evidence",
+      "operation": "create-evidence"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "capture-preflight"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "02-capture-preflight",
+      "operation": "capture-preflight"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "verify-input-hashes"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "03-verify-input-hashes",
+      "operation": "verify-input-hashes"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "snapshot-services"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "04-snapshot-services",
+      "operation": "snapshot-services"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "service-transaction",
+        "name": "quiesce-services"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "05-quiesce-services",
+      "operation": "quiesce-services"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "stage-source"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "06-stage-source",
+      "operation": "stage-source"
+    },
+    {
+      "action": {
+        "argv": [
+          "/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle",
+          "dispatch",
+          "dkms-install",
+          "0.0.0-phase5.16",
+          "6.18.34+rpt-rpi-2712",
+          "/var/lib/rp1-gpclk-dkms/gate-d/staging/gd-removal-inactive-complete-removal",
+          "--execute"
+        ],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "command",
+        "name": "install-successor"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "07-install-successor",
+      "operation": "install-successor"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "prove-inactive"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "08-prove-inactive",
+      "operation": "prove-inactive"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "inventory-owned-paths"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "09-inventory-owned-paths",
+      "operation": "inventory-owned-paths"
+    },
+    {
+      "action": {
+        "argv": [
+          "/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle",
+          "dispatch",
+          "complete-removal",
+          "0.0.0-phase5.2",
+          "0.0.0-phase5.16",
+          "6.18.34+rpt-rpi-2712",
+          "/var/lib/rp1-gpclk-dkms/gate-d/staging/gd-removal-inactive-complete-removal",
+          "--execute"
+        ],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "command",
+        "name": "remove-test-state"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "10-remove-test-state",
+      "operation": "remove-test-state"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "verify-empty-package-state"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "11-verify-empty-package-state",
+      "operation": "verify-empty-package-state"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "service-transaction",
+        "name": "restore-services"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "12-restore-services",
+      "operation": "restore-services"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "audit-residue"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "13-audit-residue",
+      "operation": "audit-residue"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "capture-kernel-log-delta"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "14-capture-kernel-log-delta",
+      "operation": "capture-kernel-log-delta"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "verify-final-safety"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "15-verify-final-safety",
+      "operation": "verify-final-safety"
+    },
+    {
+      "action": {
+        "argv": [],
+        "expectedStatus": [
+          0
+        ],
+        "kind": "internal",
+        "name": "seal-evidence"
+      },
+      "deadlineScope": "attempt-total",
+      "id": "16-seal-evidence",
+      "operation": "seal-evidence"
+    }
+  ]
+}

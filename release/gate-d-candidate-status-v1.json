@@ -29,8 +29,11 @@
   },
   "successor": {
     "release": "0.0.0-phase5.16",
-    "status": "unfrozen",
-    "qualification": "not-yet-representative-built",
+    "sourceCommit": "ff92ffcbc588494dd89f303b73c31fe24554583a",
+    "archiveSha256": "7c7b7c4741717796b0a128c3f163f2921a25ea646d815b6ba59aae3fedd3ae8d",
+    "status": "frozen-before-gate-d-execution",
+    "qualification": "Compatible-unqualified",
+    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; liveEligible false",
     "purpose": "separate source and installed tooling identities and bind copied versus target-built installation semantics"
   },
   "successorSelectionGate": "selected-to-correct-phase5.15-single-tooling-digest-defect",

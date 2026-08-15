@@ -2,7 +2,7 @@
 
 # Gate D Phase 5.16 tooling-identity adversarial assessment
 
-Status: offline software review passed; target evidence pending
+Status: passed; control set sealed; target execution not authorized
 
 ## Scope
 
@@ -30,10 +30,29 @@ lifecycle behavior and authorizes no target mutation.
    and the complete offline suite. No live-output, GPIO, clock, DMA, SDR, or RF
    permission changed.
 
-## Remaining gates
+## Sealed results
 
-The successor is not frozen. Deterministic release identities, a representative
-stock-header module build, target-built helper hashes, a Phase 5.16 route
-decision, target plan, 38-attempt bundle, and execution instance remain
-required. Target lifecycle execution remains prohibited pending a fresh exact
-authorization after those documents are sealed.
+- Source commit: `ff92ffcbc588494dd89f303b73c31fe24554583a`.
+- Two release builds were byte-identical; archive SHA-256:
+  `7c7b7c4741717796b0a128c3f163f2921a25ea646d815b6ba59aae3fedd3ae8d`.
+- The representative module build passed; module SHA-256:
+  `a237bf6228ef7280efa5399377e7bc1f6e569f5fae9b6569ffe8b3c0234bf2c5`.
+- Target-built helper SHA-256 values are
+  `c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd`
+  and `1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742`.
+- The schema-version-2 target plan validates, the generated attempt index
+  binds exactly 38 documents, and the execution instance reports all ten
+  required rows ready with five environmental rows explicitly deferred.
+- `--require-ready` fails only with `fresh target-execution authorization is
+  required`, as intended.
+
+The adversarial review also caught an incorrectly expanded abbreviated commit
+in the first target evidence labels. Those immutable directories are failed,
+non-authoritative attempts. The representative build and helper seal were
+repeated in distinct directories using the verified full commit above; only
+the corrected evidence is referenced by the control set.
+
+## Remaining gate
+
+Phase 5.16 target lifecycle execution remains prohibited. A fresh explicit
+authorization for this exact candidate and sealed control set is required.
