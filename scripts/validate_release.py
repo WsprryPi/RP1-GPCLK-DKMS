@@ -87,6 +87,7 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
             fail("archive member order/uniqueness differs")
         required = {"Kbuild", "Makefile", "dkms.conf", "include/uapi/linux/rp1_gpclk.h", "release/release-layout-v1.json",
                     "scripts/rp1-gpclk-lifecycle.sh", "scripts/rp1-gpclk-diagnostics.py", "docs/operator/signing.md",
+                    "scripts/rp1-gpclk-admin.py", "release/installation-model-v1.json",
                     f"docs/releases/{layout['release']}-security.md", f"docs/releases/{layout['release']}-behavior.md",
                     "overlays/rp1-gpclk-gpio4.dts", "overlays/rp1-gpclk-gpio20.dts"}
         if not required <= set(names):

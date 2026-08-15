@@ -26,7 +26,9 @@ assert len(artifact_ids) == len(set(artifact_ids))
 required_ids = {"source-archive", "module-source", "module-headers", "kbuild", "makefile", "dkms-conf", "kernel-module",
                 "canonical-uapi", "gpio4-overlay-source", "gpio20-overlay-source", "gpio4-dtbo", "gpio20-dtbo",
                 "compatibility-schema", "compatibility-manifest", "provenance", "checksums", "release-metadata",
-                "lifecycle-tool", "diagnostic-tool", "operator-docs", "security-notes", "behavioral-notes", "signing-guidance"}
+                "installation-model", "administration-tool", "administration-command", "diagnostics-command",
+                "configuration-directory", "transaction-state", "lifecycle-tool", "diagnostic-tool", "operator-docs",
+                "security-notes", "behavioral-notes", "signing-guidance"}
 assert required_ids == set(artifact_ids)
 for item in layout["artifacts"]:
     assert item["destination"] and item["owner"] and item["group"]

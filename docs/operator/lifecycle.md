@@ -2,6 +2,29 @@
 
 # Output-disabled DKMS lifecycle
 
+## Frozen Phase 5.3 installation model
+
+`release/installation-model-v1.json` is authoritative for installed paths,
+ownership, modes, replacement rules, transaction order, and implicit-action
+prohibitions. The package keeps the exact `0.0.0-phase5.2` candidate identity;
+the Phase 5.3 slice number is not a release-version promotion.
+
+`rp1-gpclk-admin plan` is read-only. Installation requires the explicit
+`install --execute --release-directory RELEASE --route gpio4|gpio20` form and
+a publishable, checksum-valid release. It writes a private transaction journal
+before dispatching any DKMS command. A failure remains
+`inactive-recovery-required`, with module loading and overlay activation not
+performed and live output false. `status` does not repair or mutate state.
+`recover` deliberately refuses generic automatic repair: recovery must first
+classify the recorded checkpoint and verify every package-owned byte.
+
+Installation copies only the selected DTBO; it does not activate it or edit
+boot configuration. It never creates `/etc/rp1-gpclk-dkms/enrollment.json`.
+Key enrollment, overlay activation, and reboot are separately reported
+administrator actions. Existing configuration, enrollment, keys,
+certificates, overlays, and unmarked boot entries remain administrator- or
+third-party-owned.
+
 Phase 5.2 packages the module for representative lifecycle validation. It does
 not make an operator release, enable output, or qualify another target. The
 only supported lifecycle gate in this phase is `live_output=0`.

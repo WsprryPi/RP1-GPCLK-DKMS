@@ -1,0 +1,36 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "package": "rp1-gpclk-dkms",
+  "dkmsModule": "rp1-gpclk-dkms",
+  "kernelModule": "rp1_gpclk_dkms",
+  "release": "0.0.0-phase5.2",
+  "paths": {
+    "source": "/usr/src/rp1-gpclk-dkms-0.0.0-phase5.2",
+    "module": "/lib/modules/KERNEL/updates/dkms/rp1_gpclk_dkms.ko",
+    "overlays": "/boot/firmware/overlays",
+    "releaseData": "/usr/share/rp1-gpclk-dkms/0.0.0-phase5.2",
+    "configuration": "/etc/rp1-gpclk-dkms",
+    "enrollment": "/etc/rp1-gpclk-dkms/enrollment.json",
+    "state": "/var/lib/rp1-gpclk-dkms",
+    "administrationCommand": "/usr/sbin/rp1-gpclk-admin",
+    "diagnosticsCommand": "/usr/sbin/rp1-gpclk-diagnostics",
+    "implementations": "/usr/libexec/rp1-gpclk-dkms",
+    "documentation": "/usr/share/doc/rp1-gpclk-dkms"
+  },
+  "ownership": {
+    "packageDirectories": {"owner":"root","group":"root","mode":"0755","removalOwner":"package-if-empty-or-recorded"},
+    "ordinaryFiles": {"owner":"root","group":"root","mode":"0644","removalOwner":"package-if-identical"},
+    "commands": {"owner":"root","group":"root","mode":"0755","removalOwner":"package-if-identical"},
+    "transactionState": {"owner":"root","group":"root","mode":"0600","removalOwner":"package"},
+    "deviceNode": {"path":"/dev/rp1-gpclk","owner":"root","group":"root","mode":"0600","removalOwner":"module"},
+    "administratorFiles": {"paths":["/etc/rp1-gpclk-dkms/enrollment.json","administrator signing keys and certificates"],"removalOwner":"administrator","replacement":"never"}
+  },
+  "routes": {
+    "gpio4": "rp1-gpclk-gpio4.dtbo",
+    "gpio20": "rp1-gpclk-gpio20.dtbo"
+  },
+  "transaction": ["preflight","stage","verify-staged-hashes","dkms-add","dkms-build","sign-if-required","verify-module","dkms-install","install-overlay-inactive","install-policy","verify-output-disabled","commit-state"],
+  "failureState": {"liveOutput":false,"overlayActivation":"not-performed","moduleLoad":"not-performed","recoveryRequired":true},
+  "implicitActions": {"bootConfiguration":false,"overlayActivation":false,"routeSelection":false,"liveOutput":false,"experimentalEnrollment":false,"moduleLoad":false,"fallbackBackend":false,"reboot":false}
+}
