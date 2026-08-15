@@ -43,7 +43,15 @@ def main() -> None:
         "limits": {"commandSeconds": 5, "streamBytes": 8192, "fileBytes": 4096},
         "system": {"kernel": platform.release(), "architecture": platform.machine(), "model": text(pathlib.Path("/proc/device-tree/model"))},
         "dkms": command(["dkms", "status", "-m", "rp1-gpclk-dkms"]),
-        "module": {"loaded": module.is_dir(), "liveOutput": text(module / "parameters/live_output")},
+        "module": {
+            "loaded": module.is_dir(), "liveOutput": text(module / "parameters/live_output"),
+            "version": command(["modinfo", "-F", "version", "rp1_gpclk_dkms"]),
+            "vermagic": command(["modinfo", "-F", "vermagic", "rp1_gpclk_dkms"]),
+            "signer": command(["modinfo", "-F", "signer", "rp1_gpclk_dkms"]),
+            "signatureKeyId": command(["modinfo", "-F", "sig_key", "rp1_gpclk_dkms"]),
+            "signatureAlgorithm": command(["modinfo", "-F", "sig_id", "rp1_gpclk_dkms"]),
+            "signatureHashAlgorithm": command(["modinfo", "-F", "sig_hashalgo", "rp1_gpclk_dkms"])
+        },
         "device": {"present": device.exists()}
     }
     if device.exists():

@@ -26,7 +26,7 @@ assert len(artifact_ids) == len(set(artifact_ids))
 required_ids = {"source-archive", "module-source", "module-headers", "kbuild", "makefile", "dkms-conf", "kernel-module",
                 "canonical-uapi", "gpio4-overlay-source", "gpio20-overlay-source", "gpio4-dtbo", "gpio20-dtbo",
                 "compatibility-schema", "compatibility-manifest", "provenance", "checksums", "release-metadata",
-                "installation-model", "overlay-contract", "permissions-enrollment-policy", "compatibility-decisions", "compatibility-policy", "administration-tool", "administration-command", "diagnostics-command",
+                "installation-model", "overlay-contract", "permissions-enrollment-policy", "compatibility-decisions", "compatibility-policy", "signing-policy-data", "signing-policy-tool", "administration-tool", "administration-command", "diagnostics-command",
                 "configuration-directory", "transaction-state", "lifecycle-tool", "diagnostic-tool", "operator-docs",
                 "security-notes", "behavioral-notes", "signing-guidance"}
 assert required_ids == set(artifact_ids)

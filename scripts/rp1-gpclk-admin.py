@@ -34,7 +34,7 @@ ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
                       "select-new-overlay", "revalidate-entire-compatibility-identity",
                       "renew-enrollment-if-policy-requires"]
 STEPS = ["preflight", "stage", "verify-staged-hashes", "dkms-add", "dkms-build",
-         "sign-if-required", "verify-module", "dkms-install", "install-overlay-inactive",
+         "verify-dkms-signature", "verify-module", "dkms-install", "install-overlay-inactive",
          "install-policy", "verify-output-disabled", "commit-state"]
 SAFE_PATH = re.compile(r"^/[A-Za-z0-9._+/-]+$")
 IDENTITY_FIELDS = ("compatibilityEntryId", "compatibilityManifestSha256",
@@ -248,7 +248,8 @@ def command_runner(args: list[str]) -> str:
 
 def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path | None,
             certificate: pathlib.Path | None, root: pathlib.Path = pathlib.Path("/"),
-            runner: Callable[[list[str]], str] = command_runner) -> dict:
+            runner: Callable[[list[str]], str] = command_runner,
+            expected_signer: str | None = None, expected_key_id: str | None = None) -> dict:
     transaction = plan(route, signing)
     if release.is_symlink() or not release.is_dir():
         raise ValueError("release must be a real directory")
@@ -258,9 +259,10 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
     checksums = load_checksums(release)
     if ROUTES[route] not in checksums:
         raise ValueError("selected overlay is absent from checksums")
-    if signing and (key is None or certificate is None or key.is_symlink() or certificate.is_symlink()
-                    or not key.is_file() or not certificate.is_file()):
-        raise ValueError("administrator signing key and certificate are required")
+    if key is not None or certificate is not None:
+        raise ValueError("manual signing material is not accepted; configure DKMS native signing")
+    if signing and (not expected_signer or not expected_key_id):
+        raise ValueError("exact expected DKMS signer and signature key ID are required")
     kernel = platform.release()
     state_path = rooted(root, "/var/lib/rp1-gpclk-dkms/transaction.json")
     if state_path.exists():
@@ -328,29 +330,31 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
         architecture = platform.machine()
         built_module = f"/var/lib/dkms/{PACKAGE}/{VERSION}/{kernel}/{architecture}/module/{MODULE}.ko"
         installed_module = f"/lib/modules/{kernel}/updates/dkms/{MODULE}.ko"
-        if signing:
-            commands.append([str(headers / "scripts/sign-file"), "sha256", str(key), str(certificate),
-                             built_module])
         commands += [["modinfo", "-F", "version", built_module],
                      ["modinfo", "-F", "vermagic", built_module]]
         if signing:
-            commands.append(["modinfo", "-F", "signer", built_module])
+            commands += [["modinfo", "-F", "signer", built_module],
+                         ["modinfo", "-F", "sig_key", built_module]]
         commands += [["dkms", "install", "-m", PACKAGE, "-v", VERSION, "-k", kernel],
                      ["modinfo", "-F", "version", installed_module],
                      ["modinfo", "-F", "vermagic", installed_module]]
         if signing:
-            commands.append(["modinfo", "-F", "signer", installed_module])
+            commands += [["modinfo", "-F", "signer", installed_module],
+                         ["modinfo", "-F", "sig_key", installed_module]]
         for args in commands:
-            transaction["checkpoint"] = "sign-if-required" if "sign-file" in args[0] else args[1]
-            transaction["commands"].append(["<administrator-key>" if key and value == str(key) else value for value in args])
+            transaction["checkpoint"] = "verify-dkms-signature" if args[:3] in (
+                ["modinfo", "-F", "signer"], ["modinfo", "-F", "sig_key"]) else args[1]
+            transaction["commands"].append(args)
             atomic_json(state_path, transaction)
             output = runner(args)
             if args[:3] == ["modinfo", "-F", "version"] and output.strip() != VERSION:
                 raise ValueError("module version verification failed")
             if args[:3] == ["modinfo", "-F", "vermagic"] and not output.strip().startswith(kernel + " "):
                 raise ValueError("module vermagic verification failed")
-            if args[:3] == ["modinfo", "-F", "signer"] and not output.strip():
-                raise ValueError("required module signer is absent")
+            if args[:3] == ["modinfo", "-F", "signer"] and output.strip() != expected_signer:
+                raise ValueError("required module signer identity differs")
+            if args[:3] == ["modinfo", "-F", "sig_key"] and output.strip() != expected_key_id:
+                raise ValueError("required module signature key ID differs")
         overlay_destination = overlays / ROUTES[route]
         if overlay_destination.is_symlink() or (overlay_destination.exists() and digest(overlay_destination) != checksums[ROUTES[route]]):
             raise ValueError("refusing unrelated or different overlay")
@@ -478,6 +482,8 @@ def main() -> None:
     parser.add_argument("--signing-required", action="store_true")
     parser.add_argument("--private-key", type=pathlib.Path)
     parser.add_argument("--certificate", type=pathlib.Path)
+    parser.add_argument("--expected-signer")
+    parser.add_argument("--expected-signature-key-id")
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--snapshot", type=pathlib.Path)
     parser.add_argument("--acknowledgement")
@@ -529,7 +535,9 @@ def main() -> None:
         if args.release_directory is None:
             raise SystemExit("--release-directory is required")
         result = execute(args.release_directory.resolve(), args.route, args.signing_required,
-                         args.private_key, args.certificate)
+                         args.private_key, args.certificate,
+                         expected_signer=args.expected_signer,
+                         expected_key_id=args.expected_signature_key_id)
     print(json.dumps(result, indent=2, sort_keys=True))
 
 
