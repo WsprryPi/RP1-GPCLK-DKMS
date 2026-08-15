@@ -78,8 +78,17 @@ int main(int argc, char **argv)
 	uint32_t mode = 0;
 	uint32_t count = 0;
 	uint32_t i;
+	uint32_t expected_route = RP1_GPCLK_ROUTE_GPIO20;
 	int cancel = 0;
 	int fd;
+	const char *route_environment = getenv("RP1_GPCLK_TEST_ROUTE");
+
+	if (route_environment && !strcmp(route_environment, "4"))
+		expected_route = RP1_GPCLK_ROUTE_GPIO4;
+	else if (route_environment && strcmp(route_environment, "20")) {
+		fprintf(stderr, "RP1_GPCLK_TEST_ROUTE must be 4 or 20\n");
+		return EXIT_FAILURE;
+	}
 
 	if (argc != 2 || (strcmp(argv[1], "query") &&
 	    strcmp(argv[1], "query-gpio4") &&
@@ -100,7 +109,7 @@ int main(int argc, char **argv)
 	       (unsigned long long)query.capabilities, query.build_id,
 	       query.compatibility_id);
 	if (query.route != (!strcmp(argv[1], "query-gpio4") ?
-		RP1_GPCLK_ROUTE_GPIO4 : RP1_GPCLK_ROUTE_GPIO20) ||
+		RP1_GPCLK_ROUTE_GPIO4 : expected_route) ||
 	    query.compatibility_state != RP1_GPCLK_COMPAT_EXPERIMENTAL ||
 	    (query.capabilities & REQUIRED_CAPS) != REQUIRED_CAPS ||
 	    strcmp(query.build_id, "0.0.0-phase4d-combined") ||
@@ -110,7 +119,7 @@ int main(int argc, char **argv)
 		return EXIT_SUCCESS;
 
 	header(&acquire.header, sizeof(acquire));
-	acquire.expected_route = RP1_GPCLK_ROUTE_GPIO20;
+	acquire.expected_route = expected_route;
 	acquire.required_capabilities = REQUIRED_CAPS;
 	if (ioctl(fd, RP1_GPCLK_IOC_ACQUIRE, &acquire)) {
 		perror("ACQUIRE"); return EXIT_FAILURE;

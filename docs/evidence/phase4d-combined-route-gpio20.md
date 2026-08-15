@@ -3,7 +3,7 @@
 # Phase 4D combined-route GPIO20 evidence
 
 Date: 2026-08-14
-Status: GPIO20 combined-candidate qualification passed; Phase 4 remains open
+Status: GPIO20 combined-candidate qualification passed
 Compatibility ceiling: `Experimental`, exact identity only
 
 The exact combined candidate enrolled GPIO4 and GPIO20 on `wspr5`, but GPIO4
@@ -46,6 +46,7 @@ Its internal `SHA256SUMS` identity is
 `8d52839dcca68facf7100f9a203dc3f4394b9b361121a40f60e3e9c83cf13813`;
 the downloaded archive passed independent listing verification.
 
-Phase 4 remains open until GPIO4 repeats the complete matrix, including WSPR,
-using these exact combined-candidate bytes. Earlier GPIO4 evidence used a
-different route-specific module and cannot fill that final matrix row.
+At this report's execution boundary, Phase 4 remained open until GPIO4 repeated
+the complete matrix using these exact combined-candidate bytes. That later run
+is now recorded in `phase4e-combined-route-gpio4.md`; the combined disposition
+is in `phase4-relative-qualification-closeout.md`.

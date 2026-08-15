@@ -2,14 +2,17 @@
 # SPDX-License-Identifier: MIT
 set -Eeuo pipefail
 
-if [[ $EUID -ne 0 || $# -ne 2 ]]; then
-	echo "usage: sudo $0 SOURCE_DIR NEW_EVIDENCE_DIR" >&2
+if [[ $EUID -ne 0 || ($# -ne 2 && $# -ne 3) ]]; then
+	echo "usage: sudo $0 SOURCE_DIR NEW_EVIDENCE_DIR [LIVE_PIN: 4 or 20]" >&2
 	exit 2
 fi
 
 source_dir=$(realpath "$1")
 [[ ! -e $2 ]] || { echo "evidence directory already exists" >&2; exit 2; }
 evidence_dir=$(realpath -m "$2")
+live_pin=${3:-20}
+[[ $live_pin == 4 || $live_pin == 20 ]] || { echo "live pin must be 4 or 20" >&2; exit 2; }
+if [[ $live_pin == 4 ]]; then other_pin=20; else other_pin=4; fi
 kernel=$(uname -r)
 headers="/usr/src/linux-headers-$kernel"
 common="/usr/src/linux-headers-${kernel%+rpt-rpi-2712}+rpt-common-rpi"
@@ -79,20 +82,22 @@ sha256sum /sys/firmware/fdt "$source_dir/rp1_gpclk_dkms.ko" "$work/module.ko" \
 	"$source_dir/include/uapi/linux/rp1_gpclk.h" "$work/overlays"/*.dtbo \
 	>"$evidence_dir/identities.txt"
 
-# GPIO4 must enroll under the combined bytes, but no submission is permitted.
-dtoverlay -d "$work/overlays" rp1-gpclk-gpio4
-overlay=rp1-gpclk-gpio4
+# The other route must enroll under the combined bytes, but receives no submission.
+dtoverlay -d "$work/overlays" "rp1-gpclk-gpio$other_pin"
+overlay="rp1-gpclk-gpio$other_pin"
 sleep 1
 test -c /dev/rp1-gpclk
-"$work/phase4d_live_client" query-gpio4 | tee "$evidence_dir/gpio4-query.txt"
-safe_state >"$evidence_dir/gpio4-query-safe.txt"
+RP1_GPCLK_TEST_ROUTE=$other_pin "$work/phase4d_live_client" query \
+	| tee "$evidence_dir/gpio$other_pin-query.txt"
+safe_state >"$evidence_dir/gpio$other_pin-query-safe.txt"
 dtoverlay -r "$overlay"
 overlay=
 
-dtoverlay -d "$work/overlays" rp1-gpclk-gpio20
-overlay=rp1-gpclk-gpio20
+dtoverlay -d "$work/overlays" "rp1-gpclk-gpio$live_pin"
+overlay="rp1-gpclk-gpio$live_pin"
 sleep 1
-"$work/phase4d_live_client" query | tee "$evidence_dir/query.txt"
+RP1_GPCLK_TEST_ROUTE=$live_pin "$work/phase4d_live_client" query \
+	| tee "$evidence_dir/query.txt"
 
 run_capture()
 {
@@ -104,7 +109,8 @@ run_capture()
 	pid=$!
 	for _ in $(seq 1 100); do [[ -s $evidence_dir/$name.ready ]] && break; sleep 0.05; done
 	[[ -s $evidence_dir/$name.ready ]]
-	"$work/phase4d_live_client" "$mode" >"$evidence_dir/$name-client.txt"
+	RP1_GPCLK_TEST_ROUTE=$live_pin "$work/phase4d_live_client" "$mode" \
+		>"$evidence_dir/$name-client.txt"
 	wait "$pid"
 	dmesg | tail -n "+$((before + 1))" >"$evidence_dir/$name-dmesg.txt"
 	grep 'phase4d generation=' "$evidence_dir/$name-dmesg.txt" \
@@ -138,4 +144,4 @@ cleanup
 trap - EXIT
 (cd "$evidence_dir" && find . -type f ! -name SHA256SUMS -printf '%P\0' \
 	| sort -z | xargs -0 sha256sum) >"$evidence_dir/SHA256SUMS"
-echo PHASE4D_GPIO20_BOUNDED_RESULT=PASS
+echo "PHASE4D_GPIO${live_pin}_BOUNDED_RESULT=PASS"

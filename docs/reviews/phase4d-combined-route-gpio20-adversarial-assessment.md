@@ -28,5 +28,5 @@ the resealed checksum manifest and portable archive.
 No unresolved finding remains for GPIO20. Claims remain limited to relative
 frequency, the mapped module-owned tick windows, this exact target and
 candidate, and the conducted fixture. Absolute frequency and power remain
-unavailable. Phase 4 is not complete until the same combined bytes pass the
-full GPIO4 matrix.
+unavailable. The subsequently completed exact-byte GPIO4 matrix and combined
+disposition are recorded in the Phase 4E assessment and Phase 4 closeout.
