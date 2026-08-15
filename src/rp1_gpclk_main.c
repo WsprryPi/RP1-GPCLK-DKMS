@@ -4,7 +4,6 @@
 #include <linux/limits.h>
 #include <linux/module.h>
 #include <linux/of.h>
-#include <linux/of_fdt.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/utsname.h>
@@ -31,13 +30,12 @@ bool rp1_gpclk_live_output_eligible(const struct rp1_gpclk_device *device)
 	return live_output && device && device->live_eligible;
 }
 
-static bool rp1_gpclk_phase4d_identity_allowed(
+static bool rp1_gpclk_release_identity_allowed(
 	const struct rp1_gpclk_device *device)
 {
-	return (device->route == RP1_GPCLK_ROUTE_GPIO4 ||
-		device->route == RP1_GPCLK_ROUTE_GPIO20) &&
-		!strcmp(utsname()->release, "6.18.34+rpt-rpi-2712") &&
-		of_machine_is_compatible("raspberrypi,5-model-b");
+	/* Phase 5.2 has no exact positive release-manifest entry. */
+	(void)device;
+	return false;
 }
 
 static atomic64_t rp1_gpclk_next_owner = ATOMIC64_INIT(0);
@@ -181,11 +179,11 @@ static int rp1_gpclk_probe(struct platform_device *pdev)
 			      "DMA resource acquisition failed\n");
 		goto release_resources;
 	}
-	device->live_eligible = rp1_gpclk_phase4d_identity_allowed(device);
+	device->live_eligible = rp1_gpclk_release_identity_allowed(device);
 	if (live_output && !device->live_eligible) {
 		ret = -EOPNOTSUPP;
 		dev_err_probe(&pdev->dev, ret,
-			      "live output rejected by exact Phase 4D compatibility allowlist\n");
+			      "live output rejected: release has no positive compatibility entry\n");
 		goto release_resources;
 	}
 

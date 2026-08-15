@@ -48,8 +48,16 @@ qualify GPIO output, timing, a mode, or RF, and do not generalize to another
 kernel, DT, firmware, route, or host. No DKMS installer or qualified GPIO
 output is implemented.
 
-Nothing in this repository currently authorizes module installation, target
-binding, system configuration, GPIO operation, transmission, or RF activity.
+Phase 5.2 adds a deterministic, machine-verified release unit and an explicit
+output-disabled DKMS, signing, overlay, and diagnostic tool surface. The
+release compatibility manifest is populated deny-by-default with no positive
+runtime entries; Phase 4 evidence belongs to an earlier exact module identity.
+See the [release-unit contract](docs/contracts/phase5-2-release-unit-execution-prompt.md)
+and [operator lifecycle guide](docs/operator/lifecycle.md).
+
+Nothing in this repository generally authorizes module installation, target
+binding, system configuration, GPIO operation, transmission, or RF activity;
+each target task still requires explicit bounded authority.
 
 ## Intended scope
 

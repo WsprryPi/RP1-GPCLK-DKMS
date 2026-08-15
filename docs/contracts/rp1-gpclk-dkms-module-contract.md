@@ -20,9 +20,13 @@ overlays, module compatibility metadata, and module release artifacts. If the
 contracts conflict, work stops until both repositories receive a reviewed,
 coordinated amendment; neither contract silently overrides the other.
 
-This contract does not authorize installation, loading, binding, system
+This contract does not itself authorize installation, loading, binding, system
 changes, GPIO output, transmission, or RF activity. Each target phase requires
-separately bounded authorization.
+separately bounded authorization. Phase 5.1 tasks may separately authorize
+offline packaging work and representative DKMS/signing/install/overlay/update/
+rollback/removal lifecycle administration. That lifecycle authority remains
+clock/output-disabled unless an exact test receives additional live-output
+authorization; it never implicitly authorizes GPIO output or RF.
 
 ## 2. Intended deliverable
 
@@ -32,21 +36,38 @@ DKMS. It supplements rather than replaces the stock Raspberry Pi `clk-rp1`
 driver. WsprryPi will not distribute or maintain a custom kernel for this
 feature.
 
-The release unit eventually includes:
+Every release unit includes all of the following; the machine-readable
+installation inventory in
+[`release/release-layout-v1.json`](../../release/release-layout-v1.json) freezes
+the exact destination, owner, group, mode, replacement policy, and removal
+owner for each item:
 
-- module source and Kbuild files;
-- `dkms.conf` and source-install packaging;
-- canonical versioned UAPI headers;
-- route-specific or safely parameterized device-tree overlay sources and
-  reviewed build artifacts;
-- compatibility, provenance, and artifact-integrity metadata;
-- module-signing, install, update, downgrade, rollback, removal, and diagnostic
-  support;
-- restrictive device-node policy; and
-- test definitions and exact evidence for claimed compatibility.
+- a versioned deterministic source archive and one versioned archive root;
+- module source and internal headers, `Kbuild`, `Makefile`, and finalized
+  `dkms.conf`;
+- the canonical versioned UAPI header;
+- GPIO4 and GPIO20 overlay source plus reproducibly generated DTBO files;
+- the compatibility-manifest schema and populated release compatibility
+  manifest;
+- provenance and checksum manifests;
+- installation, update, downgrade, rollback, recovery, complete-removal, and
+  read-only diagnostic tooling;
+- module-signing and administrator key-enrollment guidance;
+- operator documentation and security/behavioral release notes; and
+- machine-readable release metadata and restrictive device-node policy.
 
-No item in that list is currently implemented merely because this contract
-exists.
+Each generated release identity binds the module release, exact source commit,
+expected release tag, UAPI ABI and canonical-header hash, overlay source and
+DTBO hashes, source-archive hash, compatibility-manifest hash, installation
+inventory hash, and every byte-affecting build-tool identity and option. A
+mismatch among the source version, `dkms.conf`, `MODULE_VERSION`, UAPI,
+manifest, release metadata, release tag, archive root, or archive name fails
+validation. Generated compatibility, provenance, checksum, and release
+metadata remain sidecars so their hashes do not create a cyclic archive hash.
+
+An artifact is not implemented or qualified merely because it is enumerated in
+this contract or inventory; the release generator, validator, and applicable
+evidence gates must pass for its exact identity.
 
 ## 3. Repository ownership
 

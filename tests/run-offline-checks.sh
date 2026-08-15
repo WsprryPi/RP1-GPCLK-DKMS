@@ -17,10 +17,12 @@ python3 "$repo_dir/tests/check_phase3_interface_freeze.py"
 python3 "$repo_dir/tests/check_phase3b_target_assets.py"
 python3 "$repo_dir/tests/check_phase4a_live_path.py"
 python3 "$repo_dir/tests/check_phase4d_combined_gate.py"
+python3 "$repo_dir/tests/check_phase5_packaging.py"
 python3 "$repo_dir/tests/test_phase2e_dmesg.py"
 python3 "$repo_dir/tests/check_doc_links.py"
 if command -v shellcheck >/dev/null 2>&1; then
 	shellcheck "$repo_dir/tests/run-offline-checks.sh" \
+		"$repo_dir/scripts/rp1-gpclk-lifecycle.sh" \
 		"$repo_dir/tests/phase2e-target-test.sh" \
 		"$repo_dir/tests/phase3b-target-test.sh" \
 		"$repo_dir/tests/phase4a-target-test.sh"
