@@ -77,4 +77,18 @@ assert successor["evidence"]["manifestSha256"] == \
     "8cb7a946676bf31a79419b8bf7c7550bf3ebb9a49b618f3bc94868ea3842e56b"
 assert successor["claimBoundary"] == boundary
 
+phase515 = json.loads((ROOT / "release/gate-c-representative-build-manifest-phase5.15-v1.json").read_text())
+assert phase515["candidate"]["release"] == "0.0.0-phase5.15"
+assert phase515["candidate"]["sourceCommit"] == "123a94c46a2fb068a5e83c42b440f6b8a07545f6"
+assert phase515["candidate"]["sourceArchiveSha256"] == \
+    "6a767723a9cbbf32b68d95c67221b0a56430a037508254aa8c3a65a9cd1bbb24"
+assert phase515["result"]["moduleSha256"] == \
+    "e692b0973fd7a39894c17f3d743d6fea387305b6828fe57485fcd8331105e6af"
+assert phase515["result"]["exitStatus"] == phase515["result"]["diagnosticsCount"] == 0
+assert phase515["result"]["compatibilityState"] == "Compatible-unqualified"
+assert phase515["result"]["liveEligible"] is False
+assert phase515["evidence"]["manifestSha256"] == \
+    "711b2e4142a4457b29f052140b03bd156af2b92796cd4329e2041919f2cf6fdf"
+assert phase515["claimBoundary"] == boundary
+
 print("Gate C representative build: PASS")

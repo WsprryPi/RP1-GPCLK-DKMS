@@ -20,9 +20,12 @@
   }],
   "successor": {
     "release": "0.0.0-phase5.15",
-    "status": "selected-offline-identity-pending",
-    "qualification": "none",
-    "representativeBuild": "not-performed"
+    "sourceCommit": "123a94c46a2fb068a5e83c42b440f6b8a07545f6",
+    "archiveSha256": "6a767723a9cbbf32b68d95c67221b0a56430a037508254aa8c3a65a9cd1bbb24",
+    "status": "blocked-before-gate-d-installation",
+    "qualification": "Compatible-unqualified",
+    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; liveEligible false",
+    "blocker": "Frozen target-plan schema uses one sha256 for both helper source and installed compiled ELF bytes; the permanent executor therefore cannot validate the sealed busy-injector and UAPI-probe binary identities."
   },
   "successorSelectionGate": "selected-to-correct-phase5.14-sealed-archive-helper-defect",
   "reuseProhibited": [
