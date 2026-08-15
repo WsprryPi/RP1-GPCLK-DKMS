@@ -39,6 +39,14 @@ candidate.
    exposed host-specific authorization as installed data. The build and install
    contracts now exclude the instance while retaining the generic schema and
    tools; a separately sealed post-build instance is the execution input.
+7. The final binding audit used the module name rather than the actual platform
+   driver name, rollback/recovery omitted the post-rebind UAPI probe, and each
+   command could consume the entire row deadline independently. The audit now
+   checks `rp1-gpclk-dkms`, the probe runs after rebind, and every command gets
+   only the remaining total operation deadline.
+8. Refusal could retain no declared installation and checked only regular
+   files. It now requires at least one exact owned path and verifies retained
+   files, symlinks, and empty directories by type and digest.
 
 ## Remaining gates
 

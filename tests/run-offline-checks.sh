@@ -29,6 +29,13 @@ python3 "$repo_dir/tests/check_phase5_10_matrix.py"
 python3 "$repo_dir/tests/check_phase5_11_release_gates.py"
 python3 "$repo_dir/tests/check_phase5_12_calibrated_review.py"
 python3 "$repo_dir/tests/check_gate_d_lifecycle.py"
+if command -v check-jsonschema >/dev/null 2>&1; then
+	check-jsonschema --schemafile "$repo_dir/schema/gate-d-execution-instance-v1.schema.json" \
+		"$repo_dir/release/gate-d-execution-instance-v1.json"
+	echo "Gate D execution-instance schema: PASS"
+else
+	echo "Gate D execution-instance schema: SKIP (check-jsonschema unavailable)"
+fi
 python3 "$repo_dir/tests/test_phase2e_dmesg.py"
 python3 "$repo_dir/tests/check_doc_links.py"
 if command -v shellcheck >/dev/null 2>&1; then

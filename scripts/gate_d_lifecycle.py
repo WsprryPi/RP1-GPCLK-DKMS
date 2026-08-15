@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import pathlib
 import re
@@ -187,6 +188,8 @@ def validate_operation(value: dict) -> dict:
         raise ValueError("output-disabled cycle requires the exact installed candidate")
     if value["operation"] in {"uninstall-version", "remove-all-test-versions", "complete-removal", "repeated-removal", "reinstall-after-removal", "refuse-removal"} and not versions:
         raise ValueError("removal operation requires exact test versions")
+    if value["operation"] == "refuse-removal" and not paths:
+        raise ValueError("removal refusal requires an exact retained installation identity")
     return value
 
 
@@ -279,6 +282,8 @@ def operation_commands(spec: dict) -> list[tuple[str, list[str]]]:
                                              spec["route"], predecessor]),
                      ("unbind-bind", ["/usr/libexec/rp1-gpclk-dkms/gate-d-platform",
                                       "unbind-bind-cycle", "--execute"]),
+                     ("uapi-query-release", ["/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe",
+                                             spec["route"], predecessor]),
                      ("unload", ["modprobe", "-r", MODULE])]
     elif operation == "uninstall-version":
         commands += remove_sequence(spec["testVersions"][0])
@@ -340,15 +345,20 @@ def verify_final_state(spec: dict, root: pathlib.Path,
                                            endpoint.exists() or endpoint.is_symlink()):
         raise ValueError("runtime residue remains after inactive final state")
     if operation in removal:
-        driver = root / f"sys/bus/platform/drivers/{MODULE}"
+        driver = root / "sys/bus/platform/drivers/rp1-gpclk-dkms"
         if driver.is_dir() and any(item.is_symlink() for item in driver.iterdir()):
             raise ValueError("bound platform device remains after removal")
     if operation == "refuse-removal":
         for item in spec["ownedPaths"]:
             path = _rooted(root, item["path"])
-            if item["kind"] == "file" and (not path.is_file() or path.is_symlink() or
-                                              digest(path) != item["sha256"]):
-                raise ValueError("refused removal did not retain exact owned file")
+            if item["kind"] == "file":
+                retained = path.is_file() and not path.is_symlink() and digest(path) == item["sha256"]
+            elif item["kind"] == "symlink":
+                retained = path.is_symlink() and hashlib.sha256(os.readlink(path).encode()).hexdigest() == item["sha256"]
+            else:
+                retained = path.is_dir() and not path.is_symlink() and not any(path.iterdir())
+            if not retained:
+                raise ValueError("refused removal did not retain exact owned path")
 
 
 def execute(spec: dict, instance: dict, journal: pathlib.Path, *, root: pathlib.Path = pathlib.Path("/"),
@@ -377,6 +387,7 @@ def execute(spec: dict, instance: dict, journal: pathlib.Path, *, root: pathlib.
              "liveOutput": False, "checkpoint": "preflight", "commands": [],
              "recoveryRequired": True,
              "startedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")}
+    operation_started_ns = time.monotonic_ns()
     if prior is not None:
         state["recovers"] = {"operationId": prior.get("operationId"),
                              "operation": prior.get("operation"),
@@ -385,14 +396,18 @@ def execute(spec: dict, instance: dict, journal: pathlib.Path, *, root: pathlib.
     atomic_json(journal, state)
 
     def run(command: list[str], checkpoint: str) -> str:
+        elapsed = (time.monotonic_ns() - operation_started_ns) / 1_000_000_000
+        remaining = math.ceil(spec["deadlineSeconds"] - elapsed)
+        if remaining <= 0:
+            raise TimeoutError("operation deadline exhausted before command dispatch")
         record = {"command": command, "checkpoint": checkpoint,
-                  "deadlineSeconds": spec["deadlineSeconds"], "status": "pending",
+                  "deadlineSeconds": remaining, "status": "pending",
                   "startUtc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                   "startMonotonicNs": time.monotonic_ns()}
         state["commands"].append(record)
         atomic_json(journal, state)
         try:
-            output = runner(command, spec["deadlineSeconds"])
+            output = runner(command, remaining)
         except subprocess.CalledProcessError as error:
             record["status"] = error.returncode
             output = error.stdout or error.output or ""

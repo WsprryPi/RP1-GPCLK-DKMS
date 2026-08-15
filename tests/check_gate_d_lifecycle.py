@@ -109,6 +109,8 @@ def operation(name: str, *, op_id: str | None = None, owned=None) -> dict:
     snapshot = safety()
     if name == "refuse-removal":
         snapshot["endpointOpen"] = True
+        if owned is None:
+            owned = [{"path": "/retained", "kind": "file", "sha256": "0" * 64}]
     return {
         "schemaVersion": 1, "operationId": op_id or f"test-{name}", "operation": name,
         "matrixRow": "current-supported-kernel", "hostId": "wspr5-stock",
@@ -134,6 +136,8 @@ for name in lifecycle.OPERATIONS:
     assert "live_output=0" in flat or name in {"uninstall-version", "remove-all-test-versions", "complete-removal", "repeated-removal", "refuse-removal"}
     for prohibited in ("live_output=1", "dtoverlay", "/dev/mem", "reboot", "rpi-update"):
         assert prohibited not in flat
+    if name in {"rollback", "recover"}:
+        assert sum(command[0].endswith("gate-d-uapi-probe") for _, command in commands) == 2
 
 for field, value in (("liveOutput", True), ("clockEnabled", True), ("dmaActive", True),
                      ("si5351Disconnected", False), ("ownershipKnown", False)):
@@ -300,6 +304,25 @@ with tempfile.TemporaryDirectory() as temporary:
         assert json.loads((root / "journal").read_text())["status"] == "inactive-recovery-required"
     else:
         raise AssertionError("changed owned file was removed")
+
+with tempfile.TemporaryDirectory() as temporary:
+    root = pathlib.Path(temporary)
+    spec = operation("complete-removal")
+    original_monotonic = lifecycle.time.monotonic_ns
+    ticks = iter((0, 31_000_000_000))
+    lifecycle.time.monotonic_ns = lambda: next(ticks)
+    dispatched = []
+    try:
+        try:
+            lifecycle.execute(spec, ready_instance(), root / "deadline.json", root=root,
+                              runner=lambda command, deadline: dispatched.append(command) or "")
+        except TimeoutError:
+            state = json.loads((root / "deadline.json").read_text())
+            assert state["status"] == "inactive-recovery-required" and not dispatched
+        else:
+            raise AssertionError("exhausted total deadline dispatched a command")
+    finally:
+        lifecycle.time.monotonic_ns = original_monotonic
 
 with tempfile.TemporaryDirectory() as temporary:
     base = pathlib.Path(temporary)

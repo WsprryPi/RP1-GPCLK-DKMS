@@ -182,6 +182,12 @@ the affected checks. Ordinary green tests never waive a finding.
    the instance from the archive and installation. Package only its generic
    schema and tools; seal and supply the concrete instance as separate evidence
    after the candidate archive exists.
+8. Final-state verification must use the actual platform driver identity,
+   rollback/recovery must re-probe the UAPI after rebind, and the row deadline
+   is a total budget rather than a fresh allowance for each command.
+9. Removal refusal is evidence only when it names and verifies at least one
+   exact retained owned path; an empty ownership set or unchecked symlink and
+   directory state is insufficient.
 
 Repeat the assessment until no objective finding remains within the authorized
 and executable slice. Phase 5 itself remains open if an external gate is
