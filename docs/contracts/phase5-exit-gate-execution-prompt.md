@@ -157,8 +157,8 @@ the affected checks. Ordinary green tests never waive a finding.
 
 1. Gate D now has an offline-tested executable lifecycle coordinator and a
    concrete fail-closed execution instance. This closes the earlier tooling
-   absence only. The instance is deliberately non-executable because the
-   candidate is unfrozen and every row retains named input blockers; no target
+   absence only. One controlled-test candidate is now frozen, but the instance
+   remains non-executable because ten rows retain named input blockers; no target
    lifecycle, cleanup, residue, or representative-system result is inferred
    from coordinator, schema, or mock-runner tests.
 2. `release/release-integration-gates-v1.json` truthfully marks candidate freeze,
@@ -188,6 +188,14 @@ the affected checks. Ordinary green tests never waive a finding.
 9. Removal refusal is evidence only when it names and verifies at least one
    exact retained owned path; an empty ownership set or unchecked symlink and
    directory state is insufficient.
+10. Offline-suite passes produced before the final candidate commit are not
+    candidate evidence even when the bytes appear unchanged. Rerun twice from
+    a clean detached worktree at the exact frozen commit and retain both
+    transcripts before passing the offline gate.
+11. Candidate-sealing evidence necessarily lands after the candidate source
+    commit. Record that later commit as evidence only: it must continue to name
+    the earlier frozen source commit and must not silently regenerate or replace
+    the candidate archive with the evidence commit's bytes.
 
 Repeat the assessment until no objective finding remains within the authorized
 and executable slice. Phase 5 itself remains open if an external gate is

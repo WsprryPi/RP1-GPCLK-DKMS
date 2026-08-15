@@ -149,9 +149,10 @@ unproven state rejects removal; no forced teardown is permitted.
 `release/gate-d-execution-instance-v1.json` against the frozen 15-row matrix.
 The checked-in instance records the approved `wspr5` output-disabled mutation
 envelope, its two installed stock kernels, both independent routes, deadlines,
-and the validated `wspr5-rescue` SD-before-NVMe recovery path. It deliberately
-remains `executionReady: false`: an unfrozen candidate or any blocked row makes
-`--require-ready` fail.
+and the validated `wspr5-rescue` SD-before-NVMe recovery path. Candidate
+`a1aed8cbb3e717758dcf34f1b35a9fb3c781ca2a` is frozen for controlled testing,
+but the instance deliberately remains `executionReady: false`: any blocked row
+makes `--require-ready` fail.
 
 The execution instance is repository evidence, not package content. It is
 excluded from the candidate source archive and installation because it contains
@@ -194,6 +195,9 @@ The coordinator is executable tooling, not target evidence. A green offline
 test cannot change a row from `blocked-input-required`, freeze a candidate,
 authorize target work, or prove installation, cleanup, timing, GPIO, DMA,
 transmission, SDR, or RF behavior.
+
+The ordered target procedure and current hard stop are recorded in
+`gate-d-target-runbook.md`.
 
 ## Persistent prohibitions
 

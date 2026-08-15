@@ -47,11 +47,18 @@ candidate.
 8. Refusal could retain no declared installation and checked only regular
    files. It now requires at least one exact owned path and verifies retained
    files, symlinks, and empty directories by type and digest.
+9. The initial two green suite runs preceded the final candidate commit. They
+   were invalidated and repeated twice in a clean detached worktree at the exact
+   frozen commit; both transcripts are retained under `docs/evidence/`.
+10. Post-freeze instance and gate-status records change the repository after
+    the candidate commit. The evidence explicitly continues to bind the earlier
+    source commit and sealed archive; these later documentation bytes do not
+    redefine or regenerate the candidate.
 
 ## Remaining gates
 
-The checked-in execution instance remains intentionally blocked. Candidate
-freeze, exact missing representative systems and signing cases, target
+The checked-in execution instance remains intentionally blocked. The controlled
+test candidate is frozen, but exact missing representative systems and signing cases, target
 execution, publication/download verification, and consuming-repository
 integration remain separate future gates requiring their own authorization and
 evidence.
