@@ -105,6 +105,20 @@ to make an update succeed.
 
 ## Recovery and removal
 
+Rollback, recovery, and complete removal are separate operations. Rollback
+restores the immediately prior recorded complete release after a failed
+successor, but only while its targets and administrator bytes remain unchanged.
+Recovery classifies one interrupted transaction and either resumes a proven
+checkpoint or converges to an inactive state. Complete removal removes all and
+only exclusively package-owned state and then audits absence, restored hardware
+baselines, dependency metadata, key ownership, and preserved unrelated bytes.
+
+`lifecycle-policy rollback-plan SNAPSHOT`, `recovery-plan SNAPSHOT`, and
+`removal-audit SNAPSHOT` are read-only. Their exact input and acceptance fields
+are frozen in `release/lifecycle-removal-contract-v1.json`. They do not invoke
+DKMS, change boot files, unload a module, repair state, or remove files. A false,
+unknown, missing, or extra assertion fails closed.
+
 Unload before DKMS uninstall. Use `uninstall`, then `remove`, and remove
 `/usr/src/rp1-gpclk-dkms-VERSION` only after `dkms status` proves the version is
 absent. Remove an installed overlay only when its hash matches the retained
@@ -117,6 +131,17 @@ device, runtime overlay, package/version DKMS row, or unexpected dmesg warning;
 GPCLK0 prepare and enable counts are zero; GPIO4 and GPIO20 are input/none; and
 the output gate was never enabled. Cleanup failure leaves the combination
 `Rejected` or `Unavailable` until investigated.
+
+Complete removal additionally proves no open endpoint or owner, active work,
+callback or DMA; the selected pin is safe; clock prepare/enable counts and
+parent match the recorded baseline; no production overlay or owned boot marker
+remains; all DKMS registrations, builds and installed module files are absent;
+package udev, systemd, manifest, configuration, diagnostic and other residue is
+absent; dependency metadata and initramfs are current where applicable; and
+unrelated bytes are preserved. Administrator/shared signing keys are retained.
+An exclusively package-created private key is removable only with an explicit
+nonshared ownership record. An open descriptor, active work, cleanup latch, or
+unproven state rejects removal; no forced teardown is permitted.
 
 ## Persistent prohibitions
 

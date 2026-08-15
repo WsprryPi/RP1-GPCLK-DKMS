@@ -397,7 +397,11 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                          (source / "release/permissions-enrollment-policy-v1.json",
                           release_data / "permissions-enrollment-policy-v1.json", 0o644),
                          (source / "release/diagnostics-contract-v1.json",
-                          release_data / "diagnostics-contract-v1.json", 0o644))
+                          release_data / "diagnostics-contract-v1.json", 0o644),
+                         (source / "release/lifecycle-removal-contract-v1.json",
+                          release_data / "lifecycle-removal-contract-v1.json", 0o644),
+                         (source / "scripts/lifecycle_policy.py",
+                          libexec / "lifecycle-policy", 0o755))
         for origin, destination, mode in package_files:
             if not origin.is_file() or origin.is_symlink() or destination.exists() or destination.is_symlink():
                 raise ValueError(f"unsafe or existing package file: {destination}")

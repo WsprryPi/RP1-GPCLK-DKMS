@@ -32,6 +32,7 @@
   },
   "overlayContract": "release/overlay-contract-v1.json",
   "permissionsEnrollmentPolicy": "release/permissions-enrollment-policy-v1.json",
+  "lifecycleRemovalContract": "release/lifecycle-removal-contract-v1.json",
   "transaction": ["preflight","stage","verify-staged-hashes","dkms-add","dkms-build","verify-dkms-signature","verify-module","dkms-install","install-overlay-inactive","install-policy","verify-output-disabled","commit-state"],
   "failureState": {"liveOutput":false,"overlayActivation":"not-performed","moduleLoad":"not-performed","recoveryRequired":true},
   "implicitActions": {"bootConfiguration":false,"overlayActivation":false,"routeSelection":false,"liveOutput":false,"experimentalEnrollment":false,"moduleLoad":false,"fallbackBackend":false,"reboot":false}
