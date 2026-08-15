@@ -16,7 +16,7 @@ python3 "$repo_dir/tests/check_phase2e_target_assets.py"
 python3 "$repo_dir/tests/check_phase3_interface_freeze.py"
 python3 "$repo_dir/tests/check_phase3b_target_assets.py"
 python3 "$repo_dir/tests/check_phase4a_live_path.py"
-python3 "$repo_dir/tests/check_phase4c_gpio20_gate.py"
+python3 "$repo_dir/tests/check_phase4d_combined_gate.py"
 python3 "$repo_dir/tests/test_phase2e_dmesg.py"
 python3 "$repo_dir/tests/check_doc_links.py"
 if command -v shellcheck >/dev/null 2>&1; then
@@ -49,9 +49,9 @@ if [ "$(uname -s)" = Linux ]; then
 		-o "$tmp_dir/phase4a_uapi_client"
 	echo "Phase 4A UAPI client compile: PASS"
 	${CC:-cc} -std=c11 -Wall -Wextra -Werror \
-		-I"$repo_dir/include/uapi" "$repo_dir/tests/phase4c_live_client.c" \
-		-lm -o "$tmp_dir/phase4c_live_client"
-	echo "Phase 4C live client compile: PASS"
+		-I"$repo_dir/include/uapi" "$repo_dir/tests/phase4d_live_client.c" \
+		-lm -o "$tmp_dir/phase4d_live_client"
+	echo "Phase 4D live client compile: PASS"
 else
 	echo "Phase 2E UAPI client compile: SKIP (Linux target only)"
 	echo "Phase 3B UAPI client compile: SKIP (Linux target only)"
