@@ -6,8 +6,9 @@
 
 `release/installation-model-v1.json` is authoritative for installed paths,
 ownership, modes, replacement rules, transaction order, and implicit-action
-prohibitions. The package keeps the exact `0.0.0-phase5.2` candidate identity;
-the Phase 5.3 slice number is not a release-version promotion.
+prohibitions. Frozen `0.0.0-phase5.2` is the predecessor; changed
+blocker-resolution source has the distinct `0.0.0-phase5.13` successor
+identity. Neither identity is published.
 
 `rp1-gpclk-admin plan` is read-only. Installation requires the explicit
 `install --execute --release-directory RELEASE --route gpio4|gpio20` form and
@@ -149,10 +150,9 @@ unproven state rejects removal; no forced teardown is permitted.
 `release/gate-d-execution-instance-v1.json` against the frozen 15-row matrix.
 The checked-in instance records the approved `wspr5` output-disabled mutation
 envelope, its two installed stock kernels, both independent routes, deadlines,
-and the validated `wspr5-rescue` SD-before-NVMe recovery path. Candidate
-`a1aed8cbb3e717758dcf34f1b35a9fb3c781ca2a` is frozen for controlled testing,
-but the instance deliberately remains `executionReady: false`: any blocked row
-makes `--require-ready` fail.
+and the validated `wspr5-rescue` SD-before-NVMe recovery path. During successor
+development it deliberately remains `executionReady: false`; after sealing,
+any remaining external row blocker continues to make `--require-ready` fail.
 
 The execution instance is repository evidence, not package content. It is
 excluded from the candidate source archive and installation because it contains

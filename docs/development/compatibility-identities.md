@@ -122,7 +122,7 @@ results, exclusions, and final state.
 
 ## Phase 5.6 release decisions
 
-The populated `0.0.0-phase5.2` release manifest records the historical GPIO4
+The populated `0.0.0-phase5.13` release manifest records the historical GPIO4
 and GPIO20 Phase 4 identities as `Unavailable`, with `liveEligible=false`.
 Their module version and DTBO bytes differ from this release; firmware identity
 was not recorded; and the receiver-relative evidence is not calibrated

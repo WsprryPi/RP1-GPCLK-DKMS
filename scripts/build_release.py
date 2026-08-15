@@ -21,7 +21,13 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 LAYOUT_PATH = ROOT / "release/release-layout-v1.json"
 KEY_SUFFIXES = {".key", ".pem", ".p12", ".pfx", ".der"}
 EXCLUDED_PREFIXES = (".git/", "dist/", "build/", "build-")
-EXCLUDED_EXACT = {"release/gate-d-execution-instance-v1.json"}
+EXCLUDED_EXACT = {
+    "release/gate-d-execution-instance-v1.json",
+    "release/gate-d-version-pair-v1.json",
+    "tools/gate_d_busy_injector.c",
+    "tools/gate_d_busy_injector.h",
+    "tests/gate_d_busy_injector_test.c",
+}
 VERSION_RE = re.compile(r'^#define RP1_GPCLK_MODULE_VERSION "([0-9A-Za-z][0-9A-Za-z._+-]*)"$', re.M)
 
 

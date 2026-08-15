@@ -29,6 +29,7 @@ python3 "$repo_dir/tests/check_phase5_10_matrix.py"
 python3 "$repo_dir/tests/check_phase5_11_release_gates.py"
 python3 "$repo_dir/tests/check_phase5_12_calibrated_review.py"
 python3 "$repo_dir/tests/check_gate_d_lifecycle.py"
+python3 "$repo_dir/tests/check_gate_d_version_pair.py"
 if command -v check-jsonschema >/dev/null 2>&1; then
 	check-jsonschema --schemafile "$repo_dir/schema/gate-d-execution-instance-v1.schema.json" \
 		"$repo_dir/release/gate-d-execution-instance-v1.json"
@@ -60,6 +61,19 @@ ${CC:-cc} -std=c11 -Wall -Wextra -Werror \
     -I"$repo_dir/include/uapi" "$repo_dir/tools/gate_d_uapi_probe.c" \
     -o "$tmp_dir/gate_d_uapi_probe"
 echo "Gate D UAPI probe compile: PASS"
+
+${CC:-cc} -std=c11 -Wall -Wextra -Werror -DGATE_D_BUSY_LIBRARY \
+    -I"$repo_dir/tests/fixtures/linux" -I"$repo_dir/include/uapi" \
+    -I"$repo_dir/tools" "$repo_dir/tools/gate_d_busy_injector.c" \
+    "$repo_dir/tests/gate_d_busy_injector_test.c" \
+    -o "$tmp_dir/gate_d_busy_injector_test"
+"$tmp_dir/gate_d_busy_injector_test"
+
+${CC:-cc} -std=c11 -Wall -Wextra -Werror \
+    -I"$repo_dir/tests/fixtures/linux" -I"$repo_dir/include/uapi" \
+    -I"$repo_dir/tools" "$repo_dir/tools/gate_d_busy_injector.c" \
+    -o "$tmp_dir/gate_d_busy_injector"
+echo "Gate D busy-state injector compile: PASS"
 
 if [ "$(uname -s)" = Linux ]; then
     ${CC:-cc} -std=c11 -Wall -Wextra -Werror \

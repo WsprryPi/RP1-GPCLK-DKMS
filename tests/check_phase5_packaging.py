@@ -71,7 +71,14 @@ sha256sum "$input" | awk '{print $1}' >"$out"
         subprocess.run([str(ROOT / "scripts/validate_release.py"), destination, "--allow-development"], check=True, env=environment)
     archive = pathlib.Path(first) / f"rp1-gpclk-dkms-{release}.tar.gz"
     listing = subprocess.check_output(["tar", "-tzf", archive], text=True)
-    assert "release/gate-d-execution-instance-v1.json" not in listing
+    for excluded in (
+        "release/gate-d-execution-instance-v1.json",
+        "release/gate-d-version-pair-v1.json",
+        "tools/gate_d_busy_injector.c",
+        "tools/gate_d_busy_injector.h",
+        "tests/gate_d_busy_injector_test.c",
+    ):
+        assert excluded not in listing
     names = sorted(path.name for path in pathlib.Path(first).iterdir())
     assert names == sorted(path.name for path in pathlib.Path(second).iterdir())
     for name in names:

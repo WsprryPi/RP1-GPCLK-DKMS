@@ -50,9 +50,12 @@ output-disabled DKMS install transaction and an offline-tested Gate D
 coordinator for upgrade, downgrade, rollback, checkpoint recovery,
 exact-version removal, complete and repeated removal, reinstall,
 output-disabled UAPI query/acquire/release, and explicit unbind/rebind. Its
-concrete execution instance remains fail-closed and non-executable: candidate
-`a1aed8cbb3e717758dcf34f1b35a9fb3c781ca2a` is frozen for controlled testing,
-ten of 15 rows retain named input blockers, and no
+concrete execution instance remains fail-closed and non-executable. Frozen
+`0.0.0-phase5.2` is retained as the genuine predecessor; changed source uses
+distinct development successor `0.0.0-phase5.13`. The output-disabled open and
+owner injector is separately tested and excluded from package bytes. External
+representative-build, newer-kernel, signing-enforcement, missing-header, and
+foreign-conflict inputs remain blocked, and no
 representative-system lifecycle row has executed. No qualified GPIO output is
 implemented.
 
