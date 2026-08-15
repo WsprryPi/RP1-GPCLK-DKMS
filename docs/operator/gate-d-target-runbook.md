@@ -4,22 +4,28 @@
 
 ## Current hard stop
 
-The frozen candidate and five row inputs are ready, but the complete execution
-instance is not. This command must fail before any target command is prepared:
+The frozen candidate and two negative-integrity rows are ready, but the
+required executable subset is not. This command must fail before any target
+command is prepared:
 
 ```sh
 gate-d-instance release/gate-d-execution-instance-v1.json --require-ready
 ```
 
-Do not execute a ready subset. `gate-d-lifecycle` requires the complete frozen
-15-row instance so a convenient row cannot bypass missing representative
-kernel, signing, conflict, predecessor, or busy-state evidence.
+Do not execute a ready subset. `gate-d-lifecycle` requires every
+`required-executable` row in the frozen 15-row instance to be ready. The five
+`deferred-environmental` rows remain unpassed and continue to block complete
+environmental coverage and publication; simulations cannot satisfy them.
 
 ## Preconditions for a future authorized run
 
-Resolve every blocker in `docs/evidence/gate-d-candidate-preflight.md`, update
-the concrete instance with exact identities, pass full JSON Schema and semantic
-validation, and seal its digest. Confirm the Si5351 leads are disconnected from
+Resolve every required-executable blocker, update the concrete instance with
+exact identities, pass full JSON Schema and semantic validation, and seal its
+digest. Confirm the hashed matrix-policy and route-decision sidecars match the
+instance. `inputsReady` must first become true. Then obtain a fresh explicit
+target-execution release and record `targetExecutionApproved: true`; the older
+mutation-envelope approval is not execution authority for this revised subset.
+Confirm the Si5351 leads are disconnected from
 GPIO4 and GPIO20, no antenna is connected, SDRplay is unused, rescue SD and
 physical power access remain available, and the candidate artifact hashes match
 the instance.

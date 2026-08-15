@@ -357,6 +357,15 @@ kernel, signing policy, route, failure, or lifecycle transition cannot satisfy
 another. All representative lifecycle rows remain output-disabled and cannot
 create `Qualified` or RF evidence.
 
+When the available inventory cannot supply a genuine environmental identity,
+a separately hashed execution-policy sidecar may classify that row
+`deferred-environmental`. This classification does not remove or pass the row,
+does not permit a fixture to stand in for representative evidence, and does
+not satisfy the representative-lifecycle publication gate. It only allows a
+separately authorized executable subset to proceed after every
+`required-executable` row is ready. Execution readiness and complete
+environmental coverage must be reported independently.
+
 Kernel updates may trigger a rebuild. Build success does not preserve
 qualification automatically. Build, signing, or load failure leaves the module
 unavailable and must not select another physical backend.

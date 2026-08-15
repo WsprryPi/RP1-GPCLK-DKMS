@@ -8,6 +8,7 @@ import argparse
 import json
 import pathlib
 import re
+import hashlib
 
 ROWS = (
     "current-supported-kernel", "prior-supported-kernel-downgrade", "newer-unknown-kernel",
@@ -16,9 +17,19 @@ ROWS = (
     "interrupted-upgrade", "stale-manifest", "corrupted-archive-or-dtbo",
     "removal-inactive", "removal-open-or-active", "reinstall-after-removal",
 )
+POSITIVE_ROUTE_ROWS = {
+    "current-supported-kernel", "prior-supported-kernel-downgrade",
+    "signing-not-enforced", "deliberate-build-failure", "interrupted-upgrade",
+    "removal-inactive", "removal-open-or-active", "reinstall-after-removal",
+}
 ROUTES = {"gpio4", "gpio20", "route-neutral"}
-STATUSES = {"ready", "blocked-input-required"}
+STATUSES = {"ready", "blocked-input-required", "deferred-environmental"}
 SHA256 = re.compile(r"[0-9a-f]{64}")
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+def sha256(path: pathlib.Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def load(path: pathlib.Path) -> dict:
@@ -32,9 +43,46 @@ def load(path: pathlib.Path) -> dict:
 
 def validate(value: dict, *, require_ready: bool = False) -> dict:
     required = {"SPDX-License-Identifier", "schemaVersion", "kind", "matrixRelease",
-                "candidate", "authorization", "systems", "recovery", "rows", "executionReady"}
+                "executionPolicy", "candidate", "authorization", "systems", "recovery",
+                "rows", "inputsReady", "executionReady"}
     if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or value.get("schemaVersion") != 1 or value.get("kind") != "gate-d-representative-system-execution-instance":
         raise ValueError("invalid execution-instance identity")
+    policy_ref = value["executionPolicy"]
+    policy_fields = {"matrixPolicy", "matrixPolicySha256", "routeDecision",
+                     "routeDecisionSha256", "environmentalCoverageComplete"}
+    if not isinstance(policy_ref, dict) or set(policy_ref) != policy_fields:
+        raise ValueError("execution-policy references are incomplete")
+    for path_field, hash_field in (("matrixPolicy", "matrixPolicySha256"),
+                                   ("routeDecision", "routeDecisionSha256")):
+        relative = policy_ref[path_field]
+        if (not isinstance(relative, str) or pathlib.PurePosixPath(relative).is_absolute() or
+                ".." in pathlib.PurePosixPath(relative).parts):
+            raise ValueError("unsafe execution-policy path")
+        path = ROOT / relative
+        if not path.is_file() or path.is_symlink() or sha256(path) != policy_ref[hash_field]:
+            raise ValueError("execution-policy identity mismatch")
+    matrix_policy = json.loads((ROOT / policy_ref["matrixPolicy"]).read_text(encoding="utf-8"))
+    if (matrix_policy.get("schemaVersion") != 2 or
+            [row.get("id") for row in matrix_policy.get("rows", [])] != list(ROWS)):
+        raise ValueError("matrix execution policy is incomplete")
+    classifications = {row["id"]: row.get("classification") for row in matrix_policy["rows"]}
+    if not set(classifications.values()).issubset({"required-executable", "deferred-environmental"}):
+        raise ValueError("unknown matrix execution classification")
+    route_decision = json.loads((ROOT / policy_ref["routeDecision"]).read_text(encoding="utf-8"))
+    if (route_decision.get("kind") != "gate-d-route-compatibility-decision" or
+            route_decision.get("candidate", {}).get("release") != value.get("candidate", {}).get("release") or
+            route_decision.get("candidate", {}).get("sourceCommit") != value.get("candidate", {}).get("sourceCommit")):
+        raise ValueError("route decision differs from candidate")
+    route_entries = route_decision.get("routes")
+    if (not isinstance(route_entries, list) or
+            {entry.get("route") for entry in route_entries} != {"GPIO4", "GPIO20"} or
+            any(entry.get("liveEligible") is not False for entry in route_entries)):
+        raise ValueError("route decision is incomplete or live-enabled")
+    positive_routes = {entry["route"].lower() for entry in route_entries
+                       if entry.get("state") == "Compatible-unqualified"}
+    boundary = route_decision.get("decisionBoundary", {})
+    if bool(positive_routes) != (boundary.get("positiveReleaseManifestEntryEstablished") is True):
+        raise ValueError("route decision positive-entry boundary disagrees with entries")
     candidate = value["candidate"]
     candidate_fields = {"status", "sourceCommit", "release", "archiveSha256", "uapiSha256",
                         "manifestSha256", "gpio4DtboSha256", "gpio20DtboSha256"}
@@ -54,11 +102,13 @@ def validate(value: dict, *, require_ready: bool = False) -> dict:
     elif any(candidate[field] is not None for field in candidate_fields - {"status"}):
         raise ValueError("unfrozen candidate must not carry provisional identities")
     authorization = value["authorization"]
-    auth_fields = {"approved", "administrator", "connection", "serviceChanges", "packagePrerequisites",
+    auth_fields = {"approved", "targetExecutionApproved", "approvalScope", "administrator", "connection", "serviceChanges", "packagePrerequisites",
                    "dkms", "moduleAdministration", "overlayAdministration", "kernelSwitching",
                    "reboot", "failureInjection", "cleanup", "prohibitions"}
     if not isinstance(authorization, dict) or set(authorization) != auth_fields or authorization["approved"] is not True:
         raise ValueError("authorization fields are incomplete or unapproved")
+    if type(authorization["targetExecutionApproved"]) is not bool or not isinstance(authorization["approvalScope"], str) or not authorization["approvalScope"]:
+        raise ValueError("target execution authorization is ambiguous")
     if not isinstance(authorization["prohibitions"], list) or not authorization["prohibitions"]:
         raise ValueError("authorization prohibitions are absent")
     required_prohibitions = {"active-pinctrl", "clock-enable", "dma-submit", "gpio-output",
@@ -92,6 +142,7 @@ def validate(value: dict, *, require_ready: bool = False) -> dict:
         raise ValueError("matrix rows are missing, duplicated, or reordered")
     evidence = set()
     blocked = []
+    deferred = []
     for row in rows:
         fields = {"id", "status", "systemId", "kernel", "routes", "deadlineSeconds",
                   "evidenceDirectory", "failureInjection", "expectedFinalState", "blockers"}
@@ -115,16 +166,35 @@ def validate(value: dict, *, require_ready: bool = False) -> dict:
             raise ValueError(f"ready row retains blockers: {row['id']}")
         if row["status"] == "ready" and (row["systemId"] is None or row["kernel"] is None):
             raise ValueError(f"ready row lacks exact system or kernel: {row['id']}")
+        required_routes = set(row["routes"]) - {"route-neutral"}
+        if (row["status"] == "ready" and row["id"] in POSITIVE_ROUTE_ROWS and
+                not required_routes.issubset(positive_routes)):
+            raise ValueError(f"ready row lacks positive non-live route decision: {row['id']}")
         if row["status"] != "ready" and not row["blockers"]:
             raise ValueError(f"blocked row lacks blockers: {row['id']}")
-        if row["status"] != "ready":
+        classification = classifications[row["id"]]
+        if row["status"] == "deferred-environmental":
+            if classification != "deferred-environmental":
+                raise ValueError(f"non-environmental row deferred: {row['id']}")
+            deferred.append(row["id"])
+        elif classification == "deferred-environmental":
+            raise ValueError(f"environmental row is not deferred: {row['id']}")
+        elif row["status"] != "ready":
             blocked.append(row["id"])
-    expected_ready = candidate["status"] == "frozen" and not blocked
+    expected_inputs = candidate["status"] == "frozen" and not blocked
+    if value["inputsReady"] is not expected_inputs:
+        raise ValueError("inputsReady disagrees with candidate and required rows")
+    expected_ready = expected_inputs and authorization["targetExecutionApproved"]
     if value["executionReady"] is not expected_ready:
         raise ValueError("executionReady disagrees with candidate and rows")
     if require_ready and not expected_ready:
         raise ValueError("execution instance is blocked-input-required")
-    return {"valid": True, "executionReady": expected_ready, "blockedRows": blocked, "readOnly": True}
+    expected_environmental = not deferred
+    if policy_ref["environmentalCoverageComplete"] is not expected_environmental:
+        raise ValueError("environmentalCoverageComplete disagrees with deferred rows")
+    return {"valid": True, "inputsReady": expected_inputs, "executionReady": expected_ready,
+            "environmentalCoverageComplete": expected_environmental,
+            "blockedRows": blocked, "deferredRows": deferred, "readOnly": True}
 
 
 def main() -> None:

@@ -152,9 +152,17 @@ The checked-in instance records the approved `wspr5` output-disabled mutation
 envelope, its two installed stock kernels, both independent routes, deadlines,
 and the validated `wspr5-rescue` SD-before-NVMe recovery path. Successor
 `0.0.0-phase5.13` is sealed at
-`61ee2ea592c2551eca56fd0566fef43097b8c682`, but 13 exact manifest or
-representative-system blockers deliberately keep `executionReady: false` and
-make `--require-ready` fail.
+`61ee2ea592c2551eca56fd0566fef43097b8c682`. The single-Pi execution policy
+keeps five unavailable environmental rows explicitly deferred rather than
+simulated. Eight required-executable rows still lack exact route or predecessor
+inputs, so `executionReady: false` and `--require-ready` still fail. Two
+negative-integrity rows are ready. Deferred rows continue to block complete
+environmental coverage and publication.
+
+`inputsReady` and `executionReady` are separate. The former covers exact
+required-executable inputs; the latter additionally requires a fresh explicit
+target-execution release. The previously approved mutation envelope alone is
+not authority to dispatch the revised subset.
 
 The execution instance is repository evidence, not package content. It is
 excluded from the candidate source archive and installation because it contains

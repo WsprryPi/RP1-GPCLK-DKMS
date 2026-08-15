@@ -26,9 +26,17 @@ platform_tool = module("gate_d_platform", "scripts/gate_d_platform.py")
 instance = json.loads((ROOT / "release/gate-d-execution-instance-v1.json").read_text())
 result = instance_tool.validate(instance)
 assert result["valid"] and not result["executionReady"]
-assert len(result["blockedRows"]) == 13
+assert result["inputsReady"] is False
+assert len(result["blockedRows"]) == 8
+assert len(result["deferredRows"]) == 5
+assert result["environmentalCoverageComplete"] is False
 assert {row["id"] for row in instance["rows"] if row["status"] == "ready"} == {
     "stale-manifest", "corrupted-archive-or-dtbo",
+}
+assert set(result["deferredRows"]) == {
+    "newer-unknown-kernel", "signing-enforced-enrolled-key",
+    "deliberate-signature-rejection", "missing-headers",
+    "overlay-or-resource-conflict",
 }
 try:
     instance_tool.validate(instance, require_ready=True)
@@ -69,6 +77,22 @@ except ValueError:
     pass
 else:
     raise AssertionError("blocked instance marked ready")
+bad = copy.deepcopy(instance)
+bad["rows"][2]["status"] = "blocked-input-required"
+try:
+    instance_tool.validate(bad)
+except ValueError:
+    pass
+else:
+    raise AssertionError("deferred environmental row relabeled as executable")
+bad = copy.deepcopy(instance)
+bad["executionPolicy"]["matrixPolicySha256"] = "0" * 64
+try:
+    instance_tool.validate(bad)
+except ValueError:
+    pass
+else:
+    raise AssertionError("mismatched matrix-policy identity accepted")
 
 
 def safety() -> dict:
@@ -92,12 +116,19 @@ def ready_instance() -> dict:
         "manifestSha256": "4" * 64, "gpio4DtboSha256": "5" * 64,
         "gpio20DtboSha256": "6" * 64,
     }
+    positive = ROOT / "tests/fixtures/gate-d-route-positive-decision.json"
+    value["executionPolicy"]["routeDecision"] = "tests/fixtures/gate-d-route-positive-decision.json"
+    value["executionPolicy"]["routeDecisionSha256"] = hashlib.sha256(positive.read_bytes()).hexdigest()
     for row in value["rows"]:
-        row["status"] = "ready"
-        row["systemId"] = "wspr5-stock"
-        row["kernel"] = "6.18.34+rpt-rpi-2712"
-        row["blockers"] = []
+        if row["status"] != "deferred-environmental":
+            row["status"] = "ready"
+            row["systemId"] = "wspr5-stock"
+            row["kernel"] = "6.18.34+rpt-rpi-2712"
+            row["blockers"] = []
     value["executionReady"] = True
+    value["inputsReady"] = True
+    value["authorization"]["targetExecutionApproved"] = True
+    value["authorization"]["approvalScope"] = "unit-test execution release"
     instance_tool.validate(value, require_ready=True)
     return value
 
@@ -129,6 +160,21 @@ def operation(name: str, *, op_id: str | None = None, owned=None) -> dict:
         "rollbackOnFailure": name in {"upgrade", "downgrade"},
         "priorOperationId": "failed-operation" if name == "recover" else None,
     }
+
+
+awaiting_authorization = ready_instance()
+awaiting_authorization["authorization"]["targetExecutionApproved"] = False
+awaiting_authorization["authorization"]["approvalScope"] = "inputs complete; fresh execution release absent"
+awaiting_authorization["executionReady"] = False
+authorization_result = instance_tool.validate(awaiting_authorization)
+assert authorization_result["inputsReady"] is True
+assert authorization_result["executionReady"] is False
+try:
+    instance_tool.validate(awaiting_authorization, require_ready=True)
+except ValueError:
+    pass
+else:
+    raise AssertionError("input-ready instance executed without fresh target authority")
 
 
 for name in lifecycle.OPERATIONS:

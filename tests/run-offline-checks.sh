@@ -31,6 +31,7 @@ python3 "$repo_dir/tests/check_phase5_12_calibrated_review.py"
 python3 "$repo_dir/tests/check_gate_d_lifecycle.py"
 python3 "$repo_dir/tests/check_gate_d_version_pair.py"
 python3 "$repo_dir/tests/check_gate_c_representative_build.py"
+python3 "$repo_dir/tests/check_gate_d_matrix_policy.py"
 if command -v check-jsonschema >/dev/null 2>&1; then
 	check-jsonschema --schemafile "$repo_dir/schema/gate-d-execution-instance-v1.schema.json" \
 		"$repo_dir/release/gate-d-execution-instance-v1.json"

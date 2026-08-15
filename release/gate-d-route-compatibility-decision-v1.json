@@ -1,0 +1,42 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-route-compatibility-decision",
+  "candidate": {
+    "release": "0.0.0-phase5.13",
+    "sourceCommit": "61ee2ea592c2551eca56fd0566fef43097b8c682",
+    "archiveSha256": "58cb12864b291380fefd31ea9a203f7ee308767790787e3fce0be352dab19b14",
+    "uapiSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb",
+    "representativeBuildManifestSha256": "682baeba7158fba0b91327d67ce0843631b0a13a2c634186bdf26405e4f6b5b2"
+  },
+  "evidence": {
+    "representativeBuildEvidenceManifestSha256": "339c32513378bdf54d618cab1eeed65df904a29e20d30f7ad1a9ca8e757a0371",
+    "moduleSha256": "3aee571fde3cb0d74eda4a0128ae1110796f2bb7be035d974c30b38cfafc749d",
+    "kernelRelease": "6.18.34+rpt-rpi-2712",
+    "kernelConfigSha256": "d5ba966d17d456a6f29e53baf53464e1fd53f9f8e31481da18f2221f1da2593d",
+    "moduleSymversSha256": "681e9fe5710e43c785b39c9e9f410a860cba6a6037e51af23a408cb5ccbe2426"
+  },
+  "routes": [
+    {
+      "route": "GPIO4",
+      "overlayDtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+      "state": "Unavailable",
+      "liveEligible": false,
+      "reason": "Exact current firmware, base-device-tree, provider, resource, and route-conflict identity is not recorded for the Gate C build."
+    },
+    {
+      "route": "GPIO20",
+      "overlayDtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+      "state": "Unavailable",
+      "liveEligible": false,
+      "reason": "Exact current firmware, base-device-tree, provider, resource, and route-conflict identity is not recorded for the Gate C build."
+    }
+  ],
+  "decisionBoundary": {
+    "routeSpecific": true,
+    "outputDisabled": true,
+    "positiveReleaseManifestEntryEstablished": false,
+    "installationOrBindingAuthorized": false,
+    "readOnlyTargetIdentityRefreshRequired": true
+  }
+}
