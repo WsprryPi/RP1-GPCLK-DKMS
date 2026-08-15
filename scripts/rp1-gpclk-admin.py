@@ -395,7 +395,9 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                          (source / "release/overlay-contract-v1.json",
                           release_data / "overlay-contract-v1.json", 0o644),
                          (source / "release/permissions-enrollment-policy-v1.json",
-                          release_data / "permissions-enrollment-policy-v1.json", 0o644))
+                          release_data / "permissions-enrollment-policy-v1.json", 0o644),
+                         (source / "release/diagnostics-contract-v1.json",
+                          release_data / "diagnostics-contract-v1.json", 0o644))
         for origin, destination, mode in package_files:
             if not origin.is_file() or origin.is_symlink() or destination.exists() or destination.is_symlink():
                 raise ValueError(f"unsafe or existing package file: {destination}")

@@ -55,6 +55,13 @@ runtime entries; Phase 4 evidence belongs to an earlier exact module identity.
 See the [release-unit contract](docs/contracts/phase5-2-release-unit-execution-prompt.md)
 and [operator lifecycle guide](docs/operator/lifecycle.md).
 
+Phase 5.8 freezes the bounded read-only diagnostic contract and its six
+operator-visible outcome categories. Diagnostics report package, kernel,
+module, endpoint, UAPI, manifest, route, enrollment, cleanup, hardware
+identity, scoped kernel-log, and interrupted-transaction residue evidence;
+they never load, configure, repair, or operate hardware. See the
+[diagnostics guide](docs/operator/diagnostics.md).
+
 Nothing in this repository generally authorizes module installation, target
 binding, system configuration, GPIO operation, transmission, or RF activity;
 each target task still requires explicit bounded authority.

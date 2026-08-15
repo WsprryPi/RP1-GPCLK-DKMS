@@ -60,6 +60,7 @@ with tempfile.TemporaryDirectory() as temporary:
         for relative in ("scripts/rp1-gpclk-admin.py", "scripts/rp1-gpclk-diagnostics.py",
                          "release/installation-model-v1.json", "release/overlay-contract-v1.json",
                          "release/permissions-enrollment-policy-v1.json",
+                         "release/diagnostics-contract-v1.json",
                          "docs/operator/lifecycle.md", "docs/operator/signing.md"):
             fixtures.append((relative, (ROOT / relative).read_bytes(), 0o755 if relative.startswith("scripts/") else 0o644))
         for name, data, mode in fixtures:
@@ -95,6 +96,7 @@ with tempfile.TemporaryDirectory() as temporary:
     assert (target / "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin").is_file()
     assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.2/overlay-contract-v1.json").is_file()
     assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.2/permissions-enrollment-policy-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.2/diagnostics-contract-v1.json").is_file()
     assert (target / "usr/sbin/rp1-gpclk-admin").is_symlink()
     assert (target / "etc/rp1-gpclk-dkms").is_dir()
     assert not (target / "etc/rp1-gpclk-dkms/enrollment.json").exists()
