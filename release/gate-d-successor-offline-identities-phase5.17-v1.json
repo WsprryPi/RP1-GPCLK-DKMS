@@ -16,5 +16,11 @@
     "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
     "uapiHeaderSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb"
   },
-  "claimCeiling": "offline reproducible qualification-bootstrap successor only; no representative target evidence or execution authorization"
+  "targetBuiltHelpers": {
+    "busyInjectorSha256": "c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd",
+    "uapiProbeSha256": "1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742",
+    "qualificationIdentitySha256": "692d9d33143db9c702c9e277aed4df430ebeee5a1021ee61d27cb666a7223303",
+    "evidenceManifestSha256": "0a5ac2f833f412621203d3dc21a45ade453386dc5e90b2d62fc25203bc0191b0"
+  },
+  "claimCeiling": "offline reproducible and representative-build compatible only; no installation, lifecycle execution, or GPIO evidence"
 }

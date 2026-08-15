@@ -49,6 +49,14 @@ The successor is frozen at source commit
 `10ec47d83fe49f40c9846df72b8c9e691f6d07a5`; two deterministic builds produced
 archive SHA-256
 `c13d3c9a38875abb43a9431e498c7a45da4ef964d61ca688ff3dc9f95817050b`.
-No Raspberry Pi was contacted. Representative compilation, target-built helper
-sealing, renewed route and attempt documents, and fresh execution authorization
-remain separate gates.
+The separately authorized representative compilation and helper-sealing gate
+then passed on wspr5. Module SHA-256 is
+`3a2d163fbf35b0202ef7df198b42148d0d9559b67ccbf5a8d6da155de774cfad`;
+the helper hashes are `c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd`
+and `1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742`.
+Neither helper ran. No module was registered, installed, signed, loaded, or
+bound; no overlay, service, or boot state changed; and no GPIO, pinctrl, clock,
+DMA, Si5351, SDR, transmission, or RF operation occurred.
+
+Renewed route and attempt documents and fresh execution authorization remain
+separate gates.

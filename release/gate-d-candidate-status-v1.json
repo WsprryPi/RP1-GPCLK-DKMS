@@ -39,8 +39,9 @@
     "release": "0.0.0-phase5.17",
     "sourceCommit": "10ec47d83fe49f40c9846df72b8c9e691f6d07a5",
     "archiveSha256": "c13d3c9a38875abb43a9431e498c7a45da4ef964d61ca688ff3dc9f95817050b",
-    "status": "frozen-before-representative-build",
-    "qualification": "offline-only",
+    "status": "frozen-before-gate-d-plan-construction",
+    "qualification": "Compatible-unqualified",
+    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "add an exact output-disabled qualification-install bootstrap without weakening normal release installation"
   },
   "successorSelectionGate": "selected-to-correct-phase5.16-qualification-bootstrap-defect",
