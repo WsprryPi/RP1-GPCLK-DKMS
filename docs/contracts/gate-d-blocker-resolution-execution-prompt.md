@@ -43,6 +43,12 @@ any required external identity is absent.
    row. Keep those rows blocked unless a genuinely matching identity is
    supplied or a separately justified policy revision preserves the original
    assertion.
+6. The absent positive manifest decision transitively blocks every row that
+   must reach installation or output-disabled load, not only the nominal
+   current-kernel row. Record that dependency on each affected row.
+7. A byte-complete predecessor package is not a target-proven rollback. Name
+   the field `packageComplete`, retain the target rows as unexecuted, and never
+   use offline package validation as lifecycle evidence.
 
 Repeat adversarial review, reinject every objective finding here and in the
 implementation, invalidate affected evidence, and rerun affected checks.

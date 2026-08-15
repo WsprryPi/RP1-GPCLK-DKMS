@@ -91,7 +91,7 @@ for mutation in (
     lambda value: value.update(publishedReleaseRequiresPostDownloadVerification=False),
     lambda value: value["gates"].pop(),
     lambda value: value["gates"][1].update(requires=[]),
-    lambda value: value["gates"][1].update(status="passed"),
+    lambda value: value["gates"][0].update(status="blocked"),
     lambda value: value["gates"][10].update(evidence=["checksums passed before upload"]),
     lambda value: value["gates"][12].update(evidence=["header looks compatible"]),
 ):

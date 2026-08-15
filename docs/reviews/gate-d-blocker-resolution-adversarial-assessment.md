@@ -24,6 +24,20 @@ evidence.
    manifest entry; the row remains blocked pending Gate C evidence.
 5. None of the unavailable representative systems can be replaced truthfully by
    offline fixtures. No matrix weakening is accepted.
+6. Initial row readiness treated the missing positive manifest entry as local
+   to one row. The execution instance now carries it transitively on every row
+   that must install or load the successor or predecessor.
+7. `restorableComplete` overstated offline predecessor evidence. The version
+   pair now says only `packageComplete`; actual rollback remains a target Gate D
+   result.
 
-The final disposition must be updated after successor sealing and complete
-offline reruns. Any new objective finding reopens this assessment.
+## Final disposition
+
+The successor and version pair are sealed, exact-commit offline checks passed
+twice, generated artifacts reproduced byte-for-byte, and affected current-tree
+checks passed twice after evidence updates. No unresolved objective finding
+remains within the authorized offline slice.
+
+This does not close a target row. Thirteen rows and `--require-ready` remain
+blocked by the exact positive manifest and genuinely unavailable representative
+identities. Any new evidence or changed candidate byte reopens this assessment.

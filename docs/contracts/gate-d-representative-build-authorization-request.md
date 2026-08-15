@@ -3,13 +3,15 @@
 # Proposed Gate C successor build authorization
 
 This is a proposed authorization dossier, not authority to contact `wspr5`.
-Fill the successor commit and artifact hashes only after candidate sealing, then
-obtain an explicit operator approval before SSH or build work.
+Obtain an explicit operator approval before SSH or build work.
 
 The proposed operation is a disposable, output-disabled representative build
 on `wspr5` using stock kernel `6.18.34+rpt-rpi-2712`, matching installed headers,
 the recorded kernel configuration and `Module.symvers`, GCC 14.2.0, and exact
-successor archive `0.0.0-phase5.13`. Permitted writes are one new user-owned
+successor commit `61ee2ea592c2551eca56fd0566fef43097b8c682`, archive
+`rp1-gpclk-dkms-0.0.0-phase5.13.tar.gz`, and archive SHA-256
+`58cb12864b291380fefd31ea9a203f7ee308767790787e3fce0be352dab19b14`.
+Permitted writes are one new user-owned
 temporary source/output directory and one immutable evidence directory.
 
 The proposed evidence records archive, UAPI, configuration, `Module.symvers`,

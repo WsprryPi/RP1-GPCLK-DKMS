@@ -7,7 +7,7 @@
   "publishedReleaseRequiresPostDownloadVerification": true,
   "modulePublicationConfirmed": false,
   "candidateSnapshot": {
-    "archiveIdentity": "0.0.0-phase5.13 successor must bind an exact commit name and SHA-256 before execution",
+    "archiveIdentity": "61ee2ea592c2551eca56fd0566fef43097b8c682 rp1-gpclk-dkms-0.0.0-phase5.13.tar.gz 58cb12864b291380fefd31ea9a203f7ee308767790787e3fce0be352dab19b14",
     "sealedArchiveMayBeTested": true,
     "consumableByDependentRelease": false,
     "knownBlockers": [
@@ -35,8 +35,8 @@
     "dependent-release-publication"
   ],
   "gates": [
-    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"planned","evidence":["exact source commit","sealed archive name and SHA-256","UAPI ABI and header SHA-256","GPIO4 and GPIO20 source and DTBO SHA-256","compatibility-manifest SHA-256","expected tag"],"claimCeiling":"exact test candidate only; not a consumable release"},
-    {"id":"offline-checks-twice","owner":"RP1-GPCLK-DKMS","requires":["candidate-freeze"],"status":"blocked","evidence":["two complete clean-output offline-suite transcripts bound to the candidate","representative-header results and identified skips"],"claimCeiling":"offline and host build compatibility only"},
+    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"passed","evidence":["exact source commit 61ee2ea592c2551eca56fd0566fef43097b8c682","sealed archive rp1-gpclk-dkms-0.0.0-phase5.13.tar.gz SHA-256 58cb12864b291380fefd31ea9a203f7ee308767790787e3fce0be352dab19b14","UAPI ABI 1 and header SHA-256 1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb","GPIO4 and GPIO20 source and DTBO identities in docs/evidence/gate-d-blocker-resolution-preflight.md","compatibility-manifest SHA-256 1817bbc56512c0b6adb77bb4d1341eae71615489fd511486229b699b62616eda","expected tag v0.0.0-phase5.13 absent"],"claimCeiling":"exact test candidate only; not a consumable release"},
+    {"id":"offline-checks-twice","owner":"RP1-GPCLK-DKMS","requires":["candidate-freeze"],"status":"passed","evidence":["docs/evidence/gate-d-offline-61ee2ea-pass1.txt","docs/evidence/gate-d-offline-61ee2ea-pass2.txt","macOS host skips Linux-only UAPI client compiles; no representative target result inferred"],"claimCeiling":"offline and host build compatibility only"},
     {"id":"representative-lifecycle-matrix","owner":"RP1-GPCLK-DKMS","requires":["offline-checks-twice"],"status":"blocked","evidence":["every predeclared matrix row passed with independent sealed evidence","baseline cleanup and residue audits","output-disabled proof"],"claimCeiling":"representative lifecycle compatibility only; no calibrated or RF claim"},
     {"id":"independent-adversarial-review","owner":"RP1-GPCLK-DKMS","requires":["representative-lifecycle-matrix"],"status":"blocked","evidence":["all packaging lifecycle compatibility integrity and claim findings closed","affected evidence invalidated and rerun"],"claimCeiling":"reviewed evidence only"},
     {"id":"artifact-reproduction","owner":"RP1-GPCLK-DKMS","requires":["independent-adversarial-review"],"status":"blocked","evidence":["independent archive reproduction byte match","independent GPIO4 and GPIO20 DTBO byte matches","tool identities and commands"],"claimCeiling":"reproducible candidate artifacts only"},

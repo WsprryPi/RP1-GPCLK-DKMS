@@ -150,9 +150,11 @@ unproven state rejects removal; no forced teardown is permitted.
 `release/gate-d-execution-instance-v1.json` against the frozen 15-row matrix.
 The checked-in instance records the approved `wspr5` output-disabled mutation
 envelope, its two installed stock kernels, both independent routes, deadlines,
-and the validated `wspr5-rescue` SD-before-NVMe recovery path. During successor
-development it deliberately remains `executionReady: false`; after sealing,
-any remaining external row blocker continues to make `--require-ready` fail.
+and the validated `wspr5-rescue` SD-before-NVMe recovery path. Successor
+`0.0.0-phase5.13` is sealed at
+`61ee2ea592c2551eca56fd0566fef43097b8c682`, but 13 exact manifest or
+representative-system blockers deliberately keep `executionReady: false` and
+make `--require-ready` fail.
 
 The execution instance is repository evidence, not package content. It is
 excluded from the candidate source archive and installation because it contains

@@ -26,7 +26,10 @@ platform_tool = module("gate_d_platform", "scripts/gate_d_platform.py")
 instance = json.loads((ROOT / "release/gate-d-execution-instance-v1.json").read_text())
 result = instance_tool.validate(instance)
 assert result["valid"] and not result["executionReady"]
-assert set(result["blockedRows"]) == set(instance_tool.ROWS)
+assert len(result["blockedRows"]) == 13
+assert {row["id"] for row in instance["rows"] if row["status"] == "ready"} == {
+    "stale-manifest", "corrupted-archive-or-dtbo",
+}
 try:
     instance_tool.validate(instance, require_ready=True)
 except ValueError:

@@ -28,7 +28,7 @@ def validate(value: dict) -> dict:
         raise ValueError("invalid version-pair identity")
     release_fields = {"version", "sourceCommit", "archive", "archiveSha256", "uapiSha256",
                       "manifestSha256", "gpio4DtboSha256", "gpio20DtboSha256",
-                      "restorableComplete", "evidence"}
+                      "packageComplete", "evidence"}
     for label in ("predecessor", "successor"):
         release = value[label]
         if not isinstance(release, dict) or set(release) != release_fields:
@@ -41,7 +41,7 @@ def validate(value: dict) -> dict:
         for field in ("archiveSha256", "uapiSha256", "manifestSha256", "gpio4DtboSha256", "gpio20DtboSha256"):
             if not isinstance(release[field], str) or not SHA256.fullmatch(release[field]):
                 raise ValueError(f"invalid {label} {field}")
-        if release["restorableComplete"] is not True:
+        if release["packageComplete"] is not True:
             raise ValueError(f"{label} is not a complete restorable package state")
         if not isinstance(release["evidence"], list) or not release["evidence"] or len(release["evidence"]) != len(set(release["evidence"])) or not all(isinstance(item, str) and item for item in release["evidence"]):
             raise ValueError(f"invalid {label} evidence")

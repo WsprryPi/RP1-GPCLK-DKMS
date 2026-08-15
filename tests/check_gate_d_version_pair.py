@@ -19,7 +19,7 @@ def release(version: str, marker: str) -> dict:
         "archive": f"rp1-gpclk-dkms-{version}.tar.gz", "archiveSha256": marker * 64,
         "uapiSha256": "a" * 64, "manifestSha256": "b" * 64,
         "gpio4DtboSha256": "c" * 64, "gpio20DtboSha256": "d" * 64,
-        "restorableComplete": True, "evidence": [f"evidence-{marker}"],
+        "packageComplete": True, "evidence": [f"evidence-{marker}"],
     }
 
 
@@ -32,11 +32,14 @@ pair = {
                    "interruption": "exactly-one-complete-inactive-version", "outputEnabled": False},
 }
 assert tool.validate(pair)["valid"]
+actual = ROOT / "release/gate-d-version-pair-v1.json"
+if actual.is_file():
+    assert tool.validate(tool.load(actual))["valid"]
 for mutation in (
     lambda value: value["successor"].update(version=value["predecessor"]["version"], archive=value["predecessor"]["archive"]),
     lambda value: value["successor"].update(sourceCommit=value["predecessor"]["sourceCommit"]),
     lambda value: value["successor"].update(archiveSha256=value["predecessor"]["archiveSha256"]),
-    lambda value: value["predecessor"].update(restorableComplete=False),
+    lambda value: value["predecessor"].update(packageComplete=False),
     lambda value: value["transition"].update(outputEnabled=True),
 ):
     invalid = copy.deepcopy(pair)
