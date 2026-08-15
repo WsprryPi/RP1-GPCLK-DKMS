@@ -98,6 +98,9 @@ affected results, and repeat until no finding remains.
 3. Presence of a platform-driver directory proves registration, not binding.
    Enumerate bounded driver-bound device entries and report binding only when
    one exists.
+4. The first classifier could trust a positive UAPI state when no exact local
+   manifest entry was selected. Require the unique selected entry and UAPI
+   state to agree; absence is unavailable and disagreement is rejected.
 
 All findings were reinjected and the affected tests repeated. The final
 adversarial pass found no remaining objective issue within the offline scope.

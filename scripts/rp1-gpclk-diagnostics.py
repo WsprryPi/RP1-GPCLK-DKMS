@@ -168,6 +168,8 @@ def classify(query,selected,transaction,enrollment):
     if any(x.get("status")=="indeterminate" for x in (query,selected,enrollment)): return {"category":"indeterminate-because-inspection-lacked-privileges","compatibilityState":"indeterminate","reason":"required-read-denied-or-query-unavailable"}
     state=query.get("compatibilityState") if query.get("status")=="ok" else selected.get("status","Unavailable")
     if query.get("cleanupFault") is True or state=="Rejected": return {"category":"rejected","compatibilityState":"Rejected","reason":query.get("compatibilityReason",selected.get("reason"))}
+    if selected.get("status")=="Unavailable": return {"category":"unavailable","compatibilityState":"Unavailable","reason":selected.get("reason")}
+    if selected.get("status") not in {state,"indeterminate"}: return {"category":"rejected","compatibilityState":"Rejected","reason":"UAPI-and-manifest-state-mismatch"}
     categories={"Qualified":"healthy-and-qualified","Experimental":"healthy-but-experimental","Compatible-unqualified":"build-compatible-but-live-disabled"}
     if state in categories: return {"category":categories[state],"compatibilityState":state,"reason":selected.get("reason")}
     return {"category":"unavailable","compatibilityState":"Unavailable","reason":selected.get("reason",query.get("reason","required-identity-unavailable"))}

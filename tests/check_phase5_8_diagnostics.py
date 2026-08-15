@@ -61,6 +61,10 @@ with tempfile.TemporaryDirectory() as temporary:
     assert module.select_manifest_entry({"entries":[]},query)["status"]=="Unavailable"
     duplicate={"entries":[{"id":"entry","route":"GPIO4"},{"id":"entry","route":"GPIO4"}]}
     assert module.select_manifest_entry(duplicate,query)["status"]=="Unavailable"
+    exact_missing={"status":"Unavailable","reason":"no-unique-exact-manifest-entry"}
+    assert module.classify({**query,"compatibilityState":"Qualified"},exact_missing,{"status":"absent"},{"status":"absent"})["category"]=="unavailable"
+    mismatch={"status":"Experimental","reason":"manifest experimental"}
+    assert module.classify({**query,"compatibilityState":"Qualified"},mismatch,{"status":"absent"},{"status":"absent"})["category"]=="rejected"
 
     residue=root/"owned"; residue.mkdir()
     journal={"status":"ok","value":{"status":"inactive-recovery-required","ownedFiles":[{"path":"/owned/file"}],"ownedDirectories":["/owned"]}}
