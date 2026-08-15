@@ -53,8 +53,8 @@
     "targetPlan": "release/gate-d-target-operation-plan-phase5.16-v2.json",
     "targetPlanSha256": "ae05a31e00890e477b556b20bb591990f8dd7c5953c8bf5557e84b88df6bf9ca"
   },
-  "executionReady": true,
-  "inputsReady": true,
+  "executionReady": false,
+  "inputsReady": false,
   "kind": "gate-d-representative-system-execution-instance",
   "matrixRelease": "0.0.0-phase5.16",
   "recovery": {
@@ -70,7 +70,9 @@
   },
   "rows": [
     {
-      "blockers": [],
+      "blockers": [
+        "phase5.16-development-candidate-installer-rejection"
+      ],
       "deadlineSeconds": 1800,
       "evidenceDirectory": "gate-d/current-supported-kernel",
       "expectedFinalState": "candidate absent; stock baseline restored",
@@ -81,11 +83,13 @@
         "gpio4",
         "gpio20"
       ],
-      "status": "ready",
+      "status": "blocked-input-required",
       "systemId": "wspr5-stock"
     },
     {
-      "blockers": [],
+      "blockers": [
+        "phase5.16-development-candidate-installer-rejection"
+      ],
       "deadlineSeconds": 1800,
       "evidenceDirectory": "gate-d/prior-supported-kernel-downgrade",
       "expectedFinalState": "declared predecessor inactive and complete",
@@ -96,7 +100,7 @@
         "gpio4",
         "gpio20"
       ],
-      "status": "ready",
+      "status": "blocked-input-required",
       "systemId": "wspr5-stock"
     },
     {
@@ -116,7 +120,9 @@
       "systemId": null
     },
     {
-      "blockers": [],
+      "blockers": [
+        "phase5.16-development-candidate-installer-rejection"
+      ],
       "deadlineSeconds": 1800,
       "evidenceDirectory": "gate-d/signing-not-enforced",
       "expectedFinalState": "candidate absent; trust state unchanged",
@@ -127,7 +133,7 @@
         "gpio4",
         "gpio20"
       ],
-      "status": "ready",
+      "status": "blocked-input-required",
       "systemId": "wspr5-stock"
     },
     {
@@ -148,7 +154,9 @@
       "systemId": null
     },
     {
-      "blockers": [],
+      "blockers": [
+        "phase5.16-development-candidate-installer-rejection"
+      ],
       "deadlineSeconds": 1800,
       "evidenceDirectory": "gate-d/deliberate-build-failure",
       "expectedFinalState": "predecessor retained; successor absent",
@@ -158,7 +166,7 @@
       "routes": [
         "route-neutral"
       ],
-      "status": "ready",
+      "status": "blocked-input-required",
       "systemId": "wspr5-stock"
     },
     {
@@ -212,7 +220,9 @@
       "systemId": null
     },
     {
-      "blockers": [],
+      "blockers": [
+        "phase5.16-development-candidate-installer-rejection"
+      ],
       "deadlineSeconds": 1800,
       "evidenceDirectory": "gate-d/interrupted-upgrade",
       "expectedFinalState": "one complete inactive version; no mixed state",
@@ -223,11 +233,13 @@
         "gpio4",
         "gpio20"
       ],
-      "status": "ready",
+      "status": "blocked-input-required",
       "systemId": "wspr5-stock"
     },
     {
-      "blockers": [],
+      "blockers": [
+        "phase5.16-development-candidate-installer-rejection"
+      ],
       "deadlineSeconds": 900,
       "evidenceDirectory": "gate-d/stale-manifest",
       "expectedFinalState": "stale copy absent; prior state retained",
@@ -238,11 +250,13 @@
         "gpio4",
         "gpio20"
       ],
-      "status": "ready",
+      "status": "blocked-input-required",
       "systemId": "wspr5-stock"
     },
     {
-      "blockers": [],
+      "blockers": [
+        "phase5.16-development-candidate-installer-rejection"
+      ],
       "deadlineSeconds": 900,
       "evidenceDirectory": "gate-d/corrupted-archive-or-dtbo",
       "expectedFinalState": "corrupt copies absent; baseline unchanged",
@@ -253,11 +267,13 @@
         "gpio4",
         "gpio20"
       ],
-      "status": "ready",
+      "status": "blocked-input-required",
       "systemId": "wspr5-stock"
     },
     {
-      "blockers": [],
+      "blockers": [
+        "phase5.16-development-candidate-installer-rejection"
+      ],
       "deadlineSeconds": 1800,
       "evidenceDirectory": "gate-d/removal-inactive",
       "expectedFinalState": "all package-owned state absent",
@@ -268,11 +284,13 @@
         "gpio4",
         "gpio20"
       ],
-      "status": "ready",
+      "status": "blocked-input-required",
       "systemId": "wspr5-stock"
     },
     {
-      "blockers": [],
+      "blockers": [
+        "phase5.16-development-candidate-installer-rejection"
+      ],
       "deadlineSeconds": 900,
       "evidenceDirectory": "gate-d/removal-open-or-active",
       "expectedFinalState": "removal refused; installation unchanged",
@@ -283,11 +301,13 @@
         "gpio4",
         "gpio20"
       ],
-      "status": "ready",
+      "status": "blocked-input-required",
       "systemId": "wspr5-stock"
     },
     {
-      "blockers": [],
+      "blockers": [
+        "phase5.16-development-candidate-installer-rejection"
+      ],
       "deadlineSeconds": 1800,
       "evidenceDirectory": "gate-d/reinstall-after-removal",
       "expectedFinalState": "second complete removal restores empty baseline",
@@ -298,7 +318,7 @@
         "gpio4",
         "gpio20"
       ],
-      "status": "ready",
+      "status": "blocked-input-required",
       "systemId": "wspr5-stock"
     }
   ],

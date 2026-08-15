@@ -31,10 +31,11 @@
     "release": "0.0.0-phase5.16",
     "sourceCommit": "ff92ffcbc588494dd89f303b73c31fe24554583a",
     "archiveSha256": "7c7b7c4741717796b0a128c3f163f2921a25ea646d815b6ba59aae3fedd3ae8d",
-    "status": "frozen-before-gate-d-execution",
+    "status": "blocked-before-gate-d-installation",
     "qualification": "Compatible-unqualified",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; liveEligible false",
-    "purpose": "separate source and installed tooling identities and bind copied versus target-built installation semantics"
+    "purpose": "separate source and installed tooling identities and bind copied versus target-built installation semantics",
+    "blocker": "The sealed administrator rejects publishable=false development candidates before installing the permanent Gate D executor, so the exact qualification candidate cannot bootstrap its reviewed execution tooling."
   },
   "successorSelectionGate": "selected-to-correct-phase5.15-single-tooling-digest-defect",
   "reuseProhibited": [

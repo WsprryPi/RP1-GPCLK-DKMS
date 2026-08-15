@@ -2,7 +2,7 @@
 
 # Gate D Phase 5.16 tooling-identity adversarial assessment
 
-Status: passed; control set sealed; target execution not authorized
+Status: target execution blocked before installation
 
 ## Scope
 
@@ -54,5 +54,27 @@ the corrected evidence is referenced by the control set.
 
 ## Remaining gate
 
-Phase 5.16 target lifecycle execution remains prohibited. A fresh explicit
-authorization for this exact candidate and sealed control set is required.
+Fresh authorization was received and recorded. Immediate live preflight passed,
+but the sealed bootstrap command failed closed before mutation with:
+
+```text
+ValueError: only the exact publishable release is installable
+```
+
+Phase 5.16 is intentionally `publishable=false`: it is a qualification
+candidate, not a release. Its permanent executor must be installed before any
+attempt document can run, but the same sealed administrator refuses to install
+that candidate. This is an internal bootstrap contradiction, not a missing
+operator authorization.
+
+The disposable bootstrap directory was removed. Read-only verification found
+no permanent executor, test DKMS version, module, endpoint, or overlay; all
+four named services retained their expected pre-state. None of the 38 attempts
+executed.
+
+A successor must add a narrowly scoped, explicit qualification-install mode
+that accepts only the exact sealed development identity, remains output
+disabled, and cannot promote the artifact to a publishable release. That
+correction requires new offline review, candidate freeze, representative build,
+helper sealing, control-set construction, and authorization; Phase 5.16 must
+not be patched or bypassed on the target.
