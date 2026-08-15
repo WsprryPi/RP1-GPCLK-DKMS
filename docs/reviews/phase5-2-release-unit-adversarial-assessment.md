@@ -42,6 +42,11 @@ boot change, target access, GPIO, DMA, transmission, SDR, or RF activity.
    suppression list for only those expected standalone plugin warnings and
    rejects every remaining `dtc` warning or error. The resulting GPIO4 and
    GPIO20 DTBO hashes match the independently used Phase 4 artifacts.
+6. **The development test assumed every development build was dirty.** A clean
+   committed tree legitimately uses development mode only to bypass the absent
+   publication tag, so `dirtySource` is false while `publishable` remains
+   false. The test now derives the expected dirty state independently and also
+   requires the expected tag to be absent.
 
 ## Final falsification result
 

@@ -73,7 +73,9 @@ sha256sum "$input" | awk '{print $1}' >"$out"
         right = hashlib.sha256((pathlib.Path(second) / name).read_bytes()).hexdigest()
         assert left == right, f"release artifact is not reproducible: {name}"
     metadata = json.loads((pathlib.Path(first) / "release-metadata.json").read_text())
-    assert metadata["publishable"] is False and metadata["dirtySource"] is True
+    expected_dirty = bool(subprocess.check_output(["git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=all"], text=True))
+    assert metadata["publishable"] is False and metadata["tagPresent"] is False
+    assert metadata["dirtySource"] is expected_dirty
     checksum = pathlib.Path(first) / "SHA256SUMS"
     checksum.write_text(checksum.read_text().replace("0", "1", 1))
     result = subprocess.run([str(ROOT / "scripts/validate_release.py"), first, "--allow-development"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
