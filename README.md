@@ -45,8 +45,10 @@ gate false.
 rejected before plan allocation or any pinctrl, clock, tick, or DMA mutation;
 `LIVE_ELIGIBLE` is not reported. The implementation and build evidence do not
 qualify GPIO output, timing, a mode, or RF, and do not generalize to another
-kernel, DT, firmware, route, or host. No DKMS installer or qualified GPIO
-output is implemented.
+kernel, DT, firmware, route, or host. Phase 5 includes a guarded
+output-disabled DKMS install transaction, but the complete upgrade, downgrade,
+rollback, removal, and representative-system lifecycle gate is not implemented
+or executed. No qualified GPIO output is implemented.
 
 Phase 5.2 adds a deterministic, machine-verified release unit and an explicit
 output-disabled DKMS, signing, overlay, and diagnostic tool surface. The
@@ -61,6 +63,11 @@ module, endpoint, UAPI, manifest, route, enrollment, cleanup, hardware
 identity, scoped kernel-log, and interrupted-transaction residue evidence;
 they never load, configure, repair, or operate hardware. See the
 [diagnostics guide](docs/operator/diagnostics.md).
+
+The comprehensive [Phase 5 exit-gate execution prompt](docs/contracts/phase5-exit-gate-execution-prompt.md)
+audits the remaining contract-to-implementation and external evidence gates.
+Its [adversarial assessment](docs/reviews/phase5-exit-gate-adversarial-assessment.md)
+records why passing offline policy tests is not yet a Phase 5 exit.
 
 Nothing in this repository generally authorizes module installation, target
 binding, system configuration, GPIO operation, transmission, or RF activity;
