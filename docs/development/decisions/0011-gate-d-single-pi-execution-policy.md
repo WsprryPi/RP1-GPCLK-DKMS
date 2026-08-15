@@ -61,3 +61,12 @@ preflight remains mandatory.
 
 Seven required-executable rows are now ready. Three predecessor-dependent rows
 remain blocked, and the five environmental rows remain deferred.
+
+## Version/kernel build follow-up
+
+The three authorized disposable builds subsequently passed: predecessor
+`0.0.0-phase5.2` against current and prior stock headers, and successor
+`0.0.0-phase5.13` against prior stock headers. All ten required-executable rows
+now have exact inputs and `inputsReady: true`. This is build compatibility, not
+an installed rollback result. `targetExecutionApproved` and `executionReady`
+remain false pending a fresh explicit execution release.

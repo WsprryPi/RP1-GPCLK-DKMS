@@ -41,3 +41,12 @@ for GPIO4 and GPIO20 with live output disabled. Seven required-executable rows
 are ready, three are blocked, and five environmental rows are deferred.
 `inputsReady`, `executionReady`, and complete environmental coverage remain
 false. No target mutation is authorized.
+
+## Version/kernel build follow-up
+
+The later authorized three-build matrix closed the three predecessor-dependent
+input blockers without changing the route or environmental conclusions. Its
+separate adversarial assessment is
+[`gate-c-version-kernel-build-matrix-adversarial-assessment.md`](gate-c-version-kernel-build-matrix-adversarial-assessment.md).
+All ten required-executable inputs are now ready; execution still lacks fresh
+target authority.

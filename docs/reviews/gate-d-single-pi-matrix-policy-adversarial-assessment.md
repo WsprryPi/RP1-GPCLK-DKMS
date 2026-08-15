@@ -56,3 +56,11 @@ reinjected findings are reviewed separately in
 [`gate-d-wspr5-read-only-route-identity-adversarial-assessment.md`](gate-d-wspr5-read-only-route-identity-adversarial-assessment.md).
 The current instance has seven ready required-executable rows, three blocked
 predecessor-dependent rows, and five deferred environmental rows.
+
+## Version/kernel build follow-up
+
+The three exact predecessor/successor header builds subsequently passed and
+closed the remaining required-executable input blockers. `inputsReady` is now
+true. `executionReady` remains false because fresh target-execution authority
+is absent, and the five deferred rows still prevent complete environmental
+coverage or publication.

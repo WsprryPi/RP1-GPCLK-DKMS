@@ -4,8 +4,8 @@
 
 ## Current hard stop
 
-The frozen candidate and seven required-executable rows are ready, but three
-predecessor-dependent rows remain blocked. This command must fail before any
+All ten required-executable rows now have exact inputs, but fresh target
+execution authority has not been granted. This command must fail before any
 target command is prepared:
 
 ```sh
@@ -19,10 +19,9 @@ environmental coverage and publication; simulations cannot satisfy them.
 
 ## Preconditions for a future authorized run
 
-Resolve every required-executable blocker, update the concrete instance with
-exact identities, pass full JSON Schema and semantic validation, and seal its
-digest. Confirm the hashed matrix-policy and route-decision sidecars match the
-instance. `inputsReady` must first become true. Then obtain a fresh explicit
+Confirm all required-executable inputs, the hashed matrix-policy and
+route-decision sidecars, full JSON Schema and semantic validation, and the
+sealed instance digest. `inputsReady` is true. Obtain a fresh explicit
 target-execution release and record `targetExecutionApproved: true`; the older
 mutation-envelope approval is not execution authority for this revised subset.
 Confirm the Si5351 leads are disconnected from

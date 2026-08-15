@@ -188,7 +188,9 @@ def validate(value: dict, *, require_ready: bool = False) -> dict:
     if value["executionReady"] is not expected_ready:
         raise ValueError("executionReady disagrees with candidate and rows")
     if require_ready and not expected_ready:
-        raise ValueError("execution instance is blocked-input-required")
+        if not expected_inputs:
+            raise ValueError("execution instance is blocked-input-required")
+        raise ValueError("fresh target-execution authorization is required")
     expected_environmental = not deferred
     if policy_ref["environmentalCoverageComplete"] is not expected_environmental:
         raise ValueError("environmentalCoverageComplete disagrees with deferred rows")

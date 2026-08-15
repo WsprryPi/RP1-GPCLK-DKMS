@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Validate the exact, non-live Gate C representative-build decision."""
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -10,7 +11,8 @@ value = json.loads((ROOT / "release/gate-c-representative-build-manifest-v1.json
 
 assert set(value) == {
     "SPDX-License-Identifier", "schemaVersion", "kind", "candidate",
-    "representativeSystem", "result", "evidence", "claimBoundary",
+    "representativeSystem", "result", "evidence", "additionalBuilds",
+    "claimBoundary",
 }
 assert value["SPDX-License-Identifier"] == "MIT"
 assert value["schemaVersion"] == 1
@@ -38,5 +40,18 @@ assert all(boundary[key] is False for key in (
 assert value["evidence"]["cleanupComplete"] is True
 assert value["evidence"]["moduleLoaded"] is False
 assert value["evidence"]["driverBound"] is False
+additional = value["additionalBuilds"]
+assert additional["summarySha256"] == hashlib.sha256(
+    (ROOT / "docs/evidence/gate-c-wspr5-version-kernel-build-matrix-20260815.md").read_bytes()
+).hexdigest()
+results = additional["results"]
+assert {(item["release"], item["kernelRelease"]) for item in results} == {
+    ("0.0.0-phase5.2", "6.18.34+rpt-rpi-2712"),
+    ("0.0.0-phase5.2", "6.12.75+rpt-rpi-2712"),
+    ("0.0.0-phase5.13", "6.12.75+rpt-rpi-2712"),
+}
+assert all(item["exitStatus"] == 0 and item["diagnosticsCount"] == 0 and
+           item["compatibilityState"] == "Compatible-unqualified" and
+           item["liveEligible"] is False for item in results)
 
 print("Gate C representative build: PASS")

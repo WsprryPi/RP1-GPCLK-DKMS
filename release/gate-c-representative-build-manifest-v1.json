@@ -37,6 +37,56 @@
     "moduleLoaded": false,
     "driverBound": false
   },
+  "additionalBuilds": {
+    "summarySha256": "428dc1446f840cecdc2aca0d98269022f5ae7bf9935520ed8014fa41b3608327",
+    "results": [
+      {
+        "release": "0.0.0-phase5.2",
+        "sourceCommit": "a1aed8cbb3e717758dcf34f1b35a9fb3c781ca2a",
+        "sourceArchiveSha256": "f334853d9c94d733ea22e9b7b93961a005e63442ec4efc4edbe2b12d6321aaf4",
+        "kernelRelease": "6.18.34+rpt-rpi-2712",
+        "kernelConfigSha256": "d5ba966d17d456a6f29e53baf53464e1fd53f9f8e31481da18f2221f1da2593d",
+        "moduleSymversSha256": "681e9fe5710e43c785b39c9e9f410a860cba6a6037e51af23a408cb5ccbe2426",
+        "moduleSha256": "0c99658d7e096600adbe194805f76e6d371d078856d49d38eda05f5f497cab69",
+        "moduleVermagic": "6.18.34+rpt-rpi-2712 SMP preempt mod_unload modversions aarch64",
+        "evidenceManifestSha256": "63d5897038ce6540ab0adc72f7c05906de8fb406472642089e3d6ae0011beadc",
+        "exitStatus": 0,
+        "diagnosticsCount": 0,
+        "compatibilityState": "Compatible-unqualified",
+        "liveEligible": false
+      },
+      {
+        "release": "0.0.0-phase5.2",
+        "sourceCommit": "a1aed8cbb3e717758dcf34f1b35a9fb3c781ca2a",
+        "sourceArchiveSha256": "f334853d9c94d733ea22e9b7b93961a005e63442ec4efc4edbe2b12d6321aaf4",
+        "kernelRelease": "6.12.75+rpt-rpi-2712",
+        "kernelConfigSha256": "2e36192aee8bf4d919bcdae59f67600f3d4ec2a5d4b1e4701b0a305c730ae019",
+        "moduleSymversSha256": "851d09a0f49aab4bfb2ea13be7f6db890eb0b7332b17db783fa021fbe1e90503",
+        "moduleSha256": "bf8f46cca459fe33e6c8ba82cb06a9bb29159eb57b5981714df9baf32e298be8",
+        "moduleVermagic": "6.12.75+rpt-rpi-2712 SMP preempt mod_unload modversions aarch64",
+        "evidenceManifestSha256": "28bc78af0e0c0442012d6103fe43aa1e87a29c87455216b14ff5b5edd0c2ff10",
+        "exitStatus": 0,
+        "diagnosticsCount": 0,
+        "compatibilityState": "Compatible-unqualified",
+        "liveEligible": false
+      },
+      {
+        "release": "0.0.0-phase5.13",
+        "sourceCommit": "61ee2ea592c2551eca56fd0566fef43097b8c682",
+        "sourceArchiveSha256": "58cb12864b291380fefd31ea9a203f7ee308767790787e3fce0be352dab19b14",
+        "kernelRelease": "6.12.75+rpt-rpi-2712",
+        "kernelConfigSha256": "2e36192aee8bf4d919bcdae59f67600f3d4ec2a5d4b1e4701b0a305c730ae019",
+        "moduleSymversSha256": "851d09a0f49aab4bfb2ea13be7f6db890eb0b7332b17db783fa021fbe1e90503",
+        "moduleSha256": "635596b1c9b30490564583152956f3c9404063de3b87a65be9eed8b4bd70857f",
+        "moduleVermagic": "6.12.75+rpt-rpi-2712 SMP preempt mod_unload modversions aarch64",
+        "evidenceManifestSha256": "d776902a7ae485a7da040a86645b018f0561fd3a4dc31dcd2ff7c1b511f6eedd",
+        "exitStatus": 0,
+        "diagnosticsCount": 0,
+        "compatibilityState": "Compatible-unqualified",
+        "liveEligible": false
+      }
+    ]
+  },
   "claimBoundary": {
     "routeNeutralBuildOnly": true,
     "dkmsRegistered": false,
