@@ -25,6 +25,22 @@ administrator actions. Existing configuration, enrollment, keys,
 certificates, overlays, and unmarked boot entries remain administrator- or
 third-party-owned.
 
+## Administrative route changes
+
+`release/overlay-contract-v1.json` freezes the two distinct production overlay
+identities. Exactly one may be selected at a time. There is no arbitrary GPIO
+parameter, combined overlay, hot mutation of a bound route, or automatic route
+substitution. Conflict inspection occurs before any persistent write.
+
+`rp1-gpclk-admin route-change-plan --snapshot SNAPSHOT --route gpio4|gpio20`
+is read-only. It accepts only a complete fail-closed snapshot and emits the
+seven controlled gates: prove idle; disable live eligibility; remove the old
+binding through the proven cleanup path; verify both pins safe; select the new
+overlay; revalidate the complete compatibility identity; and renew enrollment
+when policy requires it. It does not edit boot configuration or operate an
+overlay. GPIO4 qualification and enrollment never transfer to GPIO20, or vice
+versa.
+
 Phase 5.2 packages the module for representative lifecycle validation. It does
 not make an operator release, enable output, or qualify another target. The
 only supported lifecycle gate in this phase is `live_output=0`.

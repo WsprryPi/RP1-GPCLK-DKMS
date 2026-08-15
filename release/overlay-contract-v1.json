@@ -1,0 +1,28 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "selection": {"exactlyOne": true, "arbitraryGpioParameter": false, "automaticSubstitution": false, "hotMutation": false},
+  "sharedIdentity": {
+    "endpointLabel": "rp1_gpclk_dkms",
+    "endpointName": "rp1-gpclk-dkms",
+    "compatible": "wsprrypi,rp1-gpclk-dkms-v1",
+    "clockProvider": "rp1_clocks",
+    "clockId": "RP1_CLK_GP0",
+    "clockName": "gpclk",
+    "dmaProvider": "rp1_dma",
+    "dmaId": "RP1_DMA_DMA_TICK_TICK0",
+    "dmaName": "tx",
+    "regNames": ["tick-dma0", "dma-tick0"],
+    "pinctrlNames": ["default", "active", "safe"]
+  },
+  "routes": {
+    "gpio4": {"routeId": 1, "pin": 4, "source": "overlays/rp1-gpclk-gpio4.dts", "dtbo": "rp1-gpclk-gpio4.dtbo"},
+    "gpio20": {"routeId": 2, "pin": 20, "source": "overlays/rp1-gpclk-gpio20.dts", "dtbo": "rp1-gpclk-gpio20.dtbo"}
+  },
+  "evidenceIndependence": {"gpio4NeverAuthorizesGpio20": true, "gpio20NeverAuthorizesGpio4": true},
+  "safeState": {"function": "gpio", "inputEnable": true, "bias": "disabled", "appliesTo": ["default", "safe"]},
+  "activeState": {"function": "gpclk0", "driveStrengthMilliamp": 2},
+  "identityVerification": ["sourceSha256", "dtboSha256", "compatible", "endpoint", "route", "pin", "clock", "dma", "resources", "pinctrl"],
+  "conflictCheckTiming": "before-any-persistent-write-or-backup",
+  "routeChange": ["prove-idle", "disable-live-eligibility", "remove-old-binding-proven-cleanup", "verify-both-pins-safe", "select-new-overlay", "revalidate-entire-compatibility-identity", "renew-enrollment-if-policy-requires"]
+}

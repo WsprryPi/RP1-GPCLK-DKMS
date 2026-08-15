@@ -27,6 +27,10 @@ PACKAGE = "rp1-gpclk-dkms"
 MODULE = "rp1_gpclk_dkms"
 VERSION = "0.0.0-phase5.2"
 ROUTES = {"gpio4": "rp1-gpclk-gpio4.dtbo", "gpio20": "rp1-gpclk-gpio20.dtbo"}
+ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
+                      "remove-old-binding-proven-cleanup", "verify-both-pins-safe",
+                      "select-new-overlay", "revalidate-entire-compatibility-identity",
+                      "renew-enrollment-if-policy-requires"]
 STEPS = ["preflight", "stage", "verify-staged-hashes", "dkms-add", "dkms-build",
          "sign-if-required", "verify-module", "dkms-install", "install-overlay-inactive",
          "install-policy", "verify-output-disabled", "commit-state"]
@@ -71,6 +75,36 @@ def plan(route: str, signing: bool) -> dict:
             "signingRequired": signing, "liveOutput": False, "moduleLoad": "not-performed",
             "overlayActivation": "not-performed", "routeSelection": "not-performed",
             "experimentalEnrollment": "not-performed", "reboot": "not-performed"}
+
+
+def route_change_plan(snapshot: dict, new_route: str) -> dict:
+    """Validate a fail-closed snapshot and return a non-mutating transition plan."""
+    if new_route not in ROUTES:
+        raise ValueError("route must be gpio4 or gpio20")
+    required_false = ("moduleLoaded", "endpointBound", "endpointOpen", "ownerPresent",
+                      "generationActive", "callbackPending", "dmaActive", "clockPrepared",
+                      "clockEnabled", "cleanupFault", "routeConflict", "persistentConflict",
+                      "duplicateMarker", "runtimeOverlayConflict", "endpointBusy")
+    required_true = ("liveEligibilityDisabled", "gpio4Safe", "gpio20Safe",
+                     "oldBindingCleanupProven", "artifactIdentityValid",
+                     "compatibilityIdentityValid", "configurationOwnershipKnown")
+    allowed = {"currentRoute", "enrollmentPolicyRequiresRenewal", *required_false, *required_true}
+    if set(snapshot) != allowed:
+        raise ValueError("route snapshot fields are incomplete or unknown")
+    current = snapshot.get("currentRoute")
+    if current not in ROUTES or current == new_route:
+        raise ValueError("route change requires two distinct allowlisted routes")
+    for field in required_false:
+        if snapshot.get(field) is not False:
+            raise ValueError(f"route transition rejected by {field}")
+    for field in required_true:
+        if snapshot.get(field) is not True:
+            raise ValueError(f"route transition rejected by {field}")
+    if snapshot.get("enrollmentPolicyRequiresRenewal") is not True:
+        raise ValueError("Phase 5.4 requires explicit enrollment-policy invalidation")
+    return {"fromRoute": current, "toRoute": new_route, "steps": ROUTE_CHANGE_STEPS,
+            "liveOutput": False, "persistentMutation": False,
+            "automaticSubstitution": False, "renewedEnrollmentRequired": True}
 
 
 def atomic_json(path: pathlib.Path, value: dict) -> None:
@@ -234,7 +268,9 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                 transaction["ownedDirectories"].append(str(directory))
         package_files = ((source / "scripts/rp1-gpclk-admin.py", libexec / "rp1-gpclk-admin", 0o755),
                          (source / "scripts/rp1-gpclk-diagnostics.py", libexec / "rp1-gpclk-diagnostics", 0o755),
-                         (model_source, release_data / "installation-model-v1.json", 0o644))
+                         (model_source, release_data / "installation-model-v1.json", 0o644),
+                         (source / "release/overlay-contract-v1.json",
+                          release_data / "overlay-contract-v1.json", 0o644))
         for origin, destination, mode in package_files:
             if not origin.is_file() or origin.is_symlink() or destination.exists() or destination.is_symlink():
                 raise ValueError(f"unsafe or existing package file: {destination}")
@@ -313,17 +349,22 @@ def recover(state_path: pathlib.Path, runner: Callable[[list[str]], str] = comma
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=("plan", "install", "status", "recover"))
+    parser.add_argument("action", choices=("plan", "route-change-plan", "install", "status", "recover"))
     parser.add_argument("--release-directory", type=pathlib.Path)
     parser.add_argument("--route", choices=tuple(ROUTES), default="gpio4")
     parser.add_argument("--signing-required", action="store_true")
     parser.add_argument("--private-key", type=pathlib.Path)
     parser.add_argument("--certificate", type=pathlib.Path)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--snapshot", type=pathlib.Path)
     args = parser.parse_args()
     state = pathlib.Path("/var/lib/rp1-gpclk-dkms/transaction.json")
     if args.action == "plan":
         result = plan(args.route, args.signing_required)
+    elif args.action == "route-change-plan":
+        if args.snapshot is None or args.snapshot.is_symlink() or not args.snapshot.is_file():
+            raise SystemExit("--snapshot must name a real snapshot file")
+        result = route_change_plan(json.loads(args.snapshot.read_text()), args.route)
     elif args.action == "status":
         result = json.loads(state.read_text()) if state.is_file() and not state.is_symlink() else {"status": "absent", "readOnly": True}
     elif args.action == "recover":

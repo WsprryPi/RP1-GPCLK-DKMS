@@ -229,6 +229,22 @@ Requirements:
 - one route must not reserve the other without reviewed target evidence; and
 - GPIO4 and GPIO20 have independent compatibility and qualification records.
 
+Exactly one production route overlay may be selected in persistent
+configuration. Production overlays expose no arbitrary GPIO parameter and no
+automatic route substitution. Their source and DTBO hashes and their exact
+compatible, endpoint, route, pin, clock, DMA, resource, and safe/default
+pinctrl identities are release identities. Deterministic compilation and
+semantic verification of the compiled artifact are both required.
+
+Conflict detection precedes every persistent route-configuration change. A
+bound route is never mutated in place. Changing routes is a controlled
+lifecycle: prove the module and endpoint idle; disable live eligibility;
+remove the old binding through the proven cleanup path; verify GPIO4 and
+GPIO20 safe; select the one new overlay; revalidate the entire compatibility
+identity; and renew enrollment whenever policy requires it. Failure stops the
+transition with live output disabled. Qualification or enrollment for one
+route never authorizes the other.
+
 The preferred boundary is one selected route per boot/admin overlay, exposing
 only that route's pinctrl mapping. GPIO4 is the Phase 2 feasibility route.
 GPIO20 enters during Phase 3, after GPIO4 feasibility and before interfaces,

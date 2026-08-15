@@ -58,7 +58,8 @@ with tempfile.TemporaryDirectory() as temporary:
                     ("Kbuild", b"obj-m := rp1_gpclk_dkms.o\n", 0o644),
                     ("include/rp1_gpclk/version.h", f'#define RP1_GPCLK_MODULE_VERSION "{admin.VERSION}"\n'.encode(), 0o644)]
         for relative in ("scripts/rp1-gpclk-admin.py", "scripts/rp1-gpclk-diagnostics.py",
-                         "release/installation-model-v1.json", "docs/operator/lifecycle.md", "docs/operator/signing.md"):
+                         "release/installation-model-v1.json", "release/overlay-contract-v1.json",
+                         "docs/operator/lifecycle.md", "docs/operator/signing.md"):
             fixtures.append((relative, (ROOT / relative).read_bytes(), 0o755 if relative.startswith("scripts/") else 0o644))
         for name, data, mode in fixtures:
             member = tarfile.TarInfo(f"{admin.PACKAGE}-{admin.VERSION}/{name}")
@@ -91,6 +92,7 @@ with tempfile.TemporaryDirectory() as temporary:
     assert (target / "boot/firmware/overlays/rp1-gpclk-gpio4.dtbo").read_bytes() == b"gpio4"
     assert not (target / "boot/firmware/overlays/rp1-gpclk-gpio20.dtbo").exists()
     assert (target / "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.2/overlay-contract-v1.json").is_file()
     assert (target / "usr/sbin/rp1-gpclk-admin").is_symlink()
     assert (target / "etc/rp1-gpclk-dkms").is_dir()
     assert not (target / "etc/rp1-gpclk-dkms/enrollment.json").exists()

@@ -30,6 +30,7 @@
     "gpio4": "rp1-gpclk-gpio4.dtbo",
     "gpio20": "rp1-gpclk-gpio20.dtbo"
   },
+  "overlayContract": "release/overlay-contract-v1.json",
   "transaction": ["preflight","stage","verify-staged-hashes","dkms-add","dkms-build","sign-if-required","verify-module","dkms-install","install-overlay-inactive","install-policy","verify-output-disabled","commit-state"],
   "failureState": {"liveOutput":false,"overlayActivation":"not-performed","moduleLoad":"not-performed","recoveryRequired":true},
   "implicitActions": {"bootConfiguration":false,"overlayActivation":false,"routeSelection":false,"liveOutput":false,"experimentalEnrollment":false,"moduleLoad":false,"fallbackBackend":false,"reboot":false}
