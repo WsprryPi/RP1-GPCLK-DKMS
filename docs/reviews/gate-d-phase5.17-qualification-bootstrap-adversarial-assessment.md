@@ -2,7 +2,7 @@
 
 # Gate D Phase 5.17 qualification-bootstrap adversarial assessment
 
-Status: offline software review passed; candidate freeze pending
+Status: offline software review passed; candidate frozen before target evidence
 
 ## Review target
 
@@ -44,3 +44,11 @@ The complete offline suite passes with normal unpublished-install rejection,
 successful synthetic qualification bootstrap, coupled-flag enforcement,
 identity mutations, symlink rejection, archive verification, recovery, and
 the pre-existing output-disabled safety tests.
+
+The successor is frozen at source commit
+`10ec47d83fe49f40c9846df72b8c9e691f6d07a5`; two deterministic builds produced
+archive SHA-256
+`c13d3c9a38875abb43a9431e498c7a45da4ef964d61ca688ff3dc9f95817050b`.
+No Raspberry Pi was contacted. Representative compilation, target-built helper
+sealing, renewed route and attempt documents, and fresh execution authorization
+remain separate gates.

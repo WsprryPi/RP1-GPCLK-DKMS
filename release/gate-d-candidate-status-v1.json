@@ -37,8 +37,10 @@
   }],
   "successor": {
     "release": "0.0.0-phase5.17",
-    "status": "unfrozen",
-    "qualification": "not-yet-representative-built",
+    "sourceCommit": "10ec47d83fe49f40c9846df72b8c9e691f6d07a5",
+    "archiveSha256": "c13d3c9a38875abb43a9431e498c7a45da4ef964d61ca688ff3dc9f95817050b",
+    "status": "frozen-before-representative-build",
+    "qualification": "offline-only",
     "purpose": "add an exact output-disabled qualification-install bootstrap without weakening normal release installation"
   },
   "successorSelectionGate": "selected-to-correct-phase5.16-qualification-bootstrap-defect",
