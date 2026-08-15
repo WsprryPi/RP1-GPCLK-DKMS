@@ -2,28 +2,32 @@
 
 # Gate D target runbook
 
-## Current hard stop
+## Current execution hard stop
 
-All ten required-executable rows now have exact inputs, but fresh target
-execution authority has not been granted. This command must fail before any
-target command is prepared:
+The operator granted the exact target-execution authority on 2026-08-15, but
+the first authorized read-only target preflight found that the reviewed command
+plans do not implement the complete row contracts. All ten required-executable
+rows are therefore `blocked-input-required`. This command must fail before any
+target mutation is prepared:
 
 ```sh
 gate-d-instance release/gate-d-execution-instance-v1.json --require-ready
 ```
 
-Do not execute a ready subset. `gate-d-lifecycle` requires every
+Do not execute any row while that command fails. `gate-d-lifecycle` requires every
 `required-executable` row in the frozen 15-row instance to be ready. The five
 `deferred-environmental` rows remain unpassed and continue to block complete
 environmental coverage and publication; simulations cannot satisfy them.
 
-## Preconditions for a future authorized run
+## Preconditions for a corrected authorized run
 
 Confirm all required-executable inputs, the hashed matrix-policy and
 route-decision sidecars, full JSON Schema and semantic validation, and the
-sealed instance digest. `inputsReady` is true. Obtain a fresh explicit
-target-execution release and record `targetExecutionApproved: true`; the older
-mutation-envelope approval is not execution authority for this revised subset.
+sealed instance digest. The existing approval remains limited to the exact
+required-executable subset in the authorization dossier, but it does not permit
+improvised commands outside reviewed operation plans. Correct and independently
+review every target plan, then require `inputsReady`,
+`targetExecutionApproved`, and `executionReady` to all be true.
 Confirm the Si5351 leads are disconnected from
 GPIO4 and GPIO20, no antenna is connected, SDRplay is unused, rescue SD and
 physical power access remain available, and the candidate artifact hashes match

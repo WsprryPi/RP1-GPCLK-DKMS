@@ -26,29 +26,28 @@ platform_tool = module("gate_d_platform", "scripts/gate_d_platform.py")
 instance = json.loads((ROOT / "release/gate-d-execution-instance-v1.json").read_text())
 result = instance_tool.validate(instance)
 assert result["valid"] and not result["executionReady"]
-assert result["inputsReady"] is True
-assert len(result["blockedRows"]) == 0
+assert result["inputsReady"] is False
+assert len(result["blockedRows"]) == 10
 assert len(result["deferredRows"]) == 5
 assert result["environmentalCoverageComplete"] is False
-assert {row["id"] for row in instance["rows"] if row["status"] == "ready"} == {
+assert {row["id"] for row in instance["rows"] if row["status"] == "blocked-input-required"} == {
     "current-supported-kernel", "signing-not-enforced", "stale-manifest",
     "corrupted-archive-or-dtbo", "removal-inactive",
     "removal-open-or-active", "reinstall-after-removal",
     "prior-supported-kernel-downgrade", "deliberate-build-failure",
     "interrupted-upgrade",
 }
+try:
+    instance_tool.validate(instance, require_ready=True)
+except ValueError as error:
+    assert str(error) == "execution instance is blocked-input-required"
+else:
+    raise AssertionError("command-plan-blocked execution instance accepted as ready")
 assert set(result["deferredRows"]) == {
     "newer-unknown-kernel", "signing-enforced-enrolled-key",
     "deliberate-signature-rejection", "missing-headers",
     "overlay-or-resource-conflict",
 }
-try:
-    instance_tool.validate(instance, require_ready=True)
-except ValueError:
-    pass
-else:
-    raise AssertionError("blocked execution instance accepted as ready")
-
 bad = copy.deepcopy(instance)
 bad["authorization"]["prohibitions"].remove("rf")
 try:
@@ -74,6 +73,8 @@ except ValueError:
 else:
     raise AssertionError("reused evidence directory accepted")
 bad = copy.deepcopy(instance)
+bad["authorization"]["targetExecutionApproved"] = False
+bad["authorization"]["approvalScope"] = "fresh target execution authorization absent"
 bad["executionReady"] = True
 try:
     instance_tool.validate(bad)

@@ -4,11 +4,14 @@
 
 ## Status
 
-All ten `required-executable` rows have exact inputs. The execution instance is
-SHA-256 `6ef3bc2277b88946008e63f99338dd311006c8818765e57a1e32bab0bf593cca`,
-reports `inputsReady: true`, and has no input-blocked row. It deliberately
-reports `targetExecutionApproved: false` and `executionReady: false` until the
-operator grants a fresh explicit execution release.
+On 2026-08-15 the operator granted the exact execution release requested below.
+The first authorized read-only target preflight then found that the reviewed
+coordinator does not implement complete command plans for the ten
+`required-executable` rows. The authorization remains recorded, but all ten
+rows are now `blocked-input-required`; the execution instance reports
+`inputsReady: false`, `targetExecutionApproved: true`, and
+`executionReady: false`. Its resealed SHA-256 is
+`65d5fd9bf05f531b0039e67b1b5e6063fe02a92e8ef043ff1b197948a9069b14`.
 
 The five `deferred-environmental` rows remain unpassed and continue to block
 complete environmental coverage, publication, and qualification. They are not
@@ -49,7 +52,8 @@ operation, RF, `/dev/mem`, custom-kernel qualification, forced removal, general
 upgrade, unreviewed persistent boot change, unrelated cleanup, and fallback to
 another physical backend remain prohibited.
 
-This dossier is a request, not authority. After explicit approval, update only
-the authorization fields and instance hash, rerun validation and adversarial
-preflight, and stop if any identity, physical confirmation, recovery condition,
-or reviewed command plan differs.
+The operator's 2026-08-15 authorization makes this dossier the exact boundary
+for the required-executable run. The read-only preflight stopped because the
+reviewed command plans differed from this boundary. Correct and independently
+review those plans before resealing the instance; do not fill the gaps with
+ad-hoc target commands.
