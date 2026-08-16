@@ -1,7 +1,7 @@
 {
   "SPDX-License-Identifier": "MIT",
   "schemaVersion": 1,
-  "release": "0.0.0-phase5.32",
+  "release": "0.0.0-phase5.33",
   "operations": {
     "rollback": "restore-immediately-prior-recorded-complete-package-state",
     "recovery": "resolve-one-recognized-incomplete-transaction-to-safe-checkpoint-or-inactive-state",
