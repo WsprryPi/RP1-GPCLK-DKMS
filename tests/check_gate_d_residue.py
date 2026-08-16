@@ -10,7 +10,7 @@ base_document=json.loads((ROOT/"release/gate-d-phase5.24-residue-recovery-v1.jso
 baseline=tool.BASELINE
 assert tool.validate(base_document)["outputDisabled"] is True
 for mutation in (
-    lambda v:v.update(host="other"), lambda v:v.update(candidate="0.0.0-phase5.42"),
+    lambda v:v.update(host="other"), lambda v:v.update(candidate="0.0.0-phase5.43"),
     lambda v:v["marker"].update(sha256="0"*63), lambda v:v["journal"].update(path="relative"),
     lambda v:v["administratorState"].update(expected="present"),
     lambda v:v["safety"].update(gpioAccess=True), lambda v:v["preservedPaths"].clear(),
