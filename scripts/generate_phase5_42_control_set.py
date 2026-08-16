@@ -278,11 +278,14 @@ def generate(output_root: pathlib.Path) -> list[pathlib.Path]:
                 changed = True
             if value.get("kind") == "gate-d-representative-system-execution-instance":
                 value["authorization"]["approved"] = True
-                value["authorization"]["targetExecutionApproved"] = False
+                value["authorization"]["targetExecutionApproved"] = True
                 value["authorization"]["approvalScope"] = (
-                    "Not authorized. Phase 5.42 construction and validation only."
+                    "Exact Phase 5.42 output-disabled Gate D target execution authorized by "
+                    "the operator; limited to the 38 reviewed attempts, exact seven-artifact "
+                    "release inventory, snapshot-bound Phase 5.39 predecessor state, complete "
+                    "typed Phase 5.42 successor transition, and authenticated schema-5 recovery."
                 )
-                value["executionReady"] = False
+                value["executionReady"] = True
                 changed = True
         if changed:
             path.write_bytes(pretty(value))
