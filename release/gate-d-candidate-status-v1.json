@@ -74,10 +74,11 @@
     "release": "0.0.0-phase5.21",
     "sourceCommit": "d0046092dfa9ffa0c58171ddcb52b7819cc50fc6",
     "archiveSha256": "fc5828d91446843d8ea78a09691c973d74082bea7655b6c0547a06d35fba1624",
-    "status": "representative-build-passed",
+    "status": "blocked-before-gate-d-plan-construction",
     "qualification": "Compatible-unqualified",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
-    "purpose": "bind and authenticate the installed root-validator dependency before dependent imports"
+    "purpose": "bind and authenticate the installed root-validator dependency before dependent imports",
+    "blocker": "The frozen installed layout uses hyphenated command filenames for Python dependencies imported under underscore module names; permanent bootstrap and normal dispatch cannot import their subordinate validators outside a source checkout."
   },
   "successorSelectionGate": "selected-to-correct-phase5.20-unbound-root-validator-dependency",
   "reuseProhibited": [

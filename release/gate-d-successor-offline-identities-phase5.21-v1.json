@@ -36,5 +36,5 @@
     "uapiProbeSha256": "1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742",
     "representativeBuildManifest": "release/gate-c-representative-build-manifest-phase5.21-v1.json"
   },
-  "claimCeiling": "offline reproducible and representative-build compatible only; no installation, lifecycle, route qualification, GPIO, clock, DMA, transmission, SDR, or RF claim"
+  "claimCeiling": "offline reproducible and representative-build compatible only; blocked before Gate D plan construction by an incomplete installed Python import graph; no installation, lifecycle, route qualification, GPIO, clock, DMA, transmission, SDR, or RF claim"
 }

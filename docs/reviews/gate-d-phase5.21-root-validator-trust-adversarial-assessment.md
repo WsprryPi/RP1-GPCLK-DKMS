@@ -45,3 +45,12 @@ produced byte-identical
 The complete offline suite passed twice after that implementation commit. This
 freezes an offline candidate only; it supplies no representative-system,
 installation, lifecycle, GPIO, clock, DMA, transmission, SDR, or RF evidence.
+
+## Control-set construction follow-up finding
+
+After the representative build passed, exact installed-layout review found
+that subordinate Python tools are installed under hyphenated command names
+but imported under underscore module names. The root validator itself is
+importable, but the first `gate_d_bootstrap` import fails outside a checkout.
+Phase 5.21 is therefore blocked before Gate D plan construction. See
+[`gate-d-phase5.21-control-set-construction-adversarial-assessment.md`](gate-d-phase5.21-control-set-construction-adversarial-assessment.md).
