@@ -2,7 +2,7 @@
 
 # Gate D Phase 5.18 bootstrap-contract adversarial assessment
 
-Status: offline software review passed; candidate freeze pending
+Status: offline software review passed; candidate frozen
 
 The review covers the closed bootstrap schema, target-plan and instance hash
 bindings, literal dispatch, journals, retained-tool identities, empty inactive
@@ -45,4 +45,7 @@ out of scope.
    are identical.
 
 The complete offline suite passed twice after the final corrections. No target
-was contacted or changed.
+was contacted or changed. Two deterministic development builds from source
+commit `333f0dde549ed1d8b3b6e41f3611814e6eecde0a` were byte-identical; the
+frozen archive SHA-256 is
+`de8531f94bcf2fc0f251787ad0374e6f18abcd22d8cafa2096fd3f8d4edb835d`.
