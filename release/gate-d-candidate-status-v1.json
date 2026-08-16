@@ -119,8 +119,9 @@
     "release": "0.0.0-phase5.26",
     "sourceCommit": "9f009240eecd55940d53d6f13cb9567aa76cd4ce",
     "archiveSha256": "f43422342fc03c402eb0602949cc317aea239defc6544534ea98bc40d2c505bc",
-    "status": "frozen-offline-awaiting-representative-build",
-    "qualification": "offline-reproducible-unqualified",
+    "status": "representative-build-compatible-awaiting-gate-d-control-set",
+    "qualification": "Compatible-unqualified",
+    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "correct the packaged Si5351 and GPIO4/GPIO20 topology without changing module behavior"
   },
   "successorSelectionGate": "selected-to-correct-phase5.25-packaged-si5351-topology-wording",
