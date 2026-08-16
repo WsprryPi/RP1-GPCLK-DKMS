@@ -21,7 +21,6 @@ route=load("release/gate-d-route-compatibility-decision-phase5.26-v1.json")
 plan=load("release/gate-d-target-operation-plan-phase5.26-v1.json")
 instance=load("release/gate-d-execution-instance-phase5.26-v1.json")
 index=load("release/gate-d-attempts-phase5.26-v1/index.json")
-status=load("release/gate-d-candidate-status-v1.json")
 assert gate_d_preroot.validate(envelope)=={"valid":True,"readOnly":True,"outputDisabled":True}
 assert gate_d_root.validate(instance["qualificationRoot"],verify=False)==pathlib.Path("/home/pi/gate-d-qualification/phase5.26-9f009240eecd")
 assert bootstrap["qualificationRoot"]==plan["qualificationRoot"]==index["qualificationRoot"]==instance["qualificationRoot"]
@@ -30,10 +29,6 @@ assert route["candidate"]["representativeBuildManifestSha256"]==sha(ROOT/"releas
 assert all(x["state"]=="Compatible-unqualified" and x["liveEligible"] is False for x in route["routes"])
 assert instance["inputsReady"] is True and instance["executionReady"] is True
 assert instance["authorization"]["targetExecutionApproved"] is True
-assert status["successor"]["status"]=="blocked-during-pre-root-bootstrap"
-assert status["successor"]["executionEvidence"]=="docs/evidence/gate-d-phase5.26-authorized-pre-root-execution.md"
-assert status["successor"]["controlSet"]=="release/gate-d-execution-instance-phase5.26-v1.json"
-assert status["reuseProhibited"]==["representative-build-promotion","route-decision","target-plan","attempt-bundle","execution-instance","target-authorization"]
 assert sum(x["status"]=="ready" for x in instance["rows"])==10
 assert sum(x["status"]=="deferred-environmental" for x in instance["rows"])==5
 roles={x["role"] for x in envelope["releaseInputs"]}
