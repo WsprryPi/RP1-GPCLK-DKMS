@@ -51,6 +51,12 @@ COMPILED = {
     "gate-d-busy-injector": "c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd",
     "gate-d-uapi-probe": "1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742",
 }
+RELEASE_NAMES = {
+    "PROVENANCE.json", "SHA256SUMS", "release-metadata.json",
+    "rp1-gpclk-compatibility-manifest.json",
+    "rp1-gpclk-dkms-0.0.0-phase5.39.tar.gz",
+    "rp1-gpclk-gpio20.dtbo", "rp1-gpclk-gpio4.dtbo",
+}
 
 
 def git_bytes(commit: str, path: str) -> bytes:
@@ -92,6 +98,28 @@ def source_hash_replacements() -> dict[str, str]:
             continue
         replacements[sha(old_payload)] = sha(new_payload)
     return replacements
+
+
+def release_artifacts() -> dict[str, dict]:
+    path = ROOT / "docs/evidence/gate-c-phase5.39-release-input-inventory.json"
+    value = json.loads(path.read_text())
+    if (value.get("host") != "wspr5" or value.get("release") != "0.0.0-phase5.39" or
+            value.get("sourceCommit") != SOURCE_COMMIT or
+            value.get("directory") != "/home/pi/gate-c-evidence/phase5.39-3768ae9"):
+        raise ValueError("representative release-input inventory identity differs")
+    artifacts = value.get("artifacts")
+    if not isinstance(artifacts, list) or len(artifacts) != len(RELEASE_NAMES):
+        raise ValueError("representative release-input inventory count differs")
+    result = {item["name"]: item for item in artifacts}
+    if set(result) != RELEASE_NAMES or len(result) != len(artifacts):
+        raise ValueError("representative release-input inventory names differ")
+    for item in result.values():
+        if (item.get("type") != "file" or item.get("mode") != "0644" or
+                item.get("owner") != "pi" or item.get("group") != "pi" or
+                not isinstance(item.get("size"), int) or item["size"] <= 0 or
+                len(item.get("sha256", "")) != 64):
+            raise ValueError("representative release-input inventory record differs")
+    return result
 
 
 def package_records() -> tuple[list[dict], list[dict], str]:
@@ -136,6 +164,7 @@ def package_records() -> tuple[list[dict], list[dict], str]:
 
 
 def generate(output_root: pathlib.Path) -> list[pathlib.Path]:
+    artifacts = release_artifacts()
     replacements = {
         OLD_ROOT_SUFFIX: NEW_ROOT_SUFFIX,
         "phase5.37": "phase5.39",
@@ -149,6 +178,13 @@ def generate(output_root: pathlib.Path) -> list[pathlib.Path]:
             "/var/lib/rp1-gpclk-dkms/history/phase5.37-transaction-recovered.json",
         **source_hash_replacements(),
     }
+    stale_release_hashes = {
+        "78de6dbbd14787a7baf5099acacd87615509fe3b34b393e8e8951b6d64da9747": "PROVENANCE.json",
+        "55a717972c56b7f132c05f2876072eefa98737497f75dff807438051dfd34245": "SHA256SUMS",
+        "789487a958ff160a503349d20a7a5f2757e1dcc525f9b114e23c766dab80e196": "release-metadata.json",
+        "6c12ee6997b9f0f9d6ed40da5c276a5a8223da6019dc1fcadba10a39fc395359": "rp1-gpclk-compatibility-manifest.json",
+    }
+    replacements.update({old: artifacts[name]["sha256"] for old, name in stale_release_hashes.items()})
     replacements[sha(git_bytes(TEMPLATE_COMMIT,
         "release/gate-c-representative-build-manifest-phase5.37-v1.json"))] = sha(
         (ROOT / "release/gate-c-representative-build-manifest-phase5.39-v1.json").read_bytes())
@@ -216,14 +252,13 @@ def generate(output_root: pathlib.Path) -> list[pathlib.Path]:
                 value["packagePathsSha256"] = package_digest
                 changed = True
             if value.get("kind") == "gate-d-representative-system-execution-instance":
-                value["authorization"]["targetExecutionApproved"] = True
+                value["authorization"]["targetExecutionApproved"] = False
                 value["authorization"]["approvalScope"] = (
-                    "Exact Phase 5.39 output-disabled Gate D target execution authorized by "
-                    "the operator; limited to the 38 reviewed attempts in the ten ready rows "
-                    "and the authenticated recovered-ledger and complete typed 28-path "
-                    "package transition."
+                    "Corrected artifact-grounded Phase 5.39 control successor sealed for "
+                    "independent review; the failed target authorization is retired and "
+                    "fresh explicit authorization is required."
                 )
-                value["executionReady"] = True
+                value["executionReady"] = False
                 changed = True
         if changed:
             path.write_bytes(pretty(value))

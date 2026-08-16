@@ -3,7 +3,7 @@
   "candidate": {
     "archiveSha256": "0e16828433a254467da4f4b841d355ef6d3cddf0ff582b4316416e9e66623f5c",
     "release": "0.0.0-phase5.39",
-    "representativeBuildManifestSha256": "c2f5b0f394dc7f907a640cd82f8e69561822d075e33bb81144fce904f4b5d160",
+    "representativeBuildManifestSha256": "f5eda2578fd321bdaacbb163a4f13342bbd31997b6d86e6149a5d23de3725567",
     "sourceCommit": "3768ae9cdccf0c2ae5809603b9a36e73507f2182",
     "uapiSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb"
   },

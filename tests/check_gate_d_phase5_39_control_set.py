@@ -16,11 +16,21 @@ envelope=load("release/gate-d-pre-root-bootstrap-envelope-phase5.39-v1.json")
 index=load("release/gate-d-attempts-phase5.39-v1/index.json")
 identity=load("docs/evidence/gate-d-phase5.39-qualification-install-identity.json")
 inventory=load("docs/evidence/gate-d-phase5.39-predecessor-package-inventory.json")
+release_inventory=load("docs/evidence/gate-c-phase5.39-release-input-inventory.json")
 build=load("release/gate-c-representative-build-manifest-phase5.39-v1.json")
 assert route["candidate"]["sourceCommit"]==build["candidate"]["sourceCommit"]==commit
 assert route["candidate"]["archiveSha256"]==build["candidate"]["archiveSha256"]
 assert route["evidence"]["moduleSha256"]==build["result"]["moduleSha256"]
 assert route["candidate"]["representativeBuildManifestSha256"]==sha(ROOT/"release/gate-c-representative-build-manifest-phase5.39-v1.json")
+artifacts={x["name"]:x["sha256"] for x in release_inventory["artifacts"]}; assert len(artifacts)==7
+assert {x["name"]:x["sha256"] for x in build["result"]["releaseInputs"]}==artifacts
+assert build["result"]["releaseInputInventory"]["sha256"]==sha(ROOT/"docs/evidence/gate-c-phase5.39-release-input-inventory.json")
+release_inputs={pathlib.PurePosixPath(x["path"]).name:x["sha256"] for x in envelope["releaseInputs"]}
+assert release_inputs==artifacts
+assert route["candidate"]["archiveSha256"]==artifacts["rp1-gpclk-dkms-0.0.0-phase5.39.tar.gz"]
+assert instance["candidate"]["gpio4DtboSha256"]==artifacts["rp1-gpclk-gpio4.dtbo"]
+assert instance["candidate"]["gpio20DtboSha256"]==artifacts["rp1-gpclk-gpio20.dtbo"]
+assert instance["candidate"]["manifestSha256"]==artifacts["rp1-gpclk-compatibility-manifest.json"]
 assert identity["schemaVersion"]==3 and bootstrap["schemaVersion"]==envelope["schemaVersion"]==4
 assert bootstrap["packagePaths"]==envelope["installedPackagePaths"]
 assert bootstrap["packagePathsSha256"]==envelope["packagePathsSha256"]==canonical(bootstrap["packagePaths"])
@@ -50,9 +60,12 @@ with tempfile.TemporaryDirectory() as temporary:
  try:
   assert gate_d_bootstrap.validate(bootstrap)["outputDisabled"] and gate_d_preroot.validate(envelope)["outputDisabled"]
   assert gate_d_target_plan.validate(plan)["attemptCount"]==38
-  result=gate_d_instance.validate(instance,require_ready=True); assert result["inputsReady"] is True and result["executionReady"] is True
+  result=gate_d_instance.validate(instance,require_ready=False); assert result["inputsReady"] is True and result["executionReady"] is False
+  try: gate_d_instance.validate(instance,require_ready=True)
+  except ValueError: pass
+  else: raise AssertionError("corrected successor inherited failed authorization")
  finally: gate_d_root.validate=original
-assert instance["authorization"]["approved"] is True and instance["authorization"]["targetExecutionApproved"] is True and instance["executionReady"] is True
+assert instance["authorization"]["approved"] is True and instance["authorization"]["targetExecutionApproved"] is False and instance["executionReady"] is False
 attempt_dir=ROOT/"release/gate-d-attempts-phase5.39-v1"; documents=[]
 for record in index["attempts"]:
  p=attempt_dir/record["file"]; assert sha(p)==record["sha256"]
