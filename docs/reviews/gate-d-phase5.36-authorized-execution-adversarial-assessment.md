@@ -25,10 +25,11 @@ ValueError: unsafe or existing package file:
 
 This is a control-set integration defect. The pre-root envelope authenticates
 an 18-path Phase 5.31-to-Phase 5.36 retained-tool transition, but the
-administrator invocation receives transition identities for only the two
-compiled helpers and `rp1-gpclk-admin`. `install_tool()` therefore treats the
-other authenticated predecessor tools as unsafe existing package files. The
-first rejection is diagnostics; bypassing it would merely expose the next
+administrator invocation receives transition identities for only 18 of the 22
+retained permanent files. It omits `gate-d-attempts`, `gate-d-residue`,
+`lifecycle-policy`, and `rp1-gpclk-diagnostics`. `install_tool()` therefore
+treats those authenticated predecessor tools as unsafe existing package files.
+The first rejection is diagnostics; bypassing it would merely expose the next
 unrepresented retained path.
 
 The authenticated `--resume` path ran immediately. Administrator recovery

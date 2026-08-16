@@ -465,6 +465,61 @@ with tempfile.TemporaryDirectory() as temporary:
         value["toolTransitions"] = transitions
         return value
 
+    source_by_tool = {
+        "rp1-gpclk-admin": "scripts/rp1-gpclk-admin.py",
+        "rp1-gpclk-diagnostics": "scripts/rp1-gpclk-diagnostics.py",
+        "lifecycle-policy": "scripts/lifecycle_policy.py",
+        "gate-d-instance": "scripts/gate_d_instance.py",
+        "gate-d-lifecycle": "scripts/gate_d_lifecycle.py",
+        "gate-d-platform": "scripts/gate_d_platform.py",
+        "gate-d-boot": "scripts/gate_d_boot.py",
+        "gate-d-target-plan": "scripts/gate_d_target_plan.py",
+        "gate-d-attempts": "scripts/gate_d_attempts.py",
+        "gate-d-executor": "scripts/gate_d_outer.py",
+        "gate-d-bootstrap": "scripts/gate_d_bootstrap.py",
+        "gate-d-residue": "scripts/gate_d_residue.py",
+        "gate_d_root.py": "scripts/gate_d_root.py",
+        "gate_d_bootstrap.py": "scripts/gate_d_bootstrap.py",
+        "gate_d_target_plan.py": "scripts/gate_d_target_plan.py",
+        "gate_d_lifecycle.py": "scripts/gate_d_lifecycle.py",
+        "gate_d_outer.py": "scripts/gate_d_outer.py",
+        "gate_d_attempts.py": "scripts/gate_d_attempts.py",
+        "gate_d_instance.py": "scripts/gate_d_instance.py",
+        "gate_d_preroot.py": "scripts/gate_d_preroot.py",
+    }
+
+    def complete_transition_target(name):
+        complete_target, complete_libexec, _ = mixed_qualification_target(name)
+        predecessors = {}
+        for raw in sorted(admin.QUALIFICATION_RETAINED_TOOLS):
+            tool = pathlib.PurePosixPath(raw).name
+            path = complete_libexec / tool
+            if not path.exists():
+                path.write_bytes(f"phase5.36 {tool} predecessor\n".encode())
+            path.chmod(0o644 if tool.endswith(".py") else 0o755)
+            predecessors[raw] = path.read_bytes()
+        return complete_target, complete_libexec, predecessors
+
+    def complete_transition_identity(predecessors, wrong_successor=None):
+        transitions = []
+        for raw, predecessor in sorted(predecessors.items()):
+            tool = pathlib.PurePosixPath(raw).name
+            successor = (b"gate-d-probe" if tool in {"gate-d-uapi-probe", "gate-d-busy-injector"}
+                         else (ROOT / source_by_tool[tool]).read_bytes())
+            successor_hash = hashlib.sha256(successor).hexdigest()
+            if raw == wrong_successor:
+                successor_hash = "0" * 64
+            transitions.append({
+                "path": raw,
+                "predecessorSha256": hashlib.sha256(predecessor).hexdigest(),
+                "successorSha256": successor_hash,
+                "mode": "0644" if tool.endswith(".py") else "0755",
+            })
+        value = dict(identity)
+        value["schemaVersion"] = 2
+        value["toolTransitions"] = transitions
+        return value
+
     # Exact regression: transitioned permanent tools can bracket ordinary
     # package files without making those ordinary paths transition lookups.
     mixed_target, mixed_libexec, mixed_predecessors = mixed_qualification_target(
@@ -480,6 +535,73 @@ with tempfile.TemporaryDirectory() as temporary:
     assert (mixed_libexec / "gate-d-executor").read_bytes() == (
         ROOT / "scripts/gate_d_outer.py").read_bytes()
     assert all(item["status"] == "committed" for item in mixed_result["replacedFiles"])
+
+    # The successor graph must cover the complete retained permanent inventory,
+    # including the four paths omitted by the Phase 5.36 control set.
+    complete_target, complete_libexec, complete_predecessors = complete_transition_target(
+        "complete-transition-target")
+    complete_identity_path = base / "complete-transition-identity.json"
+    complete_identity_path.write_text(json.dumps(
+        complete_transition_identity(complete_predecessors)) + "\n")
+    complete_result = admin.execute(release, "gpio4", False, None, None,
+                                    root=complete_target, runner=fake_runner,
+                                    qualification_identity=complete_identity_path)
+    assert complete_result["status"] == "complete"
+    assert len(complete_result["replacedFiles"]) == len(admin.QUALIFICATION_RETAINED_TOOLS)
+    assert all(item["status"] == "committed" for item in complete_result["replacedFiles"])
+    for required in ("gate-d-attempts", "rp1-gpclk-diagnostics",
+                     "lifecycle-policy", "gate-d-residue"):
+        assert (complete_libexec / required).is_file()
+
+    # An omitted or non-permanent transition is rejected before transaction
+    # creation and before the external runner can perform DKMS work.
+    for case in ("omitted", "extra"):
+        rejected_target, _, rejected_predecessors = complete_transition_target(
+            f"complete-transition-{case}")
+        rejected = complete_transition_identity(rejected_predecessors)
+        if case == "omitted":
+            rejected["toolTransitions"].pop()
+        else:
+            rejected["toolTransitions"].append({
+                "path": "/usr/libexec/rp1-gpclk-dkms/not-a-permanent-tool",
+                "predecessorSha256": "1" * 64, "successorSha256": "2" * 64,
+                "mode": "0755",
+            })
+        rejected_path = base / f"complete-transition-{case}-identity.json"
+        rejected_path.write_text(json.dumps(rejected) + "\n")
+        command_count = len(commands)
+        try:
+            admin.execute(release, "gpio4", False, None, None,
+                          root=rejected_target, runner=fake_runner,
+                          qualification_identity=rejected_path)
+        except ValueError:
+            assert len(commands) == command_count
+            assert not (rejected_target / "var/lib/rp1-gpclk-dkms/transaction.json").exists()
+        else:
+            raise AssertionError(f"incomplete retained-tool graph accepted: {case}")
+
+    # Exercise recovery with the invalid successor placed at every permanent
+    # replacement boundary. Earlier replacements must roll back byte-for-byte.
+    for boundary in sorted(admin.QUALIFICATION_RETAINED_TOOLS):
+        boundary_name = pathlib.PurePosixPath(boundary).name.replace(".", "-")
+        recovery_target, recovery_libexec, recovery_predecessors = complete_transition_target(
+            f"complete-transition-recovery-{boundary_name}")
+        recovery_identity_path = base / f"complete-transition-recovery-{boundary_name}.json"
+        recovery_identity_path.write_text(json.dumps(
+            complete_transition_identity(recovery_predecessors, wrong_successor=boundary)) + "\n")
+        try:
+            admin.execute(release, "gpio4", False, None, None,
+                          root=recovery_target, runner=fake_runner,
+                          qualification_identity=recovery_identity_path)
+        except ValueError:
+            recovery_state = recovery_target / "var/lib/rp1-gpclk-dkms/transaction.json"
+            assert json.loads(recovery_state.read_text())["status"] == "inactive-recovery-required"
+            recovered = admin.recover(recovery_state, fake_runner)
+            assert recovered["status"] == "recovered" and recovered["liveOutput"] is False
+            for raw, predecessor in recovery_predecessors.items():
+                assert (recovery_libexec / pathlib.PurePosixPath(raw).name).read_bytes() == predecessor
+        else:
+            raise AssertionError(f"invalid successor accepted at boundary: {boundary}")
 
     # A late successor mismatch must recover earlier transitions and remove
     # ordinary files installed between them.

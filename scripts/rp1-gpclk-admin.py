@@ -47,6 +47,16 @@ ACKNOWLEDGEMENT = ("I accept Experimental RP1 GPCLK dedicated-host and "
 HASH_IDENTITY_FIELDS = {"compatibilityManifestSha256", "moduleSha256", "uapiHeaderSha256",
                         "kernelConfigSha256", "baseDtSha256", "overlaySourceSha256",
                         "overlayDtboSha256"}
+QUALIFICATION_RETAINED_TOOLS = frozenset({
+    f"/usr/libexec/{PACKAGE}/{name}" for name in (
+        "gate-d-attempts", "gate-d-boot", "gate-d-bootstrap", "gate-d-busy-injector",
+        "gate-d-executor", "gate-d-instance", "gate-d-lifecycle", "gate-d-platform",
+        "gate-d-residue", "gate-d-target-plan", "gate-d-uapi-probe", "gate_d_attempts.py",
+        "gate_d_bootstrap.py", "gate_d_instance.py", "gate_d_lifecycle.py",
+        "gate_d_outer.py", "gate_d_preroot.py", "gate_d_root.py", "gate_d_target_plan.py",
+        "lifecycle-policy", "rp1-gpclk-admin", "rp1-gpclk-diagnostics",
+    )
+})
 
 
 def digest(path: pathlib.Path) -> str:
@@ -471,6 +481,17 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
             raise ValueError("unresolved transaction requires explicit recovery")
     transitions = ({item["path"]: item for item in qualification["toolTransitions"]}
                    if qualification and qualification["schemaVersion"] == 2 else {})
+    if qualification and qualification["schemaVersion"] == 2:
+        unknown = set(transitions) - QUALIFICATION_RETAINED_TOOLS
+        if unknown:
+            raise ValueError("qualification transition names a non-permanent tool")
+        retained = set()
+        for raw in QUALIFICATION_RETAINED_TOOLS:
+            destination = rooted(root, raw)
+            if destination.exists() or destination.is_symlink():
+                retained.add(raw)
+        if set(transitions) != retained:
+            raise ValueError("qualification transition graph differs from retained permanent tools")
     for raw, transition in transitions.items():
         destination = rooted(root, raw)
         if (destination.is_symlink() or not destination.is_file() or
