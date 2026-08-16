@@ -65,10 +65,11 @@ for checkpoint in tool.CHECKPOINTS[1:-1]:
         try: tool.execute(envelope,prefix=prefix,runner=runner,probe=lambda:baseline,stop_after=checkpoint)
         except InterruptedError: pass
         else: raise AssertionError("checkpoint interruption absent")
-        assert tool.execute(envelope,prefix=prefix,runner=runner,probe=lambda:baseline,recover=True)["status"]=="complete"
+        assert tool.execute(envelope,prefix=prefix,runner=runner,probe=lambda:baseline,recover=True)["status"]=="recovered"
         preserved=prefix/"staging/transaction.failure.json"
         assert preserved.is_file() and not preserved.is_symlink()
         assert json.loads(preserved.read_text())["status"]=="recovery-required"
+        assert not (prefix/"qualification/root").exists()
 
 for failure in ("missing", "symlink", "substituted", "preexisting-root", "unsafe-parent", "installed-mismatch", "residue", "baseline"):
     with tempfile.TemporaryDirectory() as temporary:
@@ -120,8 +121,9 @@ with tempfile.TemporaryDirectory() as temporary:
     try: tool.execute(envelope,prefix=prefix,runner=fail_before_state_once,probe=lambda:baseline)
     except RuntimeError: pass
     else: raise AssertionError("pre-state administrator failure absent")
-    assert tool.execute(envelope,prefix=prefix,runner=fail_before_state_once,probe=lambda:baseline,recover=True)["status"]=="complete"
+    assert tool.execute(envelope,prefix=prefix,runner=fail_before_state_once,probe=lambda:baseline,recover=True)["status"]=="recovered"
     assert envelope["recoveryArgv"] not in calls
+    assert calls.count(envelope["argv"])==1
 
 with tempfile.TemporaryDirectory() as temporary:
     prefix=pathlib.Path(temporary).resolve(); envelope=make_envelope(prefix); calls=[]
@@ -133,4 +135,23 @@ with tempfile.TemporaryDirectory() as temporary:
     except ValueError: pass
     else: raise AssertionError("foreign partial-root recovery accepted")
     assert marker.is_file() and foreign.read_text()=="preserve\n" and envelope["recoveryArgv"] not in calls
+
+with tempfile.TemporaryDirectory() as temporary:
+    prefix=pathlib.Path(temporary).resolve(); envelope=make_envelope(prefix); installed=prefix/"installed/gate-d-executor"; calls=[]
+    def recover_then_changed(argv:list[str])->None:
+        calls.append(argv); state=prefix/"admin-transaction.json"
+        if argv==envelope["argv"]:
+            installed.parent.mkdir(parents=True,exist_ok=True); installed.write_bytes(b"installed-executor\n"); state.write_text('{"status":"complete"}\n')
+        elif argv==envelope["recoveryArgv"]:
+            installed.unlink(); state.unlink()
+    try: tool.execute(envelope,prefix=prefix,runner=recover_then_changed,probe=lambda:baseline,stop_after="install")
+    except InterruptedError: pass
+    else: raise AssertionError("install interruption absent")
+    changed=dict(baseline); changed["moduleLoaded"]=True
+    try: tool.execute(envelope,prefix=prefix,runner=recover_then_changed,probe=lambda:changed,recover=True)
+    except ValueError as error: assert "post-recovery" in str(error)
+    else: raise AssertionError("changed post-recovery baseline accepted")
+    assert calls.count(envelope["argv"])==1 and calls.count(envelope["recoveryArgv"])==1
+    assert (prefix/"staging/transaction.json").is_file()
+    assert not (prefix/"staging/transaction.failure.json").exists()
 print("Gate D pre-root trust transition: PASS")
