@@ -21,5 +21,10 @@
     "bootstrapExecutorSourceSha256": "5da7590e3b4297404e24293f1dd94d26b50dc64464da2330e381b6c62b19bb37",
     "outerExecutorSourceSha256": "9b5590d6116a034e0d413edd239eb7a584c18ee3f972375e15c4ccd26f0a3615"
   },
-  "claimCeiling": "offline reproducible candidate identity only; no representative build, installation, lifecycle, hardware, GPIO, clock, DMA, transmission, SDR, or RF claim"
+  "targetBuiltHelpers": {
+    "busyInjectorSha256": "c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd",
+    "uapiProbeSha256": "1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742",
+    "representativeBuildManifest": "release/gate-c-representative-build-manifest-phase5.18-v1.json"
+  },
+  "claimCeiling": "offline reproducible and representative-build compatible only; blocked before Gate D plan sealing by missing explicit qualification-root binding"
 }

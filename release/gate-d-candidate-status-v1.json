@@ -48,9 +48,11 @@
     "release": "0.0.0-phase5.18",
     "sourceCommit": "333f0dde549ed1d8b3b6e41f3611814e6eecde0a",
     "archiveSha256": "de8531f94bcf2fc0f251787ad0374e6f18abcd22d8cafa2096fd3f8d4edb835d",
-    "status": "frozen-offline",
-    "qualification": "offline-reproducible-unqualified",
-    "purpose": "bind qualification bootstrap into the target plan, execution instance, permanent executor, and recovery lifecycle"
+    "status": "blocked-before-gate-d-plan-construction",
+    "qualification": "Compatible-unqualified",
+    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
+    "purpose": "bind qualification bootstrap into the target plan, execution instance, permanent executor, and recovery lifecycle",
+    "blocker": "Installed permanent validators resolve repository-relative identities below /usr rather than an explicitly sealed test-owned qualification root."
   },
   "successorSelectionGate": "selected-to-correct-phase5.17-unbound-bootstrap-contract",
   "reuseProhibited": [

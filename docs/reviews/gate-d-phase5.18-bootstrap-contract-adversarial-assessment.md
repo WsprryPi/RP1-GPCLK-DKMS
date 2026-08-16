@@ -2,7 +2,7 @@
 
 # Gate D Phase 5.18 bootstrap-contract adversarial assessment
 
-Status: offline software review passed; candidate frozen
+Status: representative build passed; target-plan construction blocked
 
 The review covers the closed bootstrap schema, target-plan and instance hash
 bindings, literal dispatch, journals, retained-tool identities, empty inactive
@@ -49,3 +49,15 @@ was contacted or changed. Two deterministic development builds from source
 commit `333f0dde549ed1d8b3b6e41f3611814e6eecde0a` were byte-identical; the
 frozen archive SHA-256 is
 `de8531f94bcf2fc0f251787ad0374e6f18abcd22d8cafa2096fd3f8d4edb835d`.
+
+## Representative-build follow-up finding
+
+The exact frozen archive built on `wspr5`, and both target-built helper
+identities were obtained without running them. During subsequent adversarial
+plan construction, the installed validators were found to derive `ROOT` from
+their installed `/usr/libexec` path. Repository-relative plan, attempt, and
+source identities therefore resolve below `/usr` instead of a sealed
+test-owned qualification root. Phase 5.18 cannot truthfully seal an executable
+target plan or instance. A distinct successor must bind an explicit real,
+non-symlink qualification root through the bootstrap plan, target plan,
+execution instance, outer executor, and every subordinate validator.
