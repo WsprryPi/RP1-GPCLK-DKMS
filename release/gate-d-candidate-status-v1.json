@@ -27,9 +27,9 @@
     "release": "0.0.0-phase5.29",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "sourceCommit": "c58b541158aa6b8e535becb04c50d41767558793",
-    "status": "authorized-for-output-disabled-gate-d-execution",
-    "executionEvidence": "docs/reviews/gate-d-phase5.29-control-set-independent-review.md",
-    "blocker": "none before exact bounded execution; stop on any identity, residue, service, recovery, or cleanup ambiguity",
+    "status": "blocked-during-pre-root-bootstrap",
+    "executionEvidence": "docs/evidence/gate-d-phase5.29-authorized-pre-root-execution.md",
+    "blocker": "DKMS installs rp1_gpclk_dkms.ko.xz, while the frozen administrator requires the uncompressed rp1_gpclk_dkms.ko path for post-install identity verification.",
     "targetExecutionApproved": true
   },
   "successorSelectionGate": "selected-to-correct-phase5.28-dkms-built-module-representation",
