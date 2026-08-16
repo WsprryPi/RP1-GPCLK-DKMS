@@ -27,3 +27,11 @@ inject failure after DKMS installation, then prove exact recovery.
 No lifecycle attempt began and output remained disabled. No loaded module,
 endpoint, overlay, GPIO, clock, DMA, Si5351, transmitter, SDR, antenna,
 transmission, reboot, or RF action occurred.
+
+The later recovery-only slice invoked the envelope-declared administrator
+recovery directly under separate authorization. It succeeded because the
+administrator ledger, unlike the outer pre-root guard, correctly treats exact
+owned DKMS state as the object of recovery. Final absence and retained-tool
+identity checks passed. This restores a safe baseline but does not cure the
+outer recovery reachability or predecessor-tool transition defects; both remain
+Phase 5.33 blockers.

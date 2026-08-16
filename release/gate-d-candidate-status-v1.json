@@ -27,9 +27,9 @@
     "release": "0.0.0-phase5.32",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "sourceCommit": "4e62b3a0b584396a9528be07592d92e0796555f2",
-    "status": "blocked-during-pre-root-install-recovery-required",
+    "status": "recovered-after-pre-root-blocker-successor-required",
     "executionEvidence": "docs/evidence/gate-d-phase5.32-authorized-execution.md",
-    "blocker": "retained predecessor UAPI probe is rejected after Phase 5.32 DKMS install, and sealed recovery is unreachable while exact owned DKMS state exists",
+    "blocker": "Phase 5.33 must provide identity-aware retained-tool transition and make sealed outer recovery reach the authenticated administrator ledger",
     "targetExecutionApproved": false
   },
   "successorSelectionGate": "selected-to-correct-phase5.31-permanent-executor-cli-dispatch",

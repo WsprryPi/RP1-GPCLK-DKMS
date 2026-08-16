@@ -36,3 +36,22 @@ the endpoint is absent, and no overlay is active. Services remain `active`,
 
 No GPIO, active pinctrl, clock, DMA, Si5351, transmitter, SDR, antenna,
 transmission, reboot, or RF operation occurred.
+
+## Separately authorized ledger recovery
+
+Recovery-only authorization was committed before execution at `6b3058a`. The
+exact envelope-declared administrator command authenticated the preserved
+ledger, uninstalled and removed the exact Phase 5.32 DKMS version, verified and
+removed 386 owned files and 26 owned directories where empty, and committed
+`status=recovered`, `checkpoint=inactive-clean`, `recoveryRequired=false`, and
+`liveOutput=false`. The recovered administrator journal SHA-256 is
+`fabb5a87c8434847e0ed134a94e4502734acee4f27802a196cb4599734216e23`.
+
+Final audit found no Phase 5.32 DKMS status, source tree, installed release
+data, installed module, loaded module, endpoint, or active overlay. The
+pre-root failure journal remains preserved with its original SHA-256. Retained
+Phase 5.31 UAPI probe, executor, and administrator hashes remained
+`1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742`,
+`49b26b3f056df6855f7e0530b2f64d2f9a423836bf4b5b773c3db31980505864`,
+and `b9c35e9d52a1f2cb67fa055cc517c870c205855ea7d7d052df138c716ad1d9e3`.
+Services remained unchanged. Staging and failure journals were preserved.
