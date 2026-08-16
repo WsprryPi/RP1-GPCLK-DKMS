@@ -425,6 +425,85 @@ with tempfile.TemporaryDirectory() as temporary:
                            qualification_identity=identity_path)
     assert result["status"] == "complete" and result["liveOutput"] is False
 
+    def mixed_qualification_target(name):
+        mixed_target = base / name
+        (mixed_target / "boot/firmware/overlays").mkdir(parents=True)
+        (mixed_target / "usr/src/test-headers").mkdir(parents=True)
+        (mixed_target / "lib").symlink_to("usr/lib")
+        mixed_modules = mixed_target / f"usr/lib/modules/{admin.platform.release()}"
+        mixed_modules.mkdir(parents=True)
+        (mixed_modules / "build").symlink_to("/usr/src/test-headers")
+        add_built_module(mixed_target)
+        add_installed_module(mixed_target)
+        mixed_libexec = mixed_target / "usr/libexec/rp1-gpclk-dkms"
+        mixed_libexec.mkdir(parents=True)
+        predecessors = {
+            "rp1-gpclk-admin": b"phase5.31 admin predecessor\n",
+            "gate-d-executor": b"phase5.31 executor predecessor\n",
+        }
+        for tool, content in predecessors.items():
+            path = mixed_libexec / tool
+            path.write_bytes(content)
+            path.chmod(0o755)
+        return mixed_target, mixed_libexec, predecessors
+
+    def mixed_identity(predecessors, executor_successor=None):
+        transitions = []
+        for tool, source_name in (("rp1-gpclk-admin", "rp1-gpclk-admin.py"),
+                                  ("gate-d-executor", "gate_d_outer.py")):
+            successor = hashlib.sha256((ROOT / f"scripts/{source_name}").read_bytes()).hexdigest()
+            if tool == "gate-d-executor" and executor_successor is not None:
+                successor = executor_successor
+            transitions.append({
+                "path": f"/usr/libexec/rp1-gpclk-dkms/{tool}",
+                "predecessorSha256": hashlib.sha256(predecessors[tool]).hexdigest(),
+                "successorSha256": successor,
+                "mode": "0755",
+            })
+        value = dict(identity)
+        value["schemaVersion"] = 2
+        value["toolTransitions"] = transitions
+        return value
+
+    # Exact regression: transitioned permanent tools can bracket ordinary
+    # package files without making those ordinary paths transition lookups.
+    mixed_target, mixed_libexec, mixed_predecessors = mixed_qualification_target(
+        "mixed-qualification-target")
+    mixed_identity_path = base / "mixed-qualification-identity.json"
+    mixed_identity_path.write_text(json.dumps(mixed_identity(mixed_predecessors)) + "\n")
+    mixed_result = admin.execute(release, "gpio4", False, None, None,
+                                 root=mixed_target, runner=fake_runner,
+                                 qualification_identity=mixed_identity_path)
+    assert mixed_result["status"] == "complete" and mixed_result["recoveryRequired"] is False
+    assert (mixed_libexec / "rp1-gpclk-diagnostics").read_bytes() == (
+        ROOT / "scripts/rp1-gpclk-diagnostics.py").read_bytes()
+    assert (mixed_libexec / "gate-d-executor").read_bytes() == (
+        ROOT / "scripts/gate_d_outer.py").read_bytes()
+    assert all(item["status"] == "committed" for item in mixed_result["replacedFiles"])
+
+    # A late successor mismatch must recover earlier transitions and remove
+    # ordinary files installed between them.
+    recovery_target, recovery_libexec, recovery_predecessors = mixed_qualification_target(
+        "mixed-qualification-recovery-target")
+    recovery_identity_path = base / "mixed-qualification-recovery-identity.json"
+    recovery_identity_path.write_text(json.dumps(
+        mixed_identity(recovery_predecessors, executor_successor="0" * 64)) + "\n")
+    try:
+        admin.execute(release, "gpio4", False, None, None,
+                      root=recovery_target, runner=fake_runner,
+                      qualification_identity=recovery_identity_path)
+    except ValueError:
+        recovery_state = recovery_target / "var/lib/rp1-gpclk-dkms/transaction.json"
+        failed_mixed = json.loads(recovery_state.read_text())
+        assert failed_mixed["status"] == "inactive-recovery-required"
+        recovered_mixed = admin.recover(recovery_state, fake_runner)
+        assert recovered_mixed["status"] == "recovered"
+        for tool, content in recovery_predecessors.items():
+            assert (recovery_libexec / tool).read_bytes() == content
+        assert not (recovery_libexec / "rp1-gpclk-diagnostics").exists()
+    else:
+        raise AssertionError("incorrect mixed-transition successor unexpectedly installed")
+
     for field, replacement in (("archiveSha256", "0" * 64),
                                ("sourceCommit", "2" * 40),
                                ("liveOutput", True), ("outputDisabled", False),

@@ -599,7 +599,8 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
             if created:
                 transaction["ownedDirectories"].append(str(directory))
         def install_tool(origin: pathlib.Path, destination: pathlib.Path, mode: int) -> None:
-            transition = transitions.pop(str(pathlib.PurePosixPath("/") / destination.relative_to(root))) if transitions else None
+            transition_path = str(pathlib.PurePosixPath("/") / destination.relative_to(root))
+            transition = transitions.pop(transition_path, None)
             if transition is None:
                 if destination.exists() or destination.is_symlink():
                     raise ValueError(f"unsafe or existing package file: {destination}")
