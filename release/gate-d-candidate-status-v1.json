@@ -84,7 +84,8 @@
     "sourceCommit": "f7ddea06a68dedceb57aeec0ddedb67598a797e1",
     "archiveSha256": "2601cadb4f2abe25b72c7ed3237c00307bbcc11a8ed671331fef677089f93be9",
     "status": "frozen-offline",
-    "qualification": "offline-reproducible-unqualified",
+    "qualification": "Compatible-unqualified",
+    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "install and authenticate the complete transitive Gate D Python import graph"
   },
   "successorSelectionGate": "selected-to-correct-phase5.21-incomplete-installed-import-graph",
