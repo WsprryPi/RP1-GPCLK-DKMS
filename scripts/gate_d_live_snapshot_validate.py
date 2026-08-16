@@ -35,8 +35,11 @@ def compare(value:dict,*,envelope:dict,inventory:dict,route:dict,build:dict)->di
  prior=envelope.get("priorTerminalState")
  expected_prior={"path":ledger["path"],"sha256":ledger["sha256"],"status":ledger["status"],"recoveryRequired":ledger["recoveryRequired"],"liveOutput":ledger["liveOutput"],"ownerUid":ledger["ownerUid"],"mode":ledger["mode"],"archivePath":prior.get("archivePath") if isinstance(prior,dict) else None,"archiveMode":prior.get("archiveMode") if isinstance(prior,dict) else None}
  if prior!=expected_prior: raise ValueError("control predecessor ledger differs from live snapshot")
- if envelope.get("installedPackagePaths")!=value["packagePaths"] or inventory.get("paths")!=value["packagePaths"]: raise ValueError("control package inventory differs from live snapshot")
- if envelope.get("packagePathsSha256")!=value["packagePathsSha256"]: raise ValueError("control package digest differs from live snapshot")
+ control_paths=envelope.get("predecessorPackagePaths") if envelope.get("schemaVersion")==5 else envelope.get("installedPackagePaths")
+ control_digest=envelope.get("predecessorPackagePathsSha256") if envelope.get("schemaVersion")==5 else envelope.get("packagePathsSha256")
+ if control_paths!=value["packagePaths"] or inventory.get("paths")!=value["packagePaths"]: raise ValueError("control package inventory differs from live snapshot")
+ if control_digest!=value["packagePathsSha256"]: raise ValueError("control package digest differs from live snapshot")
+ if envelope.get("schemaVersion")==5 and envelope.get("liveTargetSnapshotSha256")!=result["snapshotSha256"]: raise ValueError("control snapshot identity differs")
  if route.get("candidate",{}).get("sourceCommit")!=build.get("candidate",{}).get("sourceCommit"): raise ValueError("source and build commits differ")
  if route.get("evidence",{}).get("kernelRelease")!=value["kernel"]["release"] or route.get("evidence",{}).get("kernelConfigSha256")!=value["kernel"]["configSha256"]: raise ValueError("control kernel identity differs from live snapshot")
  if build.get("target",{}).get("terminalRecoveryJournalSha256")!=value["terminalRecovery"]["sha256"]: raise ValueError("build recovery identity differs from live snapshot")

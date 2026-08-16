@@ -95,14 +95,17 @@ def validate(value: dict) -> dict:
                 "cleanupArgv", "recoveryArgv", "journal", "cleanupPaths",
                 "deadlineSeconds", "expectedPreState", "expectedPostState", "safety"}
     schema = value.get("schemaVersion")
-    if schema in {2, 3, 4}:
+    if schema in {2, 3, 4, 5}:
         required.update({"releaseInputs", "administratorState"})
-    if schema in {3,4}:
+    if schema in {3, 4, 5}:
         required.add("priorTerminalState")
-    if schema == 4:
+    if schema in {4, 5}:
         required.update({"installedPackagePaths","packagePathsSha256"})
+    if schema == 5:
+        required.update({"liveTargetSnapshotSha256", "predecessorPackagePaths",
+                         "predecessorPackagePathsSha256"})
     if (not isinstance(value, dict) or set(value) != required or
-            value.get("SPDX-License-Identifier") != "MIT" or schema not in {1, 2, 3, 4} or
+            value.get("SPDX-License-Identifier") != "MIT" or schema not in {1, 2, 3, 4, 5} or
             value.get("kind") != "gate-d-pre-root-bootstrap-envelope"):
         raise ValueError("invalid pre-root envelope identity")
     candidate = value["candidate"]
@@ -151,7 +154,7 @@ def validate(value: dict) -> dict:
         if input_paths.get(path) != expected:
             raise ValueError("pre-root primary input is not bound")
     release_inputs = value.get("releaseInputs", [])
-    if schema in {2, 3, 4} and (not isinstance(release_inputs, list) or len(release_inputs) != len(RELEASE_INPUT_ROLES)):
+    if schema in {2, 3, 4, 5} and (not isinstance(release_inputs, list) or len(release_inputs) != len(RELEASE_INPUT_ROLES)):
         raise ValueError("pre-root release-input graph is incomplete")
     roles = {}
     expected_release_names = dict(RELEASE_INPUT_ROLES)
@@ -164,10 +167,10 @@ def validate(value: dict) -> dict:
                 input_paths.get(item["path"]) != item["sha256"]):
             raise ValueError("invalid pre-root release-input identity")
         roles[item["role"]] = item
-    if schema in {2, 3, 4} and (set(roles) != set(RELEASE_INPUT_ROLES) or roles["archive"]["path"] != candidate["archivePath"]):
+    if schema in {2, 3, 4, 5} and (set(roles) != set(RELEASE_INPUT_ROLES) or roles["archive"]["path"] != candidate["archivePath"]):
         raise ValueError("pre-root release-input graph differs")
     release_parent = pathlib.PurePosixPath(candidate["archivePath"]).parent
-    if schema in {2, 3, 4} and any(pathlib.PurePosixPath(item["path"]).parent != release_parent for item in release_inputs):
+    if schema in {2, 3, 4, 5} and any(pathlib.PurePosixPath(item["path"]).parent != release_parent for item in release_inputs):
         raise ValueError("pre-root release inputs do not share the administrator release directory")
     administrator_state = value.get("administratorState", {
         "path": "/var/lib/rp1-gpclk-dkms/transaction.json",
@@ -182,13 +185,13 @@ def validate(value: dict) -> dict:
             ".." in pathlib.PurePosixPath(administrator_state["path"]).parts):
         raise ValueError("invalid administrator transaction-state contract")
     prior = value.get("priorTerminalState")
-    if schema in {3,4}:
+    if schema in {3, 4, 5}:
         prior_keys = {"path", "sha256", "status", "recoveryRequired", "liveOutput",
                       "ownerUid", "mode", "archivePath", "archiveMode"}
         if (not isinstance(prior, dict) or set(prior) != prior_keys or
                 prior.get("path") != administrator_state["path"] or
                 not SHA256.fullmatch(prior.get("sha256", "")) or
-                prior.get("status") != "recovered" or prior.get("recoveryRequired") is not False or
+                prior.get("status") not in ({"complete"} if schema == 5 else {"recovered"}) or prior.get("recoveryRequired") is not False or
                 prior.get("liveOutput") is not False or type(prior.get("ownerUid")) is not int or
                 prior["ownerUid"] < 0 or prior.get("mode") != "0600" or
                 prior.get("archiveMode") != "0400"):
@@ -198,10 +201,17 @@ def validate(value: dict) -> dict:
         if (not archive.is_absolute() or ".." in archive.parts or archive == current or
                 archive.parent.parent != current.parent):
             raise ValueError("invalid prior terminal archive path")
-    if schema==4:
+    if schema in {4, 5}:
         package_paths=validate_package_paths(value["installedPackagePaths"])
         if not SHA256.fullmatch(value.get("packagePathsSha256","")) or package_paths_digest(package_paths)!=value["packagePathsSha256"]: raise ValueError("typed package inventory digest differs")
         if not {item["path"] for item in value["installedTools"]}.issubset({item["path"] for item in package_paths}): raise ValueError("installed tools are outside typed package inventory")
+    if schema == 5 and not SHA256.fullmatch(value.get("liveTargetSnapshotSha256", "")):
+        raise ValueError("live-target snapshot identity differs")
+    if schema == 5:
+        predecessor_paths = validate_package_paths(value["predecessorPackagePaths"])
+        if (not SHA256.fullmatch(value.get("predecessorPackagePathsSha256", "")) or
+                package_paths_digest(predecessor_paths) != value["predecessorPackagePathsSha256"]):
+            raise ValueError("predecessor package inventory digest differs")
     for item in transitions:
         if (not isinstance(item, dict) or set(item) != {"sourcePath", "destination", "sha256", "mode"} or
                 item.get("sourcePath") not in input_paths or input_paths[item["sourcePath"]] != item.get("sha256") or
@@ -368,7 +378,7 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
         path = rooted(prefix, item["path"])
         if path.is_symlink() or not path.is_file() or digest(path) != item["sha256"]:
             raise ValueError("pre-root input identity differs")
-    if value["schemaVersion"] in {2, 3}:
+    if value["schemaVersion"] in {2, 3, 4, 5}:
         validate_release_inputs(value, prefix=prefix)
     if prior_contract:
         if (administrator_state.is_symlink() or not administrator_state.is_file() or
@@ -439,7 +449,7 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
                     path = rooted(prefix, item["path"])
                     if path.is_symlink() or not path.is_file() or digest(path) != item["sha256"]:
                         raise ValueError("installed transition tool differs")
-                if value["schemaVersion"]==4:
+                if value["schemaVersion"] in {4, 5}:
                     for item in value["installedPackagePaths"]: verify_package_path(prefix,item)
                 for item in value["transitionFiles"]:
                     path = root / item["destination"]

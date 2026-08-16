@@ -3,6 +3,7 @@
 """Check the repository's per-file SPDX policy for governed source files."""
 
 from pathlib import Path
+import json
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,11 +20,23 @@ ROOT_FILES = ["Kbuild", "Makefile", "dkms.conf"]
 
 
 def identifier(path: Path) -> str | None:
+    if path.suffix == ".json":
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return None
+        if not isinstance(value, dict):
+            return None
+        found = value.get("SPDX-License-Identifier")
+        if isinstance(found, str):
+            return found
+        comment = value.get("$comment")
+        marker = "SPDX-License-Identifier:"
+        if isinstance(comment, str) and marker in comment:
+            return comment.split(marker, 1)[1].strip()
+        return None
     for line in path.read_text(encoding="utf-8").splitlines()[:5]:
         marker = "SPDX-License-Identifier:"
-        if ('"SPDX-License-Identifier": "MIT"' in line or
-                '"SPDX-License-Identifier":"MIT"' in line):
-            return "MIT"
         if marker in line:
             value = line.split(marker, 1)[1].strip().rstrip(" -->*/,")
             return value.strip('"')
