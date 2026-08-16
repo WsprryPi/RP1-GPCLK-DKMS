@@ -2,12 +2,18 @@
 # SPDX-License-Identifier: MIT
 """Validate the sealed Phase 5.25 Gate D control set entirely offline."""
 from __future__ import annotations
-import copy, hashlib, json, pathlib, shutil, sys, tempfile
+import copy, hashlib, json, pathlib, subprocess, sys, tempfile
 ROOT=pathlib.Path(__file__).resolve().parents[1]; sys.path.insert(0,str(ROOT/"scripts"))
 import gate_d_attempts, gate_d_bootstrap, gate_d_instance, gate_d_preroot, gate_d_root, gate_d_target_plan
 def load(relative):
  p=ROOT/relative; assert p.is_file() and not p.is_symlink(); return json.loads(p.read_text())
 def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
+def frozen_payload(relative,expected):
+ p=ROOT/relative
+ if p.is_file() and sha(p)==expected: return p.read_bytes()
+ payload=subprocess.check_output(["git","show","d9f8fd8b17f1c2ee9324704c6b6630dfccfb5e4e:"+relative],cwd=ROOT)
+ assert hashlib.sha256(payload).hexdigest()==expected
+ return payload
 envelope=load("release/gate-d-pre-root-bootstrap-envelope-phase5.25-v1.json")
 bootstrap=load("release/gate-d-qualification-bootstrap-plan-phase5.25-v1.json")
 route=load("release/gate-d-route-compatibility-decision-phase5.25-v1.json")
@@ -47,7 +53,7 @@ assert sum(x["matrixRow"]=="removal-open-or-active" for x in documents)==4
 with tempfile.TemporaryDirectory() as temporary:
  fake=pathlib.Path(temporary)/"qualification"; fake.mkdir(mode=0o700); marker=fake/instance["qualificationRoot"]["identityFile"]; marker.write_text(json.dumps(envelope["proposedRoot"]["marker"],sort_keys=True,separators=(",",":"))+"\n"); marker.chmod(0o400); assert sha(marker)==instance["qualificationRoot"]["identitySha256"]
  for item in envelope["transitionFiles"]:
-  source=ROOT/item["destination"]; assert sha(source)==item["sha256"]; target=fake/item["destination"]; target.parent.mkdir(parents=True,exist_ok=True); shutil.copyfile(source,target)
+  payload=frozen_payload(item["destination"],item["sha256"]); target=fake/item["destination"]; target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(payload)
  original=gate_d_root.validate
  def offline(reference,*,verify=True): original(reference,verify=False); return fake
  gate_d_root.validate=offline

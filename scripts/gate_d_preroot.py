@@ -17,7 +17,7 @@ COMMIT = __import__("re").compile(r"[0-9a-f]{40}")
 CHECKPOINTS = ("preflight", "create-root", "install", "cleanup-runtime",
                "copy-control-set", "verify-transition", "commit")
 RELEASE_INPUT_ROLES = {
-    "archive": "rp1-gpclk-dkms-0.0.0-phase5.25.tar.gz",
+    "archive": None,
     "gpio4Dtbo": "rp1-gpclk-gpio4.dtbo",
     "gpio20Dtbo": "rp1-gpclk-gpio20.dtbo",
     "compatibilityManifest": "rp1-gpclk-compatibility-manifest.json",
@@ -118,10 +118,12 @@ def validate(value: dict) -> dict:
     if schema == 2 and (not isinstance(release_inputs, list) or len(release_inputs) != len(RELEASE_INPUT_ROLES)):
         raise ValueError("pre-root release-input graph is incomplete")
     roles = {}
+    expected_release_names = dict(RELEASE_INPUT_ROLES)
+    expected_release_names["archive"] = f"rp1-gpclk-dkms-{candidate['release']}.tar.gz"
     for item in release_inputs:
         if (not isinstance(item, dict) or set(item) != {"role", "path", "sha256"} or
                 item.get("role") not in RELEASE_INPUT_ROLES or
-                pathlib.PurePosixPath(item.get("path", "")).name != RELEASE_INPUT_ROLES[item["role"]] or
+                pathlib.PurePosixPath(item.get("path", "")).name != expected_release_names[item["role"]] or
                 not SHA256.fullmatch(item.get("sha256", "")) or
                 input_paths.get(item["path"]) != item["sha256"]):
             raise ValueError("invalid pre-root release-input identity")
@@ -201,10 +203,11 @@ def validate_release_inputs(value: dict, *, prefix: pathlib.Path) -> None:
         if parts[1] in checksums:
             raise ValueError("duplicate staged SHA256SUMS entry")
         checksums[parts[1]] = parts[0]
-    expected = {RELEASE_INPUT_ROLES[role] for role in RELEASE_INPUT_ROLES if role != "checksums"}
+    expected = {paths[role].name for role in RELEASE_INPUT_ROLES if role != "checksums"}
     if set(checksums) != expected:
         raise ValueError("staged SHA256SUMS membership differs")
-    for role, name in RELEASE_INPUT_ROLES.items():
+    for role in RELEASE_INPUT_ROLES:
+        name = paths[role].name
         if role != "checksums" and checksums[name] != records[role]["sha256"]:
             raise ValueError(f"staged SHA256SUMS hash differs: {role}")
 

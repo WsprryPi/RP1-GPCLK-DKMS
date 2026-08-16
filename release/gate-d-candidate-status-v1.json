@@ -105,17 +105,25 @@
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "reconcile the published target-plan schema with the permanent validator and executor",
     "blocker": "The authenticated pre-root attempt proved that required release sidecars were absent from the sealed staging graph and that recovery could not clean a failure before administrator transaction-state creation."
-  }],
-  "successor": {
+  }, {
     "release": "0.0.0-phase5.25",
     "sourceCommit": "d9f8fd8b17f1c2ee9324704c6b6630dfccfb5e4e",
     "archiveSha256": "e615750897009b79d0ead1e3bbf4133e0c4d5c157cc259d513a76ad65bd993e4",
-    "status": "representative-build-compatible",
+    "status": "blocked-before-gate-d-lifecycle",
     "qualification": "Compatible-unqualified",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
-    "purpose": "close the administrator release-input graph and make pre-root recovery phase-aware and idempotent"
+    "purpose": "close the administrator release-input graph and make pre-root recovery phase-aware and idempotent",
+    "blocker": "The frozen archive's packaged runbook and authorization dossier incorrectly describe the separate I2C-controlled Si5351 RF path as connected to GPIO4 and GPIO20."
+  }],
+  "successor": {
+    "release": "0.0.0-phase5.26",
+    "sourceCommit": null,
+    "archiveSha256": null,
+    "status": "implemented-offline-awaiting-clean-commit-freeze",
+    "qualification": "unqualified",
+    "purpose": "correct the packaged Si5351 and GPIO4/GPIO20 topology without changing module behavior"
   },
-  "successorSelectionGate": "selected-to-correct-phase5.24-pre-root-staging-and-recovery-contradictions",
+  "successorSelectionGate": "selected-to-correct-phase5.25-packaged-si5351-topology-wording",
   "reuseProhibited": [
     "representative-build-promotion",
     "route-decision",
