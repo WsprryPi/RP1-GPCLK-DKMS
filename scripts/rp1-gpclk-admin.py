@@ -27,7 +27,7 @@ from typing import Callable
 
 PACKAGE = "rp1-gpclk-dkms"
 MODULE = "rp1_gpclk_dkms"
-VERSION = "0.0.0-phase5.24"
+VERSION = "0.0.0-phase5.25"
 ROUTES = {"gpio4": "rp1-gpclk-gpio4.dtbo", "gpio20": "rp1-gpclk-gpio20.dtbo"}
 ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
                       "remove-old-binding-proven-cleanup", "verify-both-pins-safe",
@@ -468,6 +468,8 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                           release_data / "diagnostics-contract-v1.json", 0o644),
                          (source / "release/lifecycle-removal-contract-v1.json",
                           release_data / "lifecycle-removal-contract-v1.json", 0o644),
+                         (source / "release/gate-d-phase5.24-residue-recovery-v1.json",
+                          release_data / "gate-d-phase5.24-residue-recovery-v1.json", 0o644),
                          (source / "schema/gate-d-execution-instance-v1.schema.json",
                           release_data / "gate-d-execution-instance-v1.schema.json", 0o644),
                          (source / "schema/gate-d-qualification-root-v1.schema.json", release_data / "gate-d-qualification-root-v1.schema.json", 0o644),
@@ -493,6 +495,8 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                           libexec / "gate-d-executor", 0o755),
                          (source / "scripts/gate_d_bootstrap.py",
                           libexec / "gate-d-bootstrap", 0o755),
+                         (source / "scripts/gate_d_residue.py",
+                          libexec / "gate-d-residue", 0o755),
                          (source / "scripts/gate_d_root.py",
                           libexec / "gate_d_root.py", 0o644),
                          (source / "scripts/gate_d_bootstrap.py", libexec / "gate_d_bootstrap.py", 0o644),

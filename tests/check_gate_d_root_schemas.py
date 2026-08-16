@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy, json, pathlib, subprocess, tempfile
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-root={"path":"/home/pi/gate-d-qualification/phase5.24","identityFile":".gate-d-root.json","identitySha256":"1"*64,"ownerUid":1000,"mode":"0700"}
+root={"path":"/home/pi/gate-d-qualification/phase5.25","identityFile":".gate-d-root.json","identitySha256":"1"*64,"ownerUid":1000,"mode":"0700"}
 bootstrap={"SPDX-License-Identifier":"MIT","schemaVersion":3,"kind":"gate-d-qualification-bootstrap-plan","operationId":"x","hostId":"h","qualificationRoot":root,"predecessorVersion":"p","kernelRelease":"k","stagingDirectory":"/s","candidate":{},"qualificationIdentity":{},"administrator":{},"argv":[],"cleanupArgv":[],"recoveryArgv":[],"journal":"/j","deadlineSeconds":1,"expectedPreState":{},"expectedPostState":{},"retainedTools":[{}],"cleanupPaths":["/c"],"safety":{}}
 module={"sourcePath":"scripts/gate_d_root.py","installedPath":"/usr/libexec/rp1-gpclk-dkms/gate_d_root.py","sourceSha256":"2"*64,"installedSha256":"2"*64,"installKind":"copied","candidateArchiveMember":True}
 names=("gate_d_root","gate_d_bootstrap","gate_d_target_plan","gate_d_lifecycle","gate_d_outer","gate_d_attempts","gate_d_instance","gate_d_preroot")

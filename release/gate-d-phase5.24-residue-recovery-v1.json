@@ -1,0 +1,41 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-failed-preroot-residue-recovery",
+  "operationId": "phase5.24-failed-preroot-residue-cleanup",
+  "host": "wspr5",
+  "candidate": "0.0.0-phase5.24",
+  "root": "/home/pi/gate-d-qualification/phase5.24-2a6ddeb8e0f7",
+  "marker": {
+    "path": "/home/pi/gate-d-qualification/phase5.24-2a6ddeb8e0f7/.gate-d-root.json",
+    "sha256": "8e87f7ceb3b576bdd7a349c72d481ddd7aad7ec5f3a94ea797815a85fb896cf4"
+  },
+  "journal": {
+    "path": "/var/lib/rp1-gpclk-dkms/gate-d/pre-root-phase5.24.json",
+    "sha256": "13e40435e25a75947fa31bf302ede827db104318db512ef04b9a72343b300212"
+  },
+  "administratorState": {
+    "path": "/var/lib/rp1-gpclk-dkms/transaction.json",
+    "expected": "absent"
+  },
+  "preservedPaths": [
+    "/home/pi/gate-d-inputs/phase5.24-2a6ddeb8e0f7",
+    "/home/pi/gate-c-evidence"
+  ],
+  "expectedBaseline": {
+    "moduleLoaded": false,
+    "endpointPresent": false,
+    "overlayActive": false,
+    "dkmsTestVersions": false,
+    "liveOutput": false
+  },
+  "safety": {
+    "outputDisabled": true,
+    "liveOutput": false,
+    "gpioAccess": false,
+    "clockEnabled": false,
+    "dmaActive": false,
+    "sdrActive": false,
+    "rf": false
+  }
+}

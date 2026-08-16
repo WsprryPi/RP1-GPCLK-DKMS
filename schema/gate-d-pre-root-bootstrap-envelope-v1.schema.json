@@ -5,12 +5,14 @@
   "type": "object", "additionalProperties": false,
   "required": ["SPDX-License-Identifier", "schemaVersion", "kind", "operationId", "candidate", "proposedRoot", "stagedExecutor", "preRootModule", "administrator", "qualificationIdentity", "inputFiles", "transitionFiles", "installedTools", "argv", "cleanupArgv", "recoveryArgv", "journal", "cleanupPaths", "deadlineSeconds", "expectedPreState", "expectedPostState", "safety"],
   "properties": {
-    "SPDX-License-Identifier": {"const": "MIT"}, "schemaVersion": {"const": 1},
+    "SPDX-License-Identifier": {"const": "MIT"}, "schemaVersion": {"enum": [1, 2]},
     "kind": {"const": "gate-d-pre-root-bootstrap-envelope"}, "operationId": {"type": "string", "minLength": 1},
     "candidate": {"type": "object", "additionalProperties": false, "required": ["release", "sourceCommit", "archivePath", "archiveSha256"], "properties": {"release": {"type": "string"}, "sourceCommit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "archivePath": {"type": "string", "pattern": "^/"}, "archiveSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
     "proposedRoot": {"type": "object", "additionalProperties": false, "required": ["path", "ownerUid", "mode", "marker", "markerSha256"], "properties": {"path": {"type": "string", "pattern": "^/"}, "ownerUid": {"type": "integer", "minimum": 0}, "mode": {"const": "0700"}, "marker": {"type": "object"}, "markerSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
     "stagedExecutor": {"$ref": "#/$defs/identity"}, "preRootModule": {"$ref": "#/$defs/identity"}, "administrator": {"$ref": "#/$defs/identity"}, "qualificationIdentity": {"$ref": "#/$defs/identity"},
     "inputFiles": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/identity"}},
+    "releaseInputs": {"type": "array", "minItems": 7, "maxItems": 7, "items": {"type": "object", "additionalProperties": false, "required": ["role", "path", "sha256"], "properties": {"role": {"enum": ["archive", "gpio4Dtbo", "gpio20Dtbo", "compatibilityManifest", "provenance", "releaseMetadata", "checksums"]}, "path": {"type": "string", "pattern": "^/"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}}},
+    "administratorState": {"type": "object", "additionalProperties": false, "required": ["path", "absenceBeforeInvocation", "recoveryPolicy"], "properties": {"path": {"type": "string", "pattern": "^/"}, "absenceBeforeInvocation": {"const": true}, "recoveryPolicy": {"const": "invoke-only-for-real-owned-state"}}},
     "transitionFiles": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["sourcePath", "destination", "sha256", "mode"], "properties": {"sourcePath": {"type": "string", "pattern": "^/"}, "destination": {"type": "string", "pattern": "^[^/]"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "mode": {"enum": ["0400", "0444"]}}}},
     "installedTools": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/identity"}},
     "argv": {"$ref": "#/$defs/argv"}, "cleanupArgv": {"$ref": "#/$defs/argv"}, "recoveryArgv": {"$ref": "#/$defs/argv"},
@@ -18,6 +20,7 @@
     "deadlineSeconds": {"type": "integer", "minimum": 1, "maximum": 1800},
     "expectedPreState": {"type": "object"}, "expectedPostState": {"type": "object"}, "safety": {"type": "object"}
   },
+  "allOf": [{"if": {"properties": {"schemaVersion": {"const": 2}}}, "then": {"required": ["releaseInputs", "administratorState"]}}],
   "$defs": {
     "identity": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"type": "string", "pattern": "^/"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
     "argv": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}

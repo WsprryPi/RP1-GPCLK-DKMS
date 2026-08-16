@@ -19,7 +19,7 @@ spec.loader.exec_module(admin)
 
 model = json.loads((ROOT / "release/installation-model-v1.json").read_text())
 layout = json.loads((ROOT / "release/release-layout-v1.json").read_text())
-assert model["release"] == layout["release"] == "0.0.0-phase5.24"
+assert model["release"] == layout["release"] == "0.0.0-phase5.25"
 assert model["dkmsModule"] == layout["package"]
 assert model["kernelModule"] == layout["module"]
 assert model["transaction"] == admin.STEPS
@@ -63,6 +63,7 @@ with tempfile.TemporaryDirectory() as temporary:
                          "release/permissions-enrollment-policy-v1.json",
                          "release/diagnostics-contract-v1.json",
                          "release/lifecycle-removal-contract-v1.json",
+                         "release/gate-d-phase5.24-residue-recovery-v1.json",
                          "schema/gate-d-execution-instance-v1.schema.json",
                          "schema/gate-d-qualification-root-v1.schema.json",
                          "schema/gate-d-qualification-bootstrap-plan-v1.schema.json",
@@ -74,7 +75,7 @@ with tempfile.TemporaryDirectory() as temporary:
                          "scripts/gate_d_platform.py",
                          "scripts/gate_d_boot.py", "scripts/gate_d_target_plan.py",
                          "scripts/gate_d_attempts.py", "scripts/gate_d_outer.py",
-                         "scripts/gate_d_bootstrap.py", "scripts/gate_d_root.py", "scripts/gate_d_preroot.py",
+                         "scripts/gate_d_bootstrap.py", "scripts/gate_d_root.py", "scripts/gate_d_preroot.py", "scripts/gate_d_residue.py",
                          "tools/gate_d_uapi_probe.c",
                          "tools/gate_d_busy_injector.c",
                          "docs/operator/lifecycle.md", "docs/operator/signing.md"):
@@ -114,20 +115,21 @@ with tempfile.TemporaryDirectory() as temporary:
     assert (target / "boot/firmware/overlays/rp1-gpclk-gpio4.dtbo").read_bytes() == b"gpio4"
     assert not (target / "boot/firmware/overlays/rp1-gpclk-gpio20.dtbo").exists()
     assert (target / "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.24/overlay-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.24/permissions-enrollment-policy-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.24/diagnostics-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.24/lifecycle-removal-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.25/overlay-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.25/permissions-enrollment-policy-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.25/diagnostics-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.25/lifecycle-removal-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.25/gate-d-phase5.24-residue-recovery-v1.json").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/lifecycle-policy").is_file()
-    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.24/gate-d-execution-instance-v1.json").exists()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.24/gate-d-execution-instance-v1.schema.json").is_file()
+    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.25/gate-d-execution-instance-v1.json").exists()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.25/gate-d-execution-instance-v1.schema.json").is_file()
     for schema_name in ("gate-d-qualification-root-v1.schema.json", "gate-d-qualification-bootstrap-plan-v1.schema.json", "gate-d-target-plan-v1.schema.json", "gate-d-attempt-index-v1.schema.json", "gate-d-pre-root-bootstrap-envelope-v1.schema.json"):
-        assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.24" / schema_name).is_file()
+        assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.25" / schema_name).is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-instance").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-platform").is_file()
     for tool in ("gate-d-boot", "gate-d-target-plan", "gate-d-attempts", "gate-d-bootstrap",
-                 "gate-d-executor", "gate-d-busy-injector"):
+                 "gate-d-executor", "gate-d-busy-injector", "gate-d-residue"):
         assert (target / "usr/libexec/rp1-gpclk-dkms" / tool).is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate_d_root.py").is_file()
     for module_name in ("gate_d_bootstrap.py", "gate_d_target_plan.py",

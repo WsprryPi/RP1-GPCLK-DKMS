@@ -96,17 +96,25 @@
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "establish a closed one-shot pre-root trust transition into the root-bound Gate D control set",
     "blocker": "The frozen target-plan JSON Schema requires attemptEnvelope to be an object while the permanent validator and executor require an ordered list."
-  }],
-  "successor": {
+  }, {
     "release": "0.0.0-phase5.24",
     "sourceCommit": "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5",
     "archiveSha256": "0da181f1ccfa9fb9edbd34456cec95730be8922283d1c5b207af376491413d8a",
-    "status": "frozen-offline",
+    "status": "blocked-before-gate-d-lifecycle",
     "qualification": "Compatible-unqualified",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
-    "purpose": "reconcile the published target-plan schema with the permanent validator and executor"
+    "purpose": "reconcile the published target-plan schema with the permanent validator and executor",
+    "blocker": "The authenticated pre-root attempt proved that required release sidecars were absent from the sealed staging graph and that recovery could not clean a failure before administrator transaction-state creation."
+  }],
+  "successor": {
+    "release": "0.0.0-phase5.25",
+    "sourceCommit": null,
+    "archiveSha256": null,
+    "status": "implemented-offline-awaiting-clean-commit-freeze",
+    "qualification": "unqualified",
+    "purpose": "close the administrator release-input graph and make pre-root recovery phase-aware and idempotent"
   },
-  "successorSelectionGate": "selected-to-correct-phase5.23-target-plan-schema-contradiction",
+  "successorSelectionGate": "selected-to-correct-phase5.24-pre-root-staging-and-recovery-contradictions",
   "reuseProhibited": [
     "representative-build-promotion",
     "route-decision",

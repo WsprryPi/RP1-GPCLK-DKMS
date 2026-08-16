@@ -16,6 +16,15 @@ SHA256 = __import__("re").compile(r"[0-9a-f]{64}")
 COMMIT = __import__("re").compile(r"[0-9a-f]{40}")
 CHECKPOINTS = ("preflight", "create-root", "install", "cleanup-runtime",
                "copy-control-set", "verify-transition", "commit")
+RELEASE_INPUT_ROLES = {
+    "archive": "rp1-gpclk-dkms-0.0.0-phase5.25.tar.gz",
+    "gpio4Dtbo": "rp1-gpclk-gpio4.dtbo",
+    "gpio20Dtbo": "rp1-gpclk-gpio20.dtbo",
+    "compatibilityManifest": "rp1-gpclk-compatibility-manifest.json",
+    "provenance": "PROVENANCE.json",
+    "releaseMetadata": "release-metadata.json",
+    "checksums": "SHA256SUMS",
+}
 
 
 def digest(path: pathlib.Path) -> str:
@@ -53,8 +62,11 @@ def validate(value: dict) -> dict:
                 "inputFiles", "transitionFiles", "installedTools", "argv",
                 "cleanupArgv", "recoveryArgv", "journal", "cleanupPaths",
                 "deadlineSeconds", "expectedPreState", "expectedPostState", "safety"}
+    schema = value.get("schemaVersion")
+    if schema == 2:
+        required.update({"releaseInputs", "administratorState"})
     if (not isinstance(value, dict) or set(value) != required or
-            value.get("SPDX-License-Identifier") != "MIT" or value.get("schemaVersion") != 1 or
+            value.get("SPDX-License-Identifier") != "MIT" or schema not in {1, 2} or
             value.get("kind") != "gate-d-pre-root-bootstrap-envelope"):
         raise ValueError("invalid pre-root envelope identity")
     candidate = value["candidate"]
@@ -102,6 +114,35 @@ def validate(value: dict) -> dict:
         expected = item["archiveSha256"] if item is candidate else item["sha256"]
         if input_paths.get(path) != expected:
             raise ValueError("pre-root primary input is not bound")
+    release_inputs = value.get("releaseInputs", [])
+    if schema == 2 and (not isinstance(release_inputs, list) or len(release_inputs) != len(RELEASE_INPUT_ROLES)):
+        raise ValueError("pre-root release-input graph is incomplete")
+    roles = {}
+    for item in release_inputs:
+        if (not isinstance(item, dict) or set(item) != {"role", "path", "sha256"} or
+                item.get("role") not in RELEASE_INPUT_ROLES or
+                pathlib.PurePosixPath(item.get("path", "")).name != RELEASE_INPUT_ROLES[item["role"]] or
+                not SHA256.fullmatch(item.get("sha256", "")) or
+                input_paths.get(item["path"]) != item["sha256"]):
+            raise ValueError("invalid pre-root release-input identity")
+        roles[item["role"]] = item
+    if schema == 2 and (set(roles) != set(RELEASE_INPUT_ROLES) or roles["archive"]["path"] != candidate["archivePath"]):
+        raise ValueError("pre-root release-input graph differs")
+    release_parent = pathlib.PurePosixPath(candidate["archivePath"]).parent
+    if schema == 2 and any(pathlib.PurePosixPath(item["path"]).parent != release_parent for item in release_inputs):
+        raise ValueError("pre-root release inputs do not share the administrator release directory")
+    administrator_state = value.get("administratorState", {
+        "path": "/var/lib/rp1-gpclk-dkms/transaction.json",
+        "absenceBeforeInvocation": True,
+        "recoveryPolicy": "invoke-only-for-real-owned-state",
+    })
+    if (not isinstance(administrator_state, dict) or
+            set(administrator_state) != {"path", "absenceBeforeInvocation", "recoveryPolicy"} or
+            administrator_state.get("absenceBeforeInvocation") is not True or
+            administrator_state.get("recoveryPolicy") != "invoke-only-for-real-owned-state" or
+            not pathlib.PurePosixPath(administrator_state.get("path", "")).is_absolute() or
+            ".." in pathlib.PurePosixPath(administrator_state["path"]).parts):
+        raise ValueError("invalid administrator transaction-state contract")
     for item in transitions:
         if (not isinstance(item, dict) or set(item) != {"sourcePath", "destination", "sha256", "mode"} or
                 item.get("sourcePath") not in input_paths or input_paths[item["sourcePath"]] != item.get("sha256") or
@@ -136,11 +177,59 @@ def validate(value: dict) -> dict:
     if not isinstance(value["cleanupPaths"], list) or not value["cleanupPaths"] or not 1 <= value["deadlineSeconds"] <= 1800:
         raise ValueError("pre-root lifecycle is incomplete")
     absolute = [root["path"], value["stagedExecutor"]["path"], value["preRootModule"]["path"],
-                value["journal"], candidate["archivePath"], *value["cleanupPaths"],
+                value["journal"], administrator_state["path"], candidate["archivePath"], *value["cleanupPaths"],
                 *(item["path"] for item in value["inputFiles"]), *(item["path"] for item in value["installedTools"])]
     if any(not pathlib.PurePosixPath(path).is_absolute() or ".." in pathlib.PurePosixPath(path).parts for path in absolute):
         raise ValueError("pre-root path is not absolute and closed")
     return {"valid": True, "readOnly": True, "outputDisabled": True}
+
+
+def validate_release_inputs(value: dict, *, prefix: pathlib.Path) -> None:
+    records = {item["role"]: item for item in value["releaseInputs"]}
+    paths = {}
+    for role, item in records.items():
+        path = rooted(prefix, item["path"])
+        if path.is_symlink() or not path.is_file() or digest(path) != item["sha256"]:
+            raise ValueError(f"pre-root release input differs: {role}")
+        paths[role] = path
+    lines = paths["checksums"].read_text(encoding="utf-8").splitlines()
+    checksums = {}
+    for line in lines:
+        parts = line.split("  ", 1)
+        if len(parts) != 2 or not SHA256.fullmatch(parts[0]) or pathlib.PurePosixPath(parts[1]).name != parts[1]:
+            raise ValueError("invalid staged SHA256SUMS entry")
+        if parts[1] in checksums:
+            raise ValueError("duplicate staged SHA256SUMS entry")
+        checksums[parts[1]] = parts[0]
+    expected = {RELEASE_INPUT_ROLES[role] for role in RELEASE_INPUT_ROLES if role != "checksums"}
+    if set(checksums) != expected:
+        raise ValueError("staged SHA256SUMS membership differs")
+    for role, name in RELEASE_INPUT_ROLES.items():
+        if role != "checksums" and checksums[name] != records[role]["sha256"]:
+            raise ValueError(f"staged SHA256SUMS hash differs: {role}")
+
+
+def validate_partial_root(value: dict, root: pathlib.Path) -> None:
+    if not root.exists():
+        return
+    marker = root / ".gate-d-root.json"
+    if (root.is_symlink() or not root.is_dir() or marker.is_symlink() or not marker.is_file() or
+            digest(marker) != value["proposedRoot"]["markerSha256"]):
+        raise ValueError("partial root identity differs during recovery")
+    allowed_files = {marker}
+    allowed_directories = {root}
+    for item in value["transitionFiles"]:
+        path = root / item["destination"]
+        current = path.parent
+        while current != root:
+            allowed_directories.add(current); current = current.parent
+        if path.exists() or path.is_symlink():
+            if path.is_symlink() or not path.is_file() or digest(path) != item["sha256"]:
+                raise ValueError("partial transition file differs during recovery")
+            allowed_files.add(path)
+    for path in root.rglob("*"):
+        if path.is_symlink() or (path.is_file() and path not in allowed_files) or (path.is_dir() and path not in allowed_directories):
+            raise ValueError("partial root contains foreign recovery bytes")
 
 
 def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], None],
@@ -148,17 +237,32 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
     validate(value)
     root = rooted(prefix, value["proposedRoot"]["path"])
     journal = rooted(prefix, value["journal"])
+    administrator_contract = value.get("administratorState", {
+        "path": "/var/lib/rp1-gpclk-dkms/transaction.json",
+    })
+    administrator_state = rooted(prefix, administrator_contract["path"])
     if recover:
+        if not journal.exists() and not journal.is_symlink() and not root.exists() and not root.is_symlink():
+            if probe() != value["expectedPreState"]:
+                raise ValueError("already-clean pre-root recovery baseline differs")
+            return {"operationId": value["operationId"], "status": "already-clean", "liveOutput": False}
         if journal.is_symlink() or not journal.is_file():
             raise ValueError("pre-root recovery journal is absent")
         old = json.loads(journal.read_text())
-        if old.get("status") != "recovery-required" or old.get("liveOutput") is not False:
+        if (old.get("status") != "recovery-required" or old.get("liveOutput") is not False or
+                type(old.get("administratorInvoked")) is not bool):
             raise ValueError("pre-root journal is not recoverable")
-        runner(value["recoveryArgv"])
+        validate_partial_root(value, root)
+        if administrator_state.is_symlink():
+            raise ValueError("administrator transaction state is symlinked")
+        if administrator_state.exists():
+            if not administrator_state.is_file() or not old["administratorInvoked"]:
+                raise ValueError("administrator transaction state is ambiguous")
+            runner(value["recoveryArgv"])
+        elif probe() != value["expectedPreState"]:
+            raise ValueError("pre-administrator recovery baseline differs")
         if root.exists():
             marker = root / ".gate-d-root.json"
-            if marker.is_symlink() or not marker.is_file() or digest(marker) != value["proposedRoot"]["markerSha256"]:
-                raise ValueError("partial root identity differs during recovery")
             for item in reversed(value["transitionFiles"]):
                 path = root / item["destination"]
                 if path.exists() and not path.is_symlink() and digest(path) == item["sha256"]:
@@ -178,7 +282,12 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
         path = rooted(prefix, item["path"])
         if path.is_symlink() or not path.is_file() or digest(path) != item["sha256"]:
             raise ValueError("pre-root input identity differs")
-    state = {"operationId": value["operationId"], "status": "in-progress", "checkpoint": "preflight", "liveOutput": False}
+    if value["schemaVersion"] == 2:
+        validate_release_inputs(value, prefix=prefix)
+    if administrator_state.exists() or administrator_state.is_symlink():
+        raise ValueError("administrator transaction state exists before invocation")
+    state = {"operationId": value["operationId"], "status": "in-progress", "checkpoint": "preflight",
+             "liveOutput": False, "administratorInvoked": False}
     atomic_json(journal, state)
     try:
         if probe() != value["expectedPreState"]:
@@ -193,6 +302,8 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
                 marker.write_text(json.dumps(value["proposedRoot"]["marker"], sort_keys=True, separators=(",", ":")) + "\n")
                 marker.chmod(0o400)
             elif checkpoint == "install":
+                state["administratorInvoked"] = True
+                atomic_json(journal, state)
                 runner(value["argv"])
             elif checkpoint == "cleanup-runtime":
                 runner(value["cleanupArgv"])
