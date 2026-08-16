@@ -360,9 +360,12 @@ def validate_qualification_identity(path: pathlib.Path, metadata: dict,
     required = {"SPDX-License-Identifier", "schemaVersion", "kind", "release",
                 "sourceCommit", "archiveSha256", "publishable", "tagPresent",
                 "outputDisabled", "liveOutput", "purpose"}
+    schema = value.get("schemaVersion")
+    if schema == 2:
+        required.add("toolTransitions")
     if (not isinstance(value, dict) or set(value) != required or
             value.get("SPDX-License-Identifier") != "MIT" or
-            value.get("schemaVersion") != 1 or
+            schema not in {1, 2} or
             value.get("kind") != "rp1-gpclk-gate-d-qualification-install-identity" or
             value.get("publishable") is not False or value.get("tagPresent") is not False or
             value.get("outputDisabled") is not True or value.get("liveOutput") is not False or
@@ -375,7 +378,58 @@ def validate_qualification_identity(path: pathlib.Path, metadata: dict,
             value.get("sourceCommit") != metadata.get("sourceCommit") or
             value.get("archiveSha256") != archive_sha256):
         raise ValueError("qualification identity differs from sealed candidate")
+    if schema == 2:
+        paths = []
+        for item in value["toolTransitions"]:
+            if (not isinstance(item, dict) or set(item) != {"path", "predecessorSha256", "successorSha256", "mode"} or
+                    not pathlib.PurePosixPath(item.get("path", "")).is_absolute() or
+                    ".." in pathlib.PurePosixPath(item["path"]).parts or
+                    not all(re.fullmatch(r"[0-9a-f]{64}", item.get(key, ""))
+                            for key in ("predecessorSha256", "successorSha256")) or
+                    item.get("mode") not in {"0644", "0755"}):
+                raise ValueError("invalid qualification tool transition")
+            paths.append(item["path"])
+        if not paths or len(paths) != len(set(paths)):
+            raise ValueError("qualification tool-transition graph is empty or ambiguous")
     return value
+
+
+def replace_qualification_tool(destination: pathlib.Path, prepared: pathlib.Path,
+                               transition: dict, transaction: dict,
+                               state_path: pathlib.Path) -> None:
+    """Atomically replace one authenticated predecessor and ledger its backup."""
+    if (destination.is_symlink() or not destination.is_file() or
+            digest(destination) != transition["predecessorSha256"] or
+            prepared.is_symlink() or not prepared.is_file() or
+            digest(prepared) != transition["successorSha256"]):
+        raise ValueError(f"qualification tool transition identity differs: {destination}")
+    backup = destination.with_name(f".{destination.name}.rp1-gpclk-predecessor")
+    if backup.exists() or backup.is_symlink():
+        raise ValueError(f"qualification tool transition backup exists: {backup}")
+    record = {"path": str(destination), "backup": str(backup),
+              "predecessorSha256": transition["predecessorSha256"],
+              "successorSha256": transition["successorSha256"], "status": "planned"}
+    transaction["replacedFiles"].append(record)
+    atomic_json(state_path, transaction)
+    with prepared.open("rb") as payload:
+        os.fsync(payload.fileno())
+    os.replace(destination, backup)
+    directory_fd = os.open(destination.parent, os.O_RDONLY)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+    record["status"] = "predecessor-backed-up"
+    atomic_json(state_path, transaction)
+    os.replace(prepared, destination)
+    destination.chmod(int(transition["mode"], 8))
+    directory_fd = os.open(destination.parent, os.O_RDONLY)
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+    record["status"] = "successor-installed"
+    atomic_json(state_path, transaction)
 
 
 def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path | None,
@@ -394,14 +448,15 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
     if (archive_path.is_symlink() or not archive_path.is_file() or
             digest(archive_path) != metadata.get("archiveSha256")):
         raise ValueError("staged archive hash mismatch")
+    qualification = None
     if qualification_identity is None:
         if metadata.get("publishable") is not True:
             raise ValueError("only the exact publishable release is installable")
     else:
         if metadata.get("publishable") is not False or metadata.get("tagPresent") is not False:
             raise ValueError("qualification mode accepts only an unpublished development candidate")
-        validate_qualification_identity(qualification_identity, metadata,
-                                        metadata["archiveSha256"])
+        qualification = validate_qualification_identity(qualification_identity, metadata,
+                                                        metadata["archiveSha256"])
     if ROUTES[route] not in checksums:
         raise ValueError("selected overlay is absent from checksums")
     if key is not None or certificate is not None:
@@ -414,9 +469,16 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
         old = json.loads(state_path.read_text())
         if old.get("status") not in {"complete", "recovered"}:
             raise ValueError("unresolved transaction requires explicit recovery")
+    transitions = ({item["path"]: item for item in qualification["toolTransitions"]}
+                   if qualification and qualification["schemaVersion"] == 2 else {})
+    for raw, transition in transitions.items():
+        destination = rooted(root, raw)
+        if (destination.is_symlink() or not destination.is_file() or
+                digest(destination) != transition["predecessorSha256"]):
+            raise ValueError(f"qualification predecessor tool differs: {destination}")
     transaction.update({"status": "inactive-in-progress", "checkpoint": "preflight",
                         "kernel": kernel, "recoveryRequired": True, "commands": [],
-                        "ownedFiles": [], "ownedDirectories": []})
+                        "ownedFiles": [], "ownedDirectories": [], "replacedFiles": []})
     atomic_json(state_path, transaction)
     try:
         headers = kernel_headers(root, kernel)
@@ -536,38 +598,68 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
             directory.chmod(0o755)
             if created:
                 transaction["ownedDirectories"].append(str(directory))
+        def install_tool(origin: pathlib.Path, destination: pathlib.Path, mode: int) -> None:
+            transition = transitions.pop(str(pathlib.PurePosixPath("/") / destination.relative_to(root))) if transitions else None
+            if transition is None:
+                if destination.exists() or destination.is_symlink():
+                    raise ValueError(f"unsafe or existing package file: {destination}")
+                shutil.copyfile(origin, destination)
+                destination.chmod(mode)
+                transaction["ownedFiles"].append({"path": str(destination), "sha256": digest(destination)})
+                atomic_json(state_path, transaction)
+                return
+            prepared = destination.with_name(f".{destination.name}.rp1-gpclk-successor")
+            if prepared.exists() or prepared.is_symlink():
+                raise ValueError(f"qualification successor temporary exists: {prepared}")
+            shutil.copyfile(origin, prepared)
+            prepared.chmod(mode)
+            replace_qualification_tool(destination, prepared, transition, transaction, state_path)
         probe_source = source / "tools/gate_d_uapi_probe.c"
         probe_destination = libexec / "gate-d-uapi-probe"
-        if not probe_source.is_file() or probe_source.is_symlink() or probe_destination.exists() or probe_destination.is_symlink():
-            raise ValueError("unsafe or existing Gate D UAPI probe")
+        if not probe_source.is_file() or probe_source.is_symlink() or probe_destination.is_symlink():
+            raise ValueError("unsafe Gate D UAPI probe")
+        probe_transition = transitions.pop("/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe", None)
+        if probe_destination.exists() and probe_transition is None:
+            raise ValueError("existing Gate D UAPI probe lacks a transition identity")
+        probe_output = (probe_destination.with_name(f".{probe_destination.name}.rp1-gpclk-successor")
+                        if probe_transition else probe_destination)
         probe_command = ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror",
                          f"-I{source / 'include/uapi'}", str(probe_source),
-                         "-o", str(probe_destination)]
+                         "-o", str(probe_output)]
         transaction["commands"].append(probe_command)
         atomic_json(state_path, transaction)
         runner(probe_command)
-        if not probe_destination.is_file() or probe_destination.is_symlink():
+        if not probe_output.is_file() or probe_output.is_symlink():
             raise ValueError("Gate D UAPI probe build produced no real binary")
-        probe_destination.chmod(0o755)
-        transaction["ownedFiles"].append({"path": str(probe_destination),
-                                           "sha256": digest(probe_destination)})
-        atomic_json(state_path, transaction)
+        if probe_transition:
+            replace_qualification_tool(probe_destination, probe_output, probe_transition, transaction, state_path)
+        else:
+            probe_destination.chmod(0o755)
+            transaction["ownedFiles"].append({"path": str(probe_destination), "sha256": digest(probe_destination)})
+            atomic_json(state_path, transaction)
         busy_source = source / "tools/gate_d_busy_injector.c"
         busy_destination = libexec / "gate-d-busy-injector"
-        if not busy_source.is_file() or busy_source.is_symlink() or busy_destination.exists() or busy_destination.is_symlink():
-            raise ValueError("unsafe or existing Gate D busy injector")
+        if not busy_source.is_file() or busy_source.is_symlink() or busy_destination.is_symlink():
+            raise ValueError("unsafe Gate D busy injector")
+        busy_transition = transitions.pop("/usr/libexec/rp1-gpclk-dkms/gate-d-busy-injector", None)
+        if busy_destination.exists() and busy_transition is None:
+            raise ValueError("existing Gate D busy injector lacks a transition identity")
+        busy_output = (busy_destination.with_name(f".{busy_destination.name}.rp1-gpclk-successor")
+                       if busy_transition else busy_destination)
         busy_command = ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror",
                         f"-I{source / 'include/uapi'}", str(busy_source),
-                        "-o", str(busy_destination)]
+                        "-o", str(busy_output)]
         transaction["commands"].append(busy_command)
         atomic_json(state_path, transaction)
         runner(busy_command)
-        if not busy_destination.is_file() or busy_destination.is_symlink():
+        if not busy_output.is_file() or busy_output.is_symlink():
             raise ValueError("Gate D busy injector build produced no real binary")
-        busy_destination.chmod(0o755)
-        transaction["ownedFiles"].append({"path": str(busy_destination),
-                                           "sha256": digest(busy_destination)})
-        atomic_json(state_path, transaction)
+        if busy_transition:
+            replace_qualification_tool(busy_destination, busy_output, busy_transition, transaction, state_path)
+        else:
+            busy_destination.chmod(0o755)
+            transaction["ownedFiles"].append({"path": str(busy_destination), "sha256": digest(busy_destination)})
+            atomic_json(state_path, transaction)
         package_files = ((source / "scripts/rp1-gpclk-admin.py", libexec / "rp1-gpclk-admin", 0o755),
                          (source / "scripts/rp1-gpclk-diagnostics.py", libexec / "rp1-gpclk-diagnostics", 0o755),
                          (model_source, release_data / "installation-model-v1.json", 0o644),
@@ -618,12 +710,11 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                          (source / "scripts/gate_d_instance.py", libexec / "gate_d_instance.py", 0o644))
         package_files += ((source / "scripts/gate_d_preroot.py", libexec / "gate_d_preroot.py", 0o644),)
         for origin, destination, mode in package_files:
-            if not origin.is_file() or origin.is_symlink() or destination.exists() or destination.is_symlink():
-                raise ValueError(f"unsafe or existing package file: {destination}")
-            shutil.copyfile(origin, destination)
-            destination.chmod(mode)
-            transaction["ownedFiles"].append({"path": str(destination), "sha256": digest(destination)})
-            atomic_json(state_path, transaction)
+            if not origin.is_file() or origin.is_symlink() or destination.is_symlink():
+                raise ValueError(f"unsafe package file: {destination}")
+            install_tool(origin, destination, mode)
+        if transitions:
+            raise ValueError("qualification tool-transition path is not an installed permanent tool")
         for origin in sorted((source / "docs/operator").glob("*.md")):
             destination = documentation / origin.name
             if origin.is_symlink() or destination.exists() or destination.is_symlink():
@@ -644,6 +735,17 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
         loaded = rooted(root, f"/sys/module/{MODULE}")
         if loaded.exists():
             raise ValueError("module is already loaded; output-disabled inactive install cannot be proven")
+        for item in transaction["replacedFiles"]:
+            destination = pathlib.Path(item["path"])
+            backup = pathlib.Path(item["backup"])
+            if (item["status"] != "successor-installed" or destination.is_symlink() or
+                    not destination.is_file() or digest(destination) != item["successorSha256"] or
+                    backup.is_symlink() or not backup.is_file() or
+                    digest(backup) != item["predecessorSha256"]):
+                raise ValueError("qualification tool transition cannot commit")
+            backup.unlink()
+            item["status"] = "committed"
+            atomic_json(state_path, transaction)
         transaction.update({"status": "complete", "checkpoint": "commit-state", "recoveryRequired": False,
                             "overlayInstalled": str(overlay_destination), "overlayActivationRequired": True,
                             "rebootRequired": False, "keyEnrollmentStatus": "administrator-verification-required" if signing else "not-required-by-install"})
@@ -681,6 +783,26 @@ def recover(state_path: pathlib.Path, runner: Callable[[list[str]], str] = comma
         elif path.is_symlink() or not path.is_file() or digest(path) != item.get("sha256"):
             raise ValueError(f"owned file changed: {path}")
         path.unlink()
+    for item in reversed(state.get("replacedFiles", [])):
+        path = pathlib.Path(item["path"])
+        backup = pathlib.Path(item["backup"])
+        status = item.get("status")
+        if status == "planned":
+            if path.is_symlink() or not path.is_file() or digest(path) != item["predecessorSha256"]:
+                raise ValueError(f"planned predecessor changed: {path}")
+            continue
+        if status == "predecessor-backed-up":
+            if path.exists() or path.is_symlink():
+                raise ValueError(f"interrupted transition destination exists: {path}")
+        elif status == "successor-installed":
+            if path.is_symlink() or not path.is_file() or digest(path) != item["successorSha256"]:
+                raise ValueError(f"transition successor changed: {path}")
+            path.unlink()
+        else:
+            raise ValueError("transition ledger status is not recoverable")
+        if backup.is_symlink() or not backup.is_file() or digest(backup) != item["predecessorSha256"]:
+            raise ValueError(f"transition predecessor backup changed: {backup}")
+        os.replace(backup, path)
     candidates = sorted({pathlib.Path(value) for value in state.get("ownedDirectories", [])},
                         key=lambda path: len(path.parts), reverse=True)
     for directory in candidates:

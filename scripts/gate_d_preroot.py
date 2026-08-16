@@ -274,6 +274,11 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
             for directory in sorted((p for p in root.rglob("*") if p.is_dir()), key=lambda p: len(p.parts), reverse=True):
                 directory.rmdir()
             root.rmdir()
+        failure_journal = journal.with_name(f"{journal.stem}.failure.json")
+        if failure_journal.exists() or failure_journal.is_symlink():
+            raise ValueError("preserved pre-root failure journal already exists")
+        shutil.copyfile(journal, failure_journal)
+        failure_journal.chmod(0o400)
         journal.unlink()
     if journal.exists() or journal.is_symlink() or root.exists() or root.is_symlink():
         raise ValueError("pre-root transition is not fresh")

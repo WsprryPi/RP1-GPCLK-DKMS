@@ -29,7 +29,7 @@
     "sourceCommit": "4e62b3a0b584396a9528be07592d92e0796555f2",
     "status": "recovered-after-pre-root-blocker-successor-required",
     "executionEvidence": "docs/evidence/gate-d-phase5.32-authorized-execution.md",
-    "blocker": "Phase 5.33 must provide identity-aware retained-tool transition and make sealed outer recovery reach the authenticated administrator ledger",
+    "blocker": "Phase 5.33 offline successor is implemented; a distinct candidate freeze and representative build must bind the complete predecessor and target-built successor tool identities",
     "targetExecutionApproved": false
   },
   "successorSelectionGate": "selected-to-correct-phase5.31-permanent-executor-cli-dispatch",

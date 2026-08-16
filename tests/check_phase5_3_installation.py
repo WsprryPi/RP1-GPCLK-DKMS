@@ -328,6 +328,89 @@ with tempfile.TemporaryDirectory() as temporary:
     }
     identity_path = base / "qualification-identity.json"
     identity_path.write_text(json.dumps(identity) + "\n")
+    transition_identity = dict(identity)
+    transition_identity["schemaVersion"] = 2
+    transition_identity["toolTransitions"] = [{
+        "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-executor",
+        "predecessorSha256": "1" * 64,
+        "successorSha256": "2" * 64,
+        "mode": "0755",
+    }]
+    transition_identity_path = base / "qualification-transition-identity.json"
+    transition_identity_path.write_text(json.dumps(transition_identity) + "\n")
+    assert admin.validate_qualification_identity(
+        transition_identity_path, metadata, metadata["archiveSha256"]
+    )["schemaVersion"] == 2
+    for mutation in (
+        lambda value: value["toolTransitions"][0].update(path="/tmp/../escape"),
+        lambda value: value["toolTransitions"][0].update(predecessorSha256="0" * 63),
+        lambda value: value["toolTransitions"].append(dict(value["toolTransitions"][0])),
+    ):
+        bad_transition = json.loads(json.dumps(transition_identity))
+        mutation(bad_transition)
+        bad_transition_path = base / f"bad-transition-{len(list(base.glob('bad-transition-*')))}.json"
+        bad_transition_path.write_text(json.dumps(bad_transition))
+        try:
+            admin.validate_qualification_identity(
+                bad_transition_path, metadata, metadata["archiveSha256"]
+            )
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("unsafe qualification tool transition accepted")
+
+    primitive = base / "transition-primitive"
+    primitive.mkdir()
+    destination = primitive / "tool"
+    prepared = primitive / ".tool.successor"
+    destination.write_bytes(b"predecessor\n")
+    prepared.write_bytes(b"successor\n")
+    transition = {
+        "path": str(destination),
+        "predecessorSha256": hashlib.sha256(b"predecessor\n").hexdigest(),
+        "successorSha256": hashlib.sha256(b"successor\n").hexdigest(),
+        "mode": "0755",
+    }
+    transition_state = primitive / "transaction.json"
+    transition_transaction = {"replacedFiles": []}
+    admin.replace_qualification_tool(destination, prepared, transition,
+                                     transition_transaction, transition_state)
+    assert destination.read_bytes() == b"successor\n"
+    recovery_state = {
+        "status": "inactive-recovery-required", "liveOutput": False,
+        "kernel": admin.platform.release(), "ownedFiles": [],
+        "ownedDirectories": [],
+        "replacedFiles": transition_transaction["replacedFiles"],
+    }
+    admin.atomic_json(transition_state, recovery_state)
+    recovered_transition = admin.recover(transition_state, runner=lambda command: "")
+    assert recovered_transition["status"] == "recovered"
+    assert destination.read_bytes() == b"predecessor\n"
+    for tamper in ("successor", "backup"):
+        tamper_root = base / f"transition-tamper-{tamper}"
+        tamper_root.mkdir()
+        tamper_destination = tamper_root / "tool"
+        tamper_prepared = tamper_root / ".tool.successor"
+        tamper_destination.write_bytes(b"predecessor\n")
+        tamper_prepared.write_bytes(b"successor\n")
+        tamper_state = tamper_root / "transaction.json"
+        tamper_transaction = {"replacedFiles": []}
+        admin.replace_qualification_tool(tamper_destination, tamper_prepared,
+                                         transition, tamper_transaction,
+                                         tamper_state)
+        record = tamper_transaction["replacedFiles"][0]
+        pathlib.Path(record["path"] if tamper == "successor" else record["backup"]).write_bytes(b"foreign\n")
+        admin.atomic_json(tamper_state, {
+            "status": "inactive-recovery-required", "liveOutput": False,
+            "kernel": admin.platform.release(), "ownedFiles": [],
+            "ownedDirectories": [], "replacedFiles": [record],
+        })
+        try:
+            admin.recover(tamper_state, runner=lambda command: "")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"tampered transition {tamper} accepted")
     qualification_target = base / "qualification-target"
     (qualification_target / "boot/firmware/overlays").mkdir(parents=True)
     (qualification_target / "usr/src/test-headers").mkdir(parents=True)

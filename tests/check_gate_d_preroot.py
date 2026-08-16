@@ -66,6 +66,9 @@ for checkpoint in tool.CHECKPOINTS[1:-1]:
         except InterruptedError: pass
         else: raise AssertionError("checkpoint interruption absent")
         assert tool.execute(envelope,prefix=prefix,runner=runner,probe=lambda:baseline,recover=True)["status"]=="complete"
+        preserved=prefix/"staging/transaction.failure.json"
+        assert preserved.is_file() and not preserved.is_symlink()
+        assert json.loads(preserved.read_text())["status"]=="recovery-required"
 
 for failure in ("missing", "symlink", "substituted", "preexisting-root", "unsafe-parent", "installed-mismatch", "residue", "baseline"):
     with tempfile.TemporaryDirectory() as temporary:
