@@ -27,7 +27,7 @@ from typing import Callable
 
 PACKAGE = "rp1-gpclk-dkms"
 MODULE = "rp1_gpclk_dkms"
-VERSION = "0.0.0-phase5.17"
+VERSION = "0.0.0-phase5.18"
 ROUTES = {"gpio4": "rp1-gpclk-gpio4.dtbo", "gpio20": "rp1-gpclk-gpio20.dtbo"}
 ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
                       "remove-old-binding-proven-cleanup", "verify-both-pins-safe",
@@ -485,7 +485,9 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                          (source / "scripts/gate_d_attempts.py",
                           libexec / "gate-d-attempts", 0o755),
                          (source / "scripts/gate_d_outer.py",
-                          libexec / "gate-d-executor", 0o755))
+                          libexec / "gate-d-executor", 0o755),
+                         (source / "scripts/gate_d_bootstrap.py",
+                          libexec / "gate-d-bootstrap", 0o755))
         for origin, destination, mode in package_files:
             if not origin.is_file() or origin.is_symlink() or destination.exists() or destination.is_symlink():
                 raise ValueError(f"unsafe or existing package file: {destination}")

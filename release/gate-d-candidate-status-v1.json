@@ -34,8 +34,7 @@
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; liveEligible false",
     "purpose": "separate source and installed tooling identities and bind copied versus target-built installation semantics",
     "blocker": "The sealed administrator rejects publishable=false development candidates before installing the permanent Gate D executor, so the exact qualification candidate cannot bootstrap its reviewed execution tooling."
-  }],
-  "successor": {
+  }, {
     "release": "0.0.0-phase5.17",
     "sourceCommit": "10ec47d83fe49f40c9846df72b8c9e691f6d07a5",
     "archiveSha256": "c13d3c9a38875abb43a9431e498c7a45da4ef964d61ca688ff3dc9f95817050b",
@@ -44,8 +43,14 @@
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "add an exact output-disabled qualification-install bootstrap without weakening normal release installation",
     "blocker": "Frozen target-plan and execution-instance contracts cannot bind the qualification-bootstrap plan, administrator identity, or bootstrap transaction and recovery state."
+  }],
+  "successor": {
+    "release": "0.0.0-phase5.18",
+    "status": "unfrozen",
+    "qualification": "offline-review-in-progress",
+    "purpose": "bind qualification bootstrap into the target plan, execution instance, permanent executor, and recovery lifecycle"
   },
-  "successorSelectionGate": "selected-to-correct-phase5.16-qualification-bootstrap-defect",
+  "successorSelectionGate": "selected-to-correct-phase5.17-unbound-bootstrap-contract",
   "reuseProhibited": [
     "representative-build-promotion",
     "route-decision",

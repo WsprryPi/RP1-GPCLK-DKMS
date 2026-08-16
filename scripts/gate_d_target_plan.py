@@ -54,10 +54,26 @@ def validate(value: dict, *, verify_tools: bool = True) -> dict:
     required = {"SPDX-License-Identifier", "schemaVersion", "kind", "hostId", "tooling", "invariants",
                 "services", "artifacts", "boot", "attemptEnvelope", "rows"}
     schema = value.get("schemaVersion")
-    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or schema not in {1, 2} or value.get("kind") != "gate-d-output-disabled-target-operation-plan":
+    if schema == 3: required.add("qualificationBootstrap")
+    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or schema not in {1, 2, 3} or value.get("kind") != "gate-d-output-disabled-target-operation-plan":
         raise ValueError("invalid target-plan identity")
     if schema == 1 and verify_tools:
         raise ValueError("legacy target plan is inspectable but not executable")
+    if schema == 3:
+        bootstrap=value["qualificationBootstrap"]
+        if (not isinstance(bootstrap,dict) or set(bootstrap)!={"path","sha256"} or
+                pathlib.PurePosixPath(bootstrap.get("path","")).is_absolute() or
+                ".." in pathlib.PurePosixPath(bootstrap.get("path","")).parts or
+                not SHA.fullmatch(bootstrap.get("sha256",""))):
+            raise ValueError("invalid qualification bootstrap reference")
+        path=ROOT/bootstrap["path"]
+        if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=bootstrap["sha256"]:
+            raise ValueError("qualification bootstrap identity mismatch")
+        scripts = ROOT / "scripts"
+        if str(scripts) not in __import__("sys").path:
+            __import__("sys").path.insert(0, str(scripts))
+        from gate_d_bootstrap import validate as validate_bootstrap
+        validate_bootstrap(json.loads(path.read_text(encoding="utf-8")))
     invariants = value["invariants"]
     expected_invariants = {"liveOutput": False, "si5351Disconnected": True,
                            "antennaConnected": False, "sdrPermitted": False,
@@ -69,6 +85,8 @@ def validate(value: dict, *, verify_tools: bool = True) -> dict:
     required_tools = {"bootSelector", "targetPlanValidator", "instanceValidator",
                       "lifecycleCoordinator", "platformCoordinator",
                       "permanentExecutor", "busyInjector", "uapiProbe"}
+    if schema == 3:
+        required_tools.add("bootstrapExecutor")
     if not isinstance(tooling, dict) or set(tooling) != required_tools:
         raise ValueError("execution tooling identities are incomplete")
     for name, item in tooling.items():
@@ -84,7 +102,7 @@ def validate(value: dict, *, verify_tools: bool = True) -> dict:
         source_sha = item.get("sha256") if schema == 1 else item.get("sourceSha256")
         if not isinstance(source_sha, str) or not SHA.fullmatch(source_sha):
             raise ValueError(f"invalid execution tool source identity: {name}")
-        if schema == 2:
+        if schema in {2, 3}:
             if item.get("installKind") not in {"copied", "target-built"} or not isinstance(item.get("installedSha256"), str) or not SHA.fullmatch(item["installedSha256"]):
                 raise ValueError(f"invalid installed execution tool identity: {name}")
             if item["installKind"] == "copied" and item["installedSha256"] != source_sha:

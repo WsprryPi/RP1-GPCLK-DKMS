@@ -6,6 +6,7 @@ import copy
 import importlib.util
 import json
 import pathlib
+import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("gate_d_target_plan", ROOT / "scripts/gate_d_target_plan.py")
@@ -56,6 +57,20 @@ for item in current["tooling"].values():
     item["installKind"] = "target-built" if item["sourcePath"].endswith(".c") else "copied"
     item["installedSha256"] = "a" * 64 if item["installKind"] == "target-built" else source_sha
 assert tool.validate(current)["attemptCount"] == 38
+bootstrap_value={"SPDX-License-Identifier":"MIT","schemaVersion":1,"kind":"gate-d-qualification-bootstrap-plan","operationId":"test-bootstrap","hostId":"test","predecessorVersion":"0.0.0-phase5.2","kernelRelease":"test-kernel","stagingDirectory":"/var/lib/rp1-gpclk-dkms/gate-d/bootstrap","candidate":{"release":"0.0.0-phase5.18","sourceCommit":"1"*40,"archive":"/inputs/candidate.tar.gz","archiveSha256":"2"*64},"qualificationIdentity":{"path":"/inputs/identity.json","sha256":"3"*64},"administrator":{"sourcePath":"scripts/rp1-gpclk-admin.py","sourceSha256":"4"*64,"bootstrapPath":"/inputs/extracted/scripts/rp1-gpclk-admin.py","installedPath":"/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin","installedSha256":"4"*64},"argv":["/usr/bin/python3","/inputs/extracted/scripts/rp1-gpclk-admin.py","install","--execute","--release-directory","/inputs","--route","gpio4","--qualification-install","--qualification-identity","/inputs/identity.json"],"cleanupArgv":["/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle","dispatch","complete-removal","0.0.0-phase5.2","0.0.0-phase5.18","test-kernel","/var/lib/rp1-gpclk-dkms/gate-d/bootstrap","--execute"],"recoveryArgv":["/usr/bin/python3","/inputs/extracted/scripts/rp1-gpclk-admin.py","recover","--execute"],"journal":"/var/lib/rp1-gpclk-dkms/gate-d/bootstrap.json","deadlineSeconds":1800,"expectedPreState":{"moduleLoaded":False,"endpointPresent":False,"overlayActive":False,"dkmsTestVersions":False,"liveOutput":False},"expectedPostState":{"moduleLoaded":False,"endpointPresent":False,"overlayActive":False,"dkmsTestVersions":False,"liveOutput":False},"retainedTools":[{"path":"/usr/libexec/rp1-gpclk-dkms/gate-d-executor","sha256":"5"*64}],"cleanupPaths":["/var/lib/rp1-gpclk-dkms/gate-d/bootstrap"],"safety":{"outputDisabled":True,"liveOutput":False,"gpioAccess":False,"clockEnabled":False,"dmaActive":False,"sdrActive":False,"rf":False}}
+with tempfile.NamedTemporaryFile(dir=ROOT / "tests/fixtures", suffix=".json", mode="w+") as bootstrap:
+    json.dump(bootstrap_value,bootstrap); bootstrap.write("\n"); bootstrap.flush()
+    bound=copy.deepcopy(current); bound["schemaVersion"]=3
+    source=ROOT/"scripts/gate_d_bootstrap.py"; source_sha=__import__("hashlib").sha256(source.read_bytes()).hexdigest()
+    bound["tooling"]["bootstrapExecutor"]={"sourcePath":"scripts/gate_d_bootstrap.py","installedPath":"/usr/libexec/rp1-gpclk-dkms/gate-d-bootstrap","sourceSha256":source_sha,"installedSha256":source_sha,"installKind":"copied","candidateArchiveMember":True}
+    bound["qualificationBootstrap"]={
+        "path": str(pathlib.Path(bootstrap.name).relative_to(ROOT)),
+        "sha256": __import__("hashlib").sha256(pathlib.Path(bootstrap.name).read_bytes()).hexdigest()}
+    assert tool.validate(bound)["attemptCount"]==38
+    bad=copy.deepcopy(bound); bad["qualificationBootstrap"]["sha256"]="0"*64
+    try: tool.validate(bad)
+    except ValueError: pass
+    else: raise AssertionError("changed bootstrap binding accepted")
 for mutation in (
     lambda value: value["tooling"]["bootSelector"].pop("sourceSha256"),
     lambda value: value["tooling"]["bootSelector"].pop("installedSha256"),

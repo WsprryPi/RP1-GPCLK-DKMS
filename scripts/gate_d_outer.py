@@ -919,7 +919,7 @@ def default_internal(operation: str, document: dict, root: pathlib.Path) -> None
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=("validate", "plan", "execute"))
+    parser.add_argument("action", choices=("validate", "plan", "execute", "bootstrap"))
     parser.add_argument("document", type=pathlib.Path)
     parser.add_argument("--index", type=pathlib.Path)
     parser.add_argument("--instance", type=pathlib.Path)
@@ -928,6 +928,30 @@ def main() -> None:
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     document = load_json(args.document)
+    if args.action == "bootstrap":
+        import sys
+        scripts=pathlib.Path(__file__).resolve().parent
+        if str(scripts) not in sys.path: sys.path.insert(0,str(scripts))
+        from gate_d_bootstrap import execute as execute_bootstrap, validate as validate_bootstrap
+        if not args.execute:
+            print(json.dumps(validate_bootstrap(document),indent=2,sort_keys=True)); return
+        if os.geteuid()!=0 or args.instance is None: raise SystemExit("bootstrap execution requires root, --execute, and --instance")
+        from gate_d_instance import load as load_instance, validate as validate_instance
+        instance=load_instance(args.instance); validate_instance(instance,require_ready=True)
+        bootstrap_path=instance["executionPolicy"].get("qualificationBootstrap")
+        bootstrap_sha=instance["executionPolicy"].get("qualificationBootstrapSha256")
+        if (bootstrap_path is None or bootstrap_sha is None or
+                args.document.resolve()!=((pathlib.Path(__file__).resolve().parents[1]/bootstrap_path).resolve()) or
+                digest(args.document)!=bootstrap_sha):
+            raise SystemExit("bootstrap plan differs from the sealed execution instance")
+        def probe() -> dict:
+            overlays=subprocess.run(["/usr/bin/dtoverlay","-l"],stdout=subprocess.PIPE,text=True,check=False,env=FIXED_ENV).stdout
+            dkms=subprocess.run(["/usr/sbin/dkms","status"],stdout=subprocess.PIPE,text=True,check=False,env=FIXED_ENV).stdout
+            return {"moduleLoaded":pathlib.Path("/sys/module/rp1_gpclk_dkms").exists(),"endpointPresent":pathlib.Path("/dev/rp1-gpclk").exists(),"overlayActive":"rp1-gpclk" in overlays,"dkmsTestVersions":"rp1-gpclk-dkms/" in dkms,"liveOutput":False}
+        def run_bootstrap(argv:list[str])->None:
+            subprocess.run(argv,stdin=subprocess.DEVNULL,check=True,timeout=document["deadlineSeconds"],env=FIXED_ENV)
+        result=execute_bootstrap(document,root=pathlib.Path("/"),runner=run_bootstrap,probe=probe,recover=args.resume)
+        print(json.dumps(result,indent=2,sort_keys=True)); return
     validate_document(document)
     if args.action == "validate":
         result = {"valid": True, "readOnly": True, "operationId": document["operationId"]}

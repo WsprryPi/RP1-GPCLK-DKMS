@@ -47,13 +47,15 @@ def validate(value: dict, *, require_ready: bool = False,
     required = {"SPDX-License-Identifier", "schemaVersion", "kind", "matrixRelease",
                 "executionPolicy", "candidate", "authorization", "systems", "recovery",
                 "rows", "inputsReady", "executionReady"}
-    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or value.get("schemaVersion") != 1 or value.get("kind") != "gate-d-representative-system-execution-instance":
+    schema=value.get("schemaVersion")
+    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or schema not in {1,2} or value.get("kind") != "gate-d-representative-system-execution-instance":
         raise ValueError("invalid execution-instance identity")
     policy_ref = value["executionPolicy"]
     policy_fields = {"matrixPolicy", "matrixPolicySha256", "routeDecision",
                      "routeDecisionSha256", "targetPlan", "targetPlanSha256",
                      "attemptIndex", "attemptIndexSha256",
                      "environmentalCoverageComplete"}
+    if schema==2: policy_fields.update({"qualificationBootstrap","qualificationBootstrapSha256"})
     if not isinstance(policy_ref, dict) or set(policy_ref) != policy_fields:
         raise ValueError("execution-policy references are incomplete")
     for path_field, hash_field in (("matrixPolicy", "matrixPolicySha256"),
@@ -67,6 +69,11 @@ def validate(value: dict, *, require_ready: bool = False,
         path = ROOT / relative
         if not path.is_file() or path.is_symlink() or sha256(path) != policy_ref[hash_field]:
             raise ValueError("execution-policy identity mismatch")
+    if schema==2:
+        relative=policy_ref["qualificationBootstrap"]
+        path=ROOT/relative
+        if pathlib.PurePosixPath(relative).is_absolute() or ".." in pathlib.PurePosixPath(relative).parts or path.is_symlink() or not path.is_file() or sha256(path)!=policy_ref["qualificationBootstrapSha256"]:
+            raise ValueError("qualification bootstrap policy identity mismatch")
     matrix_policy = json.loads((ROOT / policy_ref["matrixPolicy"]).read_text(encoding="utf-8"))
     if (matrix_policy.get("schemaVersion") != 2 or
             [row.get("id") for row in matrix_policy.get("rows", [])] != list(ROWS)):
@@ -79,6 +86,12 @@ def validate(value: dict, *, require_ready: bool = False,
         __import__("sys").path.insert(0, str(scripts))
     from gate_d_target_plan import validate as validate_target_plan
     target_plan = json.loads((ROOT / policy_ref["targetPlan"]).read_text(encoding="utf-8"))
+    if schema == 2:
+        target_bootstrap = target_plan.get("qualificationBootstrap")
+        if (not isinstance(target_bootstrap, dict) or
+                target_bootstrap.get("path") != policy_ref["qualificationBootstrap"] or
+                target_bootstrap.get("sha256") != policy_ref["qualificationBootstrapSha256"]):
+            raise ValueError("execution instance and target-plan bootstrap bindings differ")
     status_path = ROOT / "release/gate-d-candidate-status-v1.json"
     superseded = False
     if status_path.is_file() and not status_path.is_symlink():

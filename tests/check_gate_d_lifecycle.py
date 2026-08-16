@@ -31,6 +31,18 @@ assert len(result["blockedRows"]) == 10
 assert len(result["deferredRows"]) == 5
 assert result["environmentalCoverageComplete"] is False
 assert result["candidateSuperseded"] is True
+with tempfile.NamedTemporaryFile(dir=ROOT / "release", suffix=".json") as bootstrap:
+    bootstrap.write(b"{}\n"); bootstrap.flush()
+    bound=copy.deepcopy(instance); bound["schemaVersion"]=2
+    bound["executionPolicy"]["qualificationBootstrap"]=str(pathlib.Path(bootstrap.name).relative_to(ROOT))
+    bound["executionPolicy"]["qualificationBootstrapSha256"]=hashlib.sha256(pathlib.Path(bootstrap.name).read_bytes()).hexdigest()
+    try: instance_tool.validate(bound)
+    except ValueError as error: assert "target-plan bootstrap bindings differ" in str(error)
+    else: raise AssertionError("execution instance accepted without target-plan bootstrap binding")
+    bound["executionPolicy"]["qualificationBootstrapSha256"]="0"*64
+    try: instance_tool.validate(bound)
+    except ValueError: pass
+    else: raise AssertionError("changed bootstrap policy binding accepted")
 assert instance["candidate"]["release"] == "0.0.0-phase5.14"
 assert instance["authorization"]["targetExecutionApproved"] is False
 assert all(row["blockers"] == ["phase5.14-candidate-packaging-defect"]
