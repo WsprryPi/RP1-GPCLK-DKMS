@@ -55,8 +55,10 @@
   }],
   "successor": {
     "release": "0.0.0-phase5.19",
-    "status": "unfrozen",
-    "qualification": "offline-review-in-progress",
+    "sourceCommit": "7753692dd63cfa5fdda3f0a4d89dbd63161da719",
+    "archiveSha256": "8754f0490987ec9bf0eeccd8cdeaa60747116ac73f53fcc099f0af5a3c66efce",
+    "status": "frozen-offline",
+    "qualification": "offline-reproducible-unqualified",
     "purpose": "bind one explicit qualification root through bootstrap, plans, attempts, instance, and installed executor dispatch"
   },
   "successorSelectionGate": "selected-to-correct-phase5.18-installed-validator-root-defect",

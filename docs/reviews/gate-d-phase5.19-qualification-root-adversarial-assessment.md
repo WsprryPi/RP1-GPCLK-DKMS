@@ -2,7 +2,7 @@
 
 # Gate D Phase 5.19 qualification-root adversarial assessment
 
-Status: offline software review passed; candidate freeze pending
+Status: offline software review passed; candidate frozen
 
 The correction separates installed package-tool identity from test-owned
 qualification-document identity and eliminates implicit source-checkout root
@@ -27,3 +27,8 @@ The qualification root is retained as the immutable evidence and document
 container. Existing attempt-owned staging cleanup rules remain responsible for
 their exact subpaths; neither interruption recovery nor ordinary cleanup may
 remove or replace the root marker.
+
+Two deterministic development builds from source commit
+`7753692dd63cfa5fdda3f0a4d89dbd63161da719` were byte-identical. The frozen
+archive SHA-256 is
+`8754f0490987ec9bf0eeccd8cdeaa60747116ac73f53fcc099f0af5a3c66efce`.
