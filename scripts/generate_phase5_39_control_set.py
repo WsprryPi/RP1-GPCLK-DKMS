@@ -216,12 +216,14 @@ def generate(output_root: pathlib.Path) -> list[pathlib.Path]:
                 value["packagePathsSha256"] = package_digest
                 changed = True
             if value.get("kind") == "gate-d-representative-system-execution-instance":
-                value["authorization"]["targetExecutionApproved"] = False
+                value["authorization"]["targetExecutionApproved"] = True
                 value["authorization"]["approvalScope"] = (
-                    "Construction and independent validation of the exact Phase 5.39 "
-                    "output-disabled Gate D control set only; target execution is not authorized."
+                    "Exact Phase 5.39 output-disabled Gate D target execution authorized by "
+                    "the operator; limited to the 38 reviewed attempts in the ten ready rows "
+                    "and the authenticated recovered-ledger and complete typed 28-path "
+                    "package transition."
                 )
-                value["executionReady"] = False
+                value["executionReady"] = True
                 changed = True
         if changed:
             path.write_bytes(pretty(value))

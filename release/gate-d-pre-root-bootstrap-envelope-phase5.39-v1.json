@@ -231,7 +231,7 @@
     },
     {
       "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-execution-instance-phase5.39-v1.json",
-      "sha256": "68fe10a8fb9415c47705a447aeef0e7652f63814e62829ebc01f7ec7e75f50b7"
+      "sha256": "fd73346bb38ba4ebcb2c8ef6b616d4d08b1c045b6d1761fd3f843a82e5871917"
     },
     {
       "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-matrix-policy-v2.json",
@@ -986,7 +986,7 @@
     {
       "destination": "release/gate-d-execution-instance-phase5.39-v1.json",
       "mode": "0400",
-      "sha256": "68fe10a8fb9415c47705a447aeef0e7652f63814e62829ebc01f7ec7e75f50b7",
+      "sha256": "fd73346bb38ba4ebcb2c8ef6b616d4d08b1c045b6d1761fd3f843a82e5871917",
       "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-execution-instance-phase5.39-v1.json"
     },
     {

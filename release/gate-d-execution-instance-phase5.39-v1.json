@@ -2,7 +2,7 @@
   "SPDX-License-Identifier": "MIT",
   "authorization": {
     "administrator": "pi through sudo",
-    "approvalScope": "Construction and independent validation of the exact Phase 5.39 output-disabled Gate D control set only; target execution is not authorized.",
+    "approvalScope": "Exact Phase 5.39 output-disabled Gate D target execution authorized by the operator; limited to the 38 reviewed attempts in the ten ready rows and the authenticated recovered-ledger and complete typed 28-path package transition.",
     "approved": true,
     "cleanup": "remove only exact attempt-owned state and preserve administrator, historical, and unrelated bytes",
     "connection": "ssh wspr5",
@@ -30,7 +30,7 @@
     ],
     "reboot": "planned and noticed only after recovery preflight",
     "serviceChanges": "temporarily stop and restore wsprrypi, sdrplay, sdrconnect-server, and SoapySDRServer when present",
-    "targetExecutionApproved": false
+    "targetExecutionApproved": true
   },
   "candidate": {
     "archiveSha256": "0e16828433a254467da4f4b841d355ef6d3cddf0ff582b4316416e9e66623f5c",
@@ -55,7 +55,7 @@
     "targetPlan": "release/gate-d-target-operation-plan-phase5.39-v1.json",
     "targetPlanSha256": "b58897af1f80416d4a4fda7a4358698b55434f7aaff6fd86b35439f5ab9033aa"
   },
-  "executionReady": false,
+  "executionReady": true,
   "inputsReady": true,
   "kind": "gate-d-representative-system-execution-instance",
   "matrixRelease": "0.0.0-phase5.39",
