@@ -27,10 +27,10 @@
     "release": "0.0.0-phase5.32",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "sourceCommit": "4e62b3a0b584396a9528be07592d92e0796555f2",
-    "status": "control-set-authorized-for-output-disabled-execution",
-    "executionEvidence": "docs/contracts/gate-d-phase5.32-authorized-execution-prompt.md",
-    "blocker": "none before exact bounded execution; stop on any identity, residue, service, recovery, or cleanup ambiguity",
-    "targetExecutionApproved": true
+    "status": "blocked-during-pre-root-install-recovery-required",
+    "executionEvidence": "docs/evidence/gate-d-phase5.32-authorized-execution.md",
+    "blocker": "retained predecessor UAPI probe is rejected after Phase 5.32 DKMS install, and sealed recovery is unreachable while exact owned DKMS state exists",
+    "targetExecutionApproved": false
   },
   "successorSelectionGate": "selected-to-correct-phase5.31-permanent-executor-cli-dispatch",
   "supersededCandidates": [
