@@ -7,7 +7,7 @@
   "publishedReleaseRequiresPostDownloadVerification": true,
   "modulePublicationConfirmed": false,
   "candidateSnapshot": {
-    "archiveIdentity": "rp1-gpclk-dkms-0.0.0-phase5.27.tar.gz sha256 f43422342fc03c402eb0602949cc317aea239defc6544534ea98bc40d2c505bc",
+    "archiveIdentity": "rp1-gpclk-dkms-0.0.0-phase5.27.tar.gz sha256 c623a8ebf6b5dc01a6e85a17e8709c479ad349aa2a08b34a86d71a2dc2a6adbb",
     "sealedArchiveMayBeTested": true,
     "consumableByDependentRelease": false,
     "knownBlockers": [
@@ -35,7 +35,7 @@
     "dependent-release-publication"
   ],
   "gates": [
-    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"passed","evidence":["source commit d9f8fd8b17f1c2ee9324704c6b6630dfccfb5e4e","two isolated clean deterministic builds produced byte-identical archive SHA-256 e615750897009b79d0ead1e3bbf4133e0c4d5c157cc259d513a76ad65bd993e4","release/gate-d-successor-offline-identities-phase5.25-v1.json"],"claimCeiling":"frozen offline candidate identity only"},
+    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"passed","evidence":["source commit bfb92725631748db3f7f7def8d331442872cab7d","two isolated clean deterministic builds produced byte-identical archive SHA-256 c623a8ebf6b5dc01a6e85a17e8709c479ad349aa2a08b34a86d71a2dc2a6adbb","release/gate-d-successor-offline-identities-phase5.27-v1.json"],"claimCeiling":"frozen offline candidate identity only"},
     {"id":"offline-checks-twice","owner":"RP1-GPCLK-DKMS","requires":["candidate-freeze"],"status":"passed","evidence":["complete offline suite passed twice after Phase 5.25 correction and adversarial closure","macOS host skipped Linux-only UAPI client compiles; no representative target result inferred"],"claimCeiling":"offline and host build compatibility only"},
     {"id":"representative-lifecycle-matrix","owner":"RP1-GPCLK-DKMS","requires":["offline-checks-twice"],"status":"blocked","evidence":["every predeclared matrix row passed with independent sealed evidence","baseline cleanup and residue audits","output-disabled proof"],"claimCeiling":"representative lifecycle compatibility only; no calibrated or RF claim"},
     {"id":"independent-adversarial-review","owner":"RP1-GPCLK-DKMS","requires":["representative-lifecycle-matrix"],"status":"blocked","evidence":["all packaging lifecycle compatibility integrity and claim findings closed","affected evidence invalidated and rerun"],"claimCeiling":"reviewed evidence only"},
