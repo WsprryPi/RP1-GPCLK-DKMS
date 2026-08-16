@@ -27,7 +27,7 @@ from typing import Callable
 
 PACKAGE = "rp1-gpclk-dkms"
 MODULE = "rp1_gpclk_dkms"
-VERSION = "0.0.0-phase5.22"
+VERSION = "0.0.0-phase5.23"
 ROUTES = {"gpio4": "rp1-gpclk-gpio4.dtbo", "gpio20": "rp1-gpclk-gpio20.dtbo"}
 ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
                       "remove-old-binding-proven-cleanup", "verify-both-pins-safe",
@@ -473,6 +473,7 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                          (source / "schema/gate-d-qualification-root-v1.schema.json", release_data / "gate-d-qualification-root-v1.schema.json", 0o644),
                          (source / "schema/gate-d-qualification-bootstrap-plan-v1.schema.json", release_data / "gate-d-qualification-bootstrap-plan-v1.schema.json", 0o644),
                          (source / "schema/gate-d-target-plan-v1.schema.json", release_data / "gate-d-target-plan-v1.schema.json", 0o644),
+                         (source / "schema/gate-d-pre-root-bootstrap-envelope-v1.schema.json", release_data / "gate-d-pre-root-bootstrap-envelope-v1.schema.json", 0o644),
                          (source / "schema/gate-d-attempt-index-v1.schema.json", release_data / "gate-d-attempt-index-v1.schema.json", 0o644),
                          (source / "scripts/lifecycle_policy.py",
                           libexec / "lifecycle-policy", 0o755),
@@ -500,6 +501,7 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                          (source / "scripts/gate_d_outer.py", libexec / "gate_d_outer.py", 0o644),
                          (source / "scripts/gate_d_attempts.py", libexec / "gate_d_attempts.py", 0o644),
                          (source / "scripts/gate_d_instance.py", libexec / "gate_d_instance.py", 0o644))
+        package_files += ((source / "scripts/gate_d_preroot.py", libexec / "gate_d_preroot.py", 0o644),)
         for origin, destination, mode in package_files:
             if not origin.is_file() or origin.is_symlink() or destination.exists() or destination.is_symlink():
                 raise ValueError(f"unsafe or existing package file: {destination}")

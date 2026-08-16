@@ -19,7 +19,7 @@ spec.loader.exec_module(admin)
 
 model = json.loads((ROOT / "release/installation-model-v1.json").read_text())
 layout = json.loads((ROOT / "release/release-layout-v1.json").read_text())
-assert model["release"] == layout["release"] == "0.0.0-phase5.22"
+assert model["release"] == layout["release"] == "0.0.0-phase5.23"
 assert model["dkmsModule"] == layout["package"]
 assert model["kernelModule"] == layout["module"]
 assert model["transaction"] == admin.STEPS
@@ -67,13 +67,14 @@ with tempfile.TemporaryDirectory() as temporary:
                          "schema/gate-d-qualification-root-v1.schema.json",
                          "schema/gate-d-qualification-bootstrap-plan-v1.schema.json",
                          "schema/gate-d-target-plan-v1.schema.json",
+                         "schema/gate-d-pre-root-bootstrap-envelope-v1.schema.json",
                          "schema/gate-d-attempt-index-v1.schema.json",
                          "scripts/lifecycle_policy.py", "scripts/gate_d_instance.py",
                          "scripts/gate_d_lifecycle.py",
                          "scripts/gate_d_platform.py",
                          "scripts/gate_d_boot.py", "scripts/gate_d_target_plan.py",
                          "scripts/gate_d_attempts.py", "scripts/gate_d_outer.py",
-                         "scripts/gate_d_bootstrap.py", "scripts/gate_d_root.py",
+                         "scripts/gate_d_bootstrap.py", "scripts/gate_d_root.py", "scripts/gate_d_preroot.py",
                          "tools/gate_d_uapi_probe.c",
                          "tools/gate_d_busy_injector.c",
                          "docs/operator/lifecycle.md", "docs/operator/signing.md"):
@@ -113,15 +114,15 @@ with tempfile.TemporaryDirectory() as temporary:
     assert (target / "boot/firmware/overlays/rp1-gpclk-gpio4.dtbo").read_bytes() == b"gpio4"
     assert not (target / "boot/firmware/overlays/rp1-gpclk-gpio20.dtbo").exists()
     assert (target / "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.22/overlay-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.22/permissions-enrollment-policy-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.22/diagnostics-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.22/lifecycle-removal-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.23/overlay-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.23/permissions-enrollment-policy-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.23/diagnostics-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.23/lifecycle-removal-contract-v1.json").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/lifecycle-policy").is_file()
-    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.22/gate-d-execution-instance-v1.json").exists()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.22/gate-d-execution-instance-v1.schema.json").is_file()
-    for schema_name in ("gate-d-qualification-root-v1.schema.json", "gate-d-qualification-bootstrap-plan-v1.schema.json", "gate-d-target-plan-v1.schema.json", "gate-d-attempt-index-v1.schema.json"):
-        assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.22" / schema_name).is_file()
+    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.23/gate-d-execution-instance-v1.json").exists()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.23/gate-d-execution-instance-v1.schema.json").is_file()
+    for schema_name in ("gate-d-qualification-root-v1.schema.json", "gate-d-qualification-bootstrap-plan-v1.schema.json", "gate-d-target-plan-v1.schema.json", "gate-d-attempt-index-v1.schema.json", "gate-d-pre-root-bootstrap-envelope-v1.schema.json"):
+        assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.23" / schema_name).is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-instance").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-platform").is_file()
@@ -131,7 +132,8 @@ with tempfile.TemporaryDirectory() as temporary:
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate_d_root.py").is_file()
     for module_name in ("gate_d_bootstrap.py", "gate_d_target_plan.py",
                         "gate_d_lifecycle.py", "gate_d_outer.py",
-                        "gate_d_attempts.py", "gate_d_instance.py"):
+                        "gate_d_attempts.py", "gate_d_instance.py",
+                        "gate_d_preroot.py"):
         module_path = target / "usr/libexec/rp1-gpclk-dkms" / module_name
         assert module_path.is_file() and module_path.stat().st_mode & 0o777 == 0o644
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe").is_file()

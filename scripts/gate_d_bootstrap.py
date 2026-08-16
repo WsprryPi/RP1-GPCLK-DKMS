@@ -65,6 +65,7 @@ def validate(value: dict, *, root: pathlib.Path = pathlib.Path("/"), verify_file
             "/usr/libexec/rp1-gpclk-dkms/gate_d_outer.py",
             "/usr/libexec/rp1-gpclk-dkms/gate_d_attempts.py",
             "/usr/libexec/rp1-gpclk-dkms/gate_d_instance.py",
+            "/usr/libexec/rp1-gpclk-dkms/gate_d_preroot.py",
         }
         retained_paths=[item["path"] for item in value["retainedTools"]]
         if not required_modules.issubset(retained_paths) or len(retained_paths)!=len(set(retained_paths)):

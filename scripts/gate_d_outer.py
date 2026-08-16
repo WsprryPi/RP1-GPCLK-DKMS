@@ -62,6 +62,7 @@ IMPORT_MODULE_PATHS = {
     "gate_d_outer": "/usr/libexec/rp1-gpclk-dkms/gate_d_outer.py",
     "gate_d_attempts": "/usr/libexec/rp1-gpclk-dkms/gate_d_attempts.py",
     "gate_d_instance": "/usr/libexec/rp1-gpclk-dkms/gate_d_instance.py",
+    "gate_d_preroot": "/usr/libexec/rp1-gpclk-dkms/gate_d_preroot.py",
 }
 IMPORT_ORDER = tuple(IMPORT_MODULE_PATHS)
 
@@ -1069,15 +1070,52 @@ def default_internal(operation: str, document: dict, root: pathlib.Path) -> None
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=("validate", "plan", "execute", "bootstrap"))
+    parser.add_argument("action", choices=("validate", "plan", "execute", "bootstrap", "pre-root-bootstrap"))
     parser.add_argument("document", type=pathlib.Path)
     parser.add_argument("--index", type=pathlib.Path)
     parser.add_argument("--instance", type=pathlib.Path)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--recover-from", type=pathlib.Path)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--envelope-sha256")
     args = parser.parse_args()
     document = load_json(args.document)
+    if args.action == "pre-root-bootstrap":
+        if not SHA256.fullmatch(args.envelope_sha256 or "") or digest(args.document) != args.envelope_sha256:
+            raise SystemExit("pre-root envelope identity differs")
+        executor = document.get("stagedExecutor", {})
+        module_identity = document.get("preRootModule", {})
+        current = pathlib.Path(__file__).resolve()
+        if (current != pathlib.Path(executor.get("path", "")).resolve() or
+                current.is_symlink() or digest(current) != executor.get("sha256")):
+            raise SystemExit("staged pre-root executor identity differs")
+        module_path = pathlib.Path(module_identity.get("path", ""))
+        if module_path.is_symlink() or not module_path.is_file():
+            raise SystemExit("pre-root module is absent or symlinked")
+        payload = module_path.read_bytes()
+        if hashlib.sha256(payload).hexdigest() != module_identity.get("sha256"):
+            raise SystemExit("pre-root module bytes differ")
+        module = types.ModuleType("gate_d_preroot_authenticated")
+        module.__file__ = str(module_path)
+        exec(compile(payload, str(module_path), "exec"), module.__dict__)
+        module.validate(document)
+        if not args.execute:
+            print(json.dumps({"valid": True, "readOnly": True, "outputDisabled": True}, indent=2, sort_keys=True)); return
+        if os.geteuid() != 0:
+            raise SystemExit("pre-root bootstrap execution requires root and --execute")
+        def pre_root_probe() -> dict:
+            overlays = subprocess.run(["/usr/bin/dtoverlay", "-l"], stdout=subprocess.PIPE, text=True, check=False, env=FIXED_ENV).stdout
+            dkms = subprocess.run(["/usr/sbin/dkms", "status"], stdout=subprocess.PIPE, text=True, check=False, env=FIXED_ENV).stdout
+            return {"moduleLoaded": pathlib.Path("/sys/module/rp1_gpclk_dkms").exists(),
+                    "endpointPresent": pathlib.Path("/dev/rp1-gpclk").exists(),
+                    "overlayActive": "rp1-gpclk" in overlays,
+                    "dkmsTestVersions": "rp1-gpclk-dkms/" in dkms, "liveOutput": False}
+        def pre_root_runner(argv: list[str]) -> None:
+            subprocess.run(argv, stdin=subprocess.DEVNULL, check=True,
+                           timeout=document["deadlineSeconds"], env=FIXED_ENV)
+        result = module.execute(document, prefix=pathlib.Path("/"), runner=pre_root_runner,
+                                probe=pre_root_probe, recover=args.resume)
+        print(json.dumps(result, indent=2, sort_keys=True)); return
     trust_bootstrapped = False
     if args.instance is not None:
         bootstrap_root_validator(args.instance)

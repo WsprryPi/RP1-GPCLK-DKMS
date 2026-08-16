@@ -78,8 +78,7 @@
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "bind and authenticate the installed root-validator dependency before dependent imports",
     "blocker": "The frozen installed layout uses hyphenated command filenames for Python dependencies imported under underscore module names; permanent bootstrap and normal dispatch cannot import their subordinate validators outside a source checkout."
-  }],
-  "successor": {
+  }, {
     "release": "0.0.0-phase5.22",
     "sourceCommit": "f7ddea06a68dedceb57aeec0ddedb67598a797e1",
     "archiveSha256": "2601cadb4f2abe25b72c7ed3237c00307bbcc11a8ed671331fef677089f93be9",
@@ -88,8 +87,14 @@
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "install and authenticate the complete transitive Gate D Python import graph",
     "blocker": "The qualification root is required to authenticate and validate the bootstrap operation that is supposed to create that root, so a fresh target cannot enter the root-bound trust state."
+  }],
+  "successor": {
+    "release": "0.0.0-phase5.23",
+    "status": "unfrozen",
+    "qualification": "offline-review-in-progress",
+    "purpose": "establish a closed one-shot pre-root trust transition into the root-bound Gate D control set"
   },
-  "successorSelectionGate": "selected-to-correct-phase5.21-incomplete-installed-import-graph",
+  "successorSelectionGate": "selected-to-correct-phase5.22-qualification-root-bootstrap-cycle",
   "reuseProhibited": [
     "representative-build-promotion",
     "route-decision",

@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy, hashlib, importlib.util, importlib.machinery, json, os, pathlib, shutil, sys, tempfile
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-MODULES=("gate_d_root","gate_d_bootstrap","gate_d_target_plan","gate_d_lifecycle","gate_d_outer","gate_d_attempts","gate_d_instance")
+MODULES=("gate_d_root","gate_d_bootstrap","gate_d_target_plan","gate_d_lifecycle","gate_d_outer","gate_d_attempts","gate_d_instance","gate_d_preroot")
 INSTALLED={name:f"/usr/libexec/rp1-gpclk-dkms/{name}.py" for name in MODULES}
 def sha(path:pathlib.Path)->str: return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory() as temporary:
         shutil.copy2(ROOT/"scripts"/f"{name}.py",destination); destination.chmod(0o644)
     installed_executor=fake_root/"usr/libexec/rp1-gpclk-dkms/gate-d-executor"
     shutil.copy2(ROOT/"scripts/gate_d_outer.py",installed_executor); installed_executor.chmod(0o755)
-    marker={"SPDX-License-Identifier":"MIT","schemaVersion":1,"kind":"gate-d-qualification-root-identity","rootPath":str(qualification),"candidateRelease":"0.0.0-phase5.22","sourceCommit":"1"*40}
+    marker={"SPDX-License-Identifier":"MIT","schemaVersion":1,"kind":"gate-d-qualification-root-identity","rootPath":str(qualification),"candidateRelease":"0.0.0-phase5.23","sourceCommit":"1"*40}
     marker_path=qualification/".gate-d-root.json"; marker_path.write_text(json.dumps(marker,sort_keys=True)+"\n")
     reference={"path":str(qualification),"identityFile":marker_path.name,"identitySha256":sha(marker_path),"ownerUid":os.getuid(),"mode":"0700"}
     def identity(name:str)->dict:
