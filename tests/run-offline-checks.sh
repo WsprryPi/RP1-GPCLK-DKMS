@@ -50,6 +50,12 @@ python3 "$repo_dir/tests/check_gate_d_phase5_37_control_set.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_39_control_set.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_41_control_set.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_42_control_set.py"
+python3 "$repo_dir/tests/check_gate_d_phase5_43_control_set.py"
+if [ -n "${PHASE5_43_RELEASE_ARCHIVE:-}" ]; then
+    python3 "$repo_dir/tests/check_gate_d_phase5_43_archived_preroot.py" "$PHASE5_43_RELEASE_ARCHIVE"
+else
+    echo "Phase 5.43 exact archived pre-root envelope validation: SKIP (archive not supplied)"
+fi
 python3 "$repo_dir/tests/check_gate_d_live_snapshot.py"
 python3 "$repo_dir/tests/check_gate_d_outer.py"
 python3 "$repo_dir/tests/check_gate_d_bootstrap.py"

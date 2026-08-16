@@ -1,0 +1,18 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-c-release-input-inventory",
+  "host": "wspr5",
+  "release": "0.0.0-phase5.43",
+  "sourceCommit": "aa92b0550acd66671fe1988510cf93987cd61c0a",
+  "directory": "/home/pi/gate-c-evidence/phase5.43-aa92b05",
+  "artifacts": [
+    {"name":"PROVENANCE.json","type":"file","size":33421,"mode":"0644","owner":"pi","group":"pi","sha256":"deeb2b0e2db5f5387604a247c14e4fa72b75a8841634ef04c4372416fe4f9f0f"},
+    {"name":"SHA256SUMS","type":"file","size":553,"mode":"0644","owner":"pi","group":"pi","sha256":"220f5129a7e78baacdb0e50e85b7301cbbb4d8316dddba959ab22e69172afee4"},
+    {"name":"release-metadata.json","type":"file","size":2565,"mode":"0644","owner":"pi","group":"pi","sha256":"df8b38bd78ef963d8db97e2e759c8209d373cbe56e5a798eacd9a01faa67c14e"},
+    {"name":"rp1-gpclk-compatibility-manifest.json","type":"file","size":6501,"mode":"0644","owner":"pi","group":"pi","sha256":"ebea46c5af283316773df90f8204c8ec72e6ac4ddaf3620c5062a9e0ecae1365"},
+    {"name":"rp1-gpclk-dkms-0.0.0-phase5.43.tar.gz","type":"file","size":621979,"mode":"0644","owner":"pi","group":"pi","sha256":"a8a200d069ad433353a8812ef6a9a4c585b75a9f6af3d6501ac3672e90c997c3"},
+    {"name":"rp1-gpclk-gpio20.dtbo","type":"file","size":1621,"mode":"0644","owner":"pi","group":"pi","sha256":"8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"},
+    {"name":"rp1-gpclk-gpio4.dtbo","type":"file","size":1619,"mode":"0644","owner":"pi","group":"pi","sha256":"c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6"}
+  ]
+}

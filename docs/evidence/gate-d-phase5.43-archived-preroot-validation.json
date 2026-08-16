@@ -1,0 +1,24 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-archived-preroot-envelope-validation",
+  "validatedAt": "2026-08-16T23:54:15Z",
+  "release": "0.0.0-phase5.43",
+  "sourceCommit": "aa92b0550acd66671fe1988510cf93987cd61c0a",
+  "archiveSha256": "a8a200d069ad433353a8812ef6a9a4c585b75a9f6af3d6501ac3672e90c997c3",
+  "outerExecutorSha256": "6515ec5f7b07b8d5689397b77c2e384d2d039e5b385c0517e3d9cc8fc85d6e7e",
+  "preRootModuleSha256": "c9eec608c36ac6023373481e76b07b24d0ae39f8c4fa658412cef88f299b3ad3",
+  "envelopeSha256": "e981ad5ecf0e3edfd2036b6f52cf7f4bf520e76a9ee98b8521a1e40ef1fdcd73",
+  "envelopeSchemaVersion": 5,
+  "validationSource": "exact-release-archive-bytes",
+  "worktreeModuleUsed": false,
+  "result": {
+    "archiveIdentity": "passed",
+    "outerIdentity": "passed",
+    "preRootIdentity": "passed",
+    "archivedPreRootEnvelopeValidation": "passed",
+    "outputDisabled": true,
+    "targetExecutionApproved": false,
+    "executionReady": false
+  }
+}
