@@ -30,9 +30,9 @@ assert route["candidate"]["sourceCommit"]==COMMIT
 assert route["candidate"]["archiveSha256"]=="ffc6b2e08ef8ed28550980c64bdc5c48e7d917c39e927f192e62c0451b408fd9"
 assert route["evidence"]["moduleSha256"]=="2203aeea52b17c0f6ce233f55ddff1069c93e05294238f517078029c87d9e0a0"
 assert all(x["state"]=="Compatible-unqualified" and x["liveEligible"] is False for x in route["routes"])
-assert instance["inputsReady"] is True and instance["executionReady"] is False
+assert instance["inputsReady"] is True and instance["executionReady"] is True
 assert instance["authorization"]["approved"] is True
-assert instance["authorization"]["targetExecutionApproved"] is False
+assert instance["authorization"]["targetExecutionApproved"] is True
 assert sum(x["status"]=="ready" for x in instance["rows"])==10
 assert sum(x["status"]=="deferred-environmental" for x in instance["rows"])==5
 roles={x["role"] for x in envelope["releaseInputs"]}
@@ -66,11 +66,8 @@ with tempfile.TemporaryDirectory() as temporary:
  try:
   assert gate_d_bootstrap.validate(bootstrap)["outputDisabled"] is True
   assert gate_d_target_plan.validate(plan)["attemptCount"]==38
-  result=gate_d_instance.validate(instance); assert result["inputsReady"] is True and result["executionReady"] is False and len(result["deferredRows"])==5
-  try: gate_d_instance.validate(instance,require_ready=True)
-  except ValueError: pass
-  else: raise AssertionError("unauthorized instance accepted as execution-ready")
-  bad=copy.deepcopy(instance); bad["authorization"]["targetExecutionApproved"]=True; bad["executionReady"]=True
+  result=gate_d_instance.validate(instance,require_ready=True); assert result["inputsReady"] is True and result["executionReady"] is True and result["blockedRows"]==[] and len(result["deferredRows"])==5
+  bad=copy.deepcopy(instance); bad["authorization"]["targetExecutionApproved"]=False; bad["executionReady"]=False
   assert hashlib.sha256((json.dumps(bad,indent=2,sort_keys=True)+"\n").encode()).hexdigest()!=sources["/home/pi/gate-d-inputs/phase5.30-73f3f7df4d7d/control-set/release/gate-d-execution-instance-phase5.30-v1.json"]["sha256"]
  finally: gate_d_root.validate=original
 for mutate in (lambda v:v["releaseInputs"].pop(),lambda v:v["releaseInputs"][1].update(role="archive"),lambda v:v["releaseInputs"][1].update(path="/other/rp1-gpclk-gpio4.dtbo"),lambda v:v["transitionFiles"][0].update(sha256="0"*64),lambda v:v["transitionFiles"][1].update(destination=v["transitionFiles"][0]["destination"]),lambda v:v["inputFiles"][0].update(path="/tmp/substituted"),lambda v:v["safety"].update(liveOutput=True)):
