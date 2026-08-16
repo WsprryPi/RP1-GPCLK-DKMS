@@ -17,7 +17,7 @@ for path in paths:
  assert "Si5351 leads must remain disconnected" not in text
 
 layout=json.loads((ROOT/"release/release-layout-v1.json").read_text())
-assert layout["release"]=="0.0.0-phase5.41"
+assert layout["release"]=="0.0.0-phase5.42"
 tracked=set(subprocess.check_output(["git","ls-files"],cwd=ROOT,text=True).splitlines())
 assert "docs/operator/gate-d-target-runbook.md" in tracked
 assert "docs/contracts/gate-d-target-authorization-dossier.md" in tracked

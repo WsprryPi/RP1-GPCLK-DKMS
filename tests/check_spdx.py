@@ -21,7 +21,8 @@ ROOT_FILES = ["Kbuild", "Makefile", "dkms.conf"]
 def identifier(path: Path) -> str | None:
     for line in path.read_text(encoding="utf-8").splitlines()[:5]:
         marker = "SPDX-License-Identifier:"
-        if '"SPDX-License-Identifier": "MIT"' in line:
+        if ('"SPDX-License-Identifier": "MIT"' in line or
+                '"SPDX-License-Identifier":"MIT"' in line):
             return "MIT"
         if marker in line:
             value = line.split(marker, 1)[1].strip().rstrip(" -->*/,")
