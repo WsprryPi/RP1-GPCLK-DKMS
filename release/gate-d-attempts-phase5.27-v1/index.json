@@ -1,0 +1,215 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "attemptCount": 38,
+  "attempts": [
+    {
+      "file": "gd-current-supported-kernel-gpio4.json",
+      "operationId": "gd-current-supported-kernel-gpio4",
+      "sha256": "501d332ae12ad9853b2227d4679c1cf2d9a31bb062ec7860f5df65803371e8a8"
+    },
+    {
+      "file": "gd-current-supported-kernel-gpio20.json",
+      "operationId": "gd-current-supported-kernel-gpio20",
+      "sha256": "563ae461ffb1e2c05ad03aab839e2819327498dedfa5a750268f1cf518c0b4a2"
+    },
+    {
+      "file": "gd-prior-supported-kernel-downgrade-gpio4.json",
+      "operationId": "gd-prior-supported-kernel-downgrade-gpio4",
+      "sha256": "b98d413721b7a8335be22fd01125dd198dbc76a0d3dcf543446ece2d036874fc"
+    },
+    {
+      "file": "gd-prior-supported-kernel-downgrade-gpio20.json",
+      "operationId": "gd-prior-supported-kernel-downgrade-gpio20",
+      "sha256": "bcf4469fa39cdaa0f047b8d9f4be122cf2de2747ce2494b2369388c6363eb776"
+    },
+    {
+      "file": "gd-signing-not-enforced-gpio4.json",
+      "operationId": "gd-signing-not-enforced-gpio4",
+      "sha256": "5ded5bc81f5cad484cafb87160dfda8a31dc3d7347587aba92d64ec5274de325"
+    },
+    {
+      "file": "gd-signing-not-enforced-gpio20.json",
+      "operationId": "gd-signing-not-enforced-gpio20",
+      "sha256": "fb577de4699a37f3c93d7bf1011c51f7b5d6f458bdcad8067cf6ade47b2b1476"
+    },
+    {
+      "file": "gd-deliberate-build-failure-compiler-wrapper.json",
+      "operationId": "gd-deliberate-build-failure-compiler-wrapper",
+      "sha256": "f75bbf1f1feb3515c7acfa88c2943e1d640d2c29f816fded4d7fce10523d8b6f"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-preflight.json",
+      "operationId": "gd-interrupted-upgrade-after-preflight",
+      "sha256": "2752ac6b84829a5b279924014ce91f673da0fa581b4a72c3aaa621d38643cff8"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-retain-predecessor.json",
+      "operationId": "gd-interrupted-upgrade-after-retain-predecessor",
+      "sha256": "b788db9abec330e51b403b9cdb16f5117d9d326dbc99b2105b67accd0b0b5b29"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-dkms-add.json",
+      "operationId": "gd-interrupted-upgrade-after-dkms-add",
+      "sha256": "ec95ccbdbadf147c33999cf9f2cf7fb5400467e63c656ca28b70811c996c29ec"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-dkms-build.json",
+      "operationId": "gd-interrupted-upgrade-after-dkms-build",
+      "sha256": "ac6455c3e85f1a87b57170a2d81ff8959027531403c92a653f9fa69d58ade1e1"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-dkms-install.json",
+      "operationId": "gd-interrupted-upgrade-after-dkms-install",
+      "sha256": "952a0bcde192f034df976ed3c2aa715405fda9178642a3c9658fc0b1d5566ddd"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-load-disabled.json",
+      "operationId": "gd-interrupted-upgrade-after-load-disabled",
+      "sha256": "0e353f0e0537960c8fdadedcbeb733358d74de78530750d3a80bac749dcb5406"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-query-disabled.json",
+      "operationId": "gd-interrupted-upgrade-after-query-disabled",
+      "sha256": "4d1a0b1b83fbd09257c958495c5e9449933f8f2578cfb44e24bc80e974f41e76"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-uapi-query-release.json",
+      "operationId": "gd-interrupted-upgrade-after-uapi-query-release",
+      "sha256": "aadf94531a7998de464f66414ac214709a79f0eb7cead74929178d3b29ee2a1a"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-unbind-bind.json",
+      "operationId": "gd-interrupted-upgrade-after-unbind-bind",
+      "sha256": "8dffd6f8542bfba19ade45a8b93d12e942f6e88be08ea3042f72000ddd3a059e"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-unload.json",
+      "operationId": "gd-interrupted-upgrade-after-unload",
+      "sha256": "0a806a28e1153f4b12f23f824deed3ca17c2c96420a6c26cf25fb5a69c8cd1d7"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-dkms-uninstall.json",
+      "operationId": "gd-interrupted-upgrade-after-dkms-uninstall",
+      "sha256": "07cbf7a11bd30c3fc85dd59be9476326eb6caa506b666aae14cb363979b79844"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-dkms-remove.json",
+      "operationId": "gd-interrupted-upgrade-after-dkms-remove",
+      "sha256": "0b77243b23ae4b6650a1b13f82bcbd24b398173d3904ec2f287eecba4f175169"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-owned-residue-remove.json",
+      "operationId": "gd-interrupted-upgrade-after-owned-residue-remove",
+      "sha256": "87d2c4d23d1533155348ae4cd7ae62d1b4bd485f4e2de2ba4c5f7fb1cf6a55af"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-verify-final-state.json",
+      "operationId": "gd-interrupted-upgrade-after-verify-final-state",
+      "sha256": "392c1b0b465789bfd1b1b15bff4bdf099b130d4aa0902c43c29418e3bcf54fdb"
+    },
+    {
+      "file": "gd-interrupted-upgrade-after-commit-state.json",
+      "operationId": "gd-interrupted-upgrade-after-commit-state",
+      "sha256": "2962f9b63d3ccdf807d06e5964e6ea7d588552c0b0a6ad5f53f8423f201a0e8a"
+    },
+    {
+      "file": "gd-stale-manifest-release.json",
+      "operationId": "gd-stale-manifest-release",
+      "sha256": "696e66c4858fb981a2dc45c4e0d653e6637f1f681d842669f52bb6f20d857fe2"
+    },
+    {
+      "file": "gd-stale-manifest-kernel.json",
+      "operationId": "gd-stale-manifest-kernel",
+      "sha256": "5bb5e7682eadd3644c2cdada2d952f22e13143aafa1a91d641b730dae8baf6e6"
+    },
+    {
+      "file": "gd-stale-manifest-uapi.json",
+      "operationId": "gd-stale-manifest-uapi",
+      "sha256": "97c1ac50d7610c2b3cec50838ad3e353068fe8d06708ef8da7446d21b11f7530"
+    },
+    {
+      "file": "gd-stale-manifest-gpio4-overlay.json",
+      "operationId": "gd-stale-manifest-gpio4-overlay",
+      "sha256": "15771e308bef9419ffec228c3b21b130299d78ee119a71025c4ef116f0e9aa19"
+    },
+    {
+      "file": "gd-stale-manifest-gpio20-overlay.json",
+      "operationId": "gd-stale-manifest-gpio20-overlay",
+      "sha256": "5b42d0822dec29df819c6a0ff3363543b72440d4aa9a2a5b8d95c91286f4190f"
+    },
+    {
+      "file": "gd-stale-manifest-enrollment.json",
+      "operationId": "gd-stale-manifest-enrollment",
+      "sha256": "3da37dcfb3b7b3f7c5001fdadef539646b7210161107673ec52a45d6ea0e8409"
+    },
+    {
+      "file": "gd-corrupted-archive-or-dtbo-archive.json",
+      "operationId": "gd-corrupted-archive-or-dtbo-archive",
+      "sha256": "c6ac3acea898594588027db524aaab4c52d670e3a49fb8abe352c2ee4b459b76"
+    },
+    {
+      "file": "gd-corrupted-archive-or-dtbo-gpio4-dtbo.json",
+      "operationId": "gd-corrupted-archive-or-dtbo-gpio4-dtbo",
+      "sha256": "0520412c8d7db52c55b7e609d0d56af39681b9cae75f6aca50e9c274018f2117"
+    },
+    {
+      "file": "gd-corrupted-archive-or-dtbo-gpio20-dtbo.json",
+      "operationId": "gd-corrupted-archive-or-dtbo-gpio20-dtbo",
+      "sha256": "2ce18d6ea493cb259ab7db6cf1bdc68d7ecd325f4616539d09cf93e70936daa4"
+    },
+    {
+      "file": "gd-removal-inactive-complete-removal.json",
+      "operationId": "gd-removal-inactive-complete-removal",
+      "sha256": "9d6c54199c80115b0690b6e92bc3fa1da6b52f58186cc53bd98c32787b44c809"
+    },
+    {
+      "file": "gd-removal-open-or-active-open-gpio4.json",
+      "operationId": "gd-removal-open-or-active-open-gpio4",
+      "sha256": "4e265e5c7245eb312037024566bcbe360cfdaaff7e78c472cf1ea7007e521ae7"
+    },
+    {
+      "file": "gd-removal-open-or-active-owner-gpio4.json",
+      "operationId": "gd-removal-open-or-active-owner-gpio4",
+      "sha256": "b9672c2a9099cd473b8fa8459da192706db96caf76aa60fed4db01b2aa6059ea"
+    },
+    {
+      "file": "gd-removal-open-or-active-open-gpio20.json",
+      "operationId": "gd-removal-open-or-active-open-gpio20",
+      "sha256": "d4df0a24232e665dc28736a14fcb7ff027ecd5b873736b3dee8319cbfe733122"
+    },
+    {
+      "file": "gd-removal-open-or-active-owner-gpio20.json",
+      "operationId": "gd-removal-open-or-active-owner-gpio20",
+      "sha256": "8fa05bee2a16f799d1f0e085fb43779f8f145e520dde8d3611b7a9aa09f4776d"
+    },
+    {
+      "file": "gd-reinstall-after-removal-gpio4.json",
+      "operationId": "gd-reinstall-after-removal-gpio4",
+      "sha256": "27dc5b1e4a2aaa091d335db104f6c30245b7a884a3da99973c97b4f92fdb298f"
+    },
+    {
+      "file": "gd-reinstall-after-removal-gpio20.json",
+      "operationId": "gd-reinstall-after-removal-gpio20",
+      "sha256": "985aa3040a00cecb53781e8f5096cc354d5ad7e2e111119c4696dca71e813a7a"
+    }
+  ],
+  "executors": {
+    "attemptGenerator": {
+      "path": "scripts/gate_d_attempts.py",
+      "sha256": "3039fcc07528bdccd22e8f4f4d0dff369bba8f88e2c59b12b27f01feaf6654aa"
+    },
+    "permanentExecutor": {
+      "path": "scripts/gate_d_outer.py",
+      "sha256": "49b26b3f056df6855f7e0530b2f64d2f9a423836bf4b5b773c3db31980505864"
+    }
+  },
+  "kind": "gate-d-attempt-index",
+  "qualificationRoot": {
+    "identityFile": ".gate-d-root.json",
+    "identitySha256": "7d864bd85bacf8ebf3eb03e647c805372d09eed38e17e3c1e7b98a87dcdb7d1b",
+    "mode": "0700",
+    "ownerUid": 1000,
+    "path": "/home/pi/gate-d-qualification/phase5.27-bfb927256317"
+  },
+  "schemaVersion": 2
+}
