@@ -14,7 +14,7 @@ from typing import Callable
 
 SHA256 = __import__("re").compile(r"[0-9a-f]{64}")
 COMMIT = __import__("re").compile(r"[0-9a-f]{40}")
-CHECKPOINTS = ("preflight", "create-root", "install", "cleanup-runtime",
+CHECKPOINTS = ("preflight", "archive-prior-state", "create-root", "install", "cleanup-runtime",
                "copy-control-set", "verify-transition", "commit")
 RELEASE_INPUT_ROLES = {
     "archive": None,
@@ -63,10 +63,12 @@ def validate(value: dict) -> dict:
                 "cleanupArgv", "recoveryArgv", "journal", "cleanupPaths",
                 "deadlineSeconds", "expectedPreState", "expectedPostState", "safety"}
     schema = value.get("schemaVersion")
-    if schema == 2:
+    if schema in {2, 3}:
         required.update({"releaseInputs", "administratorState"})
+    if schema == 3:
+        required.add("priorTerminalState")
     if (not isinstance(value, dict) or set(value) != required or
-            value.get("SPDX-License-Identifier") != "MIT" or schema not in {1, 2} or
+            value.get("SPDX-License-Identifier") != "MIT" or schema not in {1, 2, 3} or
             value.get("kind") != "gate-d-pre-root-bootstrap-envelope"):
         raise ValueError("invalid pre-root envelope identity")
     candidate = value["candidate"]
@@ -115,7 +117,7 @@ def validate(value: dict) -> dict:
         if input_paths.get(path) != expected:
             raise ValueError("pre-root primary input is not bound")
     release_inputs = value.get("releaseInputs", [])
-    if schema == 2 and (not isinstance(release_inputs, list) or len(release_inputs) != len(RELEASE_INPUT_ROLES)):
+    if schema in {2, 3} and (not isinstance(release_inputs, list) or len(release_inputs) != len(RELEASE_INPUT_ROLES)):
         raise ValueError("pre-root release-input graph is incomplete")
     roles = {}
     expected_release_names = dict(RELEASE_INPUT_ROLES)
@@ -128,10 +130,10 @@ def validate(value: dict) -> dict:
                 input_paths.get(item["path"]) != item["sha256"]):
             raise ValueError("invalid pre-root release-input identity")
         roles[item["role"]] = item
-    if schema == 2 and (set(roles) != set(RELEASE_INPUT_ROLES) or roles["archive"]["path"] != candidate["archivePath"]):
+    if schema in {2, 3} and (set(roles) != set(RELEASE_INPUT_ROLES) or roles["archive"]["path"] != candidate["archivePath"]):
         raise ValueError("pre-root release-input graph differs")
     release_parent = pathlib.PurePosixPath(candidate["archivePath"]).parent
-    if schema == 2 and any(pathlib.PurePosixPath(item["path"]).parent != release_parent for item in release_inputs):
+    if schema in {2, 3} and any(pathlib.PurePosixPath(item["path"]).parent != release_parent for item in release_inputs):
         raise ValueError("pre-root release inputs do not share the administrator release directory")
     administrator_state = value.get("administratorState", {
         "path": "/var/lib/rp1-gpclk-dkms/transaction.json",
@@ -145,6 +147,23 @@ def validate(value: dict) -> dict:
             not pathlib.PurePosixPath(administrator_state.get("path", "")).is_absolute() or
             ".." in pathlib.PurePosixPath(administrator_state["path"]).parts):
         raise ValueError("invalid administrator transaction-state contract")
+    prior = value.get("priorTerminalState")
+    if schema == 3:
+        prior_keys = {"path", "sha256", "status", "recoveryRequired", "liveOutput",
+                      "ownerUid", "mode", "archivePath", "archiveMode"}
+        if (not isinstance(prior, dict) or set(prior) != prior_keys or
+                prior.get("path") != administrator_state["path"] or
+                not SHA256.fullmatch(prior.get("sha256", "")) or
+                prior.get("status") != "recovered" or prior.get("recoveryRequired") is not False or
+                prior.get("liveOutput") is not False or type(prior.get("ownerUid")) is not int or
+                prior["ownerUid"] < 0 or prior.get("mode") != "0600" or
+                prior.get("archiveMode") != "0400"):
+            raise ValueError("invalid prior terminal administrator state")
+        current = pathlib.PurePosixPath(prior["path"])
+        archive = pathlib.PurePosixPath(prior.get("archivePath", ""))
+        if (not archive.is_absolute() or ".." in archive.parts or archive == current or
+                archive.parent.parent != current.parent):
+            raise ValueError("invalid prior terminal archive path")
     for item in transitions:
         if (not isinstance(item, dict) or set(item) != {"sourcePath", "destination", "sha256", "mode"} or
                 item.get("sourcePath") not in input_paths or input_paths[item["sourcePath"]] != item.get("sha256") or
@@ -181,6 +200,8 @@ def validate(value: dict) -> dict:
     absolute = [root["path"], value["stagedExecutor"]["path"], value["preRootModule"]["path"],
                 value["journal"], administrator_state["path"], candidate["archivePath"], *value["cleanupPaths"],
                 *(item["path"] for item in value["inputFiles"]), *(item["path"] for item in value["installedTools"])]
+    if prior is not None:
+        absolute.append(prior["archivePath"])
     if any(not pathlib.PurePosixPath(path).is_absolute() or ".." in pathlib.PurePosixPath(path).parts for path in absolute):
         raise ValueError("pre-root path is not absolute and closed")
     return {"valid": True, "readOnly": True, "outputDisabled": True}
@@ -244,6 +265,8 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
         "path": "/var/lib/rp1-gpclk-dkms/transaction.json",
     })
     administrator_state = rooted(prefix, administrator_contract["path"])
+    prior_contract = value.get("priorTerminalState")
+    prior_archive = rooted(prefix, prior_contract["archivePath"]) if prior_contract else None
     if recover:
         if not journal.exists() and not journal.is_symlink() and not root.exists() and not root.is_symlink():
             if probe() != value["expectedPreState"]:
@@ -262,6 +285,18 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
             if not administrator_state.is_file() or not old["administratorInvoked"]:
                 raise ValueError("administrator transaction state is ambiguous")
             runner(value["recoveryArgv"])
+        elif prior_contract:
+            if old["administratorInvoked"]:
+                raise ValueError("invoked administrator has no recoverable transaction state")
+            if (prior_archive is None or prior_archive.is_symlink() or not prior_archive.is_file() or
+                    digest(prior_archive) != prior_contract["sha256"]):
+                raise ValueError("archived prior terminal state differs during recovery")
+            os.replace(prior_archive, administrator_state)
+            administrator_state.chmod(int(prior_contract["mode"], 8))
+            try:
+                prior_archive.parent.rmdir()
+            except OSError:
+                pass
         elif probe() != value["expectedPreState"]:
             raise ValueError("pre-administrator recovery baseline differs")
         if root.exists():
@@ -294,9 +329,22 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
         path = rooted(prefix, item["path"])
         if path.is_symlink() or not path.is_file() or digest(path) != item["sha256"]:
             raise ValueError("pre-root input identity differs")
-    if value["schemaVersion"] == 2:
+    if value["schemaVersion"] in {2, 3}:
         validate_release_inputs(value, prefix=prefix)
-    if administrator_state.exists() or administrator_state.is_symlink():
+    if prior_contract:
+        if (administrator_state.is_symlink() or not administrator_state.is_file() or
+                administrator_state.stat().st_uid != prior_contract["ownerUid"] or
+                stat.S_IMODE(administrator_state.stat().st_mode) != int(prior_contract["mode"], 8) or
+                digest(administrator_state) != prior_contract["sha256"]):
+            raise ValueError("prior terminal administrator state differs")
+        prior_value = json.loads(administrator_state.read_text())
+        if (prior_value.get("status") != prior_contract["status"] or
+                prior_value.get("recoveryRequired") is not prior_contract["recoveryRequired"] or
+                prior_value.get("liveOutput") is not prior_contract["liveOutput"]):
+            raise ValueError("prior administrator state is not terminal recovered")
+        if prior_archive is None or prior_archive.exists() or prior_archive.is_symlink():
+            raise ValueError("prior terminal archive destination exists")
+    elif administrator_state.exists() or administrator_state.is_symlink():
         raise ValueError("administrator transaction state exists before invocation")
     state = {"operationId": value["operationId"], "status": "in-progress", "checkpoint": "preflight",
              "liveOutput": False, "administratorInvoked": False}
@@ -307,7 +355,18 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
         for checkpoint in CHECKPOINTS[1:]:
             state["checkpoint"] = checkpoint
             atomic_json(journal, state)
-            if checkpoint == "create-root":
+            if checkpoint == "archive-prior-state" and prior_contract:
+                archive_parent = prior_archive.parent
+                if archive_parent.exists():
+                    if (archive_parent.is_symlink() or not archive_parent.is_dir() or
+                            archive_parent.stat().st_uid != prior_contract["ownerUid"] or
+                            stat.S_IMODE(archive_parent.stat().st_mode) != 0o700):
+                        raise ValueError("prior terminal archive directory is unsafe")
+                else:
+                    archive_parent.mkdir(mode=0o700)
+                os.replace(administrator_state, prior_archive)
+                prior_archive.chmod(int(prior_contract["archiveMode"], 8))
+            elif checkpoint == "create-root":
                 root.mkdir(mode=0o700)
                 os.chown(root, value["proposedRoot"]["ownerUid"], -1)
                 marker = root / ".gate-d-root.json"

@@ -154,4 +154,80 @@ with tempfile.TemporaryDirectory() as temporary:
     assert calls.count(envelope["argv"])==1 and calls.count(envelope["recoveryArgv"])==1
     assert (prefix/"staging/transaction.json").is_file()
     assert not (prefix/"staging/transaction.failure.json").exists()
+
+def add_prior_terminal_state(prefix:pathlib.Path,envelope:dict)->tuple[pathlib.Path,pathlib.Path,bytes]:
+    state=prefix/"admin-transaction.json"
+    payload=(json.dumps({"status":"recovered","recoveryRequired":False,"liveOutput":False},sort_keys=True)+"\n").encode()
+    state.write_bytes(payload); state.chmod(0o600)
+    envelope["schemaVersion"]=3
+    envelope["priorTerminalState"]={
+        "path":"/admin-transaction.json","sha256":hashlib.sha256(payload).hexdigest(),
+        "status":"recovered","recoveryRequired":False,"liveOutput":False,
+        "ownerUid":os.getuid(),"mode":"0600","archivePath":"/history/prior-recovered.json",
+        "archiveMode":"0400",
+    }
+    return state,prefix/"history/prior-recovered.json",payload
+
+with tempfile.TemporaryDirectory() as temporary:
+    prefix=pathlib.Path(temporary).resolve(); envelope=make_envelope(prefix)
+    state,archive,payload=add_prior_terminal_state(prefix,envelope)
+    installed=prefix/"installed/gate-d-executor"
+    def archival_runner(argv:list[str])->None:
+        if argv==envelope["argv"]:
+            assert not state.exists() and archive.read_bytes()==payload
+            installed.parent.mkdir(parents=True,exist_ok=True); installed.write_bytes(b"installed-executor\n")
+            state.write_text('{"status":"complete"}\n')
+        elif argv==envelope["cleanupArgv"]: state.unlink()
+    assert tool.validate(envelope)["outputDisabled"] is True
+    assert tool.execute(envelope,prefix=prefix,runner=archival_runner,probe=lambda:baseline)["status"]=="complete"
+    assert not state.exists() and archive.read_bytes()==payload
+    assert archive.stat().st_mode & 0o777==0o400
+
+with tempfile.TemporaryDirectory() as temporary:
+    prefix=pathlib.Path(temporary).resolve(); envelope=make_envelope(prefix)
+    state,archive,payload=add_prior_terminal_state(prefix,envelope)
+    try: tool.execute(envelope,prefix=prefix,runner=lambda argv:None,probe=lambda:baseline,stop_after="archive-prior-state")
+    except InterruptedError: pass
+    else: raise AssertionError("prior-ledger archive interruption absent")
+    assert not state.exists() and archive.read_bytes()==payload
+    assert tool.execute(envelope,prefix=prefix,runner=lambda argv:None,probe=lambda:baseline,recover=True)["status"]=="recovered"
+    assert state.read_bytes()==payload and state.stat().st_mode & 0o777==0o600
+    assert not archive.exists()
+
+with tempfile.TemporaryDirectory() as temporary:
+    prefix=pathlib.Path(temporary).resolve(); envelope=make_envelope(prefix)
+    state,archive,payload=add_prior_terminal_state(prefix,envelope)
+    def fail_before_new_state(argv:list[str])->None:
+        if argv==envelope["argv"]: raise RuntimeError("administrator invoked without state")
+    try: tool.execute(envelope,prefix=prefix,runner=fail_before_new_state,probe=lambda:baseline)
+    except RuntimeError: pass
+    else: raise AssertionError("administrator pre-state failure absent")
+    try: tool.execute(envelope,prefix=prefix,runner=fail_before_new_state,probe=lambda:baseline,recover=True)
+    except ValueError as error: assert "no recoverable transaction state" in str(error)
+    else: raise AssertionError("ambiguous invoked-administrator recovery accepted")
+    assert not state.exists() and archive.read_bytes()==payload
+
+for failure in ("tampered","nonterminal","wrong-mode","symlink","archive-exists","unsafe-archive-directory"):
+    with tempfile.TemporaryDirectory() as temporary:
+        prefix=pathlib.Path(temporary).resolve(); envelope=make_envelope(prefix)
+        state,archive,payload=add_prior_terminal_state(prefix,envelope)
+        if failure=="tampered": state.write_bytes(b"substituted\n")
+        elif failure=="nonterminal":
+            payload=b'{"liveOutput":false,"recoveryRequired":true,"status":"inactive-recovery-required"}\n'
+            state.write_bytes(payload); envelope["priorTerminalState"]["sha256"]=hashlib.sha256(payload).hexdigest()
+        elif failure=="wrong-mode": state.chmod(0o644)
+        elif failure=="symlink": state.unlink(); state.symlink_to(prefix/"staging/admin.py")
+        elif failure=="archive-exists": archive.parent.mkdir(); archive.write_bytes(b"foreign\n")
+        elif failure=="unsafe-archive-directory": archive.parent.mkdir(mode=0o755)
+        try: tool.execute(envelope,prefix=prefix,runner=lambda argv:None,probe=lambda:baseline)
+        except (ValueError,OSError): pass
+        else: raise AssertionError(f"unsafe prior terminal state accepted: {failure}")
+
+with tempfile.TemporaryDirectory() as temporary:
+    prefix=pathlib.Path(temporary).resolve(); envelope=make_envelope(prefix)
+    add_prior_terminal_state(prefix,envelope)
+    envelope["priorTerminalState"]["archivePath"]="/history/../escape"
+    try: tool.validate(envelope)
+    except ValueError: pass
+    else: raise AssertionError("unsafe prior terminal archive path accepted")
 print("Gate D pre-root trust transition: PASS")
