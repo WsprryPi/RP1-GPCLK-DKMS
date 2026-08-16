@@ -2,7 +2,7 @@
   "SPDX-License-Identifier": "MIT",
   "authorization": {
     "administrator": "pi through sudo",
-    "approvalScope": "Exact Phase 5.31 output-disabled Gate D target execution authorized by the operator; limited to the 38 reviewed attempts in the ten ready rows.",
+    "approvalScope": "Corrected Phase 5.31 control-set construction and offline validation only; fresh target execution is not authorized.",
     "approved": true,
     "cleanup": "remove only exact attempt-owned state and preserve administrator, historical, and unrelated bytes",
     "connection": "ssh wspr5",
@@ -30,7 +30,7 @@
     ],
     "reboot": "planned and noticed only after recovery preflight",
     "serviceChanges": "temporarily stop and restore wsprrypi, sdrplay, sdrconnect-server, and SoapySDRServer when present",
-    "targetExecutionApproved": true
+    "targetExecutionApproved": false
   },
   "candidate": {
     "archiveSha256": "ac0ce593e988886a24c22866409a20097a24105a94b846152bdc30ac4a060bed",
@@ -44,18 +44,18 @@
   },
   "executionPolicy": {
     "attemptIndex": "release/gate-d-attempts-phase5.31-v1/index.json",
-    "attemptIndexSha256": "a97dc262d8170de95cdf222acae08599e0b6d4268a457fe54216421e716781a0",
+    "attemptIndexSha256": "9dc9f304cc0300b6cb0532e5cad15d7a94444466859c20c0e1f82d6bee832a81",
     "environmentalCoverageComplete": false,
     "matrixPolicy": "release/gate-d-matrix-policy-v2.json",
     "matrixPolicySha256": "31cfe5c8c1756067b9ba8f8cc31823ba1ee33d95db5149f1877e439a6f40f994",
     "qualificationBootstrap": "release/gate-d-qualification-bootstrap-plan-phase5.31-v1.json",
-    "qualificationBootstrapSha256": "fb3a23e86e9aabfd6c443e8395bc8aa9a27b3e8cb55d415df153a8dcbf9c5d16",
+    "qualificationBootstrapSha256": "6955c6dc3d7c4ef4ff123d01256789be672fbf510b1a7ce24971ce2f22f08cb6",
     "routeDecision": "release/gate-d-route-compatibility-decision-phase5.31-v1.json",
     "routeDecisionSha256": "0ac8d8713b734fa90d6695a2bd3262dc49e3e0ed9c8a7204e9bec8d50c13729b",
     "targetPlan": "release/gate-d-target-operation-plan-phase5.31-v1.json",
-    "targetPlanSha256": "e0b0cb82f85ef3ec05279ee9ae3e1b66334fe72660281fe45a46086a9c13cd68"
+    "targetPlanSha256": "d47c8879f5a87d358d8df01396175c590aefd2df0c4cccab6376beee3106456d"
   },
-  "executionReady": true,
+  "executionReady": false,
   "inputsReady": true,
   "kind": "gate-d-representative-system-execution-instance",
   "matrixRelease": "0.0.0-phase5.31",

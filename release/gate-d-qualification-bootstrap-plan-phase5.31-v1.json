@@ -148,7 +148,7 @@
     },
     {
       "path": "/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin",
-      "sha256": "0e3b8605817d7b5a6bee112184a55e7bc8438a6e15582400570607403f223276"
+      "sha256": "b9c35e9d52a1f2cb67fa055cc517c870c205855ea7d7d052df138c716ad1d9e3"
     }
   ],
   "safety": {

@@ -43,7 +43,7 @@
     "sourceCommit": "c7e6fafdc434bdad78e12a6683239b8d87845cfa",
     "stagingDirectory": "/var/lib/rp1-gpclk-dkms/gate-d/staging/gd-corrupted-archive-or-dtbo-gpio4-dtbo",
     "subordinateLifecycle": null,
-    "targetPlanSha256": "e0b0cb82f85ef3ec05279ee9ae3e1b66334fe72660281fe45a46086a9c13cd68",
+    "targetPlanSha256": "d47c8879f5a87d358d8df01396175c590aefd2df0c4cccab6376beee3106456d",
     "tooling": {
       "bootSelector": {
         "candidateArchiveMember": true,

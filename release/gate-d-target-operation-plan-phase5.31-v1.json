@@ -127,7 +127,7 @@
   },
   "qualificationBootstrap": {
     "path": "release/gate-d-qualification-bootstrap-plan-phase5.31-v1.json",
-    "sha256": "fb3a23e86e9aabfd6c443e8395bc8aa9a27b3e8cb55d415df153a8dcbf9c5d16"
+    "sha256": "6955c6dc3d7c4ef4ff123d01256789be672fbf510b1a7ce24971ce2f22f08cb6"
   },
   "qualificationRoot": {
     "identityFile": ".gate-d-root.json",

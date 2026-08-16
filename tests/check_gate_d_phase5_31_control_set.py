@@ -30,9 +30,9 @@ assert route["candidate"]["sourceCommit"]==COMMIT
 assert route["candidate"]["archiveSha256"]=="ac0ce593e988886a24c22866409a20097a24105a94b846152bdc30ac4a060bed"
 assert route["evidence"]["moduleSha256"]=="7e1e02a535c6b549327411c84e48580c31efb0e0b1662e7fd3b3bc58f31a44b9"
 assert all(x["state"]=="Compatible-unqualified" and x["liveEligible"] is False for x in route["routes"])
-assert instance["inputsReady"] is True and instance["executionReady"] is True
+assert instance["inputsReady"] is True and instance["executionReady"] is False
 assert instance["authorization"]["approved"] is True
-assert instance["authorization"]["targetExecutionApproved"] is True
+assert instance["authorization"]["targetExecutionApproved"] is False
 assert sum(x["status"]=="ready" for x in instance["rows"])==10
 assert sum(x["status"]=="deferred-environmental" for x in instance["rows"])==5
 roles={x["role"] for x in envelope["releaseInputs"]}
@@ -46,6 +46,12 @@ assert sum(x.startswith("release/gate-d-attempts-phase5.31-v1/gd-") for x in des
 installed={x["path"] for x in envelope["installedTools"]}
 assert {x["installedPath"] for x in plan["tooling"].values()}.issubset(installed)
 assert {x["installedPath"] for x in plan["pythonModules"].values()}.issubset(installed)
+installed_hashes={x["path"]:x["sha256"] for x in envelope["installedTools"]}
+retained_hashes={x["path"]:x["sha256"] for x in bootstrap["retainedTools"]}
+assert retained_hashes[bootstrap["administrator"]["installedPath"]]==bootstrap["administrator"]["installedSha256"]
+assert all(installed_hashes[path]==value for path,value in retained_hashes.items())
+for group in ("tooling","pythonModules"):
+ assert all(installed_hashes[x["installedPath"]]==x["installedSha256"] for x in plan[group].values())
 attempt_dir=ROOT/"release/gate-d-attempts-phase5.31-v1"; documents=[]
 for record in index["attempts"]:
  p=attempt_dir/record["file"]; assert sha(p)==record["sha256"]; doc=json.loads(p.read_text()); gate_d_attempts.validate_document(doc); result=gate_d_attempts.execute_fake(doc); assert result["status"]=="complete" and result["evidenceSealed"] and result["servicesRestored"] and result["liveOutput"] is False; documents.append(doc)
@@ -66,8 +72,11 @@ with tempfile.TemporaryDirectory() as temporary:
  try:
   assert gate_d_bootstrap.validate(bootstrap)["outputDisabled"] is True
   assert gate_d_target_plan.validate(plan)["attemptCount"]==38
-  result=gate_d_instance.validate(instance,require_ready=True); assert result["inputsReady"] is True and result["executionReady"] is True and result["blockedRows"]==[] and len(result["deferredRows"])==5
-  bad=copy.deepcopy(instance); bad["authorization"]["targetExecutionApproved"]=False; bad["executionReady"]=False
+  result=gate_d_instance.validate(instance); assert result["inputsReady"] is True and result["executionReady"] is False and result["blockedRows"]==[] and len(result["deferredRows"])==5
+  try: gate_d_instance.validate(instance,require_ready=True)
+  except ValueError: pass
+  else: raise AssertionError("corrected instance became ready without fresh authorization")
+  bad=copy.deepcopy(instance); bad["authorization"]["targetExecutionApproved"]=True; bad["executionReady"]=True
   assert hashlib.sha256((json.dumps(bad,indent=2,sort_keys=True)+"\n").encode()).hexdigest()!=sources["/home/pi/gate-d-inputs/phase5.31-c7e6fafdc434/control-set/release/gate-d-execution-instance-phase5.31-v1.json"]["sha256"]
  finally: gate_d_root.validate=original
 for mutate in (lambda v:v["releaseInputs"].pop(),lambda v:v["releaseInputs"][1].update(role="archive"),lambda v:v["releaseInputs"][1].update(path="/other/rp1-gpclk-gpio4.dtbo"),lambda v:v["transitionFiles"][0].update(sha256="0"*64),lambda v:v["transitionFiles"][1].update(destination=v["transitionFiles"][0]["destination"]),lambda v:v["inputFiles"][0].update(path="/tmp/substituted"),lambda v:v["safety"].update(liveOutput=True)):
@@ -75,4 +84,8 @@ for mutate in (lambda v:v["releaseInputs"].pop(),lambda v:v["releaseInputs"][1].
  try: gate_d_preroot.validate(bad)
  except (KeyError,ValueError): continue
  raise AssertionError("adversarial pre-root mutation accepted")
+bad=copy.deepcopy(envelope)
+next(x for x in bad["installedTools"] if x["path"]==bootstrap["administrator"]["installedPath"])["sha256"]="0"*64
+bad_hashes={x["path"]:x["sha256"] for x in bad["installedTools"]}
+assert bad_hashes[bootstrap["administrator"]["installedPath"]]!=bootstrap["administrator"]["installedSha256"]
 print("Gate D Phase 5.31 offline control set: PASS")
