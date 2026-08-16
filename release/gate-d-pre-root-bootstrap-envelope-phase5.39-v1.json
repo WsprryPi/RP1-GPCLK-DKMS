@@ -1,0 +1,1089 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "administrator": {
+    "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/extracted/rp1-gpclk-dkms-0.0.0-phase5.39/scripts/rp1-gpclk-admin.py",
+    "sha256": "bf8859cb73964cf0ff16067de556f78a6e0be3cecb98c6c7a64bda78ee7db71a"
+  },
+  "administratorState": {
+    "absenceBeforeInvocation": true,
+    "path": "/var/lib/rp1-gpclk-dkms/transaction.json",
+    "recoveryPolicy": "invoke-only-for-real-owned-state"
+  },
+  "argv": [
+    "/usr/bin/python3",
+    "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/extracted/rp1-gpclk-dkms-0.0.0-phase5.39/scripts/rp1-gpclk-admin.py",
+    "install",
+    "--execute",
+    "--release-directory",
+    "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf",
+    "--route",
+    "gpio4",
+    "--qualification-install",
+    "--qualification-identity",
+    "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/gate-d-phase5.39-qualification-install-identity.json"
+  ],
+  "candidate": {
+    "archivePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/rp1-gpclk-dkms-0.0.0-phase5.39.tar.gz",
+    "archiveSha256": "0e16828433a254467da4f4b841d355ef6d3cddf0ff582b4316416e9e66623f5c",
+    "release": "0.0.0-phase5.39",
+    "sourceCommit": "3768ae9cdccf0c2ae5809603b9a36e73507f2182"
+  },
+  "cleanupArgv": [
+    "/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle",
+    "dispatch",
+    "complete-removal",
+    "0.0.0-phase5.2",
+    "0.0.0-phase5.39",
+    "6.18.34+rpt-rpi-2712",
+    "/var/lib/rp1-gpclk-dkms/gate-d/bootstrap-phase5.39",
+    "--execute"
+  ],
+  "cleanupPaths": [
+    "/var/lib/rp1-gpclk-dkms/gate-d/bootstrap-phase5.39"
+  ],
+  "deadlineSeconds": 1800,
+  "expectedPostState": {
+    "dkmsTestVersions": false,
+    "endpointPresent": false,
+    "liveOutput": false,
+    "moduleLoaded": false,
+    "overlayActive": false
+  },
+  "expectedPreState": {
+    "dkmsTestVersions": false,
+    "endpointPresent": false,
+    "liveOutput": false,
+    "moduleLoaded": false,
+    "overlayActive": false
+  },
+  "inputFiles": [
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/PROVENANCE.json",
+      "sha256": "78de6dbbd14787a7baf5099acacd87615509fe3b34b393e8e8951b6d64da9747"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/SHA256SUMS",
+      "sha256": "55a717972c56b7f132c05f2876072eefa98737497f75dff807438051dfd34245"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/docs/evidence/gate-d-phase5.39-qualification-install-identity.json",
+      "sha256": "7151c0d17fe673d6a1ebc229f6755c6afd10708d616ac2d6e514ea135b13554d"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-c-representative-build-manifest-phase5.39-v1.json",
+      "sha256": "c2f5b0f394dc7f907a640cd82f8e69561822d075e33bb81144fce904f4b5d160"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-corrupted-archive-or-dtbo-archive.json",
+      "sha256": "4347f2c41cea33ae4e212964a479329a9dba62f24d6684c496689e181b8444c1"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-corrupted-archive-or-dtbo-gpio20-dtbo.json",
+      "sha256": "3635735184303ed5f7627c7aa9636abe45ffc2abba35c5096ba4156da25ff71e"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-corrupted-archive-or-dtbo-gpio4-dtbo.json",
+      "sha256": "95f1244d6d77d4645f7b2ab91fdc822a147ba304c22cbb0a54f066e4b11fdeb9"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-current-supported-kernel-gpio20.json",
+      "sha256": "e0e98b993cebdb366b98b7fa93eac0a883c2d1f82178bb1c5caec95de4ec538a"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-current-supported-kernel-gpio4.json",
+      "sha256": "71149546974e4ee01051b9bf61e071b7494e1bbef6f7abe2058f6b9b71836aca"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-deliberate-build-failure-compiler-wrapper.json",
+      "sha256": "22baa2dfb1433c120fc5e6d0f8c0f60b01ed1ce727fb73e952952152abcfa402"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-commit-state.json",
+      "sha256": "485223e50454903f774a5ecdbeeed755d99ec2fb31685930624a4b62fa4e856f"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-add.json",
+      "sha256": "8aea3d0e12adfaa4d3f1063e802b191c78c1d16c66d7043a19cf1563c6ff0918"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-build.json",
+      "sha256": "605cf891979ae1de85f9100244f7b986b504fbd32eee4d86ee064d3b9a10cc3e"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-install.json",
+      "sha256": "04ce2b9ca7b1418aeccad1788912b76aceebeff7d70c5ebfcbd6c72cef60ab16"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-remove.json",
+      "sha256": "df35534eeb4d3b1a7f2ab3cc1f18ccfd3a8828d7da46ff875f3d3443c8505313"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-uninstall.json",
+      "sha256": "cbe817a8e2462d767f56be20f709ce2d6746133265e8d24db06a48cd738538d8"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-load-disabled.json",
+      "sha256": "b0131abf4baf09f6b14463f4524322a5f8b22394db4c11d91415c809089a5d49"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-owned-residue-remove.json",
+      "sha256": "b533bdbed2b17b3eda8034ec97456476b1f4cea9182f0992cae9171472a1247d"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-preflight.json",
+      "sha256": "d336d0f5cecec9eb95e5ec5ccf232cce17e423d70fa9357b8e3ff5ac6e2bff52"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-query-disabled.json",
+      "sha256": "3ea0c71374b236313a3c0e3f2664fc249ac61c71562a18c66c64209b5c3385da"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-retain-predecessor.json",
+      "sha256": "c0840b08b4479d11a01389cfca9942cac2d69e0454d9c82f4c20a461949e1673"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-uapi-query-release.json",
+      "sha256": "a4a2d094f9daaaa5ae2547e03b36a3ac5b2453661337dc9e2648f06e29ba4918"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-unbind-bind.json",
+      "sha256": "0d3c937f920421de36807827775764859af4358791a3d74f5f9b80d0522f53e6"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-unload.json",
+      "sha256": "25347e65cf50479f94749554197fc21bbdf3cb3d1114c5ab7608d5fb68b1ba72"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-verify-final-state.json",
+      "sha256": "d0f69faaa66ab9b4aee12ae93522be0e35fc6a4420868a7fccf14559dfecb844"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-prior-supported-kernel-downgrade-gpio20.json",
+      "sha256": "d5c0c59feebe82c9e48bbb2758f00e7007bb5ee8ae897d09adf1c00262b59019"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-prior-supported-kernel-downgrade-gpio4.json",
+      "sha256": "0b93a1ed1e916a385ab8068f15703f00843de81cf582f64c9dce8763306a9bd1"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-reinstall-after-removal-gpio20.json",
+      "sha256": "06f583362d64b9f1aa3308535d6f09f3aa4fcda0cca182706c0a6cbde90d8536"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-reinstall-after-removal-gpio4.json",
+      "sha256": "8953e95490cc4c0eac4a823934375a69f80d00b4e30e55012593abc884b82045"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-removal-inactive-complete-removal.json",
+      "sha256": "252a7380db1bcf8d4dbd892afcd6a9ea4e8ae27c8d04123152944e624aa98276"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-removal-open-or-active-open-gpio20.json",
+      "sha256": "14b9ac7c75448d9cef18437223753fc745f2227a09de5e76fee54fe3eb042b8f"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-removal-open-or-active-open-gpio4.json",
+      "sha256": "cb26b61d824e019d17d8bedbae6f26dd0f7f262ae01fcdb8e1bc35a05b523778"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-removal-open-or-active-owner-gpio20.json",
+      "sha256": "1c88fc46c0ad3970075a2a7db733395a00e8d955639a20d4f7809814cedcdbac"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-removal-open-or-active-owner-gpio4.json",
+      "sha256": "5e952f6556463ee9d6ac6d1636fee43a79b6cbe224080fb639be7c13d8128a82"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-signing-not-enforced-gpio20.json",
+      "sha256": "0a22a1ea19dd4bbb651176fed3168cd615b68ea282ab222678c04041495eb41b"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-signing-not-enforced-gpio4.json",
+      "sha256": "4901f1367454c5d3a97c68cdc96b53be0cf5fc348bb1513cdfaa6c78ed964095"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-enrollment.json",
+      "sha256": "a08222afbf1b5078d81f6f5f67011eadd3c7e98bf0a6767425ba99c264cd3a88"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-gpio20-overlay.json",
+      "sha256": "c049ae8e8e7a9a3ba1f8db16d83df46f061a1d19ae522244987d0f40b14b9b64"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-gpio4-overlay.json",
+      "sha256": "34bbe420c61527e1e3c120bbeeb8e21cdca4ffa68507e2a6fbf37bd0bfc91868"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-kernel.json",
+      "sha256": "8d9006f11f46b95c24441312a70f9bb3175fd073ddb55eb4e5b8e8b61a4fbfda"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-release.json",
+      "sha256": "37e05ea8b06431c0711eab77ae6fa8671685d8a1d09fdbc9a00a9876366817c0"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-uapi.json",
+      "sha256": "853679bb83c1d3017c4b08cd17b6699ecc068e35798db1d8cf77b1ed548d07b7"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/index.json",
+      "sha256": "82213199e3b01dec675a0d9ae258126b74fc458f01aeb60c222bef81ddc5f990"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-execution-instance-phase5.39-v1.json",
+      "sha256": "68fe10a8fb9415c47705a447aeef0e7652f63814e62829ebc01f7ec7e75f50b7"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-matrix-policy-v2.json",
+      "sha256": "31cfe5c8c1756067b9ba8f8cc31823ba1ee33d95db5149f1877e439a6f40f994"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-qualification-bootstrap-plan-phase5.39-v1.json",
+      "sha256": "30701f1f5b3e54b137de08787af0af71337a3dec326350c44868d916234960b7"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-route-compatibility-decision-phase5.39-v1.json",
+      "sha256": "14c12925dd6db8bbdb184179718651a8197a9cb965be5b92fc677d81f28e3c2e"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-target-operation-plan-phase5.39-v1.json",
+      "sha256": "b58897af1f80416d4a4fda7a4358698b55434f7aaff6fd86b35439f5ab9033aa"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_attempts.py",
+      "sha256": "3b1600291ee0fc3bc98fd8206414f121511981fe329ec561e5219af128862d3c"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_boot.py",
+      "sha256": "731b122fbc154e4945397bf844bdb093865175f16b92376972fd72e352893bf3"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_bootstrap.py",
+      "sha256": "931c1468e1c00682ef9036b03da3f02594d28c4cb7ec8f19b63cc884031d3016"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_instance.py",
+      "sha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_lifecycle.py",
+      "sha256": "1e6fbf956bb610f9d9cf27f35af99f9bc6244a87aa0e91c9d918b8f9a84b4205"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_outer.py",
+      "sha256": "d81824ab0454ecb298714e07c08ff9d81255d216152631e5285e51e08ac1d43f"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_platform.py",
+      "sha256": "d749859b0c915c4cfde8df85aa088359f7ed87d77183ae927c82bc1f149afb3c"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_preroot.py",
+      "sha256": "044d82eb99926c3c55c15042ea77102cff7960a99ff39b5d1f311689e8ed1c8d"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_root.py",
+      "sha256": "d8227d99dda0fd8c3383e7b080b23d7407ff26520cc73a18ab3882d06ca4b94d"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_target_plan.py",
+      "sha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/tools/gate_d_busy_injector.c",
+      "sha256": "1bebe7cd10be210a2dcedb9de3db701888f40c38f3210470d777b69bcf5b7582"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/tools/gate_d_uapi_probe.c",
+      "sha256": "178de464eeed875fc0906f7c19b7e2d1ac0e33313d1d1074c57616a4e7fa1133"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/extracted/rp1-gpclk-dkms-0.0.0-phase5.39/scripts/rp1-gpclk-admin.py",
+      "sha256": "bf8859cb73964cf0ff16067de556f78a6e0be3cecb98c6c7a64bda78ee7db71a"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/gate-d-phase5.39-qualification-install-identity.json",
+      "sha256": "7151c0d17fe673d6a1ebc229f6755c6afd10708d616ac2d6e514ea135b13554d"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/release-metadata.json",
+      "sha256": "789487a958ff160a503349d20a7a5f2757e1dcc525f9b114e23c766dab80e196"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/rp1-gpclk-compatibility-manifest.json",
+      "sha256": "6c12ee6997b9f0f9d6ed40da5c276a5a8223da6019dc1fcadba10a39fc395359"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/rp1-gpclk-dkms-0.0.0-phase5.39.tar.gz",
+      "sha256": "0e16828433a254467da4f4b841d355ef6d3cddf0ff582b4316416e9e66623f5c"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/rp1-gpclk-gpio20.dtbo",
+      "sha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/rp1-gpclk-gpio4.dtbo",
+      "sha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6"
+    }
+  ],
+  "installedPackagePaths": [
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-attempts",
+      "sha256": "3b1600291ee0fc3bc98fd8206414f121511981fe329ec561e5219af128862d3c",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-boot",
+      "sha256": "731b122fbc154e4945397bf844bdb093865175f16b92376972fd72e352893bf3",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-bootstrap",
+      "sha256": "931c1468e1c00682ef9036b03da3f02594d28c4cb7ec8f19b63cc884031d3016",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-busy-injector",
+      "sha256": "c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-executor",
+      "sha256": "d81824ab0454ecb298714e07c08ff9d81255d216152631e5285e51e08ac1d43f",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-instance",
+      "sha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle",
+      "sha256": "1e6fbf956bb610f9d9cf27f35af99f9bc6244a87aa0e91c9d918b8f9a84b4205",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-platform",
+      "sha256": "d749859b0c915c4cfde8df85aa088359f7ed87d77183ae927c82bc1f149afb3c",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-residue",
+      "sha256": "64e8c6e0bfb3bf99961230e9489359f093d2c1ccfcab630f28919f3bc2be4f4f",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-target-plan",
+      "sha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe",
+      "sha256": "1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_attempts.py",
+      "sha256": "3b1600291ee0fc3bc98fd8206414f121511981fe329ec561e5219af128862d3c",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_bootstrap.py",
+      "sha256": "931c1468e1c00682ef9036b03da3f02594d28c4cb7ec8f19b63cc884031d3016",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_instance.py",
+      "sha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_lifecycle.py",
+      "sha256": "1e6fbf956bb610f9d9cf27f35af99f9bc6244a87aa0e91c9d918b8f9a84b4205",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_outer.py",
+      "sha256": "d81824ab0454ecb298714e07c08ff9d81255d216152631e5285e51e08ac1d43f",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_preroot.py",
+      "sha256": "044d82eb99926c3c55c15042ea77102cff7960a99ff39b5d1f311689e8ed1c8d",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_root.py",
+      "sha256": "d8227d99dda0fd8c3383e7b080b23d7407ff26520cc73a18ab3882d06ca4b94d",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_target_plan.py",
+      "sha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/lifecycle-policy",
+      "sha256": "29075e6f15c04a5b1f7e2610b5dc23530228473f1285b7efdd999d319e53f6a7",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin",
+      "sha256": "bf8859cb73964cf0ff16067de556f78a6e0be3cecb98c6c7a64bda78ee7db71a",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-diagnostics",
+      "sha256": "6a8d35f7c4d6b58eca7db3ee6b02e18a7b031478398f78e994f93b4ea5abb9ca",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0777",
+      "ownerUid": 0,
+      "path": "/usr/sbin/rp1-gpclk-admin",
+      "target": "../libexec/rp1-gpclk-dkms/rp1-gpclk-admin",
+      "type": "symlink"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0777",
+      "ownerUid": 0,
+      "path": "/usr/sbin/rp1-gpclk-diagnostics",
+      "target": "../libexec/rp1-gpclk-dkms/rp1-gpclk-diagnostics",
+      "type": "symlink"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/share/doc/rp1-gpclk-dkms/diagnostics.md",
+      "sha256": "380f809e238309535e228492bd04bd5bd3c7ac19acf3448550747bb08a45d66c",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/share/doc/rp1-gpclk-dkms/gate-d-target-runbook.md",
+      "sha256": "59a3b9b2803e7c12593addbfefca4a251a6c43e42c917736d42f8b7cd3e47cbf",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/share/doc/rp1-gpclk-dkms/lifecycle.md",
+      "sha256": "2878cd700e00b2c466929b5be810df6205bd318cc117245c0470901b192d9649",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/share/doc/rp1-gpclk-dkms/signing.md",
+      "sha256": "8a86a6c6a1cbbe69d28ca982a3a89794181dd1e6924dedba0b513ad9452058db",
+      "type": "file"
+    }
+  ],
+  "installedTools": [
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-attempts",
+      "sha256": "3b1600291ee0fc3bc98fd8206414f121511981fe329ec561e5219af128862d3c"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-boot",
+      "sha256": "731b122fbc154e4945397bf844bdb093865175f16b92376972fd72e352893bf3"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-bootstrap",
+      "sha256": "931c1468e1c00682ef9036b03da3f02594d28c4cb7ec8f19b63cc884031d3016"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-busy-injector",
+      "sha256": "c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-executor",
+      "sha256": "d81824ab0454ecb298714e07c08ff9d81255d216152631e5285e51e08ac1d43f"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-instance",
+      "sha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle",
+      "sha256": "1e6fbf956bb610f9d9cf27f35af99f9bc6244a87aa0e91c9d918b8f9a84b4205"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-platform",
+      "sha256": "d749859b0c915c4cfde8df85aa088359f7ed87d77183ae927c82bc1f149afb3c"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-residue",
+      "sha256": "64e8c6e0bfb3bf99961230e9489359f093d2c1ccfcab630f28919f3bc2be4f4f"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-target-plan",
+      "sha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe",
+      "sha256": "1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_attempts.py",
+      "sha256": "3b1600291ee0fc3bc98fd8206414f121511981fe329ec561e5219af128862d3c"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_bootstrap.py",
+      "sha256": "931c1468e1c00682ef9036b03da3f02594d28c4cb7ec8f19b63cc884031d3016"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_instance.py",
+      "sha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_lifecycle.py",
+      "sha256": "1e6fbf956bb610f9d9cf27f35af99f9bc6244a87aa0e91c9d918b8f9a84b4205"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_outer.py",
+      "sha256": "d81824ab0454ecb298714e07c08ff9d81255d216152631e5285e51e08ac1d43f"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_preroot.py",
+      "sha256": "044d82eb99926c3c55c15042ea77102cff7960a99ff39b5d1f311689e8ed1c8d"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_root.py",
+      "sha256": "d8227d99dda0fd8c3383e7b080b23d7407ff26520cc73a18ab3882d06ca4b94d"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_target_plan.py",
+      "sha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/lifecycle-policy",
+      "sha256": "29075e6f15c04a5b1f7e2610b5dc23530228473f1285b7efdd999d319e53f6a7"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin",
+      "sha256": "bf8859cb73964cf0ff16067de556f78a6e0be3cecb98c6c7a64bda78ee7db71a"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-diagnostics",
+      "sha256": "6a8d35f7c4d6b58eca7db3ee6b02e18a7b031478398f78e994f93b4ea5abb9ca"
+    }
+  ],
+  "journal": "/var/lib/rp1-gpclk-dkms/gate-d/pre-root-phase5.39.json",
+  "kind": "gate-d-pre-root-bootstrap-envelope",
+  "operationId": "phase5.39-pre-root-transition",
+  "packagePathsSha256": "10c44dd372fb04810d416af1b52690c43a2beeaeac3ad2a7914460d56f21b0ee",
+  "preRootModule": {
+    "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/extracted/rp1-gpclk-dkms-0.0.0-phase5.39/scripts/gate_d_preroot.py",
+    "sha256": "044d82eb99926c3c55c15042ea77102cff7960a99ff39b5d1f311689e8ed1c8d"
+  },
+  "priorTerminalState": {
+    "archiveMode": "0400",
+    "archivePath": "/var/lib/rp1-gpclk-dkms/history/phase5.37-transaction-recovered.json",
+    "liveOutput": false,
+    "mode": "0600",
+    "ownerUid": 0,
+    "path": "/var/lib/rp1-gpclk-dkms/transaction.json",
+    "recoveryRequired": false,
+    "sha256": "24af8111eaa7e9f0c5084dd39063160a5188195a73667b3fcbf115c3c4ea64cf",
+    "status": "recovered"
+  },
+  "proposedRoot": {
+    "marker": {
+      "SPDX-License-Identifier": "MIT",
+      "candidateRelease": "0.0.0-phase5.39",
+      "kind": "gate-d-qualification-root-identity",
+      "rootPath": "/home/pi/gate-d-qualification/phase5.39-3768ae9cdccf",
+      "schemaVersion": 1,
+      "sourceCommit": "3768ae9cdccf0c2ae5809603b9a36e73507f2182"
+    },
+    "markerSha256": "a703602cc5483fdb13bc87a747b68eda5dd63b54e566eeeab8163b3a86d5f8f5",
+    "mode": "0700",
+    "ownerUid": 1000,
+    "path": "/home/pi/gate-d-qualification/phase5.39-3768ae9cdccf"
+  },
+  "qualificationIdentity": {
+    "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/gate-d-phase5.39-qualification-install-identity.json",
+    "sha256": "7151c0d17fe673d6a1ebc229f6755c6afd10708d616ac2d6e514ea135b13554d"
+  },
+  "recoveryArgv": [
+    "/usr/bin/python3",
+    "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/extracted/rp1-gpclk-dkms-0.0.0-phase5.39/scripts/rp1-gpclk-admin.py",
+    "recover",
+    "--execute"
+  ],
+  "releaseInputs": [
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/rp1-gpclk-dkms-0.0.0-phase5.39.tar.gz",
+      "role": "archive",
+      "sha256": "0e16828433a254467da4f4b841d355ef6d3cddf0ff582b4316416e9e66623f5c"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/rp1-gpclk-gpio4.dtbo",
+      "role": "gpio4Dtbo",
+      "sha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/rp1-gpclk-gpio20.dtbo",
+      "role": "gpio20Dtbo",
+      "sha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/rp1-gpclk-compatibility-manifest.json",
+      "role": "compatibilityManifest",
+      "sha256": "6c12ee6997b9f0f9d6ed40da5c276a5a8223da6019dc1fcadba10a39fc395359"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/PROVENANCE.json",
+      "role": "provenance",
+      "sha256": "78de6dbbd14787a7baf5099acacd87615509fe3b34b393e8e8951b6d64da9747"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/release-metadata.json",
+      "role": "releaseMetadata",
+      "sha256": "789487a958ff160a503349d20a7a5f2757e1dcc525f9b114e23c766dab80e196"
+    },
+    {
+      "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/SHA256SUMS",
+      "role": "checksums",
+      "sha256": "55a717972c56b7f132c05f2876072eefa98737497f75dff807438051dfd34245"
+    }
+  ],
+  "safety": {
+    "clockEnabled": false,
+    "dmaActive": false,
+    "gpioAccess": false,
+    "liveOutput": false,
+    "outputDisabled": true,
+    "rf": false,
+    "sdrActive": false
+  },
+  "schemaVersion": 4,
+  "stagedExecutor": {
+    "path": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/extracted/rp1-gpclk-dkms-0.0.0-phase5.39/scripts/gate_d_outer.py",
+    "sha256": "d81824ab0454ecb298714e07c08ff9d81255d216152631e5285e51e08ac1d43f"
+  },
+  "transitionFiles": [
+    {
+      "destination": "docs/evidence/gate-d-phase5.39-qualification-install-identity.json",
+      "mode": "0400",
+      "sha256": "7151c0d17fe673d6a1ebc229f6755c6afd10708d616ac2d6e514ea135b13554d",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/docs/evidence/gate-d-phase5.39-qualification-install-identity.json"
+    },
+    {
+      "destination": "release/gate-c-representative-build-manifest-phase5.39-v1.json",
+      "mode": "0400",
+      "sha256": "c2f5b0f394dc7f907a640cd82f8e69561822d075e33bb81144fce904f4b5d160",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-c-representative-build-manifest-phase5.39-v1.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-corrupted-archive-or-dtbo-archive.json",
+      "mode": "0400",
+      "sha256": "4347f2c41cea33ae4e212964a479329a9dba62f24d6684c496689e181b8444c1",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-corrupted-archive-or-dtbo-archive.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-corrupted-archive-or-dtbo-gpio20-dtbo.json",
+      "mode": "0400",
+      "sha256": "3635735184303ed5f7627c7aa9636abe45ffc2abba35c5096ba4156da25ff71e",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-corrupted-archive-or-dtbo-gpio20-dtbo.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-corrupted-archive-or-dtbo-gpio4-dtbo.json",
+      "mode": "0400",
+      "sha256": "95f1244d6d77d4645f7b2ab91fdc822a147ba304c22cbb0a54f066e4b11fdeb9",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-corrupted-archive-or-dtbo-gpio4-dtbo.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-current-supported-kernel-gpio20.json",
+      "mode": "0400",
+      "sha256": "e0e98b993cebdb366b98b7fa93eac0a883c2d1f82178bb1c5caec95de4ec538a",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-current-supported-kernel-gpio20.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-current-supported-kernel-gpio4.json",
+      "mode": "0400",
+      "sha256": "71149546974e4ee01051b9bf61e071b7494e1bbef6f7abe2058f6b9b71836aca",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-current-supported-kernel-gpio4.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-deliberate-build-failure-compiler-wrapper.json",
+      "mode": "0400",
+      "sha256": "22baa2dfb1433c120fc5e6d0f8c0f60b01ed1ce727fb73e952952152abcfa402",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-deliberate-build-failure-compiler-wrapper.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-commit-state.json",
+      "mode": "0400",
+      "sha256": "485223e50454903f774a5ecdbeeed755d99ec2fb31685930624a4b62fa4e856f",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-commit-state.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-add.json",
+      "mode": "0400",
+      "sha256": "8aea3d0e12adfaa4d3f1063e802b191c78c1d16c66d7043a19cf1563c6ff0918",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-add.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-build.json",
+      "mode": "0400",
+      "sha256": "605cf891979ae1de85f9100244f7b986b504fbd32eee4d86ee064d3b9a10cc3e",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-build.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-install.json",
+      "mode": "0400",
+      "sha256": "04ce2b9ca7b1418aeccad1788912b76aceebeff7d70c5ebfcbd6c72cef60ab16",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-install.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-remove.json",
+      "mode": "0400",
+      "sha256": "df35534eeb4d3b1a7f2ab3cc1f18ccfd3a8828d7da46ff875f3d3443c8505313",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-remove.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-uninstall.json",
+      "mode": "0400",
+      "sha256": "cbe817a8e2462d767f56be20f709ce2d6746133265e8d24db06a48cd738538d8",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-dkms-uninstall.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-load-disabled.json",
+      "mode": "0400",
+      "sha256": "b0131abf4baf09f6b14463f4524322a5f8b22394db4c11d91415c809089a5d49",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-load-disabled.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-owned-residue-remove.json",
+      "mode": "0400",
+      "sha256": "b533bdbed2b17b3eda8034ec97456476b1f4cea9182f0992cae9171472a1247d",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-owned-residue-remove.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-preflight.json",
+      "mode": "0400",
+      "sha256": "d336d0f5cecec9eb95e5ec5ccf232cce17e423d70fa9357b8e3ff5ac6e2bff52",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-preflight.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-query-disabled.json",
+      "mode": "0400",
+      "sha256": "3ea0c71374b236313a3c0e3f2664fc249ac61c71562a18c66c64209b5c3385da",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-query-disabled.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-retain-predecessor.json",
+      "mode": "0400",
+      "sha256": "c0840b08b4479d11a01389cfca9942cac2d69e0454d9c82f4c20a461949e1673",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-retain-predecessor.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-uapi-query-release.json",
+      "mode": "0400",
+      "sha256": "a4a2d094f9daaaa5ae2547e03b36a3ac5b2453661337dc9e2648f06e29ba4918",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-uapi-query-release.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-unbind-bind.json",
+      "mode": "0400",
+      "sha256": "0d3c937f920421de36807827775764859af4358791a3d74f5f9b80d0522f53e6",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-unbind-bind.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-unload.json",
+      "mode": "0400",
+      "sha256": "25347e65cf50479f94749554197fc21bbdf3cb3d1114c5ab7608d5fb68b1ba72",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-unload.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-verify-final-state.json",
+      "mode": "0400",
+      "sha256": "d0f69faaa66ab9b4aee12ae93522be0e35fc6a4420868a7fccf14559dfecb844",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-interrupted-upgrade-after-verify-final-state.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-prior-supported-kernel-downgrade-gpio20.json",
+      "mode": "0400",
+      "sha256": "d5c0c59feebe82c9e48bbb2758f00e7007bb5ee8ae897d09adf1c00262b59019",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-prior-supported-kernel-downgrade-gpio20.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-prior-supported-kernel-downgrade-gpio4.json",
+      "mode": "0400",
+      "sha256": "0b93a1ed1e916a385ab8068f15703f00843de81cf582f64c9dce8763306a9bd1",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-prior-supported-kernel-downgrade-gpio4.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-reinstall-after-removal-gpio20.json",
+      "mode": "0400",
+      "sha256": "06f583362d64b9f1aa3308535d6f09f3aa4fcda0cca182706c0a6cbde90d8536",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-reinstall-after-removal-gpio20.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-reinstall-after-removal-gpio4.json",
+      "mode": "0400",
+      "sha256": "8953e95490cc4c0eac4a823934375a69f80d00b4e30e55012593abc884b82045",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-reinstall-after-removal-gpio4.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-removal-inactive-complete-removal.json",
+      "mode": "0400",
+      "sha256": "252a7380db1bcf8d4dbd892afcd6a9ea4e8ae27c8d04123152944e624aa98276",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-removal-inactive-complete-removal.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-removal-open-or-active-open-gpio20.json",
+      "mode": "0400",
+      "sha256": "14b9ac7c75448d9cef18437223753fc745f2227a09de5e76fee54fe3eb042b8f",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-removal-open-or-active-open-gpio20.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-removal-open-or-active-open-gpio4.json",
+      "mode": "0400",
+      "sha256": "cb26b61d824e019d17d8bedbae6f26dd0f7f262ae01fcdb8e1bc35a05b523778",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-removal-open-or-active-open-gpio4.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-removal-open-or-active-owner-gpio20.json",
+      "mode": "0400",
+      "sha256": "1c88fc46c0ad3970075a2a7db733395a00e8d955639a20d4f7809814cedcdbac",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-removal-open-or-active-owner-gpio20.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-removal-open-or-active-owner-gpio4.json",
+      "mode": "0400",
+      "sha256": "5e952f6556463ee9d6ac6d1636fee43a79b6cbe224080fb639be7c13d8128a82",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-removal-open-or-active-owner-gpio4.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-signing-not-enforced-gpio20.json",
+      "mode": "0400",
+      "sha256": "0a22a1ea19dd4bbb651176fed3168cd615b68ea282ab222678c04041495eb41b",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-signing-not-enforced-gpio20.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-signing-not-enforced-gpio4.json",
+      "mode": "0400",
+      "sha256": "4901f1367454c5d3a97c68cdc96b53be0cf5fc348bb1513cdfaa6c78ed964095",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-signing-not-enforced-gpio4.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-enrollment.json",
+      "mode": "0400",
+      "sha256": "a08222afbf1b5078d81f6f5f67011eadd3c7e98bf0a6767425ba99c264cd3a88",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-enrollment.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-gpio20-overlay.json",
+      "mode": "0400",
+      "sha256": "c049ae8e8e7a9a3ba1f8db16d83df46f061a1d19ae522244987d0f40b14b9b64",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-gpio20-overlay.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-gpio4-overlay.json",
+      "mode": "0400",
+      "sha256": "34bbe420c61527e1e3c120bbeeb8e21cdca4ffa68507e2a6fbf37bd0bfc91868",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-gpio4-overlay.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-kernel.json",
+      "mode": "0400",
+      "sha256": "8d9006f11f46b95c24441312a70f9bb3175fd073ddb55eb4e5b8e8b61a4fbfda",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-kernel.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-release.json",
+      "mode": "0400",
+      "sha256": "37e05ea8b06431c0711eab77ae6fa8671685d8a1d09fdbc9a00a9876366817c0",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-release.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-uapi.json",
+      "mode": "0400",
+      "sha256": "853679bb83c1d3017c4b08cd17b6699ecc068e35798db1d8cf77b1ed548d07b7",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/gd-stale-manifest-uapi.json"
+    },
+    {
+      "destination": "release/gate-d-attempts-phase5.39-v1/index.json",
+      "mode": "0400",
+      "sha256": "82213199e3b01dec675a0d9ae258126b74fc458f01aeb60c222bef81ddc5f990",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-attempts-phase5.39-v1/index.json"
+    },
+    {
+      "destination": "release/gate-d-execution-instance-phase5.39-v1.json",
+      "mode": "0400",
+      "sha256": "68fe10a8fb9415c47705a447aeef0e7652f63814e62829ebc01f7ec7e75f50b7",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-execution-instance-phase5.39-v1.json"
+    },
+    {
+      "destination": "release/gate-d-matrix-policy-v2.json",
+      "mode": "0400",
+      "sha256": "31cfe5c8c1756067b9ba8f8cc31823ba1ee33d95db5149f1877e439a6f40f994",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-matrix-policy-v2.json"
+    },
+    {
+      "destination": "release/gate-d-qualification-bootstrap-plan-phase5.39-v1.json",
+      "mode": "0400",
+      "sha256": "30701f1f5b3e54b137de08787af0af71337a3dec326350c44868d916234960b7",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-qualification-bootstrap-plan-phase5.39-v1.json"
+    },
+    {
+      "destination": "release/gate-d-route-compatibility-decision-phase5.39-v1.json",
+      "mode": "0400",
+      "sha256": "14c12925dd6db8bbdb184179718651a8197a9cb965be5b92fc677d81f28e3c2e",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-route-compatibility-decision-phase5.39-v1.json"
+    },
+    {
+      "destination": "release/gate-d-target-operation-plan-phase5.39-v1.json",
+      "mode": "0400",
+      "sha256": "b58897af1f80416d4a4fda7a4358698b55434f7aaff6fd86b35439f5ab9033aa",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/release/gate-d-target-operation-plan-phase5.39-v1.json"
+    },
+    {
+      "destination": "scripts/gate_d_attempts.py",
+      "mode": "0400",
+      "sha256": "3b1600291ee0fc3bc98fd8206414f121511981fe329ec561e5219af128862d3c",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_attempts.py"
+    },
+    {
+      "destination": "scripts/gate_d_boot.py",
+      "mode": "0400",
+      "sha256": "731b122fbc154e4945397bf844bdb093865175f16b92376972fd72e352893bf3",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_boot.py"
+    },
+    {
+      "destination": "scripts/gate_d_bootstrap.py",
+      "mode": "0400",
+      "sha256": "931c1468e1c00682ef9036b03da3f02594d28c4cb7ec8f19b63cc884031d3016",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_bootstrap.py"
+    },
+    {
+      "destination": "scripts/gate_d_instance.py",
+      "mode": "0400",
+      "sha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_instance.py"
+    },
+    {
+      "destination": "scripts/gate_d_lifecycle.py",
+      "mode": "0400",
+      "sha256": "1e6fbf956bb610f9d9cf27f35af99f9bc6244a87aa0e91c9d918b8f9a84b4205",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_lifecycle.py"
+    },
+    {
+      "destination": "scripts/gate_d_outer.py",
+      "mode": "0400",
+      "sha256": "d81824ab0454ecb298714e07c08ff9d81255d216152631e5285e51e08ac1d43f",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_outer.py"
+    },
+    {
+      "destination": "scripts/gate_d_platform.py",
+      "mode": "0400",
+      "sha256": "d749859b0c915c4cfde8df85aa088359f7ed87d77183ae927c82bc1f149afb3c",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_platform.py"
+    },
+    {
+      "destination": "scripts/gate_d_preroot.py",
+      "mode": "0400",
+      "sha256": "044d82eb99926c3c55c15042ea77102cff7960a99ff39b5d1f311689e8ed1c8d",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_preroot.py"
+    },
+    {
+      "destination": "scripts/gate_d_root.py",
+      "mode": "0400",
+      "sha256": "d8227d99dda0fd8c3383e7b080b23d7407ff26520cc73a18ab3882d06ca4b94d",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_root.py"
+    },
+    {
+      "destination": "scripts/gate_d_target_plan.py",
+      "mode": "0400",
+      "sha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/scripts/gate_d_target_plan.py"
+    },
+    {
+      "destination": "tools/gate_d_busy_injector.c",
+      "mode": "0400",
+      "sha256": "1bebe7cd10be210a2dcedb9de3db701888f40c38f3210470d777b69bcf5b7582",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/tools/gate_d_busy_injector.c"
+    },
+    {
+      "destination": "tools/gate_d_uapi_probe.c",
+      "mode": "0400",
+      "sha256": "178de464eeed875fc0906f7c19b7e2d1ac0e33313d1d1074c57616a4e7fa1133",
+      "sourcePath": "/home/pi/gate-d-inputs/phase5.39-3768ae9cdccf/control-set/tools/gate_d_uapi_probe.c"
+    }
+  ]
+}
