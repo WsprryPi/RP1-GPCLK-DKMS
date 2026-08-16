@@ -4,21 +4,50 @@
   "$id": "https://wsprrypi.org/schemas/gate-d-target-plan-v1.schema.json",
   "type": "object",
   "additionalProperties": false,
+  "$defs": {
+    "pythonModule": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sourcePath", "installedPath", "sourceSha256", "installedSha256", "installKind", "candidateArchiveMember"],
+      "properties": {
+        "sourcePath": {"type": "string", "pattern": "^scripts/gate_d_[a-z_]+\\.py$"},
+        "installedPath": {"type": "string", "pattern": "^/usr/libexec/rp1-gpclk-dkms/gate_d_[a-z_]+\\.py$"},
+        "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "installedSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "installKind": {"const": "copied"},
+        "candidateArchiveMember": {"const": true}
+      }
+    }
+  },
   "required": ["SPDX-License-Identifier", "schemaVersion", "kind", "hostId", "tooling", "invariants", "services", "artifacts", "boot", "attemptEnvelope", "rows"],
   "properties": {
     "SPDX-License-Identifier": {"const": "MIT"},
-    "schemaVersion": {"enum": [1, 2, 3, 4]},
+    "schemaVersion": {"enum": [1, 2, 3, 4, 5]},
     "kind": {"const": "gate-d-output-disabled-target-operation-plan"},
     "qualificationRoot": {"$ref": "gate-d-qualification-root-v1.schema.json"},
     "qualificationBootstrap": {"type": "object"},
     "hostId": {"type": "string"}, "tooling": {"type": "object"},
+    "pythonModules": {
+      "type": "object", "additionalProperties": false,
+      "required": ["gate_d_root", "gate_d_bootstrap", "gate_d_target_plan", "gate_d_lifecycle", "gate_d_outer", "gate_d_attempts", "gate_d_instance"],
+      "properties": {
+        "gate_d_root": {"$ref": "#/$defs/pythonModule"},
+        "gate_d_bootstrap": {"$ref": "#/$defs/pythonModule"},
+        "gate_d_target_plan": {"$ref": "#/$defs/pythonModule"},
+        "gate_d_lifecycle": {"$ref": "#/$defs/pythonModule"},
+        "gate_d_outer": {"$ref": "#/$defs/pythonModule"},
+        "gate_d_attempts": {"$ref": "#/$defs/pythonModule"},
+        "gate_d_instance": {"$ref": "#/$defs/pythonModule"}
+      }
+    },
     "invariants": {"type": "object"}, "services": {"type": "array"},
     "artifacts": {"type": "object"}, "boot": {"type": "object"},
     "attemptEnvelope": {"type": "object"}, "rows": {"type": "array"}
   },
   "allOf": [
-    {"if": {"properties": {"schemaVersion": {"const": 4}}, "required": ["schemaVersion"]}, "then": {"required": ["qualificationRoot", "qualificationBootstrap"]}},
+    {"if": {"properties": {"schemaVersion": {"const": 5}}, "required": ["schemaVersion"]}, "then": {"required": ["qualificationRoot", "qualificationBootstrap", "pythonModules"]}},
+    {"if": {"properties": {"schemaVersion": {"const": 4}}, "required": ["schemaVersion"]}, "then": {"required": ["qualificationRoot", "qualificationBootstrap"], "not": {"required": ["pythonModules"]}}},
     {"if": {"properties": {"schemaVersion": {"const": 3}}, "required": ["schemaVersion"]}, "then": {"required": ["qualificationBootstrap"], "not": {"required": ["qualificationRoot"]}}},
+    {"if": {"properties": {"schemaVersion": {"enum": [1, 2, 3]}}, "required": ["schemaVersion"]}, "then": {"not": {"required": ["pythonModules"]}}},
     {"if": {"properties": {"schemaVersion": {"enum": [1, 2]}}, "required": ["schemaVersion"]}, "then": {"not": {"anyOf": [{"required": ["qualificationRoot"]}, {"required": ["qualificationBootstrap"]}]}}}
   ]
 }

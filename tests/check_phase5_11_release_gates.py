@@ -80,6 +80,7 @@ decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_t
 assert decisions["entries"]
 assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False for entry in decisions["entries"])
 assert set(document["candidateSnapshot"]["knownBlockers"]) == {
+    "phase5.22-candidate-freeze-pending",
     "representative-lifecycle-matrix-not-executed",
     "public-artifact-download-verification-not-performed",
     "module-release-not-published",

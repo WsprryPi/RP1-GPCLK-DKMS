@@ -69,8 +69,7 @@
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "publish closed conditional JSON Schemas for every qualification-root-carrying Gate D document",
     "blocker": "The installed root-validator dependency is imported by permanent validators and executor dispatch but cannot be named and hash-bound by the frozen target-plan tooling set."
-  }],
-  "successor": {
+  }, {
     "release": "0.0.0-phase5.21",
     "sourceCommit": "d0046092dfa9ffa0c58171ddcb52b7819cc50fc6",
     "archiveSha256": "fc5828d91446843d8ea78a09691c973d74082bea7655b6c0547a06d35fba1624",
@@ -79,8 +78,14 @@
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "bind and authenticate the installed root-validator dependency before dependent imports",
     "blocker": "The frozen installed layout uses hyphenated command filenames for Python dependencies imported under underscore module names; permanent bootstrap and normal dispatch cannot import their subordinate validators outside a source checkout."
+  }],
+  "successor": {
+    "release": "0.0.0-phase5.22",
+    "status": "unfrozen",
+    "qualification": "offline-review-in-progress",
+    "purpose": "install and authenticate the complete transitive Gate D Python import graph"
   },
-  "successorSelectionGate": "selected-to-correct-phase5.20-unbound-root-validator-dependency",
+  "successorSelectionGate": "selected-to-correct-phase5.21-incomplete-installed-import-graph",
   "reuseProhibited": [
     "representative-build-promotion",
     "route-decision",

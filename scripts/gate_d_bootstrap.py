@@ -25,9 +25,9 @@ def atomic(path: pathlib.Path, value: dict) -> None:
 def validate(value: dict, *, root: pathlib.Path = pathlib.Path("/"), verify_files: bool = False) -> dict:
     required={"SPDX-License-Identifier","schemaVersion","kind","operationId","hostId","predecessorVersion","kernelRelease","stagingDirectory","candidate","qualificationIdentity","administrator","argv","cleanupArgv","recoveryArgv","journal","deadlineSeconds","expectedPreState","expectedPostState","retainedTools","cleanupPaths","safety"}
     schema=value.get("schemaVersion")
-    if schema==2: required.add("qualificationRoot")
-    if set(value)!=required or value.get("SPDX-License-Identifier")!="MIT" or schema not in {1,2} or value.get("kind")!="gate-d-qualification-bootstrap-plan": raise ValueError("invalid bootstrap identity")
-    if schema==2:
+    if schema in {2,3}: required.add("qualificationRoot")
+    if set(value)!=required or value.get("SPDX-License-Identifier")!="MIT" or schema not in {1,2,3} or value.get("kind")!="gate-d-qualification-bootstrap-plan": raise ValueError("invalid bootstrap identity")
+    if schema in {2,3}:
         import sys
         scripts=pathlib.Path(__file__).resolve().parent
         if str(scripts) not in sys.path: sys.path.insert(0,str(scripts))
@@ -54,8 +54,21 @@ def validate(value: dict, *, root: pathlib.Path = pathlib.Path("/"), verify_file
     if not isinstance(value["retainedTools"],list) or not value["retainedTools"] or not isinstance(value["cleanupPaths"],list) or not value["cleanupPaths"] or not 1<=value["deadlineSeconds"]<=1800: raise ValueError("bootstrap lifecycle incomplete")
     for item in value["retainedTools"]:
         if not isinstance(item,dict) or set(item)!={"path","sha256"} or not pathlib.PurePosixPath(item.get("path","")).is_absolute() or not SHA.fullmatch(item.get("sha256","")): raise ValueError("invalid retained tool identity")
-    if schema==2 and [item["path"] for item in value["retainedTools"]].count("/usr/libexec/rp1-gpclk-dkms/gate_d_root.py")!=1:
+    if schema in {2,3} and [item["path"] for item in value["retainedTools"]].count("/usr/libexec/rp1-gpclk-dkms/gate_d_root.py")!=1:
         raise ValueError("bootstrap root-validator retained identity is absent")
+    if schema==3:
+        required_modules={
+            "/usr/libexec/rp1-gpclk-dkms/gate_d_root.py",
+            "/usr/libexec/rp1-gpclk-dkms/gate_d_bootstrap.py",
+            "/usr/libexec/rp1-gpclk-dkms/gate_d_target_plan.py",
+            "/usr/libexec/rp1-gpclk-dkms/gate_d_lifecycle.py",
+            "/usr/libexec/rp1-gpclk-dkms/gate_d_outer.py",
+            "/usr/libexec/rp1-gpclk-dkms/gate_d_attempts.py",
+            "/usr/libexec/rp1-gpclk-dkms/gate_d_instance.py",
+        }
+        retained_paths=[item["path"] for item in value["retainedTools"]]
+        if not required_modules.issubset(retained_paths) or len(retained_paths)!=len(set(retained_paths)):
+            raise ValueError("bootstrap retained Python import graph is incomplete")
     for raw in (candidate["archive"],identity["path"],admin["bootstrapPath"],admin["installedPath"],value["stagingDirectory"],value["journal"],*value["cleanupPaths"]):
         pure=pathlib.PurePosixPath(raw)
         if not pure.is_absolute() or ".." in pure.parts: raise ValueError("unsafe bootstrap path")

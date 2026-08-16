@@ -7,7 +7,7 @@
 `release/installation-model-v1.json` is authoritative for installed paths,
 ownership, modes, replacement rules, transaction order, and implicit-action
 prohibitions. Frozen `0.0.0-phase5.2` is the predecessor; changed
-blocker-resolution source has the distinct `0.0.0-phase5.21` successor
+blocker-resolution source has the distinct `0.0.0-phase5.22` successor
 identity. Neither identity is published.
 
 `rp1-gpclk-admin plan` is read-only. Installation requires the explicit
@@ -151,7 +151,7 @@ unproven state rejects removal; no forced teardown is permitted.
 The checked-in instance records the approved `wspr5` output-disabled mutation
 envelope, its two installed stock kernels, both independent routes, deadlines,
 and the validated `wspr5-rescue` SD-before-NVMe recovery path. Successor
-`0.0.0-phase5.21` is selected but not yet frozen. The single-Pi execution policy
+`0.0.0-phase5.22` is selected but not yet frozen. The single-Pi execution policy
 keeps five unavailable environmental rows explicitly deferred rather than
 simulated. Read-only route discovery plus the exact predecessor/current,
 predecessor/prior, and successor/prior builds supply all ten

@@ -54,19 +54,20 @@ def validate(value: dict, *, verify_tools: bool = True) -> dict:
     required = {"SPDX-License-Identifier", "schemaVersion", "kind", "hostId", "tooling", "invariants",
                 "services", "artifacts", "boot", "attemptEnvelope", "rows"}
     schema = value.get("schemaVersion")
-    if schema in {3,4}: required.add("qualificationBootstrap")
-    if schema == 4: required.add("qualificationRoot")
-    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or schema not in {1, 2, 3, 4} or value.get("kind") != "gate-d-output-disabled-target-operation-plan":
+    if schema in {3,4,5}: required.add("qualificationBootstrap")
+    if schema in {4,5}: required.add("qualificationRoot")
+    if schema == 5: required.add("pythonModules")
+    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or schema not in {1, 2, 3, 4, 5} or value.get("kind") != "gate-d-output-disabled-target-operation-plan":
         raise ValueError("invalid target-plan identity")
     if schema == 1 and verify_tools:
         raise ValueError("legacy target plan is inspectable but not executable")
     root=ROOT
-    if schema == 4:
+    if schema in {4,5}:
         scripts=pathlib.Path(__file__).resolve().parent
         if str(scripts) not in __import__("sys").path: __import__("sys").path.insert(0,str(scripts))
         from gate_d_root import validate as validate_root
         root=validate_root(value["qualificationRoot"])
-    if schema in {3,4}:
+    if schema in {3,4,5}:
         bootstrap=value["qualificationBootstrap"]
         if (not isinstance(bootstrap,dict) or set(bootstrap)!={"path","sha256"} or
                 pathlib.PurePosixPath(bootstrap.get("path","")).is_absolute() or
@@ -82,7 +83,7 @@ def validate(value: dict, *, verify_tools: bool = True) -> dict:
         from gate_d_bootstrap import validate as validate_bootstrap
         bootstrap_value=json.loads(path.read_text(encoding="utf-8"))
         validate_bootstrap(bootstrap_value)
-        if schema==4 and bootstrap_value.get("qualificationRoot")!=value["qualificationRoot"]:
+        if schema in {4,5} and bootstrap_value.get("qualificationRoot")!=value["qualificationRoot"]:
             raise ValueError("target plan and bootstrap qualification roots differ")
     invariants = value["invariants"]
     expected_invariants = {"liveOutput": False, "si5351Disconnected": True,
@@ -95,9 +96,9 @@ def validate(value: dict, *, verify_tools: bool = True) -> dict:
     required_tools = {"bootSelector", "targetPlanValidator", "instanceValidator",
                       "lifecycleCoordinator", "platformCoordinator",
                       "permanentExecutor", "busyInjector", "uapiProbe"}
-    if schema in {3,4}:
+    if schema in {3,4,5}:
         required_tools.add("bootstrapExecutor")
-    if schema == 4:
+    if schema in {4,5}:
         required_tools.add("rootValidator")
     if not isinstance(tooling, dict) or set(tooling) != required_tools:
         raise ValueError("execution tooling identities are incomplete")
@@ -114,7 +115,7 @@ def validate(value: dict, *, verify_tools: bool = True) -> dict:
         source_sha = item.get("sha256") if schema == 1 else item.get("sourceSha256")
         if not isinstance(source_sha, str) or not SHA.fullmatch(source_sha):
             raise ValueError(f"invalid execution tool source identity: {name}")
-        if schema in {2, 3, 4}:
+        if schema in {2, 3, 4, 5}:
             if item.get("installKind") not in {"copied", "target-built"} or not isinstance(item.get("installedSha256"), str) or not SHA.fullmatch(item["installedSha256"]):
                 raise ValueError(f"invalid installed execution tool identity: {name}")
             if item["installKind"] == "copied" and item["installedSha256"] != source_sha:
@@ -125,11 +126,31 @@ def validate(value: dict, *, verify_tools: bool = True) -> dict:
         path = root / item["sourcePath"]
         if verify_tools and (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != source_sha):
             raise ValueError(f"execution tool identity mismatch: {name}")
-    if schema==4:
+    if schema in {4,5}:
         retained={item["path"]:item["sha256"] for item in bootstrap_value["retainedTools"]}
         root_tool=tooling["rootValidator"]
         if retained.get(root_tool["installedPath"])!=root_tool["installedSha256"]:
             raise ValueError("bootstrap and target-plan root-validator identities differ")
+    if schema==5:
+        from gate_d_outer import IMPORT_MODULE_PATHS
+        modules=value["pythonModules"]
+        if not isinstance(modules,dict) or set(modules)!=set(IMPORT_MODULE_PATHS):
+            raise ValueError("installed Python import graph is incomplete")
+        keys={"sourcePath","installedPath","sourceSha256","installedSha256","installKind","candidateArchiveMember"}
+        for name,installed_path in IMPORT_MODULE_PATHS.items():
+            module=modules[name]
+            if (not isinstance(module,dict) or set(module)!=keys or
+                    module.get("sourcePath")!=f"scripts/{name}.py" or module.get("installedPath")!=installed_path or
+                    module.get("sourceSha256")!=module.get("installedSha256") or module.get("installKind")!="copied" or
+                    module.get("candidateArchiveMember") is not True or not SHA.fullmatch(module.get("sourceSha256",""))):
+                raise ValueError(f"invalid installed Python module identity: {name}")
+            path=root/module["sourcePath"]
+            if verify_tools and (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=module["sourceSha256"]):
+                raise ValueError(f"installed Python module source differs: {name}")
+            if retained.get(installed_path)!=module["installedSha256"]:
+                raise ValueError(f"bootstrap retained Python module differs: {name}")
+        if modules["gate_d_root"]!=tooling["rootValidator"]:
+            raise ValueError("root-validator and import-graph identities differ")
     services = value["services"]
     if not isinstance(services, list) or {item.get("name") for item in services} != {
             "wsprrypi", "sdrplay", "sdrconnect-server", "SoapySDRServer"}:

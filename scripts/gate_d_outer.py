@@ -11,6 +11,7 @@ planning and the filesystem-backed fake backend are offline and unprivileged.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import math
@@ -53,11 +54,25 @@ def load_json(path: pathlib.Path) -> dict:
     return value
 
 
-def bootstrap_root_validator(instance_path: pathlib.Path) -> tuple[dict, pathlib.Path]:
-    """Authenticate and load gate_d_root before importing dependent tools."""
+IMPORT_MODULE_PATHS = {
+    "gate_d_root": "/usr/libexec/rp1-gpclk-dkms/gate_d_root.py",
+    "gate_d_bootstrap": "/usr/libexec/rp1-gpclk-dkms/gate_d_bootstrap.py",
+    "gate_d_target_plan": "/usr/libexec/rp1-gpclk-dkms/gate_d_target_plan.py",
+    "gate_d_lifecycle": "/usr/libexec/rp1-gpclk-dkms/gate_d_lifecycle.py",
+    "gate_d_outer": "/usr/libexec/rp1-gpclk-dkms/gate_d_outer.py",
+    "gate_d_attempts": "/usr/libexec/rp1-gpclk-dkms/gate_d_attempts.py",
+    "gate_d_instance": "/usr/libexec/rp1-gpclk-dkms/gate_d_instance.py",
+}
+IMPORT_ORDER = tuple(IMPORT_MODULE_PATHS)
+
+
+def bootstrap_root_validator(instance_path: pathlib.Path, *, installed_root: pathlib.Path = pathlib.Path("/"),
+                             current_executor_override: pathlib.Path | None = None) -> tuple[dict, pathlib.Path]:
+    """Authenticate and load the complete Gate D import graph."""
     instance=load_json(instance_path)
-    if instance.get("schemaVersion")!=3 or instance.get("kind")!="gate-d-representative-system-execution-instance":
-        raise ValueError("installed trust bootstrap requires execution-instance schema 3")
+    instance_schema=instance.get("schemaVersion")
+    if instance_schema not in {3,4} or instance.get("kind")!="gate-d-representative-system-execution-instance":
+        raise ValueError("installed trust bootstrap requires execution-instance schema 3 or 4")
     reference=instance.get("qualificationRoot")
     if (not isinstance(reference,dict) or set(reference)!={"path","identityFile","identitySha256","ownerUid","mode"} or
             not isinstance(reference.get("path"),str) or not pathlib.PurePosixPath(reference["path"]).is_absolute() or
@@ -104,7 +119,8 @@ def bootstrap_root_validator(instance_path: pathlib.Path) -> tuple[dict, pathlib
     plan_bytes=plan_path.read_bytes()
     if hashlib.sha256(plan_bytes).hexdigest()!=policy["targetPlanSha256"]: raise ValueError("target-plan trust identity differs")
     plan=json.loads(plan_bytes); tooling=plan.get("tooling")
-    if plan.get("schemaVersion")!=4 or plan.get("qualificationRoot")!=reference or not isinstance(tooling,dict):
+    expected_plan_schema=5 if instance_schema==4 else 4
+    if plan.get("schemaVersion")!=expected_plan_schema or plan.get("qualificationRoot")!=reference or not isinstance(tooling,dict):
         raise ValueError("target-plan root trust binding differs")
     item=tooling.get("rootValidator"); executor=tooling.get("permanentExecutor")
     keys={"sourcePath","installedPath","sourceSha256","installedSha256","installKind","candidateArchiveMember"}
@@ -112,20 +128,76 @@ def bootstrap_root_validator(instance_path: pathlib.Path) -> tuple[dict, pathlib
             item.get("sourceSha256")!=item.get("installedSha256") or not SHA256.fullmatch(item.get("sourceSha256","")) or
             item.get("installedPath")!="/usr/libexec/rp1-gpclk-dkms/gate_d_root.py"):
         raise ValueError("root-validator trust identity is invalid")
-    current_executor=pathlib.Path(__file__).resolve()
+    current_executor=(current_executor_override.resolve() if current_executor_override is not None
+                      else pathlib.Path(__file__).resolve())
     installed_executor=pathlib.Path(executor.get("installedPath","")) if isinstance(executor,dict) else pathlib.Path()
     if current_executor==installed_executor:
-        validator=pathlib.Path(item["installedPath"]); expected=item["installedSha256"]
+        validator=installed_root/item["installedPath"].lstrip("/"); expected=item["installedSha256"]
     else:
         validator=trusted_relative(item["sourcePath"]); expected=item["sourceSha256"]
         expected_executor=trusted_relative(executor.get("sourcePath","")) if isinstance(executor,dict) else pathlib.Path()
         if current_executor!=expected_executor: raise ValueError("staged executor trust identity differs")
-    if validator.is_symlink() or not validator.is_file(): raise ValueError("root validator is absent or symlinked")
-    source=validator.read_bytes()
-    if hashlib.sha256(source).hexdigest()!=expected: raise ValueError("root-validator bytes differ")
-    module=types.ModuleType("gate_d_root"); module.__file__=str(validator)
-    exec(compile(source,str(validator),"exec"),module.__dict__)
-    sys.modules["gate_d_root"]=module
+    if instance_schema==3:
+        if validator.is_symlink() or not validator.is_file(): raise ValueError("root validator is absent or symlinked")
+        source=validator.read_bytes()
+        if hashlib.sha256(source).hexdigest()!=expected: raise ValueError("root-validator bytes differ")
+        module=types.ModuleType("gate_d_root"); module.__file__=str(validator)
+        exec(compile(source,str(validator),"exec"),module.__dict__)
+        sys.modules["gate_d_root"]=module
+        return instance,root
+    graph=plan.get("pythonModules")
+    if not isinstance(graph,dict) or set(graph)!=set(IMPORT_MODULE_PATHS):
+        raise ValueError("installed Python import graph is incomplete")
+    graph_keys={"sourcePath","installedPath","sourceSha256","installedSha256","installKind","candidateArchiveMember"}
+    payloads={}
+    for name in IMPORT_ORDER:
+        graph_item=graph[name]
+        if (not isinstance(graph_item,dict) or set(graph_item)!=graph_keys or
+                graph_item.get("sourcePath")!=f"scripts/{name}.py" or
+                graph_item.get("installedPath")!=IMPORT_MODULE_PATHS[name] or
+                graph_item.get("installKind")!="copied" or graph_item.get("candidateArchiveMember") is not True or
+                graph_item.get("sourceSha256")!=graph_item.get("installedSha256") or
+                not SHA256.fullmatch(graph_item.get("sourceSha256",""))):
+            raise ValueError(f"invalid installed Python module identity: {name}")
+        selected=(installed_root/graph_item["installedPath"].lstrip("/") if current_executor==installed_executor
+                  else trusted_relative(graph_item["sourcePath"]))
+        expected_sha=(graph_item["installedSha256"] if current_executor==installed_executor
+                      else graph_item["sourceSha256"])
+        if selected.is_symlink() or not selected.is_file():
+            raise ValueError(f"installed Python module is absent or symlinked: {name}")
+        metadata=selected.stat()
+        expected_uid=0 if installed_root==pathlib.Path("/") else os.getuid()
+        if metadata.st_uid!=expected_uid or stat.S_IMODE(metadata.st_mode)&0o022:
+            raise ValueError(f"installed Python module ownership or mode differs: {name}")
+        payload=selected.read_bytes()
+        if hashlib.sha256(payload).hexdigest()!=expected_sha:
+            raise ValueError(f"installed Python module bytes differ: {name}")
+        tree=ast.parse(payload,filename=str(selected))
+        local_imports=set()
+        for node in ast.walk(tree):
+            if isinstance(node,ast.Import):
+                local_imports.update(alias.name for alias in node.names if alias.name.startswith("gate_d_"))
+            elif isinstance(node,ast.ImportFrom) and node.module and node.module.startswith("gate_d_"):
+                local_imports.add(node.module)
+        unknown=local_imports-set(IMPORT_MODULE_PATHS)
+        if unknown:
+            raise ValueError(f"unbound Python module import in {name}: {sorted(unknown)}")
+        payloads[name]=(selected,payload)
+    if graph["gate_d_root"]!=item:
+        raise ValueError("root-validator and import-graph identities differ")
+    previous={name:sys.modules.get(name) for name in IMPORT_ORDER}
+    added=[]
+    try:
+        for name in IMPORT_ORDER:
+            selected,payload=payloads[name]
+            module=types.ModuleType(name); module.__file__=str(selected); module.__package__=""
+            sys.modules[name]=module; added.append(name)
+            exec(compile(payload,str(selected),"exec"),module.__dict__)
+    except BaseException:
+        for name in added:
+            if previous[name] is None: sys.modules.pop(name,None)
+            else: sys.modules[name]=previous[name]
+        raise
     return instance,root
 
 
@@ -1006,6 +1078,10 @@ def main() -> None:
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     document = load_json(args.document)
+    trust_bootstrapped = False
+    if args.instance is not None:
+        bootstrap_root_validator(args.instance)
+        trust_bootstrapped = True
     if args.action == "bootstrap":
         import sys
         scripts=pathlib.Path(__file__).resolve().parent
@@ -1014,7 +1090,7 @@ def main() -> None:
         if not args.execute:
             print(json.dumps(validate_bootstrap(document),indent=2,sort_keys=True)); return
         if os.geteuid()!=0 or args.instance is None: raise SystemExit("bootstrap execution requires root, --execute, and --instance")
-        bootstrap_root_validator(args.instance)
+        if not trust_bootstrapped: bootstrap_root_validator(args.instance)
         from gate_d_instance import load as load_instance, validate as validate_instance
         instance=load_instance(args.instance); validate_instance(instance,require_ready=True)
         qualification_root=instance.get("qualificationRoot")
@@ -1047,7 +1123,7 @@ def main() -> None:
     else:
         if not args.execute or os.geteuid() != 0 or args.index is None or args.instance is None:
             raise SystemExit("target execution requires root, --execute, --index, and --instance")
-        bootstrap_root_validator(args.instance)
+        if not trust_bootstrapped: bootstrap_root_validator(args.instance)
         scripts = pathlib.Path(__file__).resolve().parent
         if str(scripts) not in sys.path:
             sys.path.insert(0, str(scripts))
