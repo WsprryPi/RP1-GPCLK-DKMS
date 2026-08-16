@@ -2,7 +2,8 @@
 
 # Phase 5.26 packaged topology adversarial assessment
 
-Status: offline implementation review passed; clean-commit freeze pending
+Status: offline implementation and clean-commit freeze passed; representative
+build pending
 
 Phase 5.26 advances the release identity because the corrected target runbook
 and authorization dossier are source-archive members. Both now state that the
@@ -36,10 +37,12 @@ and package paths changed as required. A successful offline build cannot exceed
 offline reproducible and adversarially reviewed, and cannot reuse Phase 5.25
 representative-build or lifecycle evidence.
 
-The complete offline suite passed after reinjection of the validator finding.
-The final implementation must pass the suite twice, then be committed. Two
-release units must be built from that exact clean commit in separate
-directories, validate independently, and be byte-identical before the freeze
-record is committed. No Pi, package installation, DKMS mutation, module or
+The complete offline suite passed twice after reinjection of the validator
+finding. Exact clean implementation commit
+`9f009240eecd55940d53d6f13cb9567aa76cd4ce` produced two independently
+validated, byte-identical release units. The archive SHA-256 is
+`f43422342fc03c402eb0602949cc317aea239defc6544534ea98bc40d2c505bc`.
+Direct archive extraction confirmed both corrected documents contain the new
+topology language. No Pi, package installation, DKMS mutation, module or
 overlay administration, service or boot change, GPIO, GPCLK, DMA, helper,
-Si5351, SDR, transmission, or RF work is authorized by this assessment.
+Si5351, SDR, transmission, or RF work was performed.
