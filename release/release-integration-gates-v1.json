@@ -1,13 +1,13 @@
 {
   "SPDX-License-Identifier": "MIT",
   "schemaVersion": 1,
-  "release": "0.0.0-phase5.34",
-  "expectedTag": "v0.0.0-phase5.34",
+  "release": "0.0.0-phase5.35",
+  "expectedTag": "v0.0.0-phase5.35",
   "currentClassification": "candidate",
   "publishedReleaseRequiresPostDownloadVerification": true,
   "modulePublicationConfirmed": false,
   "candidateSnapshot": {
-    "archiveIdentity": "rp1-gpclk-dkms-0.0.0-phase5.34.tar.gz sha256 c623a8ebf6b5dc01a6e85a17e8709c479ad349aa2a08b34a86d71a2dc2a6adbb",
+    "archiveIdentity": "rp1-gpclk-dkms-0.0.0-phase5.35.tar.gz sha256 c623a8ebf6b5dc01a6e85a17e8709c479ad349aa2a08b34a86d71a2dc2a6adbb",
     "sealedArchiveMayBeTested": true,
     "consumableByDependentRelease": false,
     "knownBlockers": [

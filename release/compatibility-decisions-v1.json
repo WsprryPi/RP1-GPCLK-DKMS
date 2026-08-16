@@ -3,7 +3,7 @@
   "entries":[
     {
       "id":"phase4d-wspr5-combined-6.18.34-gpio20","state":"Unavailable","liveEligible":false,
-      "reason":"Historical receiver-relative evidence is for module 0.0.0-phase4d-combined and historical DTBO bytes, not release 0.0.0-phase5.34; firmware identity was not recorded and calibrated absolute RF evidence is absent.",
+      "reason":"Historical receiver-relative evidence is for module 0.0.0-phase4d-combined and historical DTBO bytes, not release 0.0.0-phase5.35; firmware identity was not recorded and calibrated absolute RF evidence is absent.",
       "route":"GPIO20","supportedDriveMa":2,"supportedModes":["QRSS","FSKCW","DFCW","WSPR"],
       "uapiAbi":1,"uapiHeaderSha256":"1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb",
       "build":{"architecture":"arm64","kernelRelease":"6.18.34+rpt-rpi-2712","headers":"linux-headers-6.18.34+rpt-rpi-2712 1:6.18.34-1+rpt1","compiler":"GCC 14.2.0 (Debian 14.2.0-19)",
@@ -15,7 +15,7 @@
     },
     {
       "id":"phase4d-wspr5-combined-6.18.34-gpio4","state":"Unavailable","liveEligible":false,
-      "reason":"Historical receiver-relative evidence is for module 0.0.0-phase4d-combined and historical DTBO bytes, not release 0.0.0-phase5.34; firmware identity was not recorded and calibrated absolute RF evidence is absent.",
+      "reason":"Historical receiver-relative evidence is for module 0.0.0-phase4d-combined and historical DTBO bytes, not release 0.0.0-phase5.35; firmware identity was not recorded and calibrated absolute RF evidence is absent.",
       "route":"GPIO4","supportedDriveMa":2,"supportedModes":["QRSS","FSKCW","DFCW","WSPR"],
       "uapiAbi":1,"uapiHeaderSha256":"1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb",
       "build":{"architecture":"arm64","kernelRelease":"6.18.34+rpt-rpi-2712","headers":"linux-headers-6.18.34+rpt-rpi-2712 1:6.18.34-1+rpt1","compiler":"GCC 14.2.0 (Debian 14.2.0-19)",
