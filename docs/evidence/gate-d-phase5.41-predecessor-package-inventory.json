@@ -1,0 +1,233 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "capturedFor": "0.0.0-phase5.41",
+  "host": "wspr5",
+  "kind": "gate-d-predecessor-package-inventory",
+  "paths": [
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-attempts",
+      "sha256": "3b1600291ee0fc3bc98fd8206414f121511981fe329ec561e5219af128862d3c",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-boot",
+      "sha256": "731b122fbc154e4945397bf844bdb093865175f16b92376972fd72e352893bf3",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-bootstrap",
+      "sha256": "931c1468e1c00682ef9036b03da3f02594d28c4cb7ec8f19b63cc884031d3016",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-busy-injector",
+      "sha256": "c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-executor",
+      "sha256": "d81824ab0454ecb298714e07c08ff9d81255d216152631e5285e51e08ac1d43f",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-instance",
+      "sha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle",
+      "sha256": "1e6fbf956bb610f9d9cf27f35af99f9bc6244a87aa0e91c9d918b8f9a84b4205",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-platform",
+      "sha256": "d749859b0c915c4cfde8df85aa088359f7ed87d77183ae927c82bc1f149afb3c",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-residue",
+      "sha256": "64e8c6e0bfb3bf99961230e9489359f093d2c1ccfcab630f28919f3bc2be4f4f",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-target-plan",
+      "sha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe",
+      "sha256": "1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_attempts.py",
+      "sha256": "3b1600291ee0fc3bc98fd8206414f121511981fe329ec561e5219af128862d3c",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_bootstrap.py",
+      "sha256": "931c1468e1c00682ef9036b03da3f02594d28c4cb7ec8f19b63cc884031d3016",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_instance.py",
+      "sha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_lifecycle.py",
+      "sha256": "1e6fbf956bb610f9d9cf27f35af99f9bc6244a87aa0e91c9d918b8f9a84b4205",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_outer.py",
+      "sha256": "d81824ab0454ecb298714e07c08ff9d81255d216152631e5285e51e08ac1d43f",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_preroot.py",
+      "sha256": "044d82eb99926c3c55c15042ea77102cff7960a99ff39b5d1f311689e8ed1c8d",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_root.py",
+      "sha256": "d8227d99dda0fd8c3383e7b080b23d7407ff26520cc73a18ab3882d06ca4b94d",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_target_plan.py",
+      "sha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/lifecycle-policy",
+      "sha256": "29075e6f15c04a5b1f7e2610b5dc23530228473f1285b7efdd999d319e53f6a7",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin",
+      "sha256": "bf8859cb73964cf0ff16067de556f78a6e0be3cecb98c6c7a64bda78ee7db71a",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0755",
+      "ownerUid": 0,
+      "path": "/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-diagnostics",
+      "sha256": "6a8d35f7c4d6b58eca7db3ee6b02e18a7b031478398f78e994f93b4ea5abb9ca",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0777",
+      "ownerUid": 0,
+      "path": "/usr/sbin/rp1-gpclk-admin",
+      "target": "../libexec/rp1-gpclk-dkms/rp1-gpclk-admin",
+      "type": "symlink"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0777",
+      "ownerUid": 0,
+      "path": "/usr/sbin/rp1-gpclk-diagnostics",
+      "target": "../libexec/rp1-gpclk-dkms/rp1-gpclk-diagnostics",
+      "type": "symlink"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/share/doc/rp1-gpclk-dkms/diagnostics.md",
+      "sha256": "380f809e238309535e228492bd04bd5bd3c7ac19acf3448550747bb08a45d66c",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/share/doc/rp1-gpclk-dkms/gate-d-target-runbook.md",
+      "sha256": "59a3b9b2803e7c12593addbfefca4a251a6c43e42c917736d42f8b7cd3e47cbf",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/share/doc/rp1-gpclk-dkms/lifecycle.md",
+      "sha256": "2878cd700e00b2c466929b5be810df6205bd318cc117245c0470901b192d9649",
+      "type": "file"
+    },
+    {
+      "groupGid": 0,
+      "mode": "0644",
+      "ownerUid": 0,
+      "path": "/usr/share/doc/rp1-gpclk-dkms/signing.md",
+      "sha256": "8a86a6c6a1cbbe69d28ca982a3a89794181dd1e6924dedba0b513ad9452058db",
+      "type": "file"
+    }
+  ],
+  "schemaVersion": 1
+}
