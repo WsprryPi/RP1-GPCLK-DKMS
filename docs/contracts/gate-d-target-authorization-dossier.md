@@ -46,12 +46,17 @@ immutable evidence, and complete test-owned cleanup. Each attempt requires a
 new validated operation document, immediate fail-closed identity/conflict
 preflight, its row deadline, and a new evidence directory.
 
-The Si5351 leads must remain disconnected from GPIO4 and GPIO20, no antenna may
-be connected, and SDRplay must remain unused. `live_output=1`, active pinctrl,
-clock enablement, DMA submission, GPIO output, transmitter keying, Si5351 or SDR
-operation, RF, `/dev/mem`, custom-kernel qualification, forced removal, general
-upgrade, unreviewed persistent boot change, unrelated cleanup, and fallback to
-another physical backend remain prohibited.
+The separate I2C-controlled Si5351 output path must remain disabled, unkeyed,
+and isolated from the antenna or test-output path. No antenna may be connected
+to either transmitter path, and SDRplay must remain unused. GPIO4 and GPIO20
+are reserved for the RP1 GPCLK DKMS module; the Si5351 is not wired to either
+pin. The machine-readable field `si5351Disconnected` records isolation of the
+Si5351 RF path for this qualification and does not describe a connection to
+GPIO4 or GPIO20. `live_output=1`, active pinctrl, clock enablement, DMA
+submission, GPIO output, transmitter keying, Si5351 or SDR operation, RF,
+`/dev/mem`, custom-kernel qualification, forced removal, general upgrade,
+unreviewed persistent boot change, unrelated cleanup, and fallback to another
+physical backend remain prohibited.
 
 The operator's 2026-08-15 authorization makes this dossier the exact boundary
 for the required-executable run. The current target plan is semantic, not

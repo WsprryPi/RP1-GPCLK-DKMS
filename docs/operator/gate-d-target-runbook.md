@@ -28,10 +28,16 @@ sealed instance digest and validate
 exact required-executable subset and does not permit improvised commands.
 Require `inputsReady`, `targetExecutionApproved`, and `executionReady` to all
 be true.
-Confirm the Si5351 leads are disconnected from
-GPIO4 and GPIO20, no antenna is connected, SDRplay is unused, rescue SD and
-physical power access remain available, and the candidate artifact hashes match
-the instance.
+Confirm the separate I2C-controlled Si5351 output path is disabled and unkeyed,
+no antenna is connected to either transmitter path, SDRplay is unused, rescue
+SD and physical power access remain available, and the candidate artifact
+hashes match the instance. GPIO4 and GPIO20 are reserved for the RP1 GPCLK DKMS
+module; the Si5351 is not wired to either pin.
+
+The existing machine-readable field `si5351Disconnected` means that the
+Si5351 RF output is isolated from the antenna or test-output path for this
+qualification and remains disabled. It does not mean that Si5351 leads are, or
+ever were, connected to GPIO4 or GPIO20.
 
 Before each row, record the exact installation transaction's owned files,
 symlinks, and empty directories with their SHA-256 identities. Generate a new
