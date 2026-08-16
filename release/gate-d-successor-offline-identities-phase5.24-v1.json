@@ -1,0 +1,44 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-successor-offline-identities",
+  "release": "0.0.0-phase5.24",
+  "sourceCommit": "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5",
+  "tagPresent": false,
+  "publishable": false,
+  "builds": {
+    "count": 2, "byteIdentical": true,
+    "archive": "rp1-gpclk-dkms-0.0.0-phase5.24.tar.gz",
+    "archiveSha256": "0da181f1ccfa9fb9edbd34456cec95730be8922283d1c5b207af376491413d8a",
+    "compatibilityManifestSha256": "c9effbf4e2d3f7fe37782e224b6c9b5484fcc1d43c372c68cd2e5e51e9b79086",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "uapiHeaderSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb",
+    "provenanceSha256": "10e0e9bc3f3ce99735581850607b2c70b6cda0c7d81bec7b8f84bf9eabd4090b",
+    "checksumsSha256": "41a128c4b53895dc4f092243f97872aa1523897016d1d07d8b7c0dca753e5e05",
+    "metadataSha256": "448ff1f78532df7cbbf8c555ee0aa3dd5838eb6119b010dd3f257f92df618d77"
+  },
+  "publishedSchemas": {
+    "qualificationRootSha256": "72c10ba9e3e1db33a2c6c2019cc0940974b6c6dc17d5e2d11a62284912062742",
+    "bootstrapSha256": "563b98d35b2ff0acfd9ea531a5ca95fe9f30949b545c5a3cefe138f24bee014e",
+    "preRootEnvelopeSha256": "a2985e8d8be8dd515ca3f7a4469158675ce6dda941bffc1b75b62c3062560b82",
+    "targetPlanSha256": "43b716aaa4d4b666a2f99ea139f6a317938b0604bed9a0807bec33f528950edc",
+    "attemptIndexSha256": "6872e59dc5957e8e88cb8e50801d5df9249130d8615b4eb07165c95e613b62cd",
+    "executionInstanceSha256": "453016f49a281b1067c930c9a5ae4e19f82252456e73172a46ed74b4e51940c5"
+  },
+  "permanentTooling": {
+    "rootValidatorSha256": "d8227d99dda0fd8c3383e7b080b23d7407ff26520cc73a18ab3882d06ca4b94d",
+    "outerExecutorSha256": "49b26b3f056df6855f7e0530b2f64d2f9a423836bf4b5b773c3db31980505864",
+    "preRootTransitionSha256": "1f52e5775adffca385f2af757c4ac133e3e02d8a69c83eace9339bfd57ef7516",
+    "targetPlanValidatorSha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756",
+    "bootstrapValidatorSha256": "a656e17673f1799e7d43d9f9992ff975a745e796f80d9035de33e02328276dfe",
+    "lifecycleCoordinatorSha256": "c55dee9ce430b30b52972a9d6312b593b5d3c9ab15b8c17a270a6b7066a7480d",
+    "attemptGeneratorSha256": "53fc7e07e78b964c7424ad3b2127aaac70cbbb67dbdd4d4b24cced60df4fe6de",
+    "instanceValidatorSha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907"
+  },
+  "targetBuiltHelpers": {
+    "busyInjectorSourceSha256": "1bebe7cd10be210a2dcedb9de3db701888f40c38f3210470d777b69bcf5b7582",
+    "uapiProbeSourceSha256": "178de464eeed875fc0906f7c19b7e2d1ac0e33313d1d1074c57616a4e7fa1133"
+  },
+  "claimCeiling": "offline reproducible and adversarially reviewed only; no representative build, installation, lifecycle, route qualification, GPIO, clock, DMA, transmission, SDR, or RF claim"
+}

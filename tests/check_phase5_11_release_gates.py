@@ -80,11 +80,20 @@ decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_t
 assert decisions["entries"]
 assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False for entry in decisions["entries"])
 assert set(document["candidateSnapshot"]["knownBlockers"]) == {
-    "phase5.24-candidate-freeze-pending",
     "representative-lifecycle-matrix-not-executed",
     "public-artifact-download-verification-not-performed",
     "module-release-not-published",
 }
+phase524 = json.loads((ROOT / "release/gate-d-successor-offline-identities-phase5.24-v1.json").read_text())
+assert phase524["release"] == "0.0.0-phase5.24"
+assert phase524["sourceCommit"] == "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5"
+assert phase524["builds"]["count"] == 2
+assert phase524["builds"]["byteIdentical"] is True
+assert phase524["builds"]["archiveSha256"] == \
+    "0da181f1ccfa9fb9edbd34456cec95730be8922283d1c5b207af376491413d8a"
+assert phase524["publishedSchemas"]["targetPlanSha256"] == \
+    "43b716aaa4d4b666a2f99ea139f6a317938b0604bed9a0807bec33f528950edc"
+assert "representative build" in phase524["claimCeiling"]
 
 for mutation in (
     lambda value: value.update(currentClassification="published-release"),
