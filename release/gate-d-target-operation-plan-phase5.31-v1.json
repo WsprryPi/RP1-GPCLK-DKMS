@@ -1,0 +1,430 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "artifacts": {
+    "gpio20": {
+      "sha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"
+    },
+    "gpio4": {
+      "sha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6"
+    },
+    "predecessor": {
+      "archive": "/home/pi/gate-c-evidence/predecessor-6.18.34-a1aed8cbb3e7/rp1-gpclk-dkms-0.0.0-phase5.2.tar.gz",
+      "sha256": "f334853d9c94d733ea22e9b7b93961a005e63442ec4efc4edbe2b12d6321aaf4",
+      "version": "0.0.0-phase5.2"
+    },
+    "successor": {
+      "archive": "/home/pi/gate-d-inputs/phase5.31-c7e6fafdc434/rp1-gpclk-dkms-0.0.0-phase5.31.tar.gz",
+      "sha256": "ac0ce593e988886a24c22866409a20097a24105a94b846152bdc30ac4a060bed",
+      "version": "0.0.0-phase5.31"
+    }
+  },
+  "attemptEnvelope": [
+    "new-evidence-directory",
+    "capture-live-preflight",
+    "verify-artifacts",
+    "snapshot-services",
+    "quiesce-exact-services",
+    "stage-test-owned-source",
+    "execute-row-actions",
+    "restore-exact-services",
+    "audit-owned-residue",
+    "capture-scoped-kernel-log-delta",
+    "seal-evidence-read-only"
+  ],
+  "boot": {
+    "assistanceSeconds": 1800,
+    "automaticRecoverySeconds": 900,
+    "config": "/boot/firmware/config.txt",
+    "configSha256": "b6218fd92bd231151f177029b0dfd84a2af1e92f94dac768bd9501af087d43e2",
+    "normalKernel": "6.18.34+rpt-rpi-2712",
+    "priorInitramfsSha256": "e3d47bcb88e0a0ed9cb338832fc1ac503d423692ab49842134c68677dc505068",
+    "priorInitramfsSource": "/boot/initrd.img-6.12.75+rpt-rpi-2712",
+    "priorKernel": "6.12.75+rpt-rpi-2712",
+    "priorKernelSha256": "c194093a665071826ff94fb014b574de8ad896584b7317bbeafefe94154b0b44",
+    "priorKernelSource": "/boot/vmlinuz-6.12.75+rpt-rpi-2712",
+    "rebootNoticeRequired": true,
+    "selector": "scripts/gate_d_boot.py",
+    "sshReturnSeconds": 600,
+    "tryboot": "/boot/firmware/tryboot.txt",
+    "trybootSha256": "c06b262332c145a0cfea594e020fced762a02eef269e4026fe84de71fb152b0a"
+  },
+  "hostId": "wspr5-stock",
+  "invariants": {
+    "antennaConnected": false,
+    "forcedRemoval": false,
+    "historicalArtifactMutation": false,
+    "liveOutput": false,
+    "sdrPermitted": false,
+    "si5351Disconnected": true,
+    "trybootMutation": false
+  },
+  "kind": "gate-d-output-disabled-target-operation-plan",
+  "pythonModules": {
+    "gate_d_attempts": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate_d_attempts.py",
+      "installedSha256": "dbb82601fddfcc820afec8e62677dc34a127a73aea0be0cc39743c8b031dd96c",
+      "sourcePath": "scripts/gate_d_attempts.py",
+      "sourceSha256": "dbb82601fddfcc820afec8e62677dc34a127a73aea0be0cc39743c8b031dd96c"
+    },
+    "gate_d_bootstrap": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate_d_bootstrap.py",
+      "installedSha256": "a656e17673f1799e7d43d9f9992ff975a745e796f80d9035de33e02328276dfe",
+      "sourcePath": "scripts/gate_d_bootstrap.py",
+      "sourceSha256": "a656e17673f1799e7d43d9f9992ff975a745e796f80d9035de33e02328276dfe"
+    },
+    "gate_d_instance": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate_d_instance.py",
+      "installedSha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907",
+      "sourcePath": "scripts/gate_d_instance.py",
+      "sourceSha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907"
+    },
+    "gate_d_lifecycle": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate_d_lifecycle.py",
+      "installedSha256": "1e6fbf956bb610f9d9cf27f35af99f9bc6244a87aa0e91c9d918b8f9a84b4205",
+      "sourcePath": "scripts/gate_d_lifecycle.py",
+      "sourceSha256": "1e6fbf956bb610f9d9cf27f35af99f9bc6244a87aa0e91c9d918b8f9a84b4205"
+    },
+    "gate_d_outer": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate_d_outer.py",
+      "installedSha256": "49b26b3f056df6855f7e0530b2f64d2f9a423836bf4b5b773c3db31980505864",
+      "sourcePath": "scripts/gate_d_outer.py",
+      "sourceSha256": "49b26b3f056df6855f7e0530b2f64d2f9a423836bf4b5b773c3db31980505864"
+    },
+    "gate_d_preroot": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate_d_preroot.py",
+      "installedSha256": "9a2d5b309c1e06f40c062b520d229c9f55040125737738b9689c0d8594ae9272",
+      "sourcePath": "scripts/gate_d_preroot.py",
+      "sourceSha256": "9a2d5b309c1e06f40c062b520d229c9f55040125737738b9689c0d8594ae9272"
+    },
+    "gate_d_root": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate_d_root.py",
+      "installedSha256": "d8227d99dda0fd8c3383e7b080b23d7407ff26520cc73a18ab3882d06ca4b94d",
+      "sourcePath": "scripts/gate_d_root.py",
+      "sourceSha256": "d8227d99dda0fd8c3383e7b080b23d7407ff26520cc73a18ab3882d06ca4b94d"
+    },
+    "gate_d_target_plan": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate_d_target_plan.py",
+      "installedSha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756",
+      "sourcePath": "scripts/gate_d_target_plan.py",
+      "sourceSha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756"
+    }
+  },
+  "qualificationBootstrap": {
+    "path": "release/gate-d-qualification-bootstrap-plan-phase5.31-v1.json",
+    "sha256": "fb3a23e86e9aabfd6c443e8395bc8aa9a27b3e8cb55d415df153a8dcbf9c5d16"
+  },
+  "qualificationRoot": {
+    "identityFile": ".gate-d-root.json",
+    "identitySha256": "be2067085f4e8f0027b5a81e3e28645126c1bd6864476daee5c81ed55f3a25f5",
+    "mode": "0700",
+    "ownerUid": 1000,
+    "path": "/home/pi/gate-d-qualification/phase5.31-c7e6fafdc434"
+  },
+  "rows": [
+    {
+      "actions": [
+        "install-successor",
+        "apply-route-runtime-output-disabled",
+        "load-disabled",
+        "query-release",
+        "unbind-rebind",
+        "unload",
+        "remove-route-runtime",
+        "complete-test-owned-removal"
+      ],
+      "attempts": [
+        "gpio4",
+        "gpio20"
+      ],
+      "id": "current-supported-kernel"
+    },
+    {
+      "actions": [
+        "select-prior-stock-kernel",
+        "noticed-reboot-to-prior",
+        "verify-prior-kernel",
+        "install-predecessor",
+        "install-successor-as-downgrade-target",
+        "apply-route-runtime-output-disabled",
+        "load-disabled",
+        "query-release",
+        "unbind-rebind",
+        "unload",
+        "complete-test-owned-removal",
+        "restore-normal-boot-selection",
+        "noticed-reboot-to-normal",
+        "verify-normal-kernel"
+      ],
+      "attempts": [
+        "gpio4",
+        "gpio20"
+      ],
+      "id": "prior-supported-kernel-downgrade"
+    },
+    {
+      "actions": [
+        "verify-signing-not-enforced",
+        "install-successor",
+        "apply-route-runtime-output-disabled",
+        "load-disabled",
+        "query-release",
+        "unload",
+        "remove-route-runtime",
+        "complete-test-owned-removal",
+        "verify-signing-policy-unchanged"
+      ],
+      "attempts": [
+        "gpio4",
+        "gpio20"
+      ],
+      "id": "signing-not-enforced"
+    },
+    {
+      "actions": [
+        "install-predecessor",
+        "stage-successor",
+        "inject-compiler-exit-nonzero",
+        "expect-dkms-build-failure",
+        "recover-predecessor",
+        "remove-failed-successor"
+      ],
+      "attempts": [
+        "compiler-wrapper"
+      ],
+      "id": "deliberate-build-failure"
+    },
+    {
+      "actions": [
+        "install-predecessor",
+        "interrupt-after-durable-checkpoint",
+        "write-immutable-failed-journal",
+        "recover-in-new-attempt",
+        "verify-one-complete-inactive-version",
+        "remove-attempt-owned-residue"
+      ],
+      "attempts": [
+        "after-preflight",
+        "after-retain-predecessor",
+        "after-dkms-add",
+        "after-dkms-build",
+        "after-dkms-install",
+        "after-load-disabled",
+        "after-query-disabled",
+        "after-uapi-query-release",
+        "after-unbind-bind",
+        "after-unload",
+        "after-dkms-uninstall",
+        "after-dkms-remove",
+        "after-owned-residue-remove",
+        "after-verify-final-state",
+        "after-commit-state"
+      ],
+      "id": "interrupted-upgrade"
+    },
+    {
+      "actions": [
+        "copy-successor-attempt-owned",
+        "inject-one-stale-identity",
+        "expect-rejection-before-load",
+        "remove-attempt-owned-copy",
+        "verify-baseline-unchanged"
+      ],
+      "attempts": [
+        "release",
+        "kernel",
+        "uapi",
+        "gpio4-overlay",
+        "gpio20-overlay",
+        "enrollment"
+      ],
+      "id": "stale-manifest"
+    },
+    {
+      "actions": [
+        "copy-artifact-attempt-owned",
+        "flip-one-byte",
+        "expect-hash-rejection-before-install",
+        "remove-corrupt-copy",
+        "verify-baseline-unchanged"
+      ],
+      "attempts": [
+        "archive",
+        "gpio4-dtbo",
+        "gpio20-dtbo"
+      ],
+      "id": "corrupted-archive-or-dtbo"
+    },
+    {
+      "actions": [
+        "install-successor",
+        "prove-live-inactive-state",
+        "inventory-exact-owned-paths",
+        "complete-test-owned-removal",
+        "verify-package-runtime-overlay-and-residue-absent"
+      ],
+      "attempts": [
+        "complete-removal"
+      ],
+      "id": "removal-inactive"
+    },
+    {
+      "actions": [
+        "install-successor",
+        "apply-route-runtime-output-disabled",
+        "load-disabled",
+        "start-busy-injector-and-wait-ready",
+        "expect-removal-refusal-without-mutation",
+        "stop-injector-and-verify-release-close",
+        "unload",
+        "remove-route-runtime",
+        "complete-test-owned-removal"
+      ],
+      "attempts": [
+        "open-gpio4",
+        "owner-gpio4",
+        "open-gpio20",
+        "owner-gpio20"
+      ],
+      "id": "removal-open-or-active"
+    },
+    {
+      "actions": [
+        "prove-empty-package-baseline",
+        "install-successor",
+        "apply-route-runtime-output-disabled",
+        "load-disabled",
+        "query-release",
+        "unload",
+        "remove-route-runtime",
+        "complete-test-owned-removal",
+        "verify-second-empty-baseline"
+      ],
+      "attempts": [
+        "gpio4",
+        "gpio20"
+      ],
+      "id": "reinstall-after-removal"
+    }
+  ],
+  "schemaVersion": 5,
+  "services": [
+    {
+      "action": "stop-then-restore-exact",
+      "name": "wsprrypi",
+      "requiredPreState": "active"
+    },
+    {
+      "action": "stop-then-restore-exact",
+      "name": "sdrplay",
+      "requiredPreState": "active"
+    },
+    {
+      "action": "preserve",
+      "name": "sdrconnect-server",
+      "requiredPreState": "inactive"
+    },
+    {
+      "action": "stop-then-restore-exact",
+      "name": "SoapySDRServer",
+      "requiredPreState": "active"
+    }
+  ],
+  "tooling": {
+    "bootSelector": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-boot",
+      "installedSha256": "731b122fbc154e4945397bf844bdb093865175f16b92376972fd72e352893bf3",
+      "sourcePath": "scripts/gate_d_boot.py",
+      "sourceSha256": "731b122fbc154e4945397bf844bdb093865175f16b92376972fd72e352893bf3"
+    },
+    "bootstrapExecutor": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-bootstrap",
+      "installedSha256": "a656e17673f1799e7d43d9f9992ff975a745e796f80d9035de33e02328276dfe",
+      "sourcePath": "scripts/gate_d_bootstrap.py",
+      "sourceSha256": "a656e17673f1799e7d43d9f9992ff975a745e796f80d9035de33e02328276dfe"
+    },
+    "busyInjector": {
+      "candidateArchiveMember": true,
+      "installKind": "target-built",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-busy-injector",
+      "installedSha256": "c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd",
+      "sourcePath": "tools/gate_d_busy_injector.c",
+      "sourceSha256": "1bebe7cd10be210a2dcedb9de3db701888f40c38f3210470d777b69bcf5b7582"
+    },
+    "instanceValidator": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-instance",
+      "installedSha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907",
+      "sourcePath": "scripts/gate_d_instance.py",
+      "sourceSha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907"
+    },
+    "lifecycleCoordinator": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle",
+      "installedSha256": "1e6fbf956bb610f9d9cf27f35af99f9bc6244a87aa0e91c9d918b8f9a84b4205",
+      "sourcePath": "scripts/gate_d_lifecycle.py",
+      "sourceSha256": "1e6fbf956bb610f9d9cf27f35af99f9bc6244a87aa0e91c9d918b8f9a84b4205"
+    },
+    "permanentExecutor": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-executor",
+      "installedSha256": "49b26b3f056df6855f7e0530b2f64d2f9a423836bf4b5b773c3db31980505864",
+      "sourcePath": "scripts/gate_d_outer.py",
+      "sourceSha256": "49b26b3f056df6855f7e0530b2f64d2f9a423836bf4b5b773c3db31980505864"
+    },
+    "platformCoordinator": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-platform",
+      "installedSha256": "d749859b0c915c4cfde8df85aa088359f7ed87d77183ae927c82bc1f149afb3c",
+      "sourcePath": "scripts/gate_d_platform.py",
+      "sourceSha256": "d749859b0c915c4cfde8df85aa088359f7ed87d77183ae927c82bc1f149afb3c"
+    },
+    "rootValidator": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate_d_root.py",
+      "installedSha256": "d8227d99dda0fd8c3383e7b080b23d7407ff26520cc73a18ab3882d06ca4b94d",
+      "sourcePath": "scripts/gate_d_root.py",
+      "sourceSha256": "d8227d99dda0fd8c3383e7b080b23d7407ff26520cc73a18ab3882d06ca4b94d"
+    },
+    "targetPlanValidator": {
+      "candidateArchiveMember": true,
+      "installKind": "copied",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-target-plan",
+      "installedSha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756",
+      "sourcePath": "scripts/gate_d_target_plan.py",
+      "sourceSha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756"
+    },
+    "uapiProbe": {
+      "candidateArchiveMember": true,
+      "installKind": "target-built",
+      "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe",
+      "installedSha256": "1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742",
+      "sourcePath": "tools/gate_d_uapi_probe.c",
+      "sourceSha256": "178de464eeed875fc0906f7c19b7e2d1ac0e33313d1d1074c57616a4e7fa1133"
+    }
+  }
+}
