@@ -19,18 +19,18 @@
   "schemaVersion": 1,
   "successor": {
     "archiveSha256": "e5f5a047b17c08e5b33aaedfd88385b560324649c236c3518df4a660371a6867",
-    "authorization": "none; target execution requires a new bounded authorization after control-set validation",
+    "authorization": "fresh operator authorization bound to the Phase 5.33 execution instance",
     "controlSet": "release/gate-d-execution-instance-phase5.33-v1.json",
-    "executionReady": false,
+    "executionReady": true,
     "purpose": "provide sealed predecessor-to-successor permanent-tool transition and authenticated pre-root recovery",
     "qualification": "Compatible-unqualified",
     "release": "0.0.0-phase5.33",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; transition helpers compiled but not run; gpioAccess false; liveEligible false",
     "sourceCommit": "4208941af537f21e3a20160d2d3d7fabe50f7cd3",
-    "status": "control-set-complete-target-authorization-required",
+    "status": "authorized-output-disabled-target-execution",
     "executionEvidence": null,
-    "blocker": "fresh explicit bounded target authorization is required before staging or execution",
-    "targetExecutionApproved": false
+    "blocker": null,
+    "targetExecutionApproved": true
   },
   "successorSelectionGate": "selected-after-phase5.32-recovery-for-retained-tool-and-outer-recovery-correction",
   "supersededCandidates": [
