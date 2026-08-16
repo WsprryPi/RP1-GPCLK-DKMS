@@ -4,12 +4,12 @@ from __future__ import annotations
 import copy, json, pathlib, subprocess, tempfile
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-root={"path":"/home/pi/gate-d-qualification/phase5.23","identityFile":".gate-d-root.json","identitySha256":"1"*64,"ownerUid":1000,"mode":"0700"}
+root={"path":"/home/pi/gate-d-qualification/phase5.24","identityFile":".gate-d-root.json","identitySha256":"1"*64,"ownerUid":1000,"mode":"0700"}
 bootstrap={"SPDX-License-Identifier":"MIT","schemaVersion":3,"kind":"gate-d-qualification-bootstrap-plan","operationId":"x","hostId":"h","qualificationRoot":root,"predecessorVersion":"p","kernelRelease":"k","stagingDirectory":"/s","candidate":{},"qualificationIdentity":{},"administrator":{},"argv":[],"cleanupArgv":[],"recoveryArgv":[],"journal":"/j","deadlineSeconds":1,"expectedPreState":{},"expectedPostState":{},"retainedTools":[{}],"cleanupPaths":["/c"],"safety":{}}
 module={"sourcePath":"scripts/gate_d_root.py","installedPath":"/usr/libexec/rp1-gpclk-dkms/gate_d_root.py","sourceSha256":"2"*64,"installedSha256":"2"*64,"installKind":"copied","candidateArchiveMember":True}
 names=("gate_d_root","gate_d_bootstrap","gate_d_target_plan","gate_d_lifecycle","gate_d_outer","gate_d_attempts","gate_d_instance","gate_d_preroot")
 modules={name:{**module,"sourcePath":f"scripts/{name}.py","installedPath":f"/usr/libexec/rp1-gpclk-dkms/{name}.py"} for name in names}; modules["gate_d_root"]=module
-target={"SPDX-License-Identifier":"MIT","schemaVersion":5,"kind":"gate-d-output-disabled-target-operation-plan","qualificationRoot":root,"qualificationBootstrap":{},"hostId":"h","tooling":{},"pythonModules":modules,"invariants":{},"services":[],"artifacts":{},"boot":{},"attemptEnvelope":{},"rows":[]}
+target={"SPDX-License-Identifier":"MIT","schemaVersion":5,"kind":"gate-d-output-disabled-target-operation-plan","qualificationRoot":root,"qualificationBootstrap":{},"hostId":"h","tooling":{},"pythonModules":modules,"invariants":{},"services":[],"artifacts":{},"boot":{},"attemptEnvelope":["create-evidence"],"rows":[]}
 index={"SPDX-License-Identifier":"MIT","schemaVersion":2,"kind":"gate-d-attempt-index","qualificationRoot":root,"attemptCount":38,"executors":{},"attempts":[{}]*38}
 instance=json.loads((ROOT/"release/gate-d-execution-instance-v1.json").read_text()); instance["schemaVersion"]=4; instance["qualificationRoot"]=root
 instance["executionPolicy"]["qualificationBootstrap"]="release/bootstrap.json"; instance["executionPolicy"]["qualificationBootstrapSha256"]="6"*64

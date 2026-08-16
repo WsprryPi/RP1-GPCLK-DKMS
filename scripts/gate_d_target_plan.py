@@ -38,6 +38,12 @@ CHECKPOINT_ATTEMPTS = {
     "after-dkms-uninstall", "after-dkms-remove", "after-owned-residue-remove",
     "after-verify-final-state", "after-commit-state",
 }
+EXPECTED_ENVELOPE = (
+    "new-evidence-directory", "capture-live-preflight", "verify-artifacts",
+    "snapshot-services", "quiesce-exact-services", "stage-test-owned-source",
+    "execute-row-actions", "restore-exact-services", "audit-owned-residue",
+    "capture-scoped-kernel-log-delta", "seal-evidence-read-only",
+)
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
@@ -182,11 +188,7 @@ def validate(value: dict, *, verify_tools: bool = True) -> dict:
     if not (0 < boot["sshReturnSeconds"] <= boot["automaticRecoverySeconds"] <= boot["assistanceSeconds"] <= 1800):
         raise ValueError("boot recovery deadlines differ")
     envelope = value["attemptEnvelope"]
-    required_envelope = {"new-evidence-directory", "capture-live-preflight", "verify-artifacts",
-                         "snapshot-services", "quiesce-exact-services", "restore-exact-services",
-                         "audit-owned-residue", "capture-scoped-kernel-log-delta",
-                         "seal-evidence-read-only"}
-    if not isinstance(envelope, list) or len(envelope) != len(set(envelope)) or not required_envelope.issubset(envelope):
+    if not isinstance(envelope, list) or tuple(envelope) != EXPECTED_ENVELOPE:
         raise ValueError("attempt evidence/service envelope is incomplete")
     rows = value["rows"]
     if not isinstance(rows, list) or tuple(row.get("id") for row in rows) != ROWS:

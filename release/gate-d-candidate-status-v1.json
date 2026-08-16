@@ -87,17 +87,23 @@
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "install and authenticate the complete transitive Gate D Python import graph",
     "blocker": "The qualification root is required to authenticate and validate the bootstrap operation that is supposed to create that root, so a fresh target cannot enter the root-bound trust state."
-  }],
-  "successor": {
+  }, {
     "release": "0.0.0-phase5.23",
     "sourceCommit": "61ec2032542ac3aea2f51feac904d5450cc17655",
     "archiveSha256": "04b6f7aee8f19c3f0da9b0d8f6a53f8f68dcaaae464b5cf99b847b587415aa8c",
-    "status": "frozen-offline",
+    "status": "blocked-before-gate-d-plan-construction",
     "qualification": "Compatible-unqualified",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
-    "purpose": "establish a closed one-shot pre-root trust transition into the root-bound Gate D control set"
+    "purpose": "establish a closed one-shot pre-root trust transition into the root-bound Gate D control set",
+    "blocker": "The frozen target-plan JSON Schema requires attemptEnvelope to be an object while the permanent validator and executor require an ordered list."
+  }],
+  "successor": {
+    "release": "0.0.0-phase5.24",
+    "status": "unfrozen",
+    "qualification": "offline-review-in-progress",
+    "purpose": "reconcile the published target-plan schema with the permanent validator and executor"
   },
-  "successorSelectionGate": "selected-to-correct-phase5.22-qualification-root-bootstrap-cycle",
+  "successorSelectionGate": "selected-to-correct-phase5.23-target-plan-schema-contradiction",
   "reuseProhibited": [
     "representative-build-promotion",
     "route-decision",
