@@ -19,7 +19,7 @@ spec.loader.exec_module(admin)
 
 model = json.loads((ROOT / "release/installation-model-v1.json").read_text())
 layout = json.loads((ROOT / "release/release-layout-v1.json").read_text())
-assert model["release"] == layout["release"] == "0.0.0-phase5.26"
+assert model["release"] == layout["release"] == "0.0.0-phase5.27"
 assert model["dkmsModule"] == layout["package"]
 assert model["kernelModule"] == layout["module"]
 assert model["transaction"] == admin.STEPS
@@ -47,6 +47,34 @@ for unsafe in ("relative", "/", "/tmp/../etc", "/tmp/$name"):
         pass
     else:
         raise AssertionError(f"unsafe path accepted: {unsafe}")
+
+with tempfile.TemporaryDirectory() as temporary:
+    header_root = pathlib.Path(temporary)
+    kernel = "6.18.34+rpt-rpi-2712"
+    module_dir = header_root / "lib/modules" / kernel
+    header_dir = header_root / "usr/src" / f"linux-headers-{kernel}"
+    module_dir.mkdir(parents=True)
+    header_dir.mkdir(parents=True)
+    (module_dir / "build").symlink_to(f"/usr/src/linux-headers-{kernel}")
+    assert admin.kernel_headers(header_root, kernel) == header_dir.resolve()
+    (module_dir / "build").unlink()
+    (module_dir / "build").symlink_to(header_root / "tmp/escaped")
+    (header_root / "tmp/escaped").mkdir(parents=True)
+    try:
+        admin.kernel_headers(header_root, kernel)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("kernel header symlink escape accepted")
+    (module_dir / "build").unlink()
+    header_dir.chmod(0o777)
+    (module_dir / "build").symlink_to(f"/usr/src/linux-headers-{kernel}")
+    try:
+        admin.kernel_headers(header_root, kernel)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("writable kernel header directory accepted")
 
 with tempfile.TemporaryDirectory() as temporary:
     base = pathlib.Path(temporary)
@@ -96,7 +124,11 @@ with tempfile.TemporaryDirectory() as temporary:
     checksum_names = sorted(artifacts)
     (release / "SHA256SUMS").write_text("".join(f"{hashlib.sha256(artifacts[name]).hexdigest()}  {name}\n" for name in checksum_names))
     (target / "boot/firmware/overlays").mkdir(parents=True)
-    (target / f"lib/modules/{admin.platform.release()}/build").mkdir(parents=True)
+    target_headers = target / "usr/src/test-headers"
+    target_headers.mkdir(parents=True)
+    target_modules = target / f"lib/modules/{admin.platform.release()}"
+    target_modules.mkdir(parents=True)
+    (target_modules / "build").symlink_to("/usr/src/test-headers")
     commands: list[list[str]] = []
     def fake_runner(command: list[str]) -> str:
         commands.append(command)
@@ -115,16 +147,16 @@ with tempfile.TemporaryDirectory() as temporary:
     assert (target / "boot/firmware/overlays/rp1-gpclk-gpio4.dtbo").read_bytes() == b"gpio4"
     assert not (target / "boot/firmware/overlays/rp1-gpclk-gpio20.dtbo").exists()
     assert (target / "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.26/overlay-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.26/permissions-enrollment-policy-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.26/diagnostics-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.26/lifecycle-removal-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.26/gate-d-phase5.24-residue-recovery-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.27/overlay-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.27/permissions-enrollment-policy-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.27/diagnostics-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.27/lifecycle-removal-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.27/gate-d-phase5.24-residue-recovery-v1.json").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/lifecycle-policy").is_file()
-    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.26/gate-d-execution-instance-v1.json").exists()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.26/gate-d-execution-instance-v1.schema.json").is_file()
+    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.27/gate-d-execution-instance-v1.json").exists()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.27/gate-d-execution-instance-v1.schema.json").is_file()
     for schema_name in ("gate-d-qualification-root-v1.schema.json", "gate-d-qualification-bootstrap-plan-v1.schema.json", "gate-d-target-plan-v1.schema.json", "gate-d-attempt-index-v1.schema.json", "gate-d-pre-root-bootstrap-envelope-v1.schema.json"):
-        assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.26" / schema_name).is_file()
+        assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.27" / schema_name).is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-instance").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-platform").is_file()
@@ -152,7 +184,10 @@ with tempfile.TemporaryDirectory() as temporary:
     second = base / "second"
     (second / "boot/firmware/overlays").mkdir(parents=True)
     (second / "boot/firmware/overlays/rp1-gpclk-gpio4.dtbo").write_bytes(b"foreign")
-    (second / f"lib/modules/{admin.platform.release()}/build").mkdir(parents=True)
+    (second / "usr/src/test-headers").mkdir(parents=True)
+    second_modules = second / f"lib/modules/{admin.platform.release()}"
+    second_modules.mkdir(parents=True)
+    (second_modules / "build").symlink_to("/usr/src/test-headers")
     try:
         admin.execute(release, "gpio4", False, None, None, root=second, runner=fake_runner)
     except ValueError:
@@ -183,7 +218,10 @@ with tempfile.TemporaryDirectory() as temporary:
     identity_path.write_text(json.dumps(identity) + "\n")
     qualification_target = base / "qualification-target"
     (qualification_target / "boot/firmware/overlays").mkdir(parents=True)
-    (qualification_target / f"lib/modules/{admin.platform.release()}/build").mkdir(parents=True)
+    (qualification_target / "usr/src/test-headers").mkdir(parents=True)
+    qualification_modules = qualification_target / f"lib/modules/{admin.platform.release()}"
+    qualification_modules.mkdir(parents=True)
+    (qualification_modules / "build").symlink_to("/usr/src/test-headers")
     result = admin.execute(release, "gpio4", False, None, None,
                            root=qualification_target, runner=fake_runner,
                            qualification_identity=identity_path)

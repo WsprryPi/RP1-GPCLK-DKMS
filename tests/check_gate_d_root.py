@@ -9,7 +9,7 @@ tool=importlib.util.module_from_spec(spec); spec.loader.exec_module(tool)
 
 with tempfile.TemporaryDirectory() as temporary:
     base=pathlib.Path(temporary).resolve(); root=base/"qualification"; root.mkdir(mode=0o700)
-    marker={"SPDX-License-Identifier":"MIT","schemaVersion":1,"kind":"gate-d-qualification-root-identity","rootPath":str(root),"candidateRelease":"0.0.0-phase5.26","sourceCommit":"1"*40}
+    marker={"SPDX-License-Identifier":"MIT","schemaVersion":1,"kind":"gate-d-qualification-root-identity","rootPath":str(root),"candidateRelease":"0.0.0-phase5.27","sourceCommit":"1"*40}
     identity=root/".gate-d-root.json"; identity.write_text(json.dumps(marker,sort_keys=True)+"\n"); identity.chmod(0o400)
     reference={"path":str(root),"identityFile":identity.name,"identitySha256":hashlib.sha256(identity.read_bytes()).hexdigest(),"ownerUid":os.getuid(),"mode":"0700"}
     assert tool.validate(reference)==root

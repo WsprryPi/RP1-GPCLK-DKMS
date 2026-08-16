@@ -27,7 +27,7 @@ from typing import Callable
 
 PACKAGE = "rp1-gpclk-dkms"
 MODULE = "rp1_gpclk_dkms"
-VERSION = "0.0.0-phase5.26"
+VERSION = "0.0.0-phase5.27"
 ROUTES = {"gpio4": "rp1-gpclk-gpio4.dtbo", "gpio20": "rp1-gpclk-gpio20.dtbo"}
 ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
                       "remove-old-binding-proven-cleanup", "verify-both-pins-safe",
@@ -63,6 +63,39 @@ def rooted(root: pathlib.Path, absolute: str) -> pathlib.Path:
         if current.is_symlink():
             raise ValueError(f"refusing symlink installation path: {absolute}")
     return result
+
+
+def kernel_headers(root: pathlib.Path, kernel: str) -> pathlib.Path:
+    """Resolve only the stock-kernel build link to a protected /usr/src tree."""
+    if not re.fullmatch(r"[A-Za-z0-9._+-]+", kernel):
+        raise ValueError("unsafe kernel release")
+    build = root / "lib" / "modules" / kernel / "build"
+    parent = rooted(root, f"/lib/modules/{kernel}")
+    if build.is_symlink():
+        link = os.readlink(build)
+        if os.path.isabs(link):
+            candidate = root / link.lstrip("/")
+        else:
+            candidate = parent / link
+    else:
+        candidate = build
+    try:
+        canonical = candidate.resolve(strict=True)
+        canonical_usr_src = (root / "usr/src").resolve(strict=True)
+    except OSError as error:
+        raise ValueError("kernel header build path is missing or unresolved") from error
+    if canonical == canonical_usr_src or canonical_usr_src not in canonical.parents:
+        raise ValueError("kernel header build path is outside canonical /usr/src")
+    current = canonical_usr_src
+    for part in canonical.relative_to(canonical_usr_src).parts:
+        current = current / part
+        if current.is_symlink():
+            raise ValueError("kernel header canonical path contains a symlink")
+    status = canonical.stat()
+    root_uid = root.stat().st_uid
+    if not canonical.is_dir() or status.st_uid != root_uid or status.st_mode & 0o022:
+        raise ValueError("kernel header directory ownership or mode is unsafe")
+    return canonical
 
 
 def load_checksums(release: pathlib.Path) -> dict[str, str]:
@@ -313,7 +346,7 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                         "ownedFiles": [], "ownedDirectories": []})
     atomic_json(state_path, transaction)
     try:
-        headers = rooted(root, f"/lib/modules/{kernel}/build")
+        headers = kernel_headers(root, kernel)
         overlays = rooted(root, "/boot/firmware/overlays")
         if root == pathlib.Path("/"):
             if os.geteuid() != 0:
