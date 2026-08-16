@@ -21,16 +21,16 @@
     "archiveSha256": "ffc6b2e08ef8ed28550980c64bdc5c48e7d917c39e927f192e62c0451b408fd9",
     "authorization": "operator authorization recorded in the Phase 5.30 execution instance",
     "controlSet": "release/gate-d-execution-instance-phase5.30-v1.json",
-    "executionReady": true,
+    "executionReady": false,
     "purpose": "recognize and verify one bounded installed DKMS module compression representation",
     "qualification": "Compatible-unqualified",
     "release": "0.0.0-phase5.30",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "sourceCommit": "73f3f7df4d7df194a52d14cacf127d29a316545f",
-    "status": "authorized-for-output-disabled-gate-d-execution",
-    "executionEvidence": "docs/reviews/gate-d-phase5.30-control-set-independent-review.md",
-    "blocker": "none before exact bounded execution; stop on any identity, residue, service, recovery, or cleanup ambiguity",
-    "targetExecutionApproved": true
+    "status": "blocked-during-gate-d-bootstrap-cleanup",
+    "executionEvidence": "docs/evidence/gate-d-phase5.30-authorized-pre-root-execution.md",
+    "blocker": "complete-removal treats a verified already-absent historical predecessor as fatal instead of accepting the required package-absent postcondition",
+    "targetExecutionApproved": false
   },
   "successorSelectionGate": "selected-to-correct-phase5.29-installed-module-representation",
   "supersededCandidates": [
