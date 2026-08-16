@@ -94,6 +94,16 @@ assert phase524["builds"]["archiveSha256"] == \
 assert phase524["publishedSchemas"]["targetPlanSha256"] == \
     "43b716aaa4d4b666a2f99ea139f6a317938b0604bed9a0807bec33f528950edc"
 assert "representative-build compatible" in phase524["claimCeiling"]
+phase525 = json.loads((ROOT / "release/gate-d-successor-offline-identities-phase5.25-v1.json").read_text())
+assert phase525["release"] == "0.0.0-phase5.25"
+assert phase525["sourceCommit"] == "d9f8fd8b17f1c2ee9324704c6b6630dfccfb5e4e"
+assert phase525["builds"]["count"] == 2 and phase525["builds"]["byteIdentical"] is True
+assert phase525["builds"]["archiveSha256"] == \
+    "e615750897009b79d0ead1e3bbf4133e0c4d5c157cc259d513a76ad65bd993e4"
+assert phase525["publishedSchemas"]["preRootEnvelopeSha256"] == \
+    "85293e1425f07ceb7cd92d92d6c884eeb8f71e4495c8176fec4e9dca2521ec11"
+assert phase525["residueRecovery"]["executed"] is False
+assert "no representative build" in phase525["claimCeiling"]
 
 for mutation in (
     lambda value: value.update(currentClassification="published-release"),
