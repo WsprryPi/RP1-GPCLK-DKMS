@@ -15,6 +15,7 @@ disabled. Coverage remains ten ready rows, five deferred environmental rows,
 15 interruption attempts, and four busy-removal attempts. Adversarial role,
 path, hash, destination, and live-output substitutions failed closed.
 
-The control set is approved as complete, but target execution is deliberately
-not approved: `targetExecutionApproved` and `executionReady` are false. No
-target command or hardware/system mutation occurred during this slice.
+The operator subsequently authorized exact Phase 5.28 target execution.
+`targetExecutionApproved` and `executionReady` are therefore true in the
+hash-closed instance; removing that authorization fails ready validation. No
+target command or hardware/system mutation occurred during control generation.

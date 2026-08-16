@@ -30,8 +30,8 @@ assert route["candidate"]["sourceCommit"]==COMMIT
 assert route["candidate"]["archiveSha256"]=="cd7e9d60f603101634d6f81e82edda311b724678c9ce9329ff98609911bcc3d6"
 assert route["evidence"]["moduleSha256"]=="41ba511cc0821cf46fc856d40da53c90e578b8b7d8a734c35e0476984244d459"
 assert all(x["state"]=="Compatible-unqualified" and x["liveEligible"] is False for x in route["routes"])
-assert instance["inputsReady"] is True and instance["executionReady"] is False
-assert instance["authorization"]["targetExecutionApproved"] is False
+assert instance["inputsReady"] is True and instance["executionReady"] is True
+assert instance["authorization"]["targetExecutionApproved"] is True
 assert sum(x["status"]=="ready" for x in instance["rows"])==10
 assert sum(x["status"]=="deferred-environmental" for x in instance["rows"])==5
 roles={x["role"] for x in envelope["releaseInputs"]}
@@ -65,7 +65,11 @@ with tempfile.TemporaryDirectory() as temporary:
  try:
   assert gate_d_bootstrap.validate(bootstrap)["outputDisabled"] is True
   assert gate_d_target_plan.validate(plan)["attemptCount"]==38
-  result=gate_d_instance.validate(instance,require_ready=False); assert result["inputsReady"] is True and result["executionReady"] is False and len(result["deferredRows"])==5
+  result=gate_d_instance.validate(instance,require_ready=True); assert result["inputsReady"] is True and result["executionReady"] is True and result["blockedRows"]==[] and len(result["deferredRows"])==5
+  bad=copy.deepcopy(instance); bad["authorization"]["targetExecutionApproved"]=False
+  try: gate_d_instance.validate(bad,require_ready=True)
+  except ValueError: pass
+  else: raise AssertionError("execution-ready instance accepted without target authorization")
  finally: gate_d_root.validate=original
 for mutate in (lambda v:v["releaseInputs"].pop(),lambda v:v["releaseInputs"][1].update(role="archive"),lambda v:v["releaseInputs"][1].update(path="/other/rp1-gpclk-gpio4.dtbo"),lambda v:v["transitionFiles"][0].update(sha256="0"*64),lambda v:v["transitionFiles"][1].update(destination=v["transitionFiles"][0]["destination"]),lambda v:v["inputFiles"][0].update(path="/tmp/substituted"),lambda v:v["safety"].update(liveOutput=True)):
  bad=copy.deepcopy(envelope); mutate(bad)
