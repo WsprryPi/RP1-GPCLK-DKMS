@@ -38,7 +38,8 @@
   },
   "targetBuiltHelpers": {
     "busyInjectorSourceSha256": "1bebe7cd10be210a2dcedb9de3db701888f40c38f3210470d777b69bcf5b7582",
-    "uapiProbeSourceSha256": "178de464eeed875fc0906f7c19b7e2d1ac0e33313d1d1074c57616a4e7fa1133"
+    "uapiProbeSourceSha256": "178de464eeed875fc0906f7c19b7e2d1ac0e33313d1d1074c57616a4e7fa1133",
+    "representativeBuildManifest": "release/gate-c-representative-build-manifest-phase5.24-v1.json"
   },
-  "claimCeiling": "offline reproducible and adversarially reviewed only; no representative build, installation, lifecycle, route qualification, GPIO, clock, DMA, transmission, SDR, or RF claim"
+  "claimCeiling": "offline reproducible, adversarially reviewed, and representative-build compatible only; no installation, lifecycle, route qualification, GPIO, clock, DMA, transmission, SDR, or RF claim"
 }

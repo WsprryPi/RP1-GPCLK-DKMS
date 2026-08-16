@@ -102,7 +102,8 @@
     "sourceCommit": "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5",
     "archiveSha256": "0da181f1ccfa9fb9edbd34456cec95730be8922283d1c5b207af376491413d8a",
     "status": "frozen-offline",
-    "qualification": "offline-reproducible-unqualified",
+    "qualification": "Compatible-unqualified",
+    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "reconcile the published target-plan schema with the permanent validator and executor"
   },
   "successorSelectionGate": "selected-to-correct-phase5.23-target-plan-schema-contradiction",

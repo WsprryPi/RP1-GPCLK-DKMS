@@ -93,7 +93,7 @@ assert phase524["builds"]["archiveSha256"] == \
     "0da181f1ccfa9fb9edbd34456cec95730be8922283d1c5b207af376491413d8a"
 assert phase524["publishedSchemas"]["targetPlanSha256"] == \
     "43b716aaa4d4b666a2f99ea139f6a317938b0604bed9a0807bec33f528950edc"
-assert "representative build" in phase524["claimCeiling"]
+assert "representative-build compatible" in phase524["claimCeiling"]
 
 for mutation in (
     lambda value: value.update(currentClassification="published-release"),
