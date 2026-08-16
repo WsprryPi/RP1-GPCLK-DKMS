@@ -27,7 +27,7 @@ from typing import Callable
 
 PACKAGE = "rp1-gpclk-dkms"
 MODULE = "rp1_gpclk_dkms"
-VERSION = "0.0.0-phase5.27"
+VERSION = "0.0.0-phase5.28"
 ROUTES = {"gpio4": "rp1-gpclk-gpio4.dtbo", "gpio20": "rp1-gpclk-gpio20.dtbo"}
 ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
                       "remove-old-binding-proven-cleanup", "verify-both-pins-safe",
@@ -69,8 +69,23 @@ def kernel_headers(root: pathlib.Path, kernel: str) -> pathlib.Path:
     """Resolve only the stock-kernel build link to a protected /usr/src tree."""
     if not re.fullmatch(r"[A-Za-z0-9._+-]+", kernel):
         raise ValueError("unsafe kernel release")
-    build = root / "lib" / "modules" / kernel / "build"
-    parent = rooted(root, f"/lib/modules/{kernel}")
+    lib = root / "lib"
+    if lib.is_symlink():
+        link = os.readlink(lib)
+        if link not in {"usr/lib", "/usr/lib"}:
+            raise ValueError("kernel module tree uses an unallowlisted /lib alias")
+        canonical_lib = rooted(root, "/usr/lib")
+    else:
+        canonical_lib = rooted(root, "/lib")
+    parent = canonical_lib / "modules" / kernel
+    current = canonical_lib
+    for part in ("modules", kernel):
+        current = current / part
+        if current.is_symlink():
+            raise ValueError("kernel module tree contains an unexpected symlink")
+    if not parent.is_dir():
+        raise ValueError("kernel module tree is missing")
+    build = parent / "build"
     if build.is_symlink():
         link = os.readlink(build)
         if os.path.isabs(link):

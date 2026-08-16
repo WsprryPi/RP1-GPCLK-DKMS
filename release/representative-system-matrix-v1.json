@@ -1,7 +1,7 @@
 {
   "SPDX-License-Identifier": "MIT",
   "schemaVersion": 1,
-  "release": "0.0.0-phase5.27",
+  "release": "0.0.0-phase5.28",
   "outputEnabled": false,
   "rowOrder": [
     "current-supported-kernel", "prior-supported-kernel-downgrade", "newer-unknown-kernel",
