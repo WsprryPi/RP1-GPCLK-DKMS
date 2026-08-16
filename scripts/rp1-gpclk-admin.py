@@ -27,7 +27,7 @@ from typing import Callable
 
 PACKAGE = "rp1-gpclk-dkms"
 MODULE = "rp1_gpclk_dkms"
-VERSION = "0.0.0-phase5.20"
+VERSION = "0.0.0-phase5.21"
 ROUTES = {"gpio4": "rp1-gpclk-gpio4.dtbo", "gpio20": "rp1-gpclk-gpio20.dtbo"}
 ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
                       "remove-old-binding-proven-cleanup", "verify-both-pins-safe",

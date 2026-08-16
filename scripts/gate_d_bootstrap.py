@@ -54,6 +54,8 @@ def validate(value: dict, *, root: pathlib.Path = pathlib.Path("/"), verify_file
     if not isinstance(value["retainedTools"],list) or not value["retainedTools"] or not isinstance(value["cleanupPaths"],list) or not value["cleanupPaths"] or not 1<=value["deadlineSeconds"]<=1800: raise ValueError("bootstrap lifecycle incomplete")
     for item in value["retainedTools"]:
         if not isinstance(item,dict) or set(item)!={"path","sha256"} or not pathlib.PurePosixPath(item.get("path","")).is_absolute() or not SHA.fullmatch(item.get("sha256","")): raise ValueError("invalid retained tool identity")
+    if schema==2 and [item["path"] for item in value["retainedTools"]].count("/usr/libexec/rp1-gpclk-dkms/gate_d_root.py")!=1:
+        raise ValueError("bootstrap root-validator retained identity is absent")
     for raw in (candidate["archive"],identity["path"],admin["bootstrapPath"],admin["installedPath"],value["stagingDirectory"],value["journal"],*value["cleanupPaths"]):
         pure=pathlib.PurePosixPath(raw)
         if not pure.is_absolute() or ".." in pure.parts: raise ValueError("unsafe bootstrap path")

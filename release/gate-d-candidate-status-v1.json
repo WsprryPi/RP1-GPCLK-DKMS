@@ -60,8 +60,7 @@
     "qualification": "offline-reproducible-unqualified",
     "purpose": "bind one explicit qualification root through bootstrap, plans, attempts, instance, and installed executor dispatch",
     "blocker": "Frozen JSON Schemas declare qualificationRoot as an unconstrained object and do not conditionally require it for the new schema versions."
-  }],
-  "successor": {
+  }, {
     "release": "0.0.0-phase5.20",
     "sourceCommit": "a16a2bb5d3cda2c4442ef82e8ddd21cedbabd9ff",
     "archiveSha256": "62d975ed8972256ecbd274a140bf1bc8639f476516410c82385c528fddff1db3",
@@ -70,8 +69,14 @@
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "publish closed conditional JSON Schemas for every qualification-root-carrying Gate D document",
     "blocker": "The installed root-validator dependency is imported by permanent validators and executor dispatch but cannot be named and hash-bound by the frozen target-plan tooling set."
+  }],
+  "successor": {
+    "release": "0.0.0-phase5.21",
+    "status": "unfrozen",
+    "qualification": "offline-review-in-progress",
+    "purpose": "bind and authenticate the installed root-validator dependency before dependent imports"
   },
-  "successorSelectionGate": "selected-to-correct-phase5.19-open-published-root-schema",
+  "successorSelectionGate": "selected-to-correct-phase5.20-unbound-root-validator-dependency",
   "reuseProhibited": [
     "representative-build-promotion",
     "route-decision",

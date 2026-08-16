@@ -97,6 +97,8 @@ def validate(value: dict, *, verify_tools: bool = True) -> dict:
                       "permanentExecutor", "busyInjector", "uapiProbe"}
     if schema in {3,4}:
         required_tools.add("bootstrapExecutor")
+    if schema == 4:
+        required_tools.add("rootValidator")
     if not isinstance(tooling, dict) or set(tooling) != required_tools:
         raise ValueError("execution tooling identities are incomplete")
     for name, item in tooling.items():
@@ -123,6 +125,11 @@ def validate(value: dict, *, verify_tools: bool = True) -> dict:
         path = root / item["sourcePath"]
         if verify_tools and (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != source_sha):
             raise ValueError(f"execution tool identity mismatch: {name}")
+    if schema==4:
+        retained={item["path"]:item["sha256"] for item in bootstrap_value["retainedTools"]}
+        root_tool=tooling["rootValidator"]
+        if retained.get(root_tool["installedPath"])!=root_tool["installedSha256"]:
+            raise ValueError("bootstrap and target-plan root-validator identities differ")
     services = value["services"]
     if not isinstance(services, list) or {item.get("name") for item in services} != {
             "wsprrypi", "sdrplay", "sdrconnect-server", "SoapySDRServer"}:

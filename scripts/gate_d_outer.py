@@ -21,7 +21,9 @@ import stat
 import subprocess
 import tarfile
 import shutil
+import sys
 import time
+import types
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Callable
@@ -49,6 +51,82 @@ def load_json(path: pathlib.Path) -> dict:
     if not isinstance(value, dict):
         raise ValueError("JSON document must be an object")
     return value
+
+
+def bootstrap_root_validator(instance_path: pathlib.Path) -> tuple[dict, pathlib.Path]:
+    """Authenticate and load gate_d_root before importing dependent tools."""
+    instance=load_json(instance_path)
+    if instance.get("schemaVersion")!=3 or instance.get("kind")!="gate-d-representative-system-execution-instance":
+        raise ValueError("installed trust bootstrap requires execution-instance schema 3")
+    reference=instance.get("qualificationRoot")
+    if (not isinstance(reference,dict) or set(reference)!={"path","identityFile","identitySha256","ownerUid","mode"} or
+            not isinstance(reference.get("path"),str) or not pathlib.PurePosixPath(reference["path"]).is_absolute() or
+            reference["path"] in {"/","/usr","/var","/home"} or ".." in pathlib.PurePosixPath(reference["path"]).parts or
+            not isinstance(reference.get("identityFile"),str) or pathlib.PurePosixPath(reference["identityFile"]).name!=reference["identityFile"] or
+            reference["identityFile"] in {".",".."} or not SHA256.fullmatch(reference.get("identitySha256","")) or
+            type(reference.get("ownerUid")) is not int or reference["ownerUid"]<0 or reference.get("mode")!="0700"):
+        raise ValueError("invalid qualification-root trust preamble")
+    root=pathlib.Path(reference["path"])
+    def trusted_relative(relative: str) -> pathlib.Path:
+        pure=pathlib.PurePosixPath(relative)
+        if not isinstance(relative,str) or pure.is_absolute() or not pure.parts or ".." in pure.parts:
+            raise ValueError("unsafe qualification-root trust path")
+        path=root.joinpath(*pure.parts); component=root
+        for part in pure.parts:
+            component=component/part
+            if component.exists() and component.is_symlink(): raise ValueError("qualification-root child trust path is symlinked")
+        return path
+    current=pathlib.Path(root.anchor)
+    for part in root.parts[1:]:
+        current=current/part
+        if current.exists() and current.is_symlink(): raise ValueError("qualification-root trust path is symlinked")
+    metadata=root.stat()
+    if root.is_symlink() or not root.is_dir() or metadata.st_uid!=reference["ownerUid"] or stat.S_IMODE(metadata.st_mode)!=0o700:
+        raise ValueError("qualification-root trust identity differs")
+    marker=trusted_relative(reference["identityFile"])
+    if marker.is_symlink() or not marker.is_file():
+        raise ValueError("qualification-root trust marker differs")
+    marker_bytes=marker.read_bytes()
+    if hashlib.sha256(marker_bytes).hexdigest()!=reference["identitySha256"]: raise ValueError("qualification-root trust marker differs")
+    marker_value=json.loads(marker_bytes)
+    if (not isinstance(marker_value,dict) or set(marker_value)!={"SPDX-License-Identifier","schemaVersion","kind","rootPath","candidateRelease","sourceCommit"} or
+            marker_value.get("SPDX-License-Identifier")!="MIT" or marker_value.get("schemaVersion")!=1 or marker_value.get("kind")!="gate-d-qualification-root-identity" or
+            marker_value.get("rootPath")!=reference["path"] or not isinstance(marker_value.get("candidateRelease"),str) or not re.fullmatch(r"[0-9a-f]{40}",marker_value.get("sourceCommit",""))):
+        raise ValueError("qualification-root trust marker identity is invalid")
+    policy=instance.get("executionPolicy")
+    if not isinstance(policy,dict): raise ValueError("execution policy trust preamble is absent")
+    relative=policy.get("targetPlan")
+    if not isinstance(relative,str) or pathlib.PurePosixPath(relative).is_absolute() or ".." in pathlib.PurePosixPath(relative).parts or not SHA256.fullmatch(policy.get("targetPlanSha256","")):
+        raise ValueError("target-plan trust preamble is invalid")
+    plan_path=trusted_relative(relative)
+    if plan_path.is_symlink() or not plan_path.is_file():
+        raise ValueError("target-plan trust identity differs")
+    plan_bytes=plan_path.read_bytes()
+    if hashlib.sha256(plan_bytes).hexdigest()!=policy["targetPlanSha256"]: raise ValueError("target-plan trust identity differs")
+    plan=json.loads(plan_bytes); tooling=plan.get("tooling")
+    if plan.get("schemaVersion")!=4 or plan.get("qualificationRoot")!=reference or not isinstance(tooling,dict):
+        raise ValueError("target-plan root trust binding differs")
+    item=tooling.get("rootValidator"); executor=tooling.get("permanentExecutor")
+    keys={"sourcePath","installedPath","sourceSha256","installedSha256","installKind","candidateArchiveMember"}
+    if (not isinstance(item,dict) or set(item)!=keys or item.get("installKind")!="copied" or item.get("candidateArchiveMember") is not True or
+            item.get("sourceSha256")!=item.get("installedSha256") or not SHA256.fullmatch(item.get("sourceSha256","")) or
+            item.get("installedPath")!="/usr/libexec/rp1-gpclk-dkms/gate_d_root.py"):
+        raise ValueError("root-validator trust identity is invalid")
+    current_executor=pathlib.Path(__file__).resolve()
+    installed_executor=pathlib.Path(executor.get("installedPath","")) if isinstance(executor,dict) else pathlib.Path()
+    if current_executor==installed_executor:
+        validator=pathlib.Path(item["installedPath"]); expected=item["installedSha256"]
+    else:
+        validator=trusted_relative(item["sourcePath"]); expected=item["sourceSha256"]
+        expected_executor=trusted_relative(executor.get("sourcePath","")) if isinstance(executor,dict) else pathlib.Path()
+        if current_executor!=expected_executor: raise ValueError("staged executor trust identity differs")
+    if validator.is_symlink() or not validator.is_file(): raise ValueError("root validator is absent or symlinked")
+    source=validator.read_bytes()
+    if hashlib.sha256(source).hexdigest()!=expected: raise ValueError("root-validator bytes differ")
+    module=types.ModuleType("gate_d_root"); module.__file__=str(validator)
+    exec(compile(source,str(validator),"exec"),module.__dict__)
+    sys.modules["gate_d_root"]=module
+    return instance,root
 
 
 def _fsync_directory(path: pathlib.Path) -> None:
@@ -936,6 +1014,7 @@ def main() -> None:
         if not args.execute:
             print(json.dumps(validate_bootstrap(document),indent=2,sort_keys=True)); return
         if os.geteuid()!=0 or args.instance is None: raise SystemExit("bootstrap execution requires root, --execute, and --instance")
+        bootstrap_root_validator(args.instance)
         from gate_d_instance import load as load_instance, validate as validate_instance
         instance=load_instance(args.instance); validate_instance(instance,require_ready=True)
         qualification_root=instance.get("qualificationRoot")
@@ -968,8 +1047,8 @@ def main() -> None:
     else:
         if not args.execute or os.geteuid() != 0 or args.index is None or args.instance is None:
             raise SystemExit("target execution requires root, --execute, --index, and --instance")
+        bootstrap_root_validator(args.instance)
         scripts = pathlib.Path(__file__).resolve().parent
-        import sys
         if str(scripts) not in sys.path:
             sys.path.insert(0, str(scripts))
         from gate_d_attempts import validate_index
