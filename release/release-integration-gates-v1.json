@@ -11,6 +11,7 @@
     "sealedArchiveMayBeTested": true,
     "consumableByDependentRelease": false,
     "knownBlockers": [
+      "phase5.22-qualification-root-bootstrap-cycle",
       "representative-lifecycle-matrix-not-executed",
       "public-artifact-download-verification-not-performed",
       "module-release-not-published"
