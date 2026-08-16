@@ -19,7 +19,7 @@ spec.loader.exec_module(admin)
 
 model = json.loads((ROOT / "release/installation-model-v1.json").read_text())
 layout = json.loads((ROOT / "release/release-layout-v1.json").read_text())
-assert model["release"] == layout["release"] == "0.0.0-phase5.29"
+assert model["release"] == layout["release"] == "0.0.0-phase5.30"
 assert model["dkmsModule"] == layout["package"]
 assert model["kernelModule"] == layout["module"]
 assert model["transaction"] == admin.STEPS
@@ -129,6 +129,52 @@ with tempfile.TemporaryDirectory() as temporary:
         raise AssertionError("directory DKMS module representation passed")
 
 with tempfile.TemporaryDirectory() as temporary:
+    installed_root = pathlib.Path(temporary)
+    kernel = "6.18.34+rpt-rpi-2712"
+    (installed_root / "lib").symlink_to("usr/lib")
+    installed_dir = installed_root / f"usr/lib/modules/{kernel}/updates/dkms"
+    installed_dir.mkdir(parents=True)
+    for suffix in (".ko", ".ko.xz", ".ko.gz", ".ko.zst"):
+        candidate = installed_dir / f"{admin.MODULE}{suffix}"
+        candidate.write_bytes(b"module")
+        assert admin.dkms_installed_module(installed_root, kernel) == candidate
+        candidate.unlink()
+    regular = installed_dir / f"{admin.MODULE}.ko"
+    unknown = installed_dir / f"{admin.MODULE}.ko.bz2"
+    regular.write_bytes(b"module"); unknown.write_bytes(b"module")
+    try:
+        admin.dkms_installed_module(installed_root, kernel)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("unknown installed module representation passed")
+    regular.unlink(); unknown.unlink()
+    regular.write_bytes(b"module")
+    compressed = installed_dir / f"{admin.MODULE}.ko.xz"
+    compressed.write_bytes(b"module")
+    try:
+        admin.dkms_installed_module(installed_root, kernel)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("ambiguous installed module representations passed")
+    regular.unlink(); compressed.unlink()
+    regular.symlink_to("foreign.ko")
+    try:
+        admin.dkms_installed_module(installed_root, kernel)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("symlink installed module representation passed")
+    regular.unlink(); regular.mkdir()
+    try:
+        admin.dkms_installed_module(installed_root, kernel)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("directory installed module representation passed")
+
+with tempfile.TemporaryDirectory() as temporary:
     base = pathlib.Path(temporary)
     release = base / "release"
     target = base / "target"
@@ -187,6 +233,10 @@ with tempfile.TemporaryDirectory() as temporary:
         built = test_root / f"var/lib/dkms/{admin.PACKAGE}/{admin.VERSION}/{admin.platform.release()}/{admin.platform.machine()}/module/{admin.MODULE}.ko.xz"
         built.parent.mkdir(parents=True, exist_ok=True)
         built.write_bytes(b"compressed-module")
+    def add_installed_module(test_root: pathlib.Path) -> None:
+        installed = test_root / f"usr/lib/modules/{admin.platform.release()}/updates/dkms/{admin.MODULE}.ko.xz"
+        installed.parent.mkdir(parents=True, exist_ok=True)
+        installed.write_bytes(b"compressed-installed-module")
     def fake_runner(command: list[str]) -> str:
         commands.append(command)
         if command[0] == "cc":
@@ -200,21 +250,22 @@ with tempfile.TemporaryDirectory() as temporary:
             return "test signer"
         return ""
     add_built_module(target)
+    add_installed_module(target)
     result = admin.execute(release, "gpio4", False, None, None, root=target, runner=fake_runner)
     assert result["status"] == "complete" and result["liveOutput"] is False
     assert (target / "boot/firmware/overlays/rp1-gpclk-gpio4.dtbo").read_bytes() == b"gpio4"
     assert not (target / "boot/firmware/overlays/rp1-gpclk-gpio20.dtbo").exists()
     assert (target / "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.29/overlay-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.29/permissions-enrollment-policy-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.29/diagnostics-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.29/lifecycle-removal-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.29/gate-d-phase5.24-residue-recovery-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.30/overlay-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.30/permissions-enrollment-policy-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.30/diagnostics-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.30/lifecycle-removal-contract-v1.json").is_file()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.30/gate-d-phase5.24-residue-recovery-v1.json").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/lifecycle-policy").is_file()
-    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.29/gate-d-execution-instance-v1.json").exists()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.29/gate-d-execution-instance-v1.schema.json").is_file()
+    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.30/gate-d-execution-instance-v1.json").exists()
+    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.30/gate-d-execution-instance-v1.schema.json").is_file()
     for schema_name in ("gate-d-qualification-root-v1.schema.json", "gate-d-qualification-bootstrap-plan-v1.schema.json", "gate-d-target-plan-v1.schema.json", "gate-d-attempt-index-v1.schema.json", "gate-d-pre-root-bootstrap-envelope-v1.schema.json"):
-        assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.29" / schema_name).is_file()
+        assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.30" / schema_name).is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-instance").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle").is_file()
     assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-platform").is_file()
@@ -248,6 +299,7 @@ with tempfile.TemporaryDirectory() as temporary:
     second_modules.mkdir(parents=True)
     (second_modules / "build").symlink_to("/usr/src/test-headers")
     add_built_module(second)
+    add_installed_module(second)
     try:
         admin.execute(release, "gpio4", False, None, None, root=second, runner=fake_runner)
     except ValueError:
@@ -284,6 +336,7 @@ with tempfile.TemporaryDirectory() as temporary:
     qualification_modules.mkdir(parents=True)
     (qualification_modules / "build").symlink_to("/usr/src/test-headers")
     add_built_module(qualification_target)
+    add_installed_module(qualification_target)
     result = admin.execute(release, "gpio4", False, None, None,
                            root=qualification_target, runner=fake_runner,
                            qualification_identity=identity_path)

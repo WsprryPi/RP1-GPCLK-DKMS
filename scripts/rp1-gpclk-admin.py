@@ -27,7 +27,7 @@ from typing import Callable
 
 PACKAGE = "rp1-gpclk-dkms"
 MODULE = "rp1_gpclk_dkms"
-VERSION = "0.0.0-phase5.29"
+VERSION = "0.0.0-phase5.30"
 ROUTES = {"gpio4": "rp1-gpclk-gpio4.dtbo", "gpio20": "rp1-gpclk-gpio20.dtbo"}
 ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
                       "remove-old-binding-proven-cleanup", "verify-both-pins-safe",
@@ -65,8 +65,8 @@ def rooted(root: pathlib.Path, absolute: str) -> pathlib.Path:
     return result
 
 
-def kernel_headers(root: pathlib.Path, kernel: str) -> pathlib.Path:
-    """Resolve only the stock-kernel build link to a protected /usr/src tree."""
+def kernel_module_tree(root: pathlib.Path, kernel: str) -> pathlib.Path:
+    """Resolve the real stock-kernel module tree through one canonical alias."""
     if not re.fullmatch(r"[A-Za-z0-9._+-]+", kernel):
         raise ValueError("unsafe kernel release")
     lib = root / "lib"
@@ -85,6 +85,12 @@ def kernel_headers(root: pathlib.Path, kernel: str) -> pathlib.Path:
             raise ValueError("kernel module tree contains an unexpected symlink")
     if not parent.is_dir():
         raise ValueError("kernel module tree is missing")
+    return parent
+
+
+def kernel_headers(root: pathlib.Path, kernel: str) -> pathlib.Path:
+    """Resolve only the stock-kernel build link to a protected /usr/src tree."""
+    parent = kernel_module_tree(root, kernel)
     build = parent / "build"
     if build.is_symlink():
         link = os.readlink(build)
@@ -137,6 +143,31 @@ def dkms_built_module(root: pathlib.Path, kernel: str,
     selected = present[0]
     if selected.is_symlink() or not selected.is_file():
         raise ValueError("DKMS built-module representation is not a regular file")
+    return selected
+
+
+def dkms_installed_module(root: pathlib.Path, kernel: str) -> pathlib.Path:
+    """Select one allowlisted installed DKMS module representation."""
+    directory = kernel_module_tree(root, kernel)
+    for part in ("updates", "dkms"):
+        directory = directory / part
+        if directory.is_symlink():
+            raise ValueError("installed DKMS module path contains a symlink")
+    if not directory.is_dir():
+        raise ValueError("installed DKMS module directory is missing or unsafe")
+    candidates = [directory / f"{MODULE}{suffix}" for suffix in
+                  (".ko", ".ko.xz", ".ko.gz", ".ko.zst")]
+    allowed_names = {path.name for path in candidates}
+    unknown = [path for path in directory.iterdir()
+               if path.name.startswith(f"{MODULE}.ko") and path.name not in allowed_names]
+    if unknown:
+        raise ValueError("installed DKMS module representation has an unknown suffix")
+    present = [path for path in candidates if path.exists() or path.is_symlink()]
+    if len(present) != 1:
+        raise ValueError("installed DKMS module representation is absent or ambiguous")
+    selected = present[0]
+    if selected.is_symlink() or not selected.is_file():
+        raise ValueError("installed DKMS module representation is not a regular file")
     return selected
 
 
@@ -439,7 +470,6 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
         commands = [["dkms", "add", "-m", PACKAGE, "-v", VERSION],
                     ["dkms", "build", "-m", PACKAGE, "-v", VERSION, "-k", kernel]]
         architecture = platform.machine()
-        installed_module = f"/lib/modules/{kernel}/updates/dkms/{MODULE}.ko"
         def run_commands(batch: list[list[str]]) -> None:
             for args in batch:
                 transaction["checkpoint"] = "verify-dkms-signature" if args[:3] in (
@@ -463,9 +493,11 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
         if signing:
             commands += [["modinfo", "-F", "signer", built_module],
                          ["modinfo", "-F", "sig_key", built_module]]
-        commands += [["dkms", "install", "-m", PACKAGE, "-v", VERSION, "-k", kernel],
-                     ["modinfo", "-F", "version", installed_module],
-                     ["modinfo", "-F", "vermagic", installed_module]]
+        commands += [["dkms", "install", "-m", PACKAGE, "-v", VERSION, "-k", kernel]]
+        run_commands(commands)
+        installed_module = str(dkms_installed_module(root, kernel))
+        commands = [["modinfo", "-F", "version", installed_module],
+                    ["modinfo", "-F", "vermagic", installed_module]]
         if signing:
             commands += [["modinfo", "-F", "signer", installed_module],
                          ["modinfo", "-F", "sig_key", installed_module]]
