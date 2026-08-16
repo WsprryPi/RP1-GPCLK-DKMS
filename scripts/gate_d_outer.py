@@ -240,6 +240,59 @@ def rooted(root: pathlib.Path, absolute: str) -> pathlib.Path:
     return current
 
 
+def module_signing_policy(root: pathlib.Path, kernel_release: str) -> dict:
+    config = rooted(root, f"/boot/config-{kernel_release}")
+    if config.is_symlink() or not config.is_file():
+        raise ValueError("exact kernel signing configuration is unavailable")
+    lines = config.read_text(encoding="utf-8").splitlines()
+    enabled = "CONFIG_MODULE_SIG=y" in lines
+    disabled = "# CONFIG_MODULE_SIG is not set" in lines
+    if enabled == disabled:
+        raise ValueError("exact kernel signing configuration is ambiguous")
+
+    cmdline_path = rooted(root, "/proc/cmdline")
+    if cmdline_path.is_symlink() or not cmdline_path.is_file():
+        raise ValueError("kernel command line is unavailable")
+    cmdline = cmdline_path.read_text(encoding="ascii").strip().split()
+    command_line_enforced = "module.sig_enforce=1" in cmdline
+
+    sysctl = rooted(root, "/proc/sys/kernel/module_sig_enforce")
+    if sysctl.exists() or sysctl.is_symlink():
+        if sysctl.is_symlink() or not sysctl.is_file():
+            raise ValueError("module signature enforcement sysctl is unsafe")
+        value = sysctl.read_text(encoding="ascii").strip()
+        if value not in {"0", "1"}:
+            raise ValueError("module signature enforcement sysctl is malformed")
+        sysctl_value: str | None = value
+    else:
+        sysctl_value = None
+
+    lockdown = rooted(root, "/sys/kernel/security/lockdown")
+    if lockdown.exists() or lockdown.is_symlink():
+        if lockdown.is_symlink() or not lockdown.is_file():
+            raise ValueError("kernel lockdown policy is unsafe")
+        lockdown_value: str | None = lockdown.read_text(encoding="ascii").strip()
+        if "[none]" not in lockdown_value:
+            raise ValueError("kernel lockdown policy differs from reviewed non-enforcing row")
+    else:
+        lockdown_value = None
+
+    if disabled:
+        if sysctl_value is not None or command_line_enforced:
+            raise ValueError("disabled module-signing configuration contradicts runtime policy")
+        enforced = False
+        source = "config-disabled-sysctl-absent"
+    else:
+        if sysctl_value is None:
+            raise ValueError("enabled module-signing configuration requires runtime policy evidence")
+        forced = "CONFIG_MODULE_SIG_FORCE=y" in lines
+        enforced = forced or command_line_enforced or sysctl_value == "1"
+        source = "config-enabled"
+    return {"enforced": enforced, "source": source, "sysctl": sysctl_value,
+            "configPath": f"/boot/config-{kernel_release}",
+            "commandLineEnforced": command_line_enforced, "lockdown": lockdown_value}
+
+
 def safe_extract(archive: pathlib.Path, destination: pathlib.Path) -> None:
     if archive.is_symlink() or not archive.is_file():
         raise ValueError("archive is absent or unsafe")
@@ -822,8 +875,8 @@ def default_internal(operation: str, document: dict, root: pathlib.Path) -> None
         boot_id = boot_id_path.read_text(encoding="ascii").strip()
         if not re.fullmatch(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", boot_id):
             raise ValueError("boot identity is malformed")
-        signing = command(["/usr/bin/cat", "/proc/sys/kernel/module_sig_enforce"]).strip()
-        if signing != "0":
+        signing = module_signing_policy(root, running_kernel)
+        if signing["enforced"] is not False:
             raise ValueError("signing policy differs from reviewed non-enforcing row")
         overlays = command(["/usr/bin/dtoverlay", "-l"], accepted=(0, 1))
         if "rp1-gpclk-gpio4" in overlays or "rp1-gpclk-gpio20" in overlays:
@@ -849,7 +902,7 @@ def default_internal(operation: str, document: dict, root: pathlib.Path) -> None
                                  "installKind": item["installKind"]}
         atomic_json(evidence / "preflight.json", {"hostId": document["hostId"],
                     "runningKernel": running_kernel, "bootId": boot_id,
-                    "moduleSigEnforce": signing, "activeOverlays": overlays.splitlines(),
+                    "moduleSigningPolicy": signing, "activeOverlays": overlays.splitlines(),
                     "resourceConflict": False, "installedTools": tool_hashes,
                     "liveOutput": False})
         return

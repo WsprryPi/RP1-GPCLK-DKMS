@@ -211,6 +211,10 @@ with tempfile.TemporaryDirectory() as temporary:
     (root / "proc/sys/kernel/random").mkdir(parents=True)
     (root / "proc/sys/kernel/random/boot_id").write_text(
         "01234567-89ab-cdef-0123-456789abcdef\n")
+    (root / "proc/cmdline").write_text("root=/dev/test quiet\n")
+    (root / "boot").mkdir()
+    (root / "boot" / f"config-{preflight_doc['kernelRelease']}").write_text(
+        "# CONFIG_MODULE_SIG is not set\n")
     for item in preflight_doc["inputs"]["tooling"].values():
         installed = outer.rooted(root, item["installedPath"])
         installed.parent.mkdir(parents=True, exist_ok=True)
@@ -225,7 +229,6 @@ with tempfile.TemporaryDirectory() as temporary:
     original_run = outer.subprocess.run
     def preflight_run(argv, **kwargs):
         outputs = {("/usr/bin/uname", "-r"): preflight_doc["kernelRelease"] + "\n",
-                   ("/usr/bin/cat", "/proc/sys/kernel/module_sig_enforce"): "0\n",
                    ("/usr/bin/dtoverlay", "-l"): "No overlays loaded\n"}
         return outer.subprocess.CompletedProcess(argv, 0, outputs[tuple(argv)], "")
     outer.subprocess.run = preflight_run
@@ -233,7 +236,11 @@ with tempfile.TemporaryDirectory() as temporary:
         outer.default_internal("capture-preflight", preflight_doc, root)
         captured = json.loads((evidence / "preflight.json").read_text())
         assert captured["runningKernel"] == preflight_doc["kernelRelease"]
-        assert captured["moduleSigEnforce"] == "0" and captured["liveOutput"] is False
+        assert captured["moduleSigningPolicy"] == {
+            "enforced": False, "source": "config-disabled-sysctl-absent",
+            "sysctl": None, "configPath": f"/boot/config-{preflight_doc['kernelRelease']}",
+            "commandLineEnforced": False, "lockdown": None,
+        } and captured["liveOutput"] is False
         victim = next(iter(preflight_doc["inputs"]["tooling"].values()))
         outer.rooted(root, victim["installedPath"]).write_bytes(b"changed")
         try:
@@ -253,5 +260,56 @@ with tempfile.TemporaryDirectory() as temporary:
             raise AssertionError("symlinked installed permanent tool passed preflight")
     finally:
         outer.subprocess.run = original_run
+
+with tempfile.TemporaryDirectory() as temporary:
+    root = pathlib.Path(temporary)
+    kernel = "test-kernel"
+    (root / "boot").mkdir()
+    (root / "proc/sys/kernel").mkdir(parents=True)
+    (root / "proc/cmdline").write_text("root=/dev/test quiet\n")
+    config = root / f"boot/config-{kernel}"
+    config.write_text("# CONFIG_MODULE_SIG is not set\n")
+    policy = outer.module_signing_policy(root, kernel)
+    assert policy["enforced"] is False and policy["sysctl"] is None
+
+    (root / "proc/cmdline").write_text("root=/dev/test module.sig_enforce=1\n")
+    try:
+        outer.module_signing_policy(root, kernel)
+    except ValueError as error:
+        assert "contradicts runtime policy" in str(error)
+    else:
+        raise AssertionError("contradictory disabled-signing policy passed")
+    (root / "proc/cmdline").write_text("root=/dev/test quiet\n")
+
+    config.write_text("CONFIG_MODULE_SIG=y\n# CONFIG_MODULE_SIG_FORCE is not set\n")
+    sysctl = root / "proc/sys/kernel/module_sig_enforce"
+    try:
+        outer.module_signing_policy(root, kernel)
+    except ValueError as error:
+        assert "requires runtime policy evidence" in str(error)
+    else:
+        raise AssertionError("signing-enabled policy without runtime evidence passed")
+    sysctl.write_text("0\n")
+    policy = outer.module_signing_policy(root, kernel)
+    assert policy["enforced"] is False and policy["sysctl"] == "0"
+    sysctl.write_text("1\n")
+    assert outer.module_signing_policy(root, kernel)["enforced"] is True
+
+    sysctl.unlink()
+    sysctl.mkdir()
+    try:
+        outer.module_signing_policy(root, kernel)
+    except ValueError as error:
+        assert "sysctl is unsafe" in str(error)
+    else:
+        raise AssertionError("unsafe signature sysctl passed")
+    sysctl.rmdir()
+    config.unlink()
+    try:
+        outer.module_signing_policy(root, kernel)
+    except ValueError as error:
+        assert "configuration is unavailable" in str(error)
+    else:
+        raise AssertionError("missing kernel configuration passed")
 
 print("Gate D permanent outer executor: PASS")

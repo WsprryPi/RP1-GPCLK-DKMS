@@ -8,6 +8,12 @@ def load(p): return json.loads((ROOT/p).read_text())
 def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
 def canonical(v): return hashlib.sha256((json.dumps(v,sort_keys=True,separators=(",",":"))+"\n").encode()).hexdigest()
 commit="3768ae9cdccf0c2ae5809603b9a36e73507f2182"
+def frozen_payload(relative,expected):
+ p=ROOT/relative
+ if p.is_file() and sha(p)==expected: return p.read_bytes()
+ payload=subprocess.check_output(["git","show",f"{commit}:{relative}"],cwd=ROOT)
+ assert hashlib.sha256(payload).hexdigest()==expected
+ return payload
 route=load("release/gate-d-route-compatibility-decision-phase5.39-v1.json")
 plan=load("release/gate-d-target-operation-plan-phase5.39-v1.json")
 bootstrap=load("release/gate-d-qualification-bootstrap-plan-phase5.39-v1.json")
@@ -51,9 +57,8 @@ with tempfile.TemporaryDirectory() as temporary:
  marker.write_text(json.dumps(envelope["proposedRoot"]["marker"],sort_keys=True,separators=(",",":"))+"\n")
  marker.chmod(0o400); assert sha(marker)==instance["qualificationRoot"]["identitySha256"]
  for item in envelope["transitionFiles"]:
-  payload=ROOT/item["destination"]
-  assert payload.is_file() and sha(payload)==item["sha256"]
-  target=fake/item["destination"]; target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(payload.read_bytes())
+  payload=frozen_payload(item["destination"],item["sha256"])
+  target=fake/item["destination"]; target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(payload)
  original=gate_d_root.validate
  def offline(reference,*,verify=True): original(reference,verify=False); return fake
  gate_d_root.validate=offline

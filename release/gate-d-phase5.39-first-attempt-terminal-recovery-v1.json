@@ -1,0 +1,45 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "candidate": "0.0.0-phase5.39",
+  "destination": {
+    "evidenceDirectory": "/var/lib/rp1-gpclk-dkms/gate-d/recovery/gd-current-supported-kernel-gpio4-preflight-terminal",
+    "journalPath": "/var/lib/rp1-gpclk-dkms/gate-d/recovery/gd-current-supported-kernel-gpio4-preflight-terminal/transaction.json"
+  },
+  "expectedBaseline": {
+    "dkmsTestVersions": false,
+    "endpointPresent": false,
+    "liveOutput": false,
+    "moduleLoaded": false,
+    "overlayActive": false
+  },
+  "expectedFailure": {
+    "completedOperation": "create-evidence",
+    "documentSha256": "173ceac3d8d85953572f8e718fd021fb7986ffcd2d0fd0d3171309e11335429e",
+    "executorSha256": "d81824ab0454ecb298714e07c08ff9d81255d216152631e5285e51e08ac1d43f",
+    "failure": "CalledProcessError",
+    "indexSha256": "71a8432178d639d5181bfe1da6e7b1bdf6c6e66dc4a1cec660424d2371619010",
+    "nextStep": 1,
+    "operationId": "gd-current-supported-kernel-gpio4",
+    "pendingOperation": "capture-preflight"
+  },
+  "host": "wspr5",
+  "kind": "gate-d-failed-attempt-terminal-recovery",
+  "operationId": "phase5.39-gd-current-supported-kernel-gpio4-preflight-terminal-recovery",
+  "safety": {
+    "clockEnabled": false,
+    "dmaActive": false,
+    "gpioAccess": false,
+    "liveOutput": false,
+    "outputDisabled": true,
+    "rf": false,
+    "sdrActive": false
+  },
+  "schemaVersion": 1,
+  "source": {
+    "evidenceDirectory": "/var/lib/rp1-gpclk-dkms/gate-d/current-supported-kernel/gd-current-supported-kernel-gpio4",
+    "journalPath": "/var/lib/rp1-gpclk-dkms/gate-d/current-supported-kernel/gd-current-supported-kernel-gpio4/transaction.json",
+    "journalSha256": "02de65dfbe49078b193e7c2f675d8e589d396eb46e4510863c24538a41ef6bf6",
+    "manifestPath": "/var/lib/rp1-gpclk-dkms/gate-d/current-supported-kernel/gd-current-supported-kernel-gpio4/SHA256SUMS",
+    "manifestSha256": "bfdc894bc3d9ed8b80f4b8cf7a09965474cd6320f9dcac78b5d64b499414d374"
+  }
+}

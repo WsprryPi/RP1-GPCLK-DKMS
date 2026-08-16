@@ -49,4 +49,43 @@ for failure in ("marker", "journal", "admin", "extra", "baseline", "symlink"):
         except ValueError: pass
         else: raise AssertionError(f"unsafe residue recovery accepted: {failure}")
         assert preserved.joinpath("evidence").read_text()=="keep\n"
+
+attempt_recovery=json.loads((ROOT/"release/gate-d-phase5.39-first-attempt-terminal-recovery-v1.json").read_text())
+assert tool.validate(attempt_recovery)["outputDisabled"] is True
+for mutation in (
+    lambda v:v["expectedFailure"].update(nextStep=2),
+    lambda v:v["expectedFailure"].update(pendingOperation="install-successor"),
+    lambda v:v["destination"].update(evidenceDirectory=v["source"]["evidenceDirectory"]),
+    lambda v:v["safety"].update(gpioAccess=True),
+):
+    bad=copy.deepcopy(attempt_recovery); mutation(bad)
+    try: tool.validate(bad)
+    except ValueError: pass
+    else: raise AssertionError("unsafe failed-attempt recovery accepted")
+
+with tempfile.TemporaryDirectory() as temporary:
+    prefix=pathlib.Path(temporary); document=copy.deepcopy(attempt_recovery)
+    source=prefix/document["source"]["evidenceDirectory"].lstrip("/"); source.mkdir(parents=True)
+    journal=source/"transaction.json"
+    journal_value={
+        "status":"inactive-recovery-required","sealed":True,"recoveryRequired":True,
+        "liveOutput":False,"operationId":document["expectedFailure"]["operationId"],
+        "documentSha256":document["expectedFailure"]["documentSha256"],
+        "indexSha256":document["expectedFailure"]["indexSha256"],
+        "executorSha256":document["expectedFailure"]["executorSha256"],
+        "failure":"CalledProcessError","nextStep":1,
+        "records":[{"operation":"create-evidence","status":0},
+                   {"operation":"capture-preflight","status":"pending"}],
+    }
+    journal.write_text(json.dumps(journal_value,indent=2,sort_keys=True)+"\n"); journal.chmod(0o400)
+    manifest=source/"SHA256SUMS"; manifest.write_text(f"{hashlib.sha256(journal.read_bytes()).hexdigest()}  transaction.json\n"); manifest.chmod(0o400); source.chmod(0o500)
+    document["source"]["journalSha256"]=hashlib.sha256(journal.read_bytes()).hexdigest()
+    document["source"]["manifestSha256"]=hashlib.sha256(manifest.read_bytes()).hexdigest()
+    assert tool.execute(document,prefix=prefix,probe=lambda:baseline)["status"]=="ready"
+    result=tool.execute(document,prefix=prefix,probe=lambda:baseline,execute=True)
+    assert result["status"]=="complete" and journal.read_text()==json.dumps(journal_value,indent=2,sort_keys=True)+"\n"
+    destination=prefix/document["destination"]["evidenceDirectory"].lstrip("/")
+    terminal=json.loads((destination/"transaction.json").read_text())
+    assert terminal["status"]=="complete" and terminal["recoveryRequired"] is False and terminal["liveOutput"] is False
+    assert destination.stat().st_mode&0o777==0o500 and all(p.stat().st_mode&0o777==0o400 for p in destination.iterdir())
 print("Gate D failed pre-root residue recovery: PASS")
