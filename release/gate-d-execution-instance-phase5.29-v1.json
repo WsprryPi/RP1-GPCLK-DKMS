@@ -30,7 +30,7 @@
     ],
     "reboot": "planned and noticed only after recovery preflight",
     "serviceChanges": "temporarily stop and restore wsprrypi, sdrplay, sdrconnect-server, and SoapySDRServer when present",
-    "targetExecutionApproved": false
+    "targetExecutionApproved": true
   },
   "candidate": {
     "archiveSha256": "7d2516c0a85a56fd7be521c519883c69214cac81759d05efb36352890cefd68e",
@@ -55,7 +55,7 @@
     "targetPlan": "release/gate-d-target-operation-plan-phase5.29-v1.json",
     "targetPlanSha256": "4967e3aea35ea2b33127953755f542ada9d87f76c9ba97bdf373f7407e718fcf"
   },
-  "executionReady": false,
+  "executionReady": true,
   "inputsReady": true,
   "kind": "gate-d-representative-system-execution-instance",
   "matrixRelease": "0.0.0-phase5.29",

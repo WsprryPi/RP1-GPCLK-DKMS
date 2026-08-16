@@ -19,18 +19,18 @@
   "schemaVersion": 1,
   "successor": {
     "archiveSha256": "7d2516c0a85a56fd7be521c519883c69214cac81759d05efb36352890cefd68e",
-    "authorization": "target execution not authorized",
+    "authorization": "operator authorization recorded in the Phase 5.29 execution instance",
     "controlSet": "release/gate-d-execution-instance-phase5.29-v1.json",
-    "executionReady": false,
+    "executionReady": true,
     "purpose": "recognize and verify one bounded DKMS-built module compression representation",
     "qualification": "Compatible-unqualified",
     "release": "0.0.0-phase5.29",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "sourceCommit": "c58b541158aa6b8e535becb04c50d41767558793",
-    "status": "control-set-validated-awaiting-authorization",
+    "status": "authorized-for-output-disabled-gate-d-execution",
     "executionEvidence": "docs/reviews/gate-d-phase5.29-control-set-independent-review.md",
-    "blocker": "Exact Phase 5.29 output-disabled Gate D target execution requires separate operator authorization bound into the execution instance and pre-root envelope.",
-    "targetExecutionApproved": false
+    "blocker": "none before exact bounded execution; stop on any identity, residue, service, recovery, or cleanup ambiguity",
+    "targetExecutionApproved": true
   },
   "successorSelectionGate": "selected-to-correct-phase5.28-dkms-built-module-representation",
   "supersededCandidates": [
