@@ -18,21 +18,21 @@
   ],
   "schemaVersion": 1,
   "successor": {
-    "archiveSha256": "7d2516c0a85a56fd7be521c519883c69214cac81759d05efb36352890cefd68e",
-    "authorization": "operator authorization recorded in the Phase 5.29 execution instance",
-    "controlSet": "release/gate-d-execution-instance-phase5.29-v1.json",
-    "executionReady": true,
-    "purpose": "recognize and verify one bounded DKMS-built module compression representation",
+    "archiveSha256": "ffc6b2e08ef8ed28550980c64bdc5c48e7d917c39e927f192e62c0451b408fd9",
+    "authorization": "not authorized",
+    "controlSet": "not constructed",
+    "executionReady": false,
+    "purpose": "recognize and verify one bounded installed DKMS module compression representation",
     "qualification": "Compatible-unqualified",
-    "release": "0.0.0-phase5.29",
+    "release": "0.0.0-phase5.30",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
-    "sourceCommit": "c58b541158aa6b8e535becb04c50d41767558793",
-    "status": "blocked-during-pre-root-bootstrap",
-    "executionEvidence": "docs/evidence/gate-d-phase5.29-authorized-pre-root-execution.md",
-    "blocker": "DKMS installs rp1_gpclk_dkms.ko.xz, while the frozen administrator requires the uncompressed rp1_gpclk_dkms.ko path for post-install identity verification.",
-    "targetExecutionApproved": true
+    "sourceCommit": "73f3f7df4d7df194a52d14cacf127d29a316545f",
+    "status": "representative-build-passed-control-set-required",
+    "executionEvidence": "docs/evidence/gate-c-representative-build-wspr5-phase5.30.md",
+    "blocker": "A new Phase 5.30 Gate D route decision, target plan, attempt bundle, execution instance, and pre-root envelope must be generated and independently validated before authorization.",
+    "targetExecutionApproved": false
   },
-  "successorSelectionGate": "selected-to-correct-phase5.28-dkms-built-module-representation",
+  "successorSelectionGate": "selected-to-correct-phase5.29-installed-module-representation",
   "supersededCandidates": [
     {
       "archiveSha256": "d0c17f2842716052bb49b1a4fc079d3d48a5674bae8610eee2ab9d17ac548bea",
