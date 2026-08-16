@@ -14,6 +14,33 @@ CHECKPOINTS = ("preflight", "install", "cleanup-runtime", "verify-tools", "empty
 def digest(path: pathlib.Path) -> str: return hashlib.sha256(path.read_bytes()).hexdigest()
 def real(path: pathlib.Path, label: str) -> None:
     if path.is_symlink() or not path.is_file(): raise ValueError(f"{label} must be a real file")
+def validate_package_paths(items: object) -> list[dict]:
+    if not isinstance(items,list) or not items: raise ValueError("typed package inventory is empty")
+    paths=[]
+    for item in items:
+        common={"path","type","mode","ownerUid","groupGid"}
+        if (not isinstance(item,dict) or item.get("type") not in {"file","symlink"} or
+                not pathlib.PurePosixPath(item.get("path","")).is_absolute() or
+                ".." in pathlib.PurePosixPath(item["path"]).parts or
+                item.get("mode") not in {"0644","0755","0777"} or
+                type(item.get("ownerUid")) is not int or item["ownerUid"]<0 or
+                type(item.get("groupGid")) is not int or item["groupGid"]<0):
+            raise ValueError("invalid typed package identity")
+        if item["type"]=="file":
+            if set(item)!=common|{"sha256"} or not SHA.fullmatch(item.get("sha256","")) or item["mode"] not in {"0644","0755"}: raise ValueError("invalid typed package file")
+        elif (set(item)!=common|{"target"} or not isinstance(item.get("target"),str) or
+              not item["target"] or pathlib.PurePosixPath(item["target"]).is_absolute() or item["mode"] not in {"0755","0777"}): raise ValueError("invalid typed package symlink")
+        paths.append(item["path"])
+    if len(paths)!=len(set(paths)): raise ValueError("duplicate typed package path")
+    return items
+def package_paths_digest(items:list[dict])->str:
+    return hashlib.sha256((json.dumps(items,sort_keys=True,separators=(",",":"))+"\n").encode()).hexdigest()
+def verify_package_path(root:pathlib.Path,item:dict)->None:
+    path=root/item["path"].lstrip("/"); status=path.lstat()
+    if status.st_uid!=item["ownerUid"] or status.st_gid!=item["groupGid"] or (status.st_mode & 0o777)!=int(item["mode"],8): raise ValueError("typed package metadata differs")
+    if item["type"]=="file":
+        if path.is_symlink() or not path.is_file() or digest(path)!=item["sha256"]: raise ValueError("typed package file differs")
+    elif not path.is_symlink() or os.readlink(path)!=item["target"]: raise ValueError("typed package symlink differs")
 def atomic(path: pathlib.Path, value: dict) -> None:
     if path.is_symlink(): raise ValueError("bootstrap journal is a symlink")
     path.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
@@ -25,9 +52,10 @@ def atomic(path: pathlib.Path, value: dict) -> None:
 def validate(value: dict, *, root: pathlib.Path = pathlib.Path("/"), verify_files: bool = False) -> dict:
     required={"SPDX-License-Identifier","schemaVersion","kind","operationId","hostId","predecessorVersion","kernelRelease","stagingDirectory","candidate","qualificationIdentity","administrator","argv","cleanupArgv","recoveryArgv","journal","deadlineSeconds","expectedPreState","expectedPostState","retainedTools","cleanupPaths","safety"}
     schema=value.get("schemaVersion")
-    if schema in {2,3}: required.add("qualificationRoot")
-    if set(value)!=required or value.get("SPDX-License-Identifier")!="MIT" or schema not in {1,2,3} or value.get("kind")!="gate-d-qualification-bootstrap-plan": raise ValueError("invalid bootstrap identity")
-    if schema in {2,3}:
+    if schema in {2,3,4}: required.add("qualificationRoot")
+    if schema==4: required.update({"packagePaths","packagePathsSha256"})
+    if set(value)!=required or value.get("SPDX-License-Identifier")!="MIT" or schema not in {1,2,3,4} or value.get("kind")!="gate-d-qualification-bootstrap-plan": raise ValueError("invalid bootstrap identity")
+    if schema in {2,3,4}:
         import sys
         scripts=pathlib.Path(__file__).resolve().parent
         if str(scripts) not in sys.path: sys.path.insert(0,str(scripts))
@@ -54,9 +82,9 @@ def validate(value: dict, *, root: pathlib.Path = pathlib.Path("/"), verify_file
     if not isinstance(value["retainedTools"],list) or not value["retainedTools"] or not isinstance(value["cleanupPaths"],list) or not value["cleanupPaths"] or not 1<=value["deadlineSeconds"]<=1800: raise ValueError("bootstrap lifecycle incomplete")
     for item in value["retainedTools"]:
         if not isinstance(item,dict) or set(item)!={"path","sha256"} or not pathlib.PurePosixPath(item.get("path","")).is_absolute() or not SHA.fullmatch(item.get("sha256","")): raise ValueError("invalid retained tool identity")
-    if schema in {2,3} and [item["path"] for item in value["retainedTools"]].count("/usr/libexec/rp1-gpclk-dkms/gate_d_root.py")!=1:
+    if schema in {2,3,4} and [item["path"] for item in value["retainedTools"]].count("/usr/libexec/rp1-gpclk-dkms/gate_d_root.py")!=1:
         raise ValueError("bootstrap root-validator retained identity is absent")
-    if schema==3:
+    if schema in {3,4}:
         required_modules={
             "/usr/libexec/rp1-gpclk-dkms/gate_d_root.py",
             "/usr/libexec/rp1-gpclk-dkms/gate_d_bootstrap.py",
@@ -70,6 +98,12 @@ def validate(value: dict, *, root: pathlib.Path = pathlib.Path("/"), verify_file
         retained_paths=[item["path"] for item in value["retainedTools"]]
         if not required_modules.issubset(retained_paths) or len(retained_paths)!=len(set(retained_paths)):
             raise ValueError("bootstrap retained Python import graph is incomplete")
+    if schema==4:
+        package_paths=validate_package_paths(value["packagePaths"])
+        if not SHA.fullmatch(value.get("packagePathsSha256","")) or package_paths_digest(package_paths)!=value["packagePathsSha256"]: raise ValueError("typed package inventory digest differs")
+        package_names={item["path"] for item in package_paths}
+        retained_names={item["path"] for item in value["retainedTools"]}
+        if not retained_names.issubset(package_names): raise ValueError("retained tools are outside typed package inventory")
     for raw in (candidate["archive"],identity["path"],admin["bootstrapPath"],admin["installedPath"],value["stagingDirectory"],value["journal"],*value["cleanupPaths"]):
         pure=pathlib.PurePosixPath(raw)
         if not pure.is_absolute() or ".." in pure.parts: raise ValueError("unsafe bootstrap path")
@@ -99,6 +133,8 @@ def execute(value: dict, *, root: pathlib.Path, runner: Callable[[list[str]], No
                 for item in value["retainedTools"]:
                     path=root/item["path"].lstrip("/"); real(path,"retained tool")
                     if digest(path)!=item["sha256"]: raise ValueError("retained tool differs")
+                if value["schemaVersion"]==4:
+                    for item in value["packagePaths"]: verify_package_path(root,item)
             if checkpoint in {"verify-tools","empty-runtime-baseline"} and probe()!=value["expectedPostState"]: raise ValueError("bootstrap post-state differs")
             if checkpoint=="empty-runtime-baseline":
                 for raw in value["cleanupPaths"]:

@@ -30,6 +30,33 @@ RELEASE_INPUT_ROLES = {
 def digest(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
+def validate_package_paths(items: object) -> list[dict]:
+    if not isinstance(items,list) or not items: raise ValueError("typed package inventory is empty")
+    paths=[]
+    for item in items:
+        common={"path","type","mode","ownerUid","groupGid"}
+        if (not isinstance(item,dict) or item.get("type") not in {"file","symlink"} or
+                not pathlib.PurePosixPath(item.get("path","")).is_absolute() or
+                ".." in pathlib.PurePosixPath(item["path"]).parts or
+                item.get("mode") not in {"0644","0755","0777"} or
+                type(item.get("ownerUid")) is not int or item["ownerUid"]<0 or
+                type(item.get("groupGid")) is not int or item["groupGid"]<0): raise ValueError("invalid typed package identity")
+        if item["type"]=="file":
+            if set(item)!=common|{"sha256"} or not SHA256.fullmatch(item.get("sha256","")) or item["mode"] not in {"0644","0755"}: raise ValueError("invalid typed package file")
+        elif (set(item)!=common|{"target"} or not isinstance(item.get("target"),str) or not item["target"] or pathlib.PurePosixPath(item["target"]).is_absolute() or item["mode"] not in {"0755","0777"}): raise ValueError("invalid typed package symlink")
+        paths.append(item["path"])
+    if len(paths)!=len(set(paths)): raise ValueError("duplicate typed package path")
+    return items
+def package_paths_digest(items:list[dict])->str:
+    return hashlib.sha256((json.dumps(items,sort_keys=True,separators=(",",":"))+"\n").encode()).hexdigest()
+
+def verify_package_path(prefix:pathlib.Path,item:dict)->None:
+    path=rooted_leaf(prefix,item["path"]); status=path.lstat()
+    if status.st_uid!=item["ownerUid"] or status.st_gid!=item["groupGid"] or stat.S_IMODE(status.st_mode)!=int(item["mode"],8): raise ValueError("typed package metadata differs")
+    if item["type"]=="file":
+        if path.is_symlink() or not path.is_file() or digest(path)!=item["sha256"]: raise ValueError("typed package file differs")
+    elif not path.is_symlink() or os.readlink(path)!=item["target"]: raise ValueError("typed package symlink differs")
+
 
 def rooted(prefix: pathlib.Path, absolute: str) -> pathlib.Path:
     pure = pathlib.PurePosixPath(absolute)
@@ -41,6 +68,11 @@ def rooted(prefix: pathlib.Path, absolute: str) -> pathlib.Path:
         if current.exists() and current.is_symlink():
             raise ValueError("symlink in pre-root controlled path")
     return current
+
+def rooted_leaf(prefix:pathlib.Path,absolute:str)->pathlib.Path:
+    pure=pathlib.PurePosixPath(absolute)
+    if not pure.is_absolute() or ".." in pure.parts or pure==pathlib.PurePosixPath("/"): raise ValueError("unsafe pre-root package path")
+    return rooted(prefix,str(pure.parent))/pure.name
 
 
 def atomic_json(path: pathlib.Path, value: dict) -> None:
@@ -63,12 +95,14 @@ def validate(value: dict) -> dict:
                 "cleanupArgv", "recoveryArgv", "journal", "cleanupPaths",
                 "deadlineSeconds", "expectedPreState", "expectedPostState", "safety"}
     schema = value.get("schemaVersion")
-    if schema in {2, 3}:
+    if schema in {2, 3, 4}:
         required.update({"releaseInputs", "administratorState"})
-    if schema == 3:
+    if schema in {3,4}:
         required.add("priorTerminalState")
+    if schema == 4:
+        required.update({"installedPackagePaths","packagePathsSha256"})
     if (not isinstance(value, dict) or set(value) != required or
-            value.get("SPDX-License-Identifier") != "MIT" or schema not in {1, 2, 3} or
+            value.get("SPDX-License-Identifier") != "MIT" or schema not in {1, 2, 3, 4} or
             value.get("kind") != "gate-d-pre-root-bootstrap-envelope"):
         raise ValueError("invalid pre-root envelope identity")
     candidate = value["candidate"]
@@ -117,7 +151,7 @@ def validate(value: dict) -> dict:
         if input_paths.get(path) != expected:
             raise ValueError("pre-root primary input is not bound")
     release_inputs = value.get("releaseInputs", [])
-    if schema in {2, 3} and (not isinstance(release_inputs, list) or len(release_inputs) != len(RELEASE_INPUT_ROLES)):
+    if schema in {2, 3, 4} and (not isinstance(release_inputs, list) or len(release_inputs) != len(RELEASE_INPUT_ROLES)):
         raise ValueError("pre-root release-input graph is incomplete")
     roles = {}
     expected_release_names = dict(RELEASE_INPUT_ROLES)
@@ -130,10 +164,10 @@ def validate(value: dict) -> dict:
                 input_paths.get(item["path"]) != item["sha256"]):
             raise ValueError("invalid pre-root release-input identity")
         roles[item["role"]] = item
-    if schema in {2, 3} and (set(roles) != set(RELEASE_INPUT_ROLES) or roles["archive"]["path"] != candidate["archivePath"]):
+    if schema in {2, 3, 4} and (set(roles) != set(RELEASE_INPUT_ROLES) or roles["archive"]["path"] != candidate["archivePath"]):
         raise ValueError("pre-root release-input graph differs")
     release_parent = pathlib.PurePosixPath(candidate["archivePath"]).parent
-    if schema in {2, 3} and any(pathlib.PurePosixPath(item["path"]).parent != release_parent for item in release_inputs):
+    if schema in {2, 3, 4} and any(pathlib.PurePosixPath(item["path"]).parent != release_parent for item in release_inputs):
         raise ValueError("pre-root release inputs do not share the administrator release directory")
     administrator_state = value.get("administratorState", {
         "path": "/var/lib/rp1-gpclk-dkms/transaction.json",
@@ -148,7 +182,7 @@ def validate(value: dict) -> dict:
             ".." in pathlib.PurePosixPath(administrator_state["path"]).parts):
         raise ValueError("invalid administrator transaction-state contract")
     prior = value.get("priorTerminalState")
-    if schema == 3:
+    if schema in {3,4}:
         prior_keys = {"path", "sha256", "status", "recoveryRequired", "liveOutput",
                       "ownerUid", "mode", "archivePath", "archiveMode"}
         if (not isinstance(prior, dict) or set(prior) != prior_keys or
@@ -164,6 +198,10 @@ def validate(value: dict) -> dict:
         if (not archive.is_absolute() or ".." in archive.parts or archive == current or
                 archive.parent.parent != current.parent):
             raise ValueError("invalid prior terminal archive path")
+    if schema==4:
+        package_paths=validate_package_paths(value["installedPackagePaths"])
+        if not SHA256.fullmatch(value.get("packagePathsSha256","")) or package_paths_digest(package_paths)!=value["packagePathsSha256"]: raise ValueError("typed package inventory digest differs")
+        if not {item["path"] for item in value["installedTools"]}.issubset({item["path"] for item in package_paths}): raise ValueError("installed tools are outside typed package inventory")
     for item in transitions:
         if (not isinstance(item, dict) or set(item) != {"sourcePath", "destination", "sha256", "mode"} or
                 item.get("sourcePath") not in input_paths or input_paths[item["sourcePath"]] != item.get("sha256") or
@@ -200,6 +238,7 @@ def validate(value: dict) -> dict:
     absolute = [root["path"], value["stagedExecutor"]["path"], value["preRootModule"]["path"],
                 value["journal"], administrator_state["path"], candidate["archivePath"], *value["cleanupPaths"],
                 *(item["path"] for item in value["inputFiles"]), *(item["path"] for item in value["installedTools"])]
+    if schema==4: absolute.extend(item["path"] for item in value["installedPackagePaths"])
     if prior is not None:
         absolute.append(prior["archivePath"])
     if any(not pathlib.PurePosixPath(path).is_absolute() or ".." in pathlib.PurePosixPath(path).parts for path in absolute):
@@ -400,6 +439,8 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
                     path = rooted(prefix, item["path"])
                     if path.is_symlink() or not path.is_file() or digest(path) != item["sha256"]:
                         raise ValueError("installed transition tool differs")
+                if value["schemaVersion"]==4:
+                    for item in value["installedPackagePaths"]: verify_package_path(prefix,item)
                 for item in value["transitionFiles"]:
                     path = root / item["destination"]
                     if path.is_symlink() or not path.is_file() or digest(path) != item["sha256"]:

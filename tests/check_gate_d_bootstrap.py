@@ -64,4 +64,18 @@ with tempfile.TemporaryDirectory() as temporary:
     try: tool.validate(interrupted,root=root)
     except ValueError: pass
     else: raise AssertionError("missing retained tools accepted")
+with tempfile.TemporaryDirectory() as temporary:
+    typed_root=pathlib.Path(temporary); regular=typed_root/"tool"; regular.write_bytes(b"tool\n"); regular.chmod(0o644)
+    link=typed_root/"command"; link.symlink_to("tool")
+    records=[{"path":"/tool","type":"file","sha256":sha(regular),"mode":"0644","ownerUid":regular.stat().st_uid,"groupGid":regular.stat().st_gid},{"path":"/command","type":"symlink","target":"tool","mode":f"{link.lstat().st_mode & 0o777:04o}","ownerUid":link.lstat().st_uid,"groupGid":link.lstat().st_gid}]
+    assert tool.validate_package_paths(records)==records
+    assert tool.package_paths_digest(records)==hashlib.sha256((json.dumps(records,sort_keys=True,separators=(",",":"))+"\n").encode()).hexdigest()
+    for item in records: tool.verify_package_path(typed_root,item)
+    for mutation in (lambda v:v.append(dict(v[0])),lambda v:v[0].update(type="symlink"),lambda v:v[0].update(mode="0755"),lambda v:v[1].update(target="wrong")):
+        bad=copy.deepcopy(records); mutation(bad)
+        try:
+            tool.validate_package_paths(bad)
+            for item in bad: tool.verify_package_path(typed_root,item)
+        except (ValueError,KeyError): pass
+        else: raise AssertionError("unsafe typed bootstrap package inventory accepted")
 print("Gate D qualification bootstrap: PASS")

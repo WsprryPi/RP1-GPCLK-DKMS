@@ -230,4 +230,18 @@ with tempfile.TemporaryDirectory() as temporary:
     try: tool.validate(envelope)
     except ValueError: pass
     else: raise AssertionError("unsafe prior terminal archive path accepted")
+with tempfile.TemporaryDirectory() as temporary:
+    typed_prefix=pathlib.Path(temporary); regular=typed_prefix/"tool"; regular.write_bytes(b"tool\n"); regular.chmod(0o644)
+    link=typed_prefix/"command"; link.symlink_to("tool")
+    records=[{"path":"/tool","type":"file","sha256":sha(regular),"mode":"0644","ownerUid":regular.stat().st_uid,"groupGid":regular.stat().st_gid},{"path":"/command","type":"symlink","target":"tool","mode":f"{link.lstat().st_mode & 0o777:04o}","ownerUid":link.lstat().st_uid,"groupGid":link.lstat().st_gid}]
+    assert tool.validate_package_paths(records)==records
+    assert tool.package_paths_digest(records)==hashlib.sha256((json.dumps(records,sort_keys=True,separators=(",",":"))+"\n").encode()).hexdigest()
+    for item in records: tool.verify_package_path(typed_prefix,item)
+    for mutation in (lambda v:v.append(dict(v[0])),lambda v:v[0].update(sha256="0"*64),lambda v:v[1].update(target="wrong"),lambda v:v[1].update(mode="0644")):
+        bad=copy.deepcopy(records); mutation(bad)
+        try:
+            tool.validate_package_paths(bad)
+            for item in bad: tool.verify_package_path(typed_prefix,item)
+        except (ValueError,KeyError): pass
+        else: raise AssertionError("unsafe typed pre-root package inventory accepted")
 print("Gate D pre-root trust transition: PASS")
