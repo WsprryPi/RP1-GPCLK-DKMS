@@ -60,12 +60,9 @@ with tempfile.TemporaryDirectory() as temporary:
  try:
   assert gate_d_bootstrap.validate(bootstrap)["outputDisabled"] and gate_d_preroot.validate(envelope)["outputDisabled"]
   assert gate_d_target_plan.validate(plan)["attemptCount"]==38
-  result=gate_d_instance.validate(instance,require_ready=False); assert result["inputsReady"] is True and result["executionReady"] is False
-  try: gate_d_instance.validate(instance,require_ready=True)
-  except ValueError: pass
-  else: raise AssertionError("corrected successor inherited failed authorization")
+  result=gate_d_instance.validate(instance,require_ready=True); assert result["inputsReady"] is True and result["executionReady"] is True
  finally: gate_d_root.validate=original
-assert instance["authorization"]["approved"] is True and instance["authorization"]["targetExecutionApproved"] is False and instance["executionReady"] is False
+assert instance["authorization"]["approved"] is True and instance["authorization"]["targetExecutionApproved"] is True and instance["executionReady"] is True
 attempt_dir=ROOT/"release/gate-d-attempts-phase5.39-v1"; documents=[]
 for record in index["attempts"]:
  p=attempt_dir/record["file"]; assert sha(p)==record["sha256"]
