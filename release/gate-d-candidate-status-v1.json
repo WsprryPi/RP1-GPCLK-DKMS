@@ -19,18 +19,18 @@
   "schemaVersion": 1,
   "successor": {
     "archiveSha256": "ac0ce593e988886a24c22866409a20097a24105a94b846152bdc30ac4a060bed",
-    "authorization": "target execution not authorized",
+    "authorization": "operator authorization recorded in the Phase 5.31 execution instance",
     "controlSet": "release/gate-d-execution-instance-phase5.31-v1.json",
-    "executionReady": false,
+    "executionReady": true,
     "purpose": "accept a failed exact DKMS removal only after bounded status proves the required scope already absent",
     "qualification": "Compatible-unqualified",
     "release": "0.0.0-phase5.31",
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "sourceCommit": "c7e6fafdc434bdad78e12a6683239b8d87845cfa",
-    "status": "control-set-validated-awaiting-authorization",
+    "status": "authorized-for-output-disabled-gate-d-execution",
     "executionEvidence": "docs/reviews/gate-d-phase5.31-control-set-independent-review.md",
-    "blocker": "Exact Phase 5.31 output-disabled Gate D target execution requires separate operator authorization bound into the execution instance and pre-root envelope.",
-    "targetExecutionApproved": false
+    "blocker": "none before exact bounded execution; stop on any identity, residue, service, recovery, or cleanup ambiguity",
+    "targetExecutionApproved": true
   },
   "successorSelectionGate": "selected-to-correct-phase5.30-complete-removal-idempotency",
   "supersededCandidates": [
