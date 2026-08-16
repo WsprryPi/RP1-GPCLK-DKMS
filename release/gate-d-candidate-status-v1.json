@@ -1,133 +1,13 @@
 {
   "SPDX-License-Identifier": "MIT",
-  "schemaVersion": 1,
-  "kind": "gate-d-candidate-status",
   "historicalCandidate": {
+    "archiveSha256": "58cb12864b291380fefd31ea9a203f7ee308767790787e3fce0be352dab19b14",
+    "reason": "candidate archive lacks the adopted permanent Gate D outer executor",
     "release": "0.0.0-phase5.13",
     "sourceCommit": "61ee2ea592c2551eca56fd0566fef43097b8c682",
-    "archiveSha256": "58cb12864b291380fefd31ea9a203f7ee308767790787e3fce0be352dab19b14",
-    "status": "superseded-before-gate-d-execution",
-    "reason": "candidate archive lacks the adopted permanent Gate D outer executor"
+    "status": "superseded-before-gate-d-execution"
   },
-  "supersededCandidates": [{
-    "release": "0.0.0-phase5.14",
-    "sourceCommit": "7bbdfe1b5c83e1417e9dc5e0c4a7385136fd094a",
-    "archiveSha256": "d0c17f2842716052bb49b1a4fc079d3d48a5674bae8610eee2ab9d17ac548bea",
-    "status": "blocked-before-gate-d-installation",
-    "qualification": "Compatible-unqualified",
-    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; liveEligible false",
-    "blocker": "Frozen archive omits tools/gate_d_busy_injector.h, so the release-owned installer cannot compile the permanent busy injector from sealed inputs."
-  }, {
-    "release": "0.0.0-phase5.15",
-    "sourceCommit": "123a94c46a2fb068a5e83c42b440f6b8a07545f6",
-    "archiveSha256": "6a767723a9cbbf32b68d95c67221b0a56430a037508254aa8c3a65a9cd1bbb24",
-    "status": "blocked-before-gate-d-installation",
-    "qualification": "Compatible-unqualified",
-    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; liveEligible false",
-    "blocker": "Frozen target-plan schema uses one sha256 for both helper source and installed compiled ELF bytes; the permanent executor therefore cannot validate the sealed busy-injector and UAPI-probe binary identities."
-  }, {
-    "release": "0.0.0-phase5.16",
-    "sourceCommit": "ff92ffcbc588494dd89f303b73c31fe24554583a",
-    "archiveSha256": "7c7b7c4741717796b0a128c3f163f2921a25ea646d815b6ba59aae3fedd3ae8d",
-    "status": "blocked-before-gate-d-installation",
-    "qualification": "Compatible-unqualified",
-    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; liveEligible false",
-    "purpose": "separate source and installed tooling identities and bind copied versus target-built installation semantics",
-    "blocker": "The sealed administrator rejects publishable=false development candidates before installing the permanent Gate D executor, so the exact qualification candidate cannot bootstrap its reviewed execution tooling."
-  }, {
-    "release": "0.0.0-phase5.17",
-    "sourceCommit": "10ec47d83fe49f40c9846df72b8c9e691f6d07a5",
-    "archiveSha256": "c13d3c9a38875abb43a9431e498c7a45da4ef964d61ca688ff3dc9f95817050b",
-    "status": "blocked-before-gate-d-plan-construction",
-    "qualification": "Compatible-unqualified",
-    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
-    "purpose": "add an exact output-disabled qualification-install bootstrap without weakening normal release installation",
-    "blocker": "Frozen target-plan and execution-instance contracts cannot bind the qualification-bootstrap plan, administrator identity, or bootstrap transaction and recovery state."
-  }, {
-    "release": "0.0.0-phase5.18",
-    "sourceCommit": "333f0dde549ed1d8b3b6e41f3611814e6eecde0a",
-    "archiveSha256": "de8531f94bcf2fc0f251787ad0374e6f18abcd22d8cafa2096fd3f8d4edb835d",
-    "status": "blocked-before-gate-d-plan-construction",
-    "qualification": "Compatible-unqualified",
-    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
-    "purpose": "bind qualification bootstrap into the target plan, execution instance, permanent executor, and recovery lifecycle",
-    "blocker": "Installed permanent validators resolve repository-relative identities below /usr rather than an explicitly sealed test-owned qualification root."
-  }, {
-    "release": "0.0.0-phase5.19",
-    "sourceCommit": "7753692dd63cfa5fdda3f0a4d89dbd63161da719",
-    "archiveSha256": "8754f0490987ec9bf0eeccd8cdeaa60747116ac73f53fcc099f0af5a3c66efce",
-    "status": "blocked-before-representative-build",
-    "qualification": "offline-reproducible-unqualified",
-    "purpose": "bind one explicit qualification root through bootstrap, plans, attempts, instance, and installed executor dispatch",
-    "blocker": "Frozen JSON Schemas declare qualificationRoot as an unconstrained object and do not conditionally require it for the new schema versions."
-  }, {
-    "release": "0.0.0-phase5.20",
-    "sourceCommit": "a16a2bb5d3cda2c4442ef82e8ddd21cedbabd9ff",
-    "archiveSha256": "62d975ed8972256ecbd274a140bf1bc8639f476516410c82385c528fddff1db3",
-    "status": "blocked-before-gate-d-plan-construction",
-    "qualification": "Compatible-unqualified",
-    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
-    "purpose": "publish closed conditional JSON Schemas for every qualification-root-carrying Gate D document",
-    "blocker": "The installed root-validator dependency is imported by permanent validators and executor dispatch but cannot be named and hash-bound by the frozen target-plan tooling set."
-  }, {
-    "release": "0.0.0-phase5.21",
-    "sourceCommit": "d0046092dfa9ffa0c58171ddcb52b7819cc50fc6",
-    "archiveSha256": "fc5828d91446843d8ea78a09691c973d74082bea7655b6c0547a06d35fba1624",
-    "status": "blocked-before-gate-d-plan-construction",
-    "qualification": "Compatible-unqualified",
-    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
-    "purpose": "bind and authenticate the installed root-validator dependency before dependent imports",
-    "blocker": "The frozen installed layout uses hyphenated command filenames for Python dependencies imported under underscore module names; permanent bootstrap and normal dispatch cannot import their subordinate validators outside a source checkout."
-  }, {
-    "release": "0.0.0-phase5.22",
-    "sourceCommit": "f7ddea06a68dedceb57aeec0ddedb67598a797e1",
-    "archiveSha256": "2601cadb4f2abe25b72c7ed3237c00307bbcc11a8ed671331fef677089f93be9",
-    "status": "blocked-before-gate-d-plan-construction",
-    "qualification": "Compatible-unqualified",
-    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
-    "purpose": "install and authenticate the complete transitive Gate D Python import graph",
-    "blocker": "The qualification root is required to authenticate and validate the bootstrap operation that is supposed to create that root, so a fresh target cannot enter the root-bound trust state."
-  }, {
-    "release": "0.0.0-phase5.23",
-    "sourceCommit": "61ec2032542ac3aea2f51feac904d5450cc17655",
-    "archiveSha256": "04b6f7aee8f19c3f0da9b0d8f6a53f8f68dcaaae464b5cf99b847b587415aa8c",
-    "status": "blocked-before-gate-d-plan-construction",
-    "qualification": "Compatible-unqualified",
-    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
-    "purpose": "establish a closed one-shot pre-root trust transition into the root-bound Gate D control set",
-    "blocker": "The frozen target-plan JSON Schema requires attemptEnvelope to be an object while the permanent validator and executor require an ordered list."
-  }, {
-    "release": "0.0.0-phase5.24",
-    "sourceCommit": "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5",
-    "archiveSha256": "0da181f1ccfa9fb9edbd34456cec95730be8922283d1c5b207af376491413d8a",
-    "status": "blocked-before-gate-d-lifecycle",
-    "qualification": "Compatible-unqualified",
-    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
-    "purpose": "reconcile the published target-plan schema with the permanent validator and executor",
-    "blocker": "The authenticated pre-root attempt proved that required release sidecars were absent from the sealed staging graph and that recovery could not clean a failure before administrator transaction-state creation."
-  }, {
-    "release": "0.0.0-phase5.25",
-    "sourceCommit": "d9f8fd8b17f1c2ee9324704c6b6630dfccfb5e4e",
-    "archiveSha256": "e615750897009b79d0ead1e3bbf4133e0c4d5c157cc259d513a76ad65bd993e4",
-    "status": "blocked-before-gate-d-lifecycle",
-    "qualification": "Compatible-unqualified",
-    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
-    "purpose": "close the administrator release-input graph and make pre-root recovery phase-aware and idempotent",
-    "blocker": "The frozen archive's packaged runbook and authorization dossier incorrectly describe the separate I2C-controlled Si5351 RF path as connected to GPIO4 and GPIO20."
-  }],
-  "successor": {
-    "release": "0.0.0-phase5.26",
-    "sourceCommit": "9f009240eecd55940d53d6f13cb9567aa76cd4ce",
-    "archiveSha256": "f43422342fc03c402eb0602949cc317aea239defc6544534ea98bc40d2c505bc",
-    "status": "gate-d-control-set-ready-awaiting-target-authorization",
-    "qualification": "Compatible-unqualified",
-    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
-    "purpose": "correct the packaged Si5351 and GPIO4/GPIO20 topology without changing module behavior",
-    "controlSet": "release/gate-d-execution-instance-phase5.26-v1.json",
-    "targetExecutionApproved": false,
-    "executionReady": false
-  },
-  "successorSelectionGate": "selected-to-correct-phase5.25-packaged-si5351-topology-wording",
+  "kind": "gate-d-candidate-status",
   "reuseProhibited": [
     "representative-build-promotion",
     "route-decision",
@@ -135,5 +15,141 @@
     "attempt-bundle",
     "execution-instance",
     "target-authorization"
+  ],
+  "schemaVersion": 1,
+  "successor": {
+    "archiveSha256": "f43422342fc03c402eb0602949cc317aea239defc6544534ea98bc40d2c505bc",
+    "authorization": "docs/evidence/gate-d-phase5.26-target-execution-authorization.md",
+    "controlSet": "release/gate-d-execution-instance-phase5.26-v1.json",
+    "executionReady": true,
+    "purpose": "correct the packaged Si5351 and GPIO4/GPIO20 topology without changing module behavior",
+    "qualification": "Compatible-unqualified",
+    "release": "0.0.0-phase5.26",
+    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
+    "sourceCommit": "9f009240eecd55940d53d6f13cb9567aa76cd4ce",
+    "status": "blocked-during-pre-root-bootstrap",
+    "executionEvidence": "docs/evidence/gate-d-phase5.26-authorized-pre-root-execution.md",
+    "blocker": "The frozen administrator rejects the stock kernel header build symlink /lib/modules/6.18.34+rpt-rpi-2712/build before DKMS registration.",
+    "targetExecutionApproved": true
+  },
+  "successorSelectionGate": "selected-to-correct-phase5.25-packaged-si5351-topology-wording",
+  "supersededCandidates": [
+    {
+      "archiveSha256": "d0c17f2842716052bb49b1a4fc079d3d48a5674bae8610eee2ab9d17ac548bea",
+      "blocker": "Frozen archive omits tools/gate_d_busy_injector.h, so the release-owned installer cannot compile the permanent busy injector from sealed inputs.",
+      "qualification": "Compatible-unqualified",
+      "release": "0.0.0-phase5.14",
+      "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; liveEligible false",
+      "sourceCommit": "7bbdfe1b5c83e1417e9dc5e0c4a7385136fd094a",
+      "status": "blocked-before-gate-d-installation"
+    },
+    {
+      "archiveSha256": "6a767723a9cbbf32b68d95c67221b0a56430a037508254aa8c3a65a9cd1bbb24",
+      "blocker": "Frozen target-plan schema uses one sha256 for both helper source and installed compiled ELF bytes; the permanent executor therefore cannot validate the sealed busy-injector and UAPI-probe binary identities.",
+      "qualification": "Compatible-unqualified",
+      "release": "0.0.0-phase5.15",
+      "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; liveEligible false",
+      "sourceCommit": "123a94c46a2fb068a5e83c42b440f6b8a07545f6",
+      "status": "blocked-before-gate-d-installation"
+    },
+    {
+      "archiveSha256": "7c7b7c4741717796b0a128c3f163f2921a25ea646d815b6ba59aae3fedd3ae8d",
+      "blocker": "The sealed administrator rejects publishable=false development candidates before installing the permanent Gate D executor, so the exact qualification candidate cannot bootstrap its reviewed execution tooling.",
+      "purpose": "separate source and installed tooling identities and bind copied versus target-built installation semantics",
+      "qualification": "Compatible-unqualified",
+      "release": "0.0.0-phase5.16",
+      "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; liveEligible false",
+      "sourceCommit": "ff92ffcbc588494dd89f303b73c31fe24554583a",
+      "status": "blocked-before-gate-d-installation"
+    },
+    {
+      "archiveSha256": "c13d3c9a38875abb43a9431e498c7a45da4ef964d61ca688ff3dc9f95817050b",
+      "blocker": "Frozen target-plan and execution-instance contracts cannot bind the qualification-bootstrap plan, administrator identity, or bootstrap transaction and recovery state.",
+      "purpose": "add an exact output-disabled qualification-install bootstrap without weakening normal release installation",
+      "qualification": "Compatible-unqualified",
+      "release": "0.0.0-phase5.17",
+      "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
+      "sourceCommit": "10ec47d83fe49f40c9846df72b8c9e691f6d07a5",
+      "status": "blocked-before-gate-d-plan-construction"
+    },
+    {
+      "archiveSha256": "de8531f94bcf2fc0f251787ad0374e6f18abcd22d8cafa2096fd3f8d4edb835d",
+      "blocker": "Installed permanent validators resolve repository-relative identities below /usr rather than an explicitly sealed test-owned qualification root.",
+      "purpose": "bind qualification bootstrap into the target plan, execution instance, permanent executor, and recovery lifecycle",
+      "qualification": "Compatible-unqualified",
+      "release": "0.0.0-phase5.18",
+      "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
+      "sourceCommit": "333f0dde549ed1d8b3b6e41f3611814e6eecde0a",
+      "status": "blocked-before-gate-d-plan-construction"
+    },
+    {
+      "archiveSha256": "8754f0490987ec9bf0eeccd8cdeaa60747116ac73f53fcc099f0af5a3c66efce",
+      "blocker": "Frozen JSON Schemas declare qualificationRoot as an unconstrained object and do not conditionally require it for the new schema versions.",
+      "purpose": "bind one explicit qualification root through bootstrap, plans, attempts, instance, and installed executor dispatch",
+      "qualification": "offline-reproducible-unqualified",
+      "release": "0.0.0-phase5.19",
+      "sourceCommit": "7753692dd63cfa5fdda3f0a4d89dbd63161da719",
+      "status": "blocked-before-representative-build"
+    },
+    {
+      "archiveSha256": "62d975ed8972256ecbd274a140bf1bc8639f476516410c82385c528fddff1db3",
+      "blocker": "The installed root-validator dependency is imported by permanent validators and executor dispatch but cannot be named and hash-bound by the frozen target-plan tooling set.",
+      "purpose": "publish closed conditional JSON Schemas for every qualification-root-carrying Gate D document",
+      "qualification": "Compatible-unqualified",
+      "release": "0.0.0-phase5.20",
+      "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
+      "sourceCommit": "a16a2bb5d3cda2c4442ef82e8ddd21cedbabd9ff",
+      "status": "blocked-before-gate-d-plan-construction"
+    },
+    {
+      "archiveSha256": "fc5828d91446843d8ea78a09691c973d74082bea7655b6c0547a06d35fba1624",
+      "blocker": "The frozen installed layout uses hyphenated command filenames for Python dependencies imported under underscore module names; permanent bootstrap and normal dispatch cannot import their subordinate validators outside a source checkout.",
+      "purpose": "bind and authenticate the installed root-validator dependency before dependent imports",
+      "qualification": "Compatible-unqualified",
+      "release": "0.0.0-phase5.21",
+      "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
+      "sourceCommit": "d0046092dfa9ffa0c58171ddcb52b7819cc50fc6",
+      "status": "blocked-before-gate-d-plan-construction"
+    },
+    {
+      "archiveSha256": "2601cadb4f2abe25b72c7ed3237c00307bbcc11a8ed671331fef677089f93be9",
+      "blocker": "The qualification root is required to authenticate and validate the bootstrap operation that is supposed to create that root, so a fresh target cannot enter the root-bound trust state.",
+      "purpose": "install and authenticate the complete transitive Gate D Python import graph",
+      "qualification": "Compatible-unqualified",
+      "release": "0.0.0-phase5.22",
+      "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
+      "sourceCommit": "f7ddea06a68dedceb57aeec0ddedb67598a797e1",
+      "status": "blocked-before-gate-d-plan-construction"
+    },
+    {
+      "archiveSha256": "04b6f7aee8f19c3f0da9b0d8f6a53f8f68dcaaae464b5cf99b847b587415aa8c",
+      "blocker": "The frozen target-plan JSON Schema requires attemptEnvelope to be an object while the permanent validator and executor require an ordered list.",
+      "purpose": "establish a closed one-shot pre-root trust transition into the root-bound Gate D control set",
+      "qualification": "Compatible-unqualified",
+      "release": "0.0.0-phase5.23",
+      "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
+      "sourceCommit": "61ec2032542ac3aea2f51feac904d5450cc17655",
+      "status": "blocked-before-gate-d-plan-construction"
+    },
+    {
+      "archiveSha256": "0da181f1ccfa9fb9edbd34456cec95730be8922283d1c5b207af376491413d8a",
+      "blocker": "The authenticated pre-root attempt proved that required release sidecars were absent from the sealed staging graph and that recovery could not clean a failure before administrator transaction-state creation.",
+      "purpose": "reconcile the published target-plan schema with the permanent validator and executor",
+      "qualification": "Compatible-unqualified",
+      "release": "0.0.0-phase5.24",
+      "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
+      "sourceCommit": "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5",
+      "status": "blocked-before-gate-d-lifecycle"
+    },
+    {
+      "archiveSha256": "e615750897009b79d0ead1e3bbf4133e0c4d5c157cc259d513a76ad65bd993e4",
+      "blocker": "The frozen archive's packaged runbook and authorization dossier incorrectly describe the separate I2C-controlled Si5351 RF path as connected to GPIO4 and GPIO20.",
+      "purpose": "close the administrator release-input graph and make pre-root recovery phase-aware and idempotent",
+      "qualification": "Compatible-unqualified",
+      "release": "0.0.0-phase5.25",
+      "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
+      "sourceCommit": "d9f8fd8b17f1c2ee9324704c6b6630dfccfb5e4e",
+      "status": "blocked-before-gate-d-lifecycle"
+    }
   ]
 }

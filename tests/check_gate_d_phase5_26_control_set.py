@@ -28,9 +28,10 @@ assert bootstrap["qualificationRoot"]==plan["qualificationRoot"]==index["qualifi
 assert route["candidate"]["release"]==instance["candidate"]["release"]==plan["artifacts"]["successor"]["version"]=="0.0.0-phase5.26"
 assert route["candidate"]["representativeBuildManifestSha256"]==sha(ROOT/"release/gate-c-representative-build-manifest-phase5.26-v1.json")
 assert all(x["state"]=="Compatible-unqualified" and x["liveEligible"] is False for x in route["routes"])
-assert instance["inputsReady"] is True and instance["executionReady"] is False
-assert instance["authorization"]["targetExecutionApproved"] is False
-assert status["successor"]["status"]=="gate-d-control-set-ready-awaiting-target-authorization"
+assert instance["inputsReady"] is True and instance["executionReady"] is True
+assert instance["authorization"]["targetExecutionApproved"] is True
+assert status["successor"]["status"]=="blocked-during-pre-root-bootstrap"
+assert status["successor"]["executionEvidence"]=="docs/evidence/gate-d-phase5.26-authorized-pre-root-execution.md"
 assert status["successor"]["controlSet"]=="release/gate-d-execution-instance-phase5.26-v1.json"
 assert status["reuseProhibited"]==["representative-build-promotion","route-decision","target-plan","attempt-bundle","execution-instance","target-authorization"]
 assert sum(x["status"]=="ready" for x in instance["rows"])==10
@@ -66,10 +67,7 @@ with tempfile.TemporaryDirectory() as temporary:
  try:
   assert gate_d_bootstrap.validate(bootstrap)["outputDisabled"] is True
   assert gate_d_target_plan.validate(plan)["attemptCount"]==38
-  result=gate_d_instance.validate(instance); assert result["inputsReady"] is True and result["blockedRows"]==[] and len(result["deferredRows"])==5
-  try: gate_d_instance.validate(instance,require_ready=True)
-  except ValueError as error: assert str(error)=="fresh target-execution authorization is required"
-  else: raise AssertionError("unauthorized instance became executable")
+  result=gate_d_instance.validate(instance,require_ready=True); assert result["inputsReady"] is True and result["executionReady"] is True and result["blockedRows"]==[] and len(result["deferredRows"])==5
  finally: gate_d_root.validate=original
 for mutate in (lambda v:v["releaseInputs"].pop(),lambda v:v["releaseInputs"][1].update(role="archive"),lambda v:v["releaseInputs"][1].update(path="/other/rp1-gpclk-gpio4.dtbo"),lambda v:v["transitionFiles"][0].update(sha256="0"*64),lambda v:v["transitionFiles"][1].update(destination=v["transitionFiles"][0]["destination"]),lambda v:v["inputFiles"][0].update(path="/tmp/substituted"),lambda v:v["safety"].update(liveOutput=True)):
  bad=copy.deepcopy(envelope); mutate(bad)
