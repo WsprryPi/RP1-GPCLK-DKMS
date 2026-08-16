@@ -32,7 +32,9 @@
     "bootstrapValidatorSha256": "15b65db11a5bc6712e1aca5cd2229406f21a1da2c051cba6e005bbe7b22d4621"
   },
   "targetBuiltHelpers": {
-    "representativeBuildManifest": "pending exact Phase 5.21 disposable representative build"
+    "busyInjectorSha256": "c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd",
+    "uapiProbeSha256": "1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742",
+    "representativeBuildManifest": "release/gate-c-representative-build-manifest-phase5.21-v1.json"
   },
-  "claimCeiling": "offline reproducible and adversarially reviewed only; no representative build, installation, lifecycle, GPIO, clock, DMA, transmission, SDR, or RF claim"
+  "claimCeiling": "offline reproducible and representative-build compatible only; no installation, lifecycle, route qualification, GPIO, clock, DMA, transmission, SDR, or RF claim"
 }
