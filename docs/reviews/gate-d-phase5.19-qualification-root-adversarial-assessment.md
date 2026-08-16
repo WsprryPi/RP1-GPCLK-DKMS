@@ -2,7 +2,7 @@
 
 # Gate D Phase 5.19 qualification-root adversarial assessment
 
-Status: offline software review passed; candidate frozen
+Status: post-freeze schema finding; candidate blocked
 
 The correction separates installed package-tool identity from test-owned
 qualification-document identity and eliminates implicit source-checkout root
@@ -32,3 +32,13 @@ Two deterministic development builds from source commit
 `7753692dd63cfa5fdda3f0a4d89dbd63161da719` were byte-identical. The frozen
 archive SHA-256 is
 `8754f0490987ec9bf0eeccd8cdeaa60747116ac73f53fcc099f0af5a3c66efce`.
+
+## Post-freeze blocking finding
+
+The Python validators enforce the exact qualification-root fields, but the
+frozen JSON Schemas describe `qualificationRoot` only as an unconstrained
+object and do not conditionally require it for the new schema versions. This
+fails the closed published-schema requirement. The frozen candidate is not
+eligible for representative build or plan sealing. A distinct successor must
+add exact `additionalProperties: false` root definitions, conditional version
+requirements, and positive and negative JSON Schema tests before refreeze.

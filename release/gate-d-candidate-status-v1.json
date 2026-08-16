@@ -57,9 +57,10 @@
     "release": "0.0.0-phase5.19",
     "sourceCommit": "7753692dd63cfa5fdda3f0a4d89dbd63161da719",
     "archiveSha256": "8754f0490987ec9bf0eeccd8cdeaa60747116ac73f53fcc099f0af5a3c66efce",
-    "status": "frozen-offline",
+    "status": "blocked-before-representative-build",
     "qualification": "offline-reproducible-unqualified",
-    "purpose": "bind one explicit qualification root through bootstrap, plans, attempts, instance, and installed executor dispatch"
+    "purpose": "bind one explicit qualification root through bootstrap, plans, attempts, instance, and installed executor dispatch",
+    "blocker": "Frozen JSON Schemas declare qualificationRoot as an unconstrained object and do not conditionally require it for the new schema versions; Python validators are closed but the published schema contract is not."
   },
   "successorSelectionGate": "selected-to-correct-phase5.18-installed-validator-root-defect",
   "reuseProhibited": [
