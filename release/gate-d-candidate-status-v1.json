@@ -93,7 +93,8 @@
     "sourceCommit": "61ec2032542ac3aea2f51feac904d5450cc17655",
     "archiveSha256": "04b6f7aee8f19c3f0da9b0d8f6a53f8f68dcaaae464b5cf99b847b587415aa8c",
     "status": "frozen-offline",
-    "qualification": "offline-reproducible-unqualified",
+    "qualification": "Compatible-unqualified",
+    "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "establish a closed one-shot pre-root trust transition into the root-bound Gate D control set"
   },
   "successorSelectionGate": "selected-to-correct-phase5.22-qualification-root-bootstrap-cycle",

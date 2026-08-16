@@ -131,4 +131,20 @@ assert phase522["evidence"]["evidenceSealResumed"] is True
 assert phase522["evidence"]["buildRepeated"] is False
 assert phase522["claimBoundary"] == boundary
 
+phase523 = json.loads((ROOT / "release/gate-c-representative-build-manifest-phase5.23-v1.json").read_text())
+assert phase523["candidate"]["sourceCommit"] == "61ec2032542ac3aea2f51feac904d5450cc17655"
+assert phase523["candidate"]["sourceArchiveSha256"] == \
+    "04b6f7aee8f19c3f0da9b0d8f6a53f8f68dcaaae464b5cf99b847b587415aa8c"
+assert phase523["representativeSystem"]["kernelRelease"] == "6.18.34+rpt-rpi-2712"
+assert phase523["result"]["moduleSha256"] == \
+    "44fba1121952e4874fcf5814cce721cc3a66d7e199ea1e0cce711c0887f489a3"
+assert phase523["result"]["exitStatus"] == phase523["result"]["diagnosticsCount"] == 0
+assert phase523["result"]["compatibilityState"] == "Compatible-unqualified"
+assert phase523["result"]["liveEligible"] is False
+assert phase523["evidence"]["manifestSha256"] == \
+    "bed0238f9f46d0e2a64bd70250d47f7fbc407f326ab1d2c106ed6e56764dc5eb"
+assert phase523["evidence"]["cleanupComplete"] is True
+assert phase523["evidence"]["helpersExecuted"] is False
+assert phase523["claimBoundary"] == boundary
+
 print("Gate C representative build: PASS")
