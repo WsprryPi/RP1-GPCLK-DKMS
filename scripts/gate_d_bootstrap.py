@@ -24,7 +24,15 @@ def atomic(path: pathlib.Path, value: dict) -> None:
 
 def validate(value: dict, *, root: pathlib.Path = pathlib.Path("/"), verify_files: bool = False) -> dict:
     required={"SPDX-License-Identifier","schemaVersion","kind","operationId","hostId","predecessorVersion","kernelRelease","stagingDirectory","candidate","qualificationIdentity","administrator","argv","cleanupArgv","recoveryArgv","journal","deadlineSeconds","expectedPreState","expectedPostState","retainedTools","cleanupPaths","safety"}
-    if set(value)!=required or value.get("SPDX-License-Identifier")!="MIT" or value.get("schemaVersion")!=1 or value.get("kind")!="gate-d-qualification-bootstrap-plan": raise ValueError("invalid bootstrap identity")
+    schema=value.get("schemaVersion")
+    if schema==2: required.add("qualificationRoot")
+    if set(value)!=required or value.get("SPDX-License-Identifier")!="MIT" or schema not in {1,2} or value.get("kind")!="gate-d-qualification-bootstrap-plan": raise ValueError("invalid bootstrap identity")
+    if schema==2:
+        import sys
+        scripts=pathlib.Path(__file__).resolve().parent
+        if str(scripts) not in sys.path: sys.path.insert(0,str(scripts))
+        from gate_d_root import validate as validate_root
+        validate_root(value["qualificationRoot"])
     candidate=value["candidate"]
     if set(candidate)!={"release","sourceCommit","archive","archiveSha256"} or not COMMIT.fullmatch(candidate.get("sourceCommit","")) or not SHA.fullmatch(candidate.get("archiveSha256","")): raise ValueError("invalid bootstrap candidate")
     identity=value["qualificationIdentity"]

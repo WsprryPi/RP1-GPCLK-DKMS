@@ -938,10 +938,17 @@ def main() -> None:
         if os.geteuid()!=0 or args.instance is None: raise SystemExit("bootstrap execution requires root, --execute, and --instance")
         from gate_d_instance import load as load_instance, validate as validate_instance
         instance=load_instance(args.instance); validate_instance(instance,require_ready=True)
+        qualification_root=instance.get("qualificationRoot")
+        identity_root=pathlib.Path(__file__).resolve().parents[1]
+        if qualification_root:
+            from gate_d_root import validate as validate_root
+            identity_root=validate_root(qualification_root)
+            if document.get("qualificationRoot")!=qualification_root:
+                raise SystemExit("bootstrap and execution-instance qualification roots differ")
         bootstrap_path=instance["executionPolicy"].get("qualificationBootstrap")
         bootstrap_sha=instance["executionPolicy"].get("qualificationBootstrapSha256")
         if (bootstrap_path is None or bootstrap_sha is None or
-                args.document.resolve()!=((pathlib.Path(__file__).resolve().parents[1]/bootstrap_path).resolve()) or
+                args.document.resolve()!=((identity_root/bootstrap_path).resolve()) or
                 digest(args.document)!=bootstrap_sha):
             raise SystemExit("bootstrap plan differs from the sealed execution instance")
         def probe() -> dict:

@@ -8,7 +8,8 @@
   "required": ["SPDX-License-Identifier", "schemaVersion", "kind", "matrixRelease", "executionPolicy", "candidate", "authorization", "systems", "recovery", "rows", "inputsReady", "executionReady"],
   "properties": {
     "SPDX-License-Identifier": {"const": "MIT"},
-    "schemaVersion": {"const": 1},
+    "schemaVersion": {"enum": [1, 2, 3]},
+    "qualificationRoot": {"type": "object"},
     "kind": {"const": "gate-d-representative-system-execution-instance"},
     "matrixRelease": {"type": "string", "minLength": 1},
     "executionPolicy": {

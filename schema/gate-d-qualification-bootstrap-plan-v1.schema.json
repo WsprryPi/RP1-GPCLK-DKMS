@@ -32,7 +32,7 @@
       "const": "MIT"
     },
     "schemaVersion": {
-      "const": 1
+      "enum": [1, 2]
     },
     "kind": {
       "const": "gate-d-qualification-bootstrap-plan"
@@ -42,6 +42,9 @@
     },
     "hostId": {
       "type": "string"
+    },
+    "qualificationRoot": {
+      "type": "object"
     },
     "predecessorVersion": {
       "type": "string"

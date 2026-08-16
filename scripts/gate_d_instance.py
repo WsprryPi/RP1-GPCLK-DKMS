@@ -48,14 +48,21 @@ def validate(value: dict, *, require_ready: bool = False,
                 "executionPolicy", "candidate", "authorization", "systems", "recovery",
                 "rows", "inputsReady", "executionReady"}
     schema=value.get("schemaVersion")
-    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or schema not in {1,2} or value.get("kind") != "gate-d-representative-system-execution-instance":
+    if schema==3: required.add("qualificationRoot")
+    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or schema not in {1,2,3} or value.get("kind") != "gate-d-representative-system-execution-instance":
         raise ValueError("invalid execution-instance identity")
+    root=ROOT
+    if schema==3:
+        scripts=pathlib.Path(__file__).resolve().parent
+        if str(scripts) not in __import__("sys").path: __import__("sys").path.insert(0,str(scripts))
+        from gate_d_root import validate as validate_root
+        root=validate_root(value["qualificationRoot"])
     policy_ref = value["executionPolicy"]
     policy_fields = {"matrixPolicy", "matrixPolicySha256", "routeDecision",
                      "routeDecisionSha256", "targetPlan", "targetPlanSha256",
                      "attemptIndex", "attemptIndexSha256",
                      "environmentalCoverageComplete"}
-    if schema==2: policy_fields.update({"qualificationBootstrap","qualificationBootstrapSha256"})
+    if schema in {2,3}: policy_fields.update({"qualificationBootstrap","qualificationBootstrapSha256"})
     if not isinstance(policy_ref, dict) or set(policy_ref) != policy_fields:
         raise ValueError("execution-policy references are incomplete")
     for path_field, hash_field in (("matrixPolicy", "matrixPolicySha256"),
@@ -66,33 +73,35 @@ def validate(value: dict, *, require_ready: bool = False,
         if (not isinstance(relative, str) or pathlib.PurePosixPath(relative).is_absolute() or
                 ".." in pathlib.PurePosixPath(relative).parts):
             raise ValueError("unsafe execution-policy path")
-        path = ROOT / relative
+        path = root / relative
         if not path.is_file() or path.is_symlink() or sha256(path) != policy_ref[hash_field]:
             raise ValueError("execution-policy identity mismatch")
-    if schema==2:
+    if schema in {2,3}:
         relative=policy_ref["qualificationBootstrap"]
-        path=ROOT/relative
+        path=root/relative
         if pathlib.PurePosixPath(relative).is_absolute() or ".." in pathlib.PurePosixPath(relative).parts or path.is_symlink() or not path.is_file() or sha256(path)!=policy_ref["qualificationBootstrapSha256"]:
             raise ValueError("qualification bootstrap policy identity mismatch")
-    matrix_policy = json.loads((ROOT / policy_ref["matrixPolicy"]).read_text(encoding="utf-8"))
+    matrix_policy = json.loads((root / policy_ref["matrixPolicy"]).read_text(encoding="utf-8"))
     if (matrix_policy.get("schemaVersion") != 2 or
             [row.get("id") for row in matrix_policy.get("rows", [])] != list(ROWS)):
         raise ValueError("matrix execution policy is incomplete")
     classifications = {row["id"]: row.get("classification") for row in matrix_policy["rows"]}
     if not set(classifications.values()).issubset({"required-executable", "deferred-environmental"}):
         raise ValueError("unknown matrix execution classification")
-    scripts = ROOT / "scripts"
+    scripts = pathlib.Path(__file__).resolve().parent
     if str(scripts) not in __import__("sys").path:
         __import__("sys").path.insert(0, str(scripts))
     from gate_d_target_plan import validate as validate_target_plan
-    target_plan = json.loads((ROOT / policy_ref["targetPlan"]).read_text(encoding="utf-8"))
-    if schema == 2:
+    target_plan = json.loads((root / policy_ref["targetPlan"]).read_text(encoding="utf-8"))
+    if schema==3 and target_plan.get("qualificationRoot")!=value["qualificationRoot"]:
+        raise ValueError("execution instance and target-plan qualification roots differ")
+    if schema in {2,3}:
         target_bootstrap = target_plan.get("qualificationBootstrap")
         if (not isinstance(target_bootstrap, dict) or
                 target_bootstrap.get("path") != policy_ref["qualificationBootstrap"] or
                 target_bootstrap.get("sha256") != policy_ref["qualificationBootstrapSha256"]):
             raise ValueError("execution instance and target-plan bootstrap bindings differ")
-    status_path = ROOT / "release/gate-d-candidate-status-v1.json"
+    status_path = root / "release/gate-d-candidate-status-v1.json"
     superseded = False
     if status_path.is_file() and not status_path.is_symlink():
         candidate_status = json.loads(status_path.read_text(encoding="utf-8"))
@@ -113,13 +122,13 @@ def validate(value: dict, *, require_ready: bool = False,
     # executor/index hashes intentionally cease to be live-executable when the
     # permanent executor advances for a successor.
     if validate_attempt_bundle and not superseded:
-        attempt_result = validate_index(ROOT / policy_ref["attemptIndex"],
+        attempt_result = validate_index(root / policy_ref["attemptIndex"], root=root,
                                         expected_documents=generate_attempts(value, target_plan))
         if attempt_result["attemptCount"] != 38:
             raise ValueError("attempt bundle is incomplete")
     if target_plan.get("hostId") not in {system.get("id") for system in value.get("systems", [])}:
         raise ValueError("target plan host differs from execution instance")
-    route_decision = json.loads((ROOT / policy_ref["routeDecision"]).read_text(encoding="utf-8"))
+    route_decision = json.loads((root / policy_ref["routeDecision"]).read_text(encoding="utf-8"))
     if (route_decision.get("kind") != "gate-d-route-compatibility-decision" or
             route_decision.get("candidate", {}).get("release") != value.get("candidate", {}).get("release") or
             route_decision.get("candidate", {}).get("sourceCommit") != value.get("candidate", {}).get("sourceCommit")):

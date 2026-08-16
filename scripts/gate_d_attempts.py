@@ -336,13 +336,13 @@ class FakeSystem:
         self.evidence_sealed = True
     def op_install_successor(self):
         if not self.source_staged: raise ValueError("source not staged")
-        self.dkms.add("0.0.0-phase5.18")
+        self.dkms.add("0.0.0-phase5.19")
     def op_install_predecessor(self): self.dkms.add("0.0.0-phase5.2")
     def op_apply_route(self):
         if self.document["route"] not in {"gpio4", "gpio20"}: raise ValueError("route required")
         self.overlay = self.document["route"]; self.endpoint = self.module_loaded
     def op_load_disabled(self):
-        if "0.0.0-phase5.18" not in self.dkms or not self.overlay: raise ValueError("load precondition")
+        if "0.0.0-phase5.19" not in self.dkms or not self.overlay: raise ValueError("load precondition")
         self.module_loaded = True; self.endpoint = True
     def op_query_release(self):
         if not self.module_loaded or not self.endpoint: raise ValueError("query unavailable")
@@ -375,7 +375,7 @@ class FakeSystem:
         if not self.injected: raise ValueError("build failure absent")
     def op_recover_predecessor(self):
         self.dkms = {"0.0.0-phase5.2"}; self.module_loaded = False; self.overlay = None
-    def op_remove_failed_successor(self): self.dkms.discard("0.0.0-phase5.18")
+    def op_remove_failed_successor(self): self.dkms.discard("0.0.0-phase5.19")
     def op_run_to_checkpoint(self): self.failed_journal = False
     def op_interrupt_after_checkpoint(self): self.failed_journal = True
     def op_freeze_failed_journal(self):
@@ -426,7 +426,8 @@ def execute_fake(document: dict) -> dict:
             "liveOutput": False, "elapsedSeconds": state.elapsed}
 
 
-def write_bundle(output: pathlib.Path, documents: list[dict], tool_path: pathlib.Path) -> dict:
+def write_bundle(output: pathlib.Path, documents: list[dict], tool_path: pathlib.Path,
+                 qualification_root: dict | None = None) -> dict:
     if output.exists() or output.is_symlink():
         raise ValueError("attempt output directory already exists")
     output.mkdir(parents=True, mode=0o755)
@@ -436,32 +437,46 @@ def write_bundle(output: pathlib.Path, documents: list[dict], tool_path: pathlib
         path.write_bytes(canonical(document))
         records.append({"operationId": document["operationId"], "file": path.name,
                         "sha256": digest(path)})
-    index = {"SPDX-License-Identifier": "MIT", "schemaVersion": 1,
+    identity_root=ROOT
+    if qualification_root:
+        from gate_d_root import validate as validate_root
+        identity_root=validate_root(qualification_root)
+    index = {"SPDX-License-Identifier": "MIT", "schemaVersion": 2 if qualification_root else 1,
              "kind": "gate-d-attempt-index", "attemptCount": len(records),
              "executors": {
-                 "attemptGenerator": {"path": str(tool_path.relative_to(ROOT)), "sha256": digest(tool_path)},
-                 "permanentExecutor": {"path": "scripts/gate_d_outer.py", "sha256": digest(ROOT / "scripts/gate_d_outer.py")},
+                 "attemptGenerator": {"path": "scripts/gate_d_attempts.py", "sha256": digest(identity_root / "scripts/gate_d_attempts.py")},
+                 "permanentExecutor": {"path": "scripts/gate_d_outer.py", "sha256": digest(identity_root / "scripts/gate_d_outer.py")},
              },
              "attempts": records}
+    if qualification_root:
+        index["qualificationRoot"]=qualification_root
     (output / "index.json").write_bytes(canonical(index))
     return index
 
 
-def validate_index(index_path: pathlib.Path, *, expected_documents: list[dict] | None = None) -> dict:
+def validate_index(index_path: pathlib.Path, *, expected_documents: list[dict] | None = None,
+                   root: pathlib.Path | None = None) -> dict:
     """Validate a checked bundle, including every byte and executor identity."""
     index = load_json(index_path)
     required = {"SPDX-License-Identifier", "schemaVersion", "kind", "attemptCount",
                 "executors", "attempts"}
+    schema=index.get("schemaVersion")
+    if schema==2: required.add("qualificationRoot")
     if (set(index) != required or index.get("SPDX-License-Identifier") != "MIT" or
-            index.get("schemaVersion") != 1 or index.get("kind") != "gate-d-attempt-index"):
+            schema not in {1,2} or index.get("kind") != "gate-d-attempt-index"):
         raise ValueError("invalid attempt-index identity")
+    identity_root=ROOT
+    if schema==2:
+        from gate_d_root import validate as validate_root
+        identity_root=validate_root(index["qualificationRoot"])
+        if root is not None and identity_root != root: raise ValueError("attempt index qualification root differs")
     records = index.get("attempts")
     if index.get("attemptCount") != 38 or not isinstance(records, list) or len(records) != 38:
         raise ValueError("attempt index must contain exactly 38 records")
     executors = index.get("executors")
     expected_executors = {
-        "attemptGenerator": {"path": "scripts/gate_d_attempts.py", "sha256": digest(ROOT / "scripts/gate_d_attempts.py")},
-        "permanentExecutor": {"path": "scripts/gate_d_outer.py", "sha256": digest(ROOT / "scripts/gate_d_outer.py")},
+        "attemptGenerator": {"path": "scripts/gate_d_attempts.py", "sha256": digest(identity_root / "scripts/gate_d_attempts.py")},
+        "permanentExecutor": {"path": "scripts/gate_d_outer.py", "sha256": digest(identity_root / "scripts/gate_d_outer.py")},
     }
     if executors != expected_executors:
         raise ValueError("attempt executor identity mismatch")
@@ -508,7 +523,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.action == "generate":
         documents = generate(load_json(args.instance), load_json(args.plan))
-        result = write_bundle(args.output, documents, pathlib.Path(__file__).resolve())
+        root_ref=load_json(args.instance).get("qualificationRoot")
+        result = write_bundle(args.output, documents, pathlib.Path(__file__).resolve(),root_ref)
     elif args.action == "validate":
         result = validate_document(load_json(args.document))
     else:
