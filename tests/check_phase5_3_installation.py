@@ -185,6 +185,7 @@ with tempfile.TemporaryDirectory() as temporary:
                     ("Kbuild", b"obj-m := rp1_gpclk_dkms.o\n", 0o644),
                     ("include/rp1_gpclk/version.h", f'#define RP1_GPCLK_MODULE_VERSION "{admin.VERSION}"\n'.encode(), 0o644)]
         for relative in ("scripts/rp1-gpclk-admin.py", "scripts/rp1-gpclk-diagnostics.py",
+                         "release/release-layout-v1.json",
                          "release/installation-model-v1.json", "release/overlay-contract-v1.json",
                          "release/permissions-enrollment-policy-v1.json",
                          "release/diagnostics-contract-v1.json",
@@ -204,6 +205,7 @@ with tempfile.TemporaryDirectory() as temporary:
                          "scripts/gate_d_bootstrap.py", "scripts/gate_d_root.py", "scripts/gate_d_preroot.py", "scripts/gate_d_residue.py",
                          "tools/gate_d_uapi_probe.c",
                          "tools/gate_d_busy_injector.c",
+                         "docs/operator/diagnostics.md", "docs/operator/gate-d-target-runbook.md",
                          "docs/operator/lifecycle.md", "docs/operator/signing.md"):
             fixtures.append((relative, (ROOT / relative).read_bytes(), 0o755 if relative.startswith("scripts/") else 0o644))
         for name, data, mode in fixtures:
@@ -221,6 +223,19 @@ with tempfile.TemporaryDirectory() as temporary:
         (release / name).write_bytes(data)
     checksum_names = sorted(artifacts)
     (release / "SHA256SUMS").write_text("".join(f"{hashlib.sha256(artifacts[name]).hexdigest()}  {name}\n" for name in checksum_names))
+    package_paths = admin.qualification_package_paths(archive)
+    observed_retained = {
+        *admin.QUALIFICATION_RETAINED_TOOLS,
+        "/usr/share/doc/rp1-gpclk-dkms/diagnostics.md",
+        "/usr/share/doc/rp1-gpclk-dkms/gate-d-target-runbook.md",
+        "/usr/share/doc/rp1-gpclk-dkms/lifecycle.md",
+        "/usr/share/doc/rp1-gpclk-dkms/signing.md",
+        "/usr/sbin/rp1-gpclk-admin",
+        "/usr/sbin/rp1-gpclk-diagnostics",
+    }
+    assert observed_retained.issubset(package_paths)
+    assert package_paths["/usr/sbin/rp1-gpclk-admin"]["kind"] == "installed-link"
+    assert package_paths["/usr/share/doc/rp1-gpclk-dkms/diagnostics.md"]["kind"] == "archive-tree"
     (target / "boot/firmware/overlays").mkdir(parents=True)
     target_headers = target / "usr/src/test-headers"
     target_headers.mkdir(parents=True)
@@ -341,6 +356,38 @@ with tempfile.TemporaryDirectory() as temporary:
     assert admin.validate_qualification_identity(
         transition_identity_path, metadata, metadata["archiveSha256"]
     )["schemaVersion"] == 2
+    # Schema 3 derives the complete existing package closure from the sealed
+    # layout. One omitted documentation path is rejected before a transaction
+    # or external command can exist, and the diagnostic reports the full diff.
+    closure_target = base / "closure-omission-target"
+    closure_docs = closure_target / "usr/share/doc/rp1-gpclk-dkms"
+    closure_docs.mkdir(parents=True)
+    for name in ("diagnostics.md", "lifecycle.md"):
+        (closure_docs / name).write_bytes(f"predecessor {name}\n".encode())
+        (closure_docs / name).chmod(0o644)
+    retained_doc = closure_docs / "diagnostics.md"
+    retained_status = retained_doc.stat()
+    closure_identity = dict(identity)
+    closure_identity["schemaVersion"] = 3
+    closure_identity["packageTransitions"] = [{
+        "path": "/usr/share/doc/rp1-gpclk-dkms/diagnostics.md", "type": "file",
+        "predecessorSha256": hashlib.sha256(retained_doc.read_bytes()).hexdigest(),
+        "successorSha256": hashlib.sha256((ROOT / "docs/operator/diagnostics.md").read_bytes()).hexdigest(),
+        "mode": "0644", "ownerUid": retained_status.st_uid, "groupGid": retained_status.st_gid,
+    }]
+    closure_identity_path = base / "qualification-package-closure-identity.json"
+    closure_identity_path.write_text(json.dumps(closure_identity) + "\n")
+    command_count = len(commands)
+    try:
+        admin.execute(release, "gpio4", False, None, None, root=closure_target,
+                      runner=fake_runner, qualification_identity=closure_identity_path)
+    except ValueError as error:
+        assert "package-transition closure differs" in str(error)
+        assert "/usr/share/doc/rp1-gpclk-dkms/lifecycle.md" in str(error)
+        assert len(commands) == command_count
+        assert not (closure_target / "var/lib/rp1-gpclk-dkms/transaction.json").exists()
+    else:
+        raise AssertionError("incomplete package-path closure accepted")
     for mutation in (
         lambda value: value["toolTransitions"][0].update(path="/tmp/../escape"),
         lambda value: value["toolTransitions"][0].update(predecessorSha256="0" * 63),
@@ -519,6 +566,89 @@ with tempfile.TemporaryDirectory() as temporary:
         value["schemaVersion"] = 2
         value["toolTransitions"] = transitions
         return value
+
+    def complete_package_transition(name, wrong_successor=None):
+        package_target, package_libexec, predecessors = complete_transition_target(name)
+        package_docs = package_target / "usr/share/doc/rp1-gpclk-dkms"
+        package_docs.mkdir(parents=True)
+        for doc in ("diagnostics.md", "gate-d-target-runbook.md", "lifecycle.md", "signing.md"):
+            path = package_docs / doc
+            path.write_bytes(f"phase5.31 {doc} predecessor\n".encode())
+            predecessors[f"/usr/share/doc/rp1-gpclk-dkms/{doc}"] = path.read_bytes()
+        package_sbin = package_target / "usr/sbin"
+        package_sbin.mkdir(parents=True)
+        links = {}
+        for command in ("rp1-gpclk-admin", "rp1-gpclk-diagnostics"):
+            path = package_sbin / command
+            target = f"../libexec/rp1-gpclk-dkms/{command}"
+            path.symlink_to(target)
+            links[f"/usr/sbin/{command}"] = target
+        transitions = []
+        for raw, predecessor in sorted(predecessors.items()):
+            destination = package_target / raw.lstrip("/")
+            name = pathlib.PurePosixPath(raw).name
+            if raw.startswith("/usr/share/doc/"):
+                successor = (ROOT / "docs/operator" / name).read_bytes()
+                mode = "0644"
+            else:
+                successor = (b"gate-d-probe" if name in {"gate-d-uapi-probe", "gate-d-busy-injector"}
+                             else (ROOT / source_by_tool[name]).read_bytes())
+                mode = "0644" if name.endswith(".py") else "0755"
+            status = destination.stat()
+            successor_hash = hashlib.sha256(successor).hexdigest()
+            if raw == wrong_successor:
+                successor_hash = "0" * 64
+            transitions.append({"path": raw, "type": "file",
+                                "predecessorSha256": hashlib.sha256(predecessor).hexdigest(),
+                                "successorSha256": successor_hash,
+                                "mode": mode, "ownerUid": status.st_uid, "groupGid": status.st_gid})
+        for raw, target_value in sorted(links.items()):
+            status = (package_target / raw.lstrip("/")).lstat()
+            successor_target = ("../invalid-successor" if raw == wrong_successor else target_value)
+            transitions.append({"path": raw, "type": "symlink",
+                                "predecessorTarget": target_value,
+                                "successorTarget": successor_target,
+                                "ownerUid": status.st_uid, "groupGid": status.st_gid})
+        value = dict(identity)
+        value["schemaVersion"] = 3
+        value["packageTransitions"] = sorted(transitions, key=lambda item: item["path"])
+        return package_target, package_libexec, predecessors, links, value
+
+    package_target, package_libexec, package_predecessors, package_links, package_identity = (
+        complete_package_transition("complete-package-transition-target"))
+    package_identity_path = base / "complete-package-transition-identity.json"
+    package_identity_path.write_text(json.dumps(package_identity) + "\n")
+    package_result = admin.execute(release, "gpio4", False, None, None,
+                                   root=package_target, runner=fake_runner,
+                                   qualification_identity=package_identity_path)
+    assert package_result["status"] == "complete"
+    assert len(package_result["replacedFiles"]) == len(package_predecessors) + len(package_links) == 28
+    assert all(item["status"] == "committed" for item in package_result["replacedFiles"])
+
+    # Inject a successor mismatch at every file and symlink boundary. Recovery
+    # must restore the complete 28-path predecessor closure without residue.
+    for boundary in sorted({*package_predecessors, *package_links}):
+        boundary_name = boundary.strip("/").replace("/", "-").replace(".", "-")
+        recovery_target, _, recovery_predecessors, recovery_links, recovery_identity = (
+            complete_package_transition(f"package-recovery-{boundary_name}", boundary))
+        recovery_identity_path = base / f"package-recovery-{boundary_name}.json"
+        recovery_identity_path.write_text(json.dumps(recovery_identity) + "\n")
+        try:
+            admin.execute(release, "gpio4", False, None, None,
+                          root=recovery_target, runner=fake_runner,
+                          qualification_identity=recovery_identity_path)
+        except ValueError:
+            recovery_state = recovery_target / "var/lib/rp1-gpclk-dkms/transaction.json"
+            assert json.loads(recovery_state.read_text())["status"] == "inactive-recovery-required"
+            recovered = admin.recover(recovery_state, fake_runner)
+            assert recovered["status"] == "recovered" and recovered["liveOutput"] is False
+            for raw, predecessor in recovery_predecessors.items():
+                assert (recovery_target / raw.lstrip("/")).read_bytes() == predecessor
+            for raw, target_value in recovery_links.items():
+                path = recovery_target / raw.lstrip("/")
+                assert path.is_symlink() and path.readlink() == pathlib.Path(target_value)
+        else:
+            raise AssertionError(f"invalid package successor accepted at boundary: {boundary}")
 
     # Exact regression: transitioned permanent tools can bracket ordinary
     # package files without making those ordinary paths transition lookups.

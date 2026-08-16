@@ -76,7 +76,6 @@
     {"id":"diagnostic-tool","kind":"archive","path":"scripts/rp1-gpclk-diagnostics.py","destination":"/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-diagnostics","owner":"root","group":"root","mode":"0755","replacement":"exact-version-checksum","removalOwner":"package"},
     {"id":"operator-docs","kind":"archive-tree","path":"docs/operator/*.md","destination":"/usr/share/doc/rp1-gpclk-dkms/","owner":"root","group":"root","mode":"0644","replacement":"exact-version-checksum","removalOwner":"package"},
     {"id":"security-notes","kind":"archive","path":"docs/releases/0.0.0-phase5.37-security.md","destination":"/usr/share/doc/rp1-gpclk-dkms/0.0.0-phase5.37-security.md","owner":"root","group":"root","mode":"0644","replacement":"exact-version-checksum","removalOwner":"package"},
-    {"id":"behavioral-notes","kind":"archive","path":"docs/releases/0.0.0-phase5.37-behavior.md","destination":"/usr/share/doc/rp1-gpclk-dkms/0.0.0-phase5.37-behavior.md","owner":"root","group":"root","mode":"0644","replacement":"exact-version-checksum","removalOwner":"package"},
-    {"id":"signing-guidance","kind":"archive","path":"docs/operator/signing.md","destination":"/usr/share/doc/rp1-gpclk-dkms/signing.md","owner":"root","group":"root","mode":"0644","replacement":"exact-version-checksum","removalOwner":"package"}
+    {"id":"behavioral-notes","kind":"archive","path":"docs/releases/0.0.0-phase5.37-behavior.md","destination":"/usr/share/doc/rp1-gpclk-dkms/0.0.0-phase5.37-behavior.md","owner":"root","group":"root","mode":"0644","replacement":"exact-version-checksum","removalOwner":"package"}
   ]
 }

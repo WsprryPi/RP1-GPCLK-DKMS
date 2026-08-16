@@ -47,6 +47,8 @@ ACKNOWLEDGEMENT = ("I accept Experimental RP1 GPCLK dedicated-host and "
 HASH_IDENTITY_FIELDS = {"compatibilityManifestSha256", "moduleSha256", "uapiHeaderSha256",
                         "kernelConfigSha256", "baseDtSha256", "overlaySourceSha256",
                         "overlayDtboSha256"}
+# Schema 2 is retained only to validate already sealed historical control sets.
+# New successors use schema 3 and the archive-derived package closure below.
 QUALIFICATION_RETAINED_TOOLS = frozenset({
     f"/usr/libexec/{PACKAGE}/{name}" for name in (
         "gate-d-attempts", "gate-d-boot", "gate-d-bootstrap", "gate-d-busy-injector",
@@ -57,8 +59,6 @@ QUALIFICATION_RETAINED_TOOLS = frozenset({
         "lifecycle-policy", "rp1-gpclk-admin", "rp1-gpclk-diagnostics",
     )
 })
-
-
 def digest(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -72,6 +72,67 @@ def rooted(root: pathlib.Path, absolute: str) -> pathlib.Path:
         current = current / part
         if current.is_symlink():
             raise ValueError(f"refusing symlink installation path: {absolute}")
+    return result
+
+
+def rooted_leaf(root: pathlib.Path, absolute: str) -> pathlib.Path:
+    """Resolve a canonical parent while permitting an authenticated symlink leaf."""
+    pure = pathlib.PurePosixPath(absolute)
+    if not SAFE_PATH.fullmatch(absolute) or ".." in pure.parts or pure == pathlib.PurePosixPath("/"):
+        raise ValueError(f"unsafe installation path: {absolute}")
+    parent = rooted(root, str(pure.parent))
+    return parent / pure.name
+
+
+def qualification_package_paths(archive_path: pathlib.Path) -> dict[str, dict]:
+    """Expand canonical unversioned package destinations from the sealed layout."""
+    with tarfile.open(archive_path, "r:gz") as archive:
+        members = archive.getmembers()
+        roots = {pathlib.PurePosixPath(item.name).parts[0] for item in members
+                 if pathlib.PurePosixPath(item.name).parts}
+        if len(roots) != 1:
+            raise ValueError("candidate archive root is absent or ambiguous")
+        prefix = next(iter(roots))
+        layout_member = archive.getmember(f"{prefix}/release/release-layout-v1.json")
+        stream = archive.extractfile(layout_member)
+        if stream is None:
+            raise ValueError("candidate installation layout is unreadable")
+        layout = json.loads(stream.read())
+        archive_names = [str(pathlib.PurePosixPath(item.name).relative_to(prefix))
+                         for item in members if item.isfile()]
+    result: dict[str, dict] = {}
+    for artifact in layout.get("artifacts", []):
+        destination = artifact.get("destination")
+        kind = artifact.get("kind")
+        source_pattern = artifact.get("path")
+        if (not isinstance(destination, str) or not destination.startswith("/") or
+                VERSION in destination or "KERNEL" in destination or
+                kind in {"generated", "dkms-output", "installed-state"}):
+            continue
+        expanded: list[tuple[str, str]] = []
+        if kind == "archive-tree" and isinstance(source_pattern, str):
+            import fnmatch
+            matches = sorted(name for name in archive_names if fnmatch.fnmatch(name, source_pattern))
+            if not matches:
+                raise ValueError("installation layout archive tree expands to no files")
+            expanded = [(name, destination.rstrip("/") + "/" + pathlib.PurePosixPath(name).name)
+                        for name in matches]
+        elif kind in {"archive", "installed-build"}:
+            expanded = [(str(source_pattern), destination)]
+        elif kind == "installed-link":
+            expanded = [(str(source_pattern), destination)]
+        elif kind == "installed-directory":
+            expanded = [(str(source_pattern), destination.rstrip("/"))]
+        for source_name, path in expanded:
+            if not SAFE_PATH.fullmatch(path) or ".." in pathlib.PurePosixPath(path).parts:
+                raise ValueError("installation layout contains an unsafe canonical path")
+            if path in result:
+                raise ValueError("installation layout expands a duplicate canonical path")
+            result[path] = {"kind": kind, "source": source_name,
+                            "mode": artifact.get("mode"), "owner": artifact.get("owner"),
+                            "group": artifact.get("group")}
+    if not result:
+        raise ValueError("installation layout has no canonical package paths")
     return result
 
 
@@ -373,9 +434,11 @@ def validate_qualification_identity(path: pathlib.Path, metadata: dict,
     schema = value.get("schemaVersion")
     if schema == 2:
         required.add("toolTransitions")
+    if schema == 3:
+        required.add("packageTransitions")
     if (not isinstance(value, dict) or set(value) != required or
             value.get("SPDX-License-Identifier") != "MIT" or
-            schema not in {1, 2} or
+            schema not in {1, 2, 3} or
             value.get("kind") != "rp1-gpclk-gate-d-qualification-install-identity" or
             value.get("publishable") is not False or value.get("tagPresent") is not False or
             value.get("outputDisabled") is not True or value.get("liveOutput") is not False or
@@ -401,6 +464,31 @@ def validate_qualification_identity(path: pathlib.Path, metadata: dict,
             paths.append(item["path"])
         if not paths or len(paths) != len(set(paths)):
             raise ValueError("qualification tool-transition graph is empty or ambiguous")
+    if schema == 3:
+        paths = []
+        for item in value["packageTransitions"]:
+            if (not isinstance(item, dict) or item.get("type") not in {"file", "symlink"} or
+                    not pathlib.PurePosixPath(item.get("path", "")).is_absolute() or
+                    ".." in pathlib.PurePosixPath(item["path"]).parts or
+                    not isinstance(item.get("ownerUid"), int) or item["ownerUid"] < 0 or
+                    not isinstance(item.get("groupGid"), int) or item["groupGid"] < 0):
+                raise ValueError("invalid qualification package transition")
+            if item["type"] == "file":
+                if (set(item) != {"path", "type", "predecessorSha256", "successorSha256",
+                                  "mode", "ownerUid", "groupGid"} or
+                        not all(re.fullmatch(r"[0-9a-f]{64}", item.get(key, ""))
+                                for key in ("predecessorSha256", "successorSha256")) or
+                        item.get("mode") not in {"0644", "0755"}):
+                    raise ValueError("invalid qualification package file transition")
+            elif (set(item) != {"path", "type", "predecessorTarget", "successorTarget",
+                                "ownerUid", "groupGid"} or
+                  not all(isinstance(item.get(key), str) and item[key] and
+                          not pathlib.PurePosixPath(item[key]).is_absolute()
+                          for key in ("predecessorTarget", "successorTarget"))):
+                raise ValueError("invalid qualification package symlink transition")
+            paths.append(item["path"])
+        if not paths or len(paths) != len(set(paths)):
+            raise ValueError("qualification package-transition graph is empty or ambiguous")
     return value
 
 
@@ -438,6 +526,32 @@ def replace_qualification_tool(destination: pathlib.Path, prepared: pathlib.Path
         os.fsync(directory_fd)
     finally:
         os.close(directory_fd)
+    record["status"] = "successor-installed"
+    atomic_json(state_path, transaction)
+
+
+def replace_qualification_symlink(destination: pathlib.Path, target: str,
+                                  transition: dict, transaction: dict,
+                                  state_path: pathlib.Path) -> None:
+    """Atomically replace one authenticated symlink and ledger its predecessor."""
+    if (transition.get("type") != "symlink" or not destination.is_symlink() or
+            os.readlink(destination) != transition["predecessorTarget"] or
+            target != transition["successorTarget"]):
+        raise ValueError(f"qualification symlink transition identity differs: {destination}")
+    backup = destination.with_name(f".{destination.name}.rp1-gpclk-predecessor")
+    prepared = destination.with_name(f".{destination.name}.rp1-gpclk-successor")
+    if backup.exists() or backup.is_symlink() or prepared.exists() or prepared.is_symlink():
+        raise ValueError(f"qualification symlink transition temporary exists: {destination}")
+    prepared.symlink_to(target)
+    record = {"path": str(destination), "backup": str(backup), "type": "symlink",
+              "predecessorTarget": transition["predecessorTarget"],
+              "successorTarget": transition["successorTarget"], "status": "planned"}
+    transaction["replacedFiles"].append(record)
+    atomic_json(state_path, transaction)
+    os.replace(destination, backup)
+    record["status"] = "predecessor-backed-up"
+    atomic_json(state_path, transaction)
+    os.replace(prepared, destination)
     record["status"] = "successor-installed"
     atomic_json(state_path, transaction)
 
@@ -480,23 +594,55 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
         if old.get("status") not in {"complete", "recovered"}:
             raise ValueError("unresolved transaction requires explicit recovery")
     transitions = ({item["path"]: item for item in qualification["toolTransitions"]}
-                   if qualification and qualification["schemaVersion"] == 2 else {})
+                   if qualification and qualification["schemaVersion"] == 2 else
+                   {item["path"]: item for item in qualification["packageTransitions"]}
+                   if qualification and qualification["schemaVersion"] == 3 else {})
     if qualification and qualification["schemaVersion"] == 2:
         unknown = set(transitions) - QUALIFICATION_RETAINED_TOOLS
         if unknown:
             raise ValueError("qualification transition names a non-permanent tool")
         retained = set()
         for raw in QUALIFICATION_RETAINED_TOOLS:
-            destination = rooted(root, raw)
+            destination = rooted_leaf(root, raw)
             if destination.exists() or destination.is_symlink():
                 retained.add(raw)
         if set(transitions) != retained:
             raise ValueError("qualification transition graph differs from retained permanent tools")
     for raw, transition in transitions.items():
-        destination = rooted(root, raw)
+        destination = rooted_leaf(root, raw)
+        if qualification and qualification["schemaVersion"] == 3:
+            continue
         if (destination.is_symlink() or not destination.is_file() or
                 digest(destination) != transition["predecessorSha256"]):
             raise ValueError(f"qualification predecessor tool differs: {destination}")
+    if qualification and qualification["schemaVersion"] == 3:
+        package_paths = qualification_package_paths(archive_path)
+        existing = set()
+        for raw, spec in package_paths.items():
+            destination = rooted_leaf(root, raw)
+            if spec["kind"] == "installed-directory":
+                if destination.exists() and (destination.is_symlink() or not destination.is_dir()):
+                    raise ValueError(f"qualification package directory type differs: {destination}")
+                continue
+            if destination.exists() or destination.is_symlink():
+                existing.add(raw)
+        if set(transitions) != existing:
+            missing = sorted(existing - set(transitions))
+            extra = sorted(set(transitions) - existing)
+            raise ValueError(f"qualification package-transition closure differs: missing={missing}, extra={extra}")
+        for raw, transition in transitions.items():
+            destination = rooted_leaf(root, raw)
+            status = destination.lstat()
+            if status.st_uid != transition["ownerUid"] or status.st_gid != transition["groupGid"]:
+                raise ValueError(f"qualification predecessor ownership differs: {destination}")
+            if transition["type"] == "file":
+                if (destination.is_symlink() or not destination.is_file() or
+                        digest(destination) != transition["predecessorSha256"] or
+                        status.st_mode & 0o777 != int(transition["mode"], 8)):
+                    raise ValueError(f"qualification predecessor file differs: {destination}")
+            elif (not destination.is_symlink() or
+                  os.readlink(destination) != transition["predecessorTarget"]):
+                raise ValueError(f"qualification predecessor symlink differs: {destination}")
     transaction.update({"status": "inactive-in-progress", "checkpoint": "preflight",
                         "kernel": kernel, "recoveryRequired": True, "commands": [],
                         "ownedFiles": [], "ownedDirectories": [], "replacedFiles": []})
@@ -630,6 +776,8 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                 transaction["ownedFiles"].append({"path": str(destination), "sha256": digest(destination)})
                 atomic_json(state_path, transaction)
                 return
+            if transition.get("type", "file") != "file":
+                raise ValueError(f"qualification package transition type differs: {destination}")
             prepared = destination.with_name(f".{destination.name}.rp1-gpclk-successor")
             if prepared.exists() or prepared.is_symlink():
                 raise ValueError(f"qualification successor temporary exists: {prepared}")
@@ -735,36 +883,45 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
             if not origin.is_file() or origin.is_symlink() or destination.is_symlink():
                 raise ValueError(f"unsafe package file: {destination}")
             install_tool(origin, destination, mode)
-        if transitions:
-            raise ValueError("qualification tool-transition path is not an installed permanent tool")
         for origin in sorted((source / "docs/operator").glob("*.md")):
             destination = documentation / origin.name
-            if origin.is_symlink() or destination.exists() or destination.is_symlink():
-                raise ValueError(f"unsafe or existing documentation: {destination}")
-            shutil.copyfile(origin, destination)
-            destination.chmod(0o644)
-            transaction["ownedFiles"].append({"path": str(destination), "sha256": digest(destination)})
-            atomic_json(state_path, transaction)
+            if origin.is_symlink():
+                raise ValueError(f"unsafe documentation source: {origin}")
+            install_tool(origin, destination, 0o644)
         sbin = rooted(root, "/usr/sbin")
         sbin.mkdir(parents=True, mode=0o755, exist_ok=True)
         for name in ("rp1-gpclk-admin", "rp1-gpclk-diagnostics"):
             link = sbin / name
-            if link.exists() or link.is_symlink():
-                raise ValueError(f"refusing existing command: {link}")
-            link.symlink_to(f"../libexec/{PACKAGE}/{name}")
-            transaction["ownedFiles"].append({"path": str(link), "symlink": f"../libexec/{PACKAGE}/{name}"})
-            atomic_json(state_path, transaction)
+            target = f"../libexec/{PACKAGE}/{name}"
+            raw = str(pathlib.PurePosixPath("/") / link.relative_to(root))
+            transition = transitions.pop(raw, None)
+            if transition is not None:
+                replace_qualification_symlink(link, target, transition, transaction, state_path)
+            else:
+                if link.exists() or link.is_symlink():
+                    raise ValueError(f"refusing existing command: {link}")
+                link.symlink_to(target)
+                transaction["ownedFiles"].append({"path": str(link), "symlink": target})
+                atomic_json(state_path, transaction)
+        if transitions:
+            raise ValueError("qualification package-transition path is not installed by this transaction")
         loaded = rooted(root, f"/sys/module/{MODULE}")
         if loaded.exists():
             raise ValueError("module is already loaded; output-disabled inactive install cannot be proven")
         for item in transaction["replacedFiles"]:
             destination = pathlib.Path(item["path"])
             backup = pathlib.Path(item["backup"])
-            if (item["status"] != "successor-installed" or destination.is_symlink() or
-                    not destination.is_file() or digest(destination) != item["successorSha256"] or
-                    backup.is_symlink() or not backup.is_file() or
-                    digest(backup) != item["predecessorSha256"]):
-                raise ValueError("qualification tool transition cannot commit")
+            if item.get("type") == "symlink":
+                valid = (item["status"] == "successor-installed" and destination.is_symlink() and
+                         os.readlink(destination) == item["successorTarget"] and backup.is_symlink() and
+                         os.readlink(backup) == item["predecessorTarget"])
+            else:
+                valid = (item["status"] == "successor-installed" and not destination.is_symlink() and
+                         destination.is_file() and digest(destination) == item["successorSha256"] and
+                         not backup.is_symlink() and backup.is_file() and
+                         digest(backup) == item["predecessorSha256"])
+            if not valid:
+                raise ValueError("qualification package transition cannot commit")
             backup.unlink()
             item["status"] = "committed"
             atomic_json(state_path, transaction)
@@ -809,20 +966,33 @@ def recover(state_path: pathlib.Path, runner: Callable[[list[str]], str] = comma
         path = pathlib.Path(item["path"])
         backup = pathlib.Path(item["backup"])
         status = item.get("status")
+        symlink_transition = item.get("type") == "symlink"
         if status == "planned":
-            if path.is_symlink() or not path.is_file() or digest(path) != item["predecessorSha256"]:
+            valid = (path.is_symlink() and os.readlink(path) == item["predecessorTarget"]
+                     if symlink_transition else
+                     not path.is_symlink() and path.is_file() and
+                     digest(path) == item["predecessorSha256"])
+            if not valid:
                 raise ValueError(f"planned predecessor changed: {path}")
             continue
         if status == "predecessor-backed-up":
             if path.exists() or path.is_symlink():
                 raise ValueError(f"interrupted transition destination exists: {path}")
         elif status == "successor-installed":
-            if path.is_symlink() or not path.is_file() or digest(path) != item["successorSha256"]:
+            valid = (path.is_symlink() and os.readlink(path) == item["successorTarget"]
+                     if symlink_transition else
+                     not path.is_symlink() and path.is_file() and
+                     digest(path) == item["successorSha256"])
+            if not valid:
                 raise ValueError(f"transition successor changed: {path}")
             path.unlink()
         else:
             raise ValueError("transition ledger status is not recoverable")
-        if backup.is_symlink() or not backup.is_file() or digest(backup) != item["predecessorSha256"]:
+        valid_backup = (backup.is_symlink() and os.readlink(backup) == item["predecessorTarget"]
+                        if symlink_transition else
+                        not backup.is_symlink() and backup.is_file() and
+                        digest(backup) == item["predecessorSha256"])
+        if not valid_backup:
             raise ValueError(f"transition predecessor backup changed: {backup}")
         os.replace(backup, path)
     candidates = sorted({pathlib.Path(value) for value in state.get("ownedDirectories", [])},
