@@ -63,8 +63,10 @@
   }],
   "successor": {
     "release": "0.0.0-phase5.20",
-    "status": "unfrozen",
-    "qualification": "offline-review-in-progress",
+    "sourceCommit": "a16a2bb5d3cda2c4442ef82e8ddd21cedbabd9ff",
+    "archiveSha256": "62d975ed8972256ecbd274a140bf1bc8639f476516410c82385c528fddff1db3",
+    "status": "frozen-offline",
+    "qualification": "offline-reproducible-unqualified",
     "purpose": "publish closed conditional JSON Schemas for every qualification-root-carrying Gate D document"
   },
   "successorSelectionGate": "selected-to-correct-phase5.19-open-published-root-schema",

@@ -2,7 +2,7 @@
 
 # Gate D Phase 5.20 closed-root-schema adversarial assessment
 
-Status: pre-freeze adversarial review passed
+Status: offline adversarial review passed; candidate frozen
 
 The shared root schema uses an exact five-field object with
 `additionalProperties: false`. Bootstrap 2, target plan 4, attempt index 2,
@@ -27,4 +27,7 @@ and wrong-version mutations. All referenced schemas are installed together.
    constraints now agree, and adversarial tests cover that boundary.
 
 The separate post-implementation audit found no remaining open-root or
-version-conditional acceptance path. Candidate freeze remains pending.
+version-conditional acceptance path. Two deterministic builds from source
+commit `a16a2bb5d3cda2c4442ef82e8ddd21cedbabd9ff` were byte-identical; the frozen
+archive SHA-256 is
+`62d975ed8972256ecbd274a140bf1bc8639f476516410c82385c528fddff1db3`.
