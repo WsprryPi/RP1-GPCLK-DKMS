@@ -27,7 +27,7 @@ from typing import Callable
 
 PACKAGE = "rp1-gpclk-dkms"
 MODULE = "rp1_gpclk_dkms"
-VERSION = "0.0.0-phase5.28"
+VERSION = "0.0.0-phase5.29"
 ROUTES = {"gpio4": "rp1-gpclk-gpio4.dtbo", "gpio20": "rp1-gpclk-gpio20.dtbo"}
 ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
                       "remove-old-binding-proven-cleanup", "verify-both-pins-safe",
@@ -111,6 +111,33 @@ def kernel_headers(root: pathlib.Path, kernel: str) -> pathlib.Path:
     if not canonical.is_dir() or status.st_uid != root_uid or status.st_mode & 0o022:
         raise ValueError("kernel header directory ownership or mode is unsafe")
     return canonical
+
+
+def dkms_built_module(root: pathlib.Path, kernel: str,
+                      architecture: str) -> pathlib.Path:
+    """Select one allowlisted DKMS-built module representation."""
+    if not re.fullmatch(r"[A-Za-z0-9._+-]+", kernel):
+        raise ValueError("unsafe kernel release")
+    if not re.fullmatch(r"[A-Za-z0-9._+-]+", architecture):
+        raise ValueError("unsafe architecture")
+    directory = rooted(
+        root, f"/var/lib/dkms/{PACKAGE}/{VERSION}/{kernel}/{architecture}/module")
+    if directory.is_symlink() or not directory.is_dir():
+        raise ValueError("DKMS built-module directory is missing or unsafe")
+    candidates = [directory / f"{MODULE}{suffix}" for suffix in
+                  (".ko", ".ko.xz", ".ko.gz", ".ko.zst")]
+    allowed_names = {path.name for path in candidates}
+    unknown = [path for path in directory.iterdir()
+               if path.name.startswith(f"{MODULE}.ko") and path.name not in allowed_names]
+    if unknown:
+        raise ValueError("DKMS built-module representation has an unknown suffix")
+    present = [path for path in candidates if path.exists() or path.is_symlink()]
+    if len(present) != 1:
+        raise ValueError("DKMS built-module representation is absent or ambiguous")
+    selected = present[0]
+    if selected.is_symlink() or not selected.is_file():
+        raise ValueError("DKMS built-module representation is not a regular file")
+    return selected
 
 
 def load_checksums(release: pathlib.Path) -> dict[str, str]:
@@ -412,10 +439,27 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
         commands = [["dkms", "add", "-m", PACKAGE, "-v", VERSION],
                     ["dkms", "build", "-m", PACKAGE, "-v", VERSION, "-k", kernel]]
         architecture = platform.machine()
-        built_module = f"/var/lib/dkms/{PACKAGE}/{VERSION}/{kernel}/{architecture}/module/{MODULE}.ko"
         installed_module = f"/lib/modules/{kernel}/updates/dkms/{MODULE}.ko"
-        commands += [["modinfo", "-F", "version", built_module],
-                     ["modinfo", "-F", "vermagic", built_module]]
+        def run_commands(batch: list[list[str]]) -> None:
+            for args in batch:
+                transaction["checkpoint"] = "verify-dkms-signature" if args[:3] in (
+                    ["modinfo", "-F", "signer"], ["modinfo", "-F", "sig_key"]) else args[1]
+                transaction["commands"].append(args)
+                atomic_json(state_path, transaction)
+                output = runner(args)
+                if args[:3] == ["modinfo", "-F", "version"] and output.strip() != VERSION:
+                    raise ValueError("module version verification failed")
+                if args[:3] == ["modinfo", "-F", "vermagic"] and not output.strip().startswith(kernel + " "):
+                    raise ValueError("module vermagic verification failed")
+                if args[:3] == ["modinfo", "-F", "signer"] and output.strip() != expected_signer:
+                    raise ValueError("required module signer identity differs")
+                if args[:3] == ["modinfo", "-F", "sig_key"] and output.strip() != expected_key_id:
+                    raise ValueError("required module signature key ID differs")
+
+        run_commands(commands)
+        built_module = str(dkms_built_module(root, kernel, architecture))
+        commands = [["modinfo", "-F", "version", built_module],
+                    ["modinfo", "-F", "vermagic", built_module]]
         if signing:
             commands += [["modinfo", "-F", "signer", built_module],
                          ["modinfo", "-F", "sig_key", built_module]]
@@ -425,20 +469,7 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
         if signing:
             commands += [["modinfo", "-F", "signer", installed_module],
                          ["modinfo", "-F", "sig_key", installed_module]]
-        for args in commands:
-            transaction["checkpoint"] = "verify-dkms-signature" if args[:3] in (
-                ["modinfo", "-F", "signer"], ["modinfo", "-F", "sig_key"]) else args[1]
-            transaction["commands"].append(args)
-            atomic_json(state_path, transaction)
-            output = runner(args)
-            if args[:3] == ["modinfo", "-F", "version"] and output.strip() != VERSION:
-                raise ValueError("module version verification failed")
-            if args[:3] == ["modinfo", "-F", "vermagic"] and not output.strip().startswith(kernel + " "):
-                raise ValueError("module vermagic verification failed")
-            if args[:3] == ["modinfo", "-F", "signer"] and output.strip() != expected_signer:
-                raise ValueError("required module signer identity differs")
-            if args[:3] == ["modinfo", "-F", "sig_key"] and output.strip() != expected_key_id:
-                raise ValueError("required module signature key ID differs")
+        run_commands(commands)
         overlay_destination = overlays / ROUTES[route]
         if overlay_destination.is_symlink() or (overlay_destination.exists() and digest(overlay_destination) != checksums[ROUTES[route]]):
             raise ValueError("refusing unrelated or different overlay")

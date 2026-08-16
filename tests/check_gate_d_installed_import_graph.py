@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory() as temporary:
         shutil.copy2(ROOT/"scripts"/f"{name}.py",destination); destination.chmod(0o644)
     installed_executor=fake_root/"usr/libexec/rp1-gpclk-dkms/gate-d-executor"
     shutil.copy2(ROOT/"scripts/gate_d_outer.py",installed_executor); installed_executor.chmod(0o755)
-    marker={"SPDX-License-Identifier":"MIT","schemaVersion":1,"kind":"gate-d-qualification-root-identity","rootPath":str(qualification),"candidateRelease":"0.0.0-phase5.28","sourceCommit":"1"*40}
+    marker={"SPDX-License-Identifier":"MIT","schemaVersion":1,"kind":"gate-d-qualification-root-identity","rootPath":str(qualification),"candidateRelease":"0.0.0-phase5.29","sourceCommit":"1"*40}
     marker_path=qualification/".gate-d-root.json"; marker_path.write_text(json.dumps(marker,sort_keys=True)+"\n")
     reference={"path":str(qualification),"identityFile":marker_path.name,"identitySha256":sha(marker_path),"ownerUid":os.getuid(),"mode":"0700"}
     def identity(name:str)->dict:
