@@ -177,6 +177,57 @@ with tempfile.TemporaryDirectory() as temporary:
         root=primitive_root, administrator_uid=0)
     assert primitive["liveOutput"] is False and len(primitive_commands) == 3
     assert (primitive_root / "usr/src/rp1-gpclk-dkms-0.0.0-new/dkms.conf").is_file()
+
+    absent_commands = []
+    def absent_primitive_runner(command, deadline):
+        absent_commands.append(command)
+        if command[:2] in (["dkms", "uninstall"], ["dkms", "remove"]):
+            raise lifecycle.subprocess.CalledProcessError(3, command, output="not installed\n")
+        if command[:2] == ["dkms", "status"]:
+            return ""
+        raise AssertionError(command)
+    absent = lifecycle.dispatch_primitive(
+        ["complete-removal", "0.0.0-old", "0.0.0-new",
+         "6.18.34+rpt-rpi-2712", "/stage", "--execute"],
+        runner=absent_primitive_runner, root=primitive_root, administrator_uid=0)
+    assert absent["liveOutput"] is False
+    assert [command[1] for command in absent_commands] == [
+        "uninstall", "status", "remove", "status", "uninstall", "status", "remove", "status"]
+    assert absent_commands[1][-2:] == ["-k", "6.18.34+rpt-rpi-2712"]
+    assert absent_commands[3] == ["dkms", "status", "-m", lifecycle.PACKAGE, "-v", "0.0.0-new"]
+
+    for remaining in (
+            "rp1-gpclk-dkms/0.0.0-new, 6.18.34+rpt-rpi-2712, aarch64: installed\n",
+            "rp1-gpclk-dkms/0.0.0-new, 6.18.35+rpt-rpi-2712, aarch64: built\n"):
+        def present_runner(command, deadline, remaining=remaining):
+            if command[:2] == ["dkms", "uninstall"]:
+                raise lifecycle.subprocess.CalledProcessError(3, command)
+            if command[:2] == ["dkms", "status"]:
+                return remaining
+            raise AssertionError(command)
+        try:
+            lifecycle.dispatch_primitive(
+                ["complete-removal", "0.0.0-old", "0.0.0-new",
+                 "6.18.34+rpt-rpi-2712", "/stage", "--execute"],
+                runner=present_runner, root=primitive_root, administrator_uid=0)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("failed removal accepted a present or ambiguous DKMS state")
+
+    def status_failure_runner(command, deadline):
+        if command[:2] in (["dkms", "uninstall"], ["dkms", "status"]):
+            raise lifecycle.subprocess.CalledProcessError(4, command)
+        raise AssertionError(command)
+    try:
+        lifecycle.dispatch_primitive(
+            ["complete-removal", "0.0.0-old", "0.0.0-new",
+             "6.18.34+rpt-rpi-2712", "/stage", "--execute"],
+            runner=status_failure_runner, root=primitive_root, administrator_uid=0)
+    except lifecycle.subprocess.CalledProcessError:
+        pass
+    else:
+        raise AssertionError("failed DKMS absence query was accepted")
     try:
         lifecycle.dispatch_primitive(["arbitrary", "--execute"], root=primitive_root,
                                      administrator_uid=0)

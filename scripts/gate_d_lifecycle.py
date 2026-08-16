@@ -312,7 +312,24 @@ def dispatch_primitive(arguments: list[str], *, runner=command_runner,
                     dkms("uninstall", predecessor, kernel), dkms("remove", predecessor, kernel)]
     outputs = []
     for command in commands:
-        outputs.append({"argv": command, "output": runner(command, 1800)[:65536]})
+        try:
+            output = runner(command, 1800)
+        except subprocess.CalledProcessError as error:
+            if command[:2] not in (["dkms", "uninstall"], ["dkms", "remove"]):
+                raise
+            version = command[command.index("-v") + 1]
+            status_command = ["dkms", "status", "-m", PACKAGE, "-v", version]
+            if command[1] == "uninstall":
+                kernel = command[command.index("-k") + 1]
+                status_command += ["-k", kernel]
+            status = runner(status_command, 1800)
+            outputs.append({"argv": command, "output": (error.stdout or error.output or "")[:65536],
+                            "status": error.returncode})
+            outputs.append({"argv": status_command, "output": status[:65536], "status": 0})
+            if status.strip():
+                raise ValueError("DKMS removal failed and the exact scope remains present")
+            continue
+        outputs.append({"argv": command, "output": output[:65536], "status": 0})
     return {"operation": operation, "commands": outputs, "liveOutput": False}
 
 

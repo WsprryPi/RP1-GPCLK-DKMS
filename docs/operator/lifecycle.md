@@ -187,6 +187,11 @@ upgrade, downgrade, rollback, checkpoint recovery, exact-version uninstall,
 removal of a declared test-version set, complete removal of only digest-bound
 owned paths, repeated removal with exact DKMS absence verification, and
 reinstall after proved removal. Every external command has the row deadline.
+If exact-version DKMS uninstall or removal fails, the permanent primitive
+accepts an already-absent result only when a bounded DKMS status query succeeds
+and returns no state for the exact package/version/kernel scope (or the whole
+version after `remove --all`). Any returned or ambiguous state and any failed
+status query remain fatal; command error text is never used as proof of absence.
 Interruption leaves `inactive-recovery-required`; a changed owned byte refuses
 removal. An ordinary upgrade or downgrade failure automatically removes the
 failed successor and restores the retained predecessor; a rollback failure

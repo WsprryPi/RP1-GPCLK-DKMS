@@ -9,7 +9,7 @@ with tempfile.TemporaryDirectory() as temporary:
     scripts.mkdir(parents=True); release.mkdir(); root.chmod(0o700)
     outer=scripts/"gate_d_outer.py"; validator=scripts/"gate_d_root.py"
     shutil.copy2(ROOT/"scripts/gate_d_outer.py",outer); shutil.copy2(ROOT/"scripts/gate_d_root.py",validator)
-    marker={"SPDX-License-Identifier":"MIT","schemaVersion":1,"kind":"gate-d-qualification-root-identity","rootPath":str(root),"candidateRelease":"0.0.0-phase5.30","sourceCommit":"1"*40}
+    marker={"SPDX-License-Identifier":"MIT","schemaVersion":1,"kind":"gate-d-qualification-root-identity","rootPath":str(root),"candidateRelease":"0.0.0-phase5.31","sourceCommit":"1"*40}
     marker_path=root/".gate-d-root.json"; marker_path.write_text(json.dumps(marker,sort_keys=True)+"\n")
     reference={"path":str(root),"identityFile":marker_path.name,"identitySha256":hashlib.sha256(marker_path.read_bytes()).hexdigest(),"ownerUid":os.getuid(),"mode":"0700"}
     def identity(source:pathlib.Path,installed:str):
