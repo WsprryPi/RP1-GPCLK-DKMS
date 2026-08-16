@@ -2,7 +2,7 @@
 
 # Gate D Phase 5.20 closed-root-schema adversarial assessment
 
-Status: offline adversarial review passed; candidate frozen
+Status: representative build passed; target-plan construction blocked
 
 The shared root schema uses an exact five-field object with
 `additionalProperties: false`. Bootstrap 2, target plan 4, attempt index 2,
@@ -31,3 +31,15 @@ version-conditional acceptance path. Two deterministic builds from source
 commit `a16a2bb5d3cda2c4442ef82e8ddd21cedbabd9ff` were byte-identical; the frozen
 archive SHA-256 is
 `62d975ed8972256ecbd274a140bf1bc8639f476516410c82385c528fddff1db3`.
+
+## Representative-build follow-up finding
+
+The exact archive built successfully on `wspr5`, and the compiled helper
+identities were sealed without executing them. Control-set construction then
+found that installed validators and the outer executor import
+`gate_d_root.py`, but the frozen target-plan tooling vocabulary cannot name or
+hash-bind that dependency. Bootstrap-time retained-tool verification does not
+protect later dispatch from post-bootstrap substitution. Phase 5.20 is
+therefore blocked before target-plan and execution-instance sealing. The
+incomplete qualification root was removed; sealed inputs and representative
+build evidence remain read-only.

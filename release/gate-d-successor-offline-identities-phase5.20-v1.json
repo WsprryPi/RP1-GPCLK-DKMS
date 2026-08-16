@@ -22,5 +22,10 @@
     "attemptIndexSha256": "6872e59dc5957e8e88cb8e50801d5df9249130d8615b4eb07165c95e613b62cd",
     "executionInstanceSha256": "4e0aec1e2c53d07c05e07deef2460a1d5db09579c86e93c7a5a35fe2ca210be9"
   },
-  "claimCeiling": "offline reproducible closed-schema successor only; no representative build or target qualification claim"
+  "targetBuiltHelpers": {
+    "busyInjectorSha256": "c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd",
+    "uapiProbeSha256": "1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742",
+    "representativeBuildManifest": "release/gate-c-representative-build-manifest-phase5.20-v1.json"
+  },
+  "claimCeiling": "offline reproducible and representative-build compatible only; blocked before Gate D plan sealing because the root-validator installed dependency is not in the frozen target-plan tooling set"
 }
