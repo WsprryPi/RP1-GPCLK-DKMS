@@ -56,3 +56,28 @@ remained `active`, `active`, `inactive`, `active`.
 No module was loaded or bound. No overlay was activated. No GPIO, pinctrl,
 clock, DMA, Si5351, transmitter, SDR test, antenna, transmission, reboot, or RF
 operation occurred.
+
+## Corrected authorization and executor dispatch
+
+The corrected control set was authorized at commit `1f5676e`. Its authenticated
+pre-root transition committed successfully on 2026-08-16 with execution-instance
+SHA-256 `c872a12242883241aca2e1137bb7bedc5ea9d722122c8029abba8fc91c29675b`,
+envelope SHA-256 `3027d21bd0bdf41bd976435a959bcbc8bc360967b6970792c75fb0e5902cf1ee`,
+`status=complete`, `checkpoint=commit`, and `liveOutput=false`. The prior failed
+staging tree remains preserved below `gate-d-inputs/historical/`.
+
+The first indexed attempt was then validated and planned successfully, but the
+installed permanent executor stopped before its first operation with:
+
+```text
+UnboundLocalError: cannot access local variable 'sys' where it is not associated with a value
+```
+
+`main()` contained a branch-local `import sys`; Python therefore treated `sys`
+as local throughout the function, while the target execute branch read it
+before that import. The failure occurred before `execute()` was called, before
+`create-evidence`, and before any target mutation. None of the 38 attempts ran.
+The committed Phase 5.31 root and installed tools are retained as immutable
+failure evidence. A successor candidate and newly sealed control set are
+required; the installed executor and Phase 5.31 authorization must not be
+patched in place or reused.

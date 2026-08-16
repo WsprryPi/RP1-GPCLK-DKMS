@@ -7,6 +7,7 @@ import hashlib
 import importlib.util
 import json
 import pathlib
+import subprocess
 import sys
 import tempfile
 import tarfile
@@ -17,6 +18,21 @@ assert spec and spec.loader
 outer = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = outer
 spec.loader.exec_module(outer)
+
+# Exercise the actual CLI execute branch through its explicit fail-closed gate.
+# A function-local import in another branch previously shadowed the module-level
+# ``sys`` binding and crashed here before reaching this authorization check.
+cli = subprocess.run(
+    ["python3", str(ROOT / "scripts/gate_d_outer.py"), "execute",
+     str(ROOT / "release/gate-d-attempts-v1/gd-current-supported-kernel-gpio4.json")],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    text=True,
+    check=False,
+)
+assert cli.returncode != 0
+assert "target execution requires root, --execute, --index, and --instance" in cli.stderr
+assert "UnboundLocalError" not in cli.stderr
 
 
 def refresh_actions(value):

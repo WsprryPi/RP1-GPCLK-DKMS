@@ -1121,7 +1121,6 @@ def main() -> None:
         bootstrap_root_validator(args.instance)
         trust_bootstrapped = True
     if args.action == "bootstrap":
-        import sys
         scripts=pathlib.Path(__file__).resolve().parent
         if str(scripts) not in sys.path: sys.path.insert(0,str(scripts))
         from gate_d_bootstrap import execute as execute_bootstrap, validate as validate_bootstrap

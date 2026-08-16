@@ -26,3 +26,20 @@ authorization must not be reused.
 
 No module load or binding, overlay activation, GPIO, clock, DMA, Si5351,
 transmitter, SDR test, antenna, transmission, reboot, or RF action occurred.
+
+## Corrected-run reassessment
+
+The corrected pre-root transition later committed safely, but the first
+permanent-executor dispatch exposed a separate blocker before `execute()`:
+Python function-local name binding made `sys` unavailable in the execute
+branch. Validation and planning did not cover the real CLI dispatch path, so
+their success was insufficient evidence. The target remained output-disabled
+and unmodified by the attempt.
+
+The smallest repair removes the redundant branch-local import and adds a
+subprocess regression that enters the real execute CLI path and requires its
+explicit fail-closed authorization error, with no `UnboundLocalError`. This
+repair changes an archive-installed executable, so Phase 5.31 remains frozen
+and blocked. A successor must rebuild, re-freeze, repeat representative build
+evidence, regenerate and independently validate every hash-bound Gate D
+control, and receive fresh authorization before target execution.
