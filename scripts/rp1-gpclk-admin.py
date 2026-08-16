@@ -27,7 +27,7 @@ from typing import Callable
 
 PACKAGE = "rp1-gpclk-dkms"
 MODULE = "rp1_gpclk_dkms"
-VERSION = "0.0.0-phase5.19"
+VERSION = "0.0.0-phase5.20"
 ROUTES = {"gpio4": "rp1-gpclk-gpio4.dtbo", "gpio20": "rp1-gpclk-gpio20.dtbo"}
 ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
                       "remove-old-binding-proven-cleanup", "verify-both-pins-safe",
@@ -470,6 +470,10 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                           release_data / "lifecycle-removal-contract-v1.json", 0o644),
                          (source / "schema/gate-d-execution-instance-v1.schema.json",
                           release_data / "gate-d-execution-instance-v1.schema.json", 0o644),
+                         (source / "schema/gate-d-qualification-root-v1.schema.json", release_data / "gate-d-qualification-root-v1.schema.json", 0o644),
+                         (source / "schema/gate-d-qualification-bootstrap-plan-v1.schema.json", release_data / "gate-d-qualification-bootstrap-plan-v1.schema.json", 0o644),
+                         (source / "schema/gate-d-target-plan-v1.schema.json", release_data / "gate-d-target-plan-v1.schema.json", 0o644),
+                         (source / "schema/gate-d-attempt-index-v1.schema.json", release_data / "gate-d-attempt-index-v1.schema.json", 0o644),
                          (source / "scripts/lifecycle_policy.py",
                           libexec / "lifecycle-policy", 0o755),
                          (source / "scripts/gate_d_instance.py",

@@ -52,17 +52,22 @@
     "representativeBuild": "passed on wspr5 stock 6.18.34+rpt-rpi-2712; helpers compiled but not run; gpioAccess false; liveEligible false",
     "purpose": "bind qualification bootstrap into the target plan, execution instance, permanent executor, and recovery lifecycle",
     "blocker": "Installed permanent validators resolve repository-relative identities below /usr rather than an explicitly sealed test-owned qualification root."
-  }],
-  "successor": {
+  }, {
     "release": "0.0.0-phase5.19",
     "sourceCommit": "7753692dd63cfa5fdda3f0a4d89dbd63161da719",
     "archiveSha256": "8754f0490987ec9bf0eeccd8cdeaa60747116ac73f53fcc099f0af5a3c66efce",
     "status": "blocked-before-representative-build",
     "qualification": "offline-reproducible-unqualified",
     "purpose": "bind one explicit qualification root through bootstrap, plans, attempts, instance, and installed executor dispatch",
-    "blocker": "Frozen JSON Schemas declare qualificationRoot as an unconstrained object and do not conditionally require it for the new schema versions; Python validators are closed but the published schema contract is not."
+    "blocker": "Frozen JSON Schemas declare qualificationRoot as an unconstrained object and do not conditionally require it for the new schema versions."
+  }],
+  "successor": {
+    "release": "0.0.0-phase5.20",
+    "status": "unfrozen",
+    "qualification": "offline-review-in-progress",
+    "purpose": "publish closed conditional JSON Schemas for every qualification-root-carrying Gate D document"
   },
-  "successorSelectionGate": "selected-to-correct-phase5.18-installed-validator-root-defect",
+  "successorSelectionGate": "selected-to-correct-phase5.19-open-published-root-schema",
   "reuseProhibited": [
     "representative-build-promotion",
     "route-decision",

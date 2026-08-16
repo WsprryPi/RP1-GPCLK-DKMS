@@ -1,0 +1,24 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wsprrypi.org/schemas/gate-d-target-plan-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["SPDX-License-Identifier", "schemaVersion", "kind", "hostId", "tooling", "invariants", "services", "artifacts", "boot", "attemptEnvelope", "rows"],
+  "properties": {
+    "SPDX-License-Identifier": {"const": "MIT"},
+    "schemaVersion": {"enum": [1, 2, 3, 4]},
+    "kind": {"const": "gate-d-output-disabled-target-operation-plan"},
+    "qualificationRoot": {"$ref": "gate-d-qualification-root-v1.schema.json"},
+    "qualificationBootstrap": {"type": "object"},
+    "hostId": {"type": "string"}, "tooling": {"type": "object"},
+    "invariants": {"type": "object"}, "services": {"type": "array"},
+    "artifacts": {"type": "object"}, "boot": {"type": "object"},
+    "attemptEnvelope": {"type": "object"}, "rows": {"type": "array"}
+  },
+  "allOf": [
+    {"if": {"properties": {"schemaVersion": {"const": 4}}, "required": ["schemaVersion"]}, "then": {"required": ["qualificationRoot", "qualificationBootstrap"]}},
+    {"if": {"properties": {"schemaVersion": {"const": 3}}, "required": ["schemaVersion"]}, "then": {"required": ["qualificationBootstrap"], "not": {"required": ["qualificationRoot"]}}},
+    {"if": {"properties": {"schemaVersion": {"enum": [1, 2]}}, "required": ["schemaVersion"]}, "then": {"not": {"anyOf": [{"required": ["qualificationRoot"]}, {"required": ["qualificationBootstrap"]}]}}}
+  ]
+}

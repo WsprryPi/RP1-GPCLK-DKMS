@@ -9,7 +9,7 @@
   "properties": {
     "SPDX-License-Identifier": {"const": "MIT"},
     "schemaVersion": {"enum": [1, 2, 3]},
-    "qualificationRoot": {"type": "object"},
+    "qualificationRoot": {"$ref": "gate-d-qualification-root-v1.schema.json"},
     "kind": {"const": "gate-d-representative-system-execution-instance"},
     "matrixRelease": {"type": "string", "minLength": 1},
     "executionPolicy": {
@@ -24,6 +24,8 @@
         "targetPlanSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "attemptIndex": {"type": "string", "minLength": 1},
         "attemptIndexSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "qualificationBootstrap": {"type": "string", "minLength": 1},
+        "qualificationBootstrapSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "environmentalCoverageComplete": {"type": "boolean"}
       }
     },
@@ -112,5 +114,10 @@
     },
     "inputsReady": {"type": "boolean"},
     "executionReady": {"type": "boolean"}
-  }
+  },
+  "allOf": [
+    {"if": {"properties": {"schemaVersion": {"const": 1}}, "required": ["schemaVersion"]}, "then": {"properties": {"executionPolicy": {"not": {"anyOf": [{"required": ["qualificationBootstrap"]}, {"required": ["qualificationBootstrapSha256"]}]}}}, "not": {"required": ["qualificationRoot"]}}},
+    {"if": {"properties": {"schemaVersion": {"const": 2}}, "required": ["schemaVersion"]}, "then": {"properties": {"executionPolicy": {"required": ["qualificationBootstrap", "qualificationBootstrapSha256"]}}, "not": {"required": ["qualificationRoot"]}}},
+    {"if": {"properties": {"schemaVersion": {"const": 3}}, "required": ["schemaVersion"]}, "then": {"required": ["qualificationRoot"], "properties": {"executionPolicy": {"required": ["qualificationBootstrap", "qualificationBootstrapSha256"]}}}}
+  ]
 }
