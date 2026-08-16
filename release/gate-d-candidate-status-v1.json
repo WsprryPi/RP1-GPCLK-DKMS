@@ -72,8 +72,10 @@
   }],
   "successor": {
     "release": "0.0.0-phase5.21",
-    "status": "unfrozen",
-    "qualification": "offline-review-in-progress",
+    "sourceCommit": "d0046092dfa9ffa0c58171ddcb52b7819cc50fc6",
+    "archiveSha256": "fc5828d91446843d8ea78a09691c973d74082bea7655b6c0547a06d35fba1624",
+    "status": "frozen-offline",
+    "qualification": "offline-reproducible-unqualified",
     "purpose": "bind and authenticate the installed root-validator dependency before dependent imports"
   },
   "successorSelectionGate": "selected-to-correct-phase5.20-unbound-root-validator-dependency",

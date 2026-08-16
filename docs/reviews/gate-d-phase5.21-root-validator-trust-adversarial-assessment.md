@@ -2,7 +2,7 @@
 
 # Gate D Phase 5.21 root-validator trust adversarial assessment
 
-Status: pre-freeze circular-trust review passed
+Status: offline circular-trust review passed; candidate frozen
 
 The review covers the circular-trust boundary, installed versus staged
 identity selection, root marker and target-plan binding, allowlisted installed
@@ -34,3 +34,14 @@ instance, target-plan, attempt-index, authorization, and candidate checks run
 before mutation. Verified validator bytes are compiled directly into the
 module object, eliminating a verify-then-import reopen window. Normal attempt
 preflight rechecks the installed file identity, detecting later substitution.
+
+## Freeze evidence
+
+The reviewed implementation is source commit
+`d0046092dfa9ffa0c58171ddcb52b7819cc50fc6`. Two clean deterministic builds
+produced byte-identical
+`rp1-gpclk-dkms-0.0.0-phase5.21.tar.gz` archives with SHA-256
+`fc5828d91446843d8ea78a09691c973d74082bea7655b6c0547a06d35fba1624`.
+The complete offline suite passed twice after that implementation commit. This
+freezes an offline candidate only; it supplies no representative-system,
+installation, lifecycle, GPIO, clock, DMA, transmission, SDR, or RF evidence.
