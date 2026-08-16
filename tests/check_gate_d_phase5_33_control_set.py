@@ -21,6 +21,11 @@ route=load("release/gate-d-route-compatibility-decision-phase5.33-v1.json")
 plan=load("release/gate-d-target-operation-plan-phase5.33-v1.json")
 instance=load("release/gate-d-execution-instance-phase5.33-v1.json")
 index=load("release/gate-d-attempts-phase5.33-v1/index.json")
+assert envelope["administratorState"] == {
+  "path":"/var/lib/rp1-gpclk-dkms/transaction.json",
+  "absenceBeforeInvocation":True,
+  "recoveryPolicy":"invoke-only-for-real-owned-state",
+}
 assert gate_d_preroot.validate(envelope)=={"valid":True,"readOnly":True,"outputDisabled":True}
 assert gate_d_root.validate(instance["qualificationRoot"],verify=False)==pathlib.Path("/home/pi/gate-d-qualification/phase5.33-4208941af537")
 assert bootstrap["qualificationRoot"]==plan["qualificationRoot"]==index["qualificationRoot"]==instance["qualificationRoot"]

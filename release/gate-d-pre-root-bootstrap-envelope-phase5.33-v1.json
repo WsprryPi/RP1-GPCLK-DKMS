@@ -6,7 +6,7 @@
   },
   "administratorState": {
     "absenceBeforeInvocation": true,
-    "path": "/var/lib/rp1-gpclk-dkms/transactions/0.0.0-phase5.33.json",
+    "path": "/var/lib/rp1-gpclk-dkms/transaction.json",
     "recoveryPolicy": "invoke-only-for-real-owned-state"
   },
   "argv": [
