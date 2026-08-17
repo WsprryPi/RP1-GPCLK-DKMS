@@ -110,6 +110,7 @@ python3 "$repo_dir/tests/check_gate_d_phase5_50_control_set.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_50_preauthorization.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_50_authorization_decision.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_50_authorization.py"
+python3 "$repo_dir/tests/check_gate_d_phase5_50_metadata_free_preroot.py"
 if [ -n "${PHASE5_50_RELEASE_ARCHIVE:-}" ]; then
     python3 "$repo_dir/tests/check_gate_d_phase5_50_archived_control_set.py" "$PHASE5_50_RELEASE_ARCHIVE"
 else
