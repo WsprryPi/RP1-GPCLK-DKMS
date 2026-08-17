@@ -212,6 +212,8 @@ with tempfile.TemporaryDirectory() as temporary:
     (root / "proc/sys/kernel/random/boot_id").write_text(
         "01234567-89ab-cdef-0123-456789abcdef\n")
     (root / "proc/cmdline").write_text("root=/dev/test quiet\n")
+    (root / "sys/firmware/devicetree/base").mkdir(parents=True)
+    (root / "proc/device-tree").symlink_to("/sys/firmware/devicetree/base")
     (root / "boot").mkdir()
     (root / "boot" / f"config-{preflight_doc['kernelRelease']}").write_text(
         "# CONFIG_MODULE_SIG is not set\n")
@@ -260,6 +262,66 @@ with tempfile.TemporaryDirectory() as temporary:
             raise AssertionError("symlinked installed permanent tool passed preflight")
     finally:
         outer.subprocess.run = original_run
+
+# Match the Raspberry Pi kernel alias exactly while rejecting every less
+# specific symlink allowance and every symlink below the canonical DT root.
+with tempfile.TemporaryDirectory() as temporary:
+    root = pathlib.Path(temporary)
+    canonical = root / "sys/firmware/devicetree/base"
+    canonical.mkdir(parents=True)
+    (root / "proc").mkdir()
+    alias = root / "proc/device-tree"
+    alias.symlink_to("/sys/firmware/devicetree/base")
+    resource = outer.device_tree_resource(root, "rp1-gpclk")
+    assert resource == canonical / "rp1-gpclk" and not resource.exists()
+    resource.mkdir()
+    (resource / "compatible").write_bytes(b"wsprrypi,rp1-gpclk\0")
+    assert outer.device_tree_resource(root, "rp1-gpclk") == resource
+    (resource / "malicious").symlink_to("/etc/passwd")
+    try:
+        outer.device_tree_resource(root, "rp1-gpclk")
+    except ValueError as error:
+        assert "symlink below canonical device-tree resource" in str(error)
+    else:
+        raise AssertionError("device-tree descendant symlink passed")
+    (resource / "malicious").unlink()
+    resource.rename(canonical / "direct")
+    (canonical / "rp1-gpclk").symlink_to("direct")
+    try:
+        outer.device_tree_resource(root, "rp1-gpclk")
+    except ValueError as error:
+        assert "symlink in controlled path" in str(error)
+    else:
+        raise AssertionError("symlinked device-tree resource passed")
+    (canonical / "rp1-gpclk").unlink()
+    alias.unlink()
+    alias.symlink_to("/sys/firmware/devicetree/wrong")
+    try:
+        outer.device_tree_resource(root, "rp1-gpclk")
+    except ValueError as error:
+        assert "canonical /proc/device-tree alias differs" in str(error)
+    else:
+        raise AssertionError("changed /proc/device-tree alias passed")
+    try:
+        outer.device_tree_resource(root, "../rp1-gpclk")
+    except ValueError as error:
+        assert "unsafe device-tree resource name" in str(error)
+    else:
+        raise AssertionError("unsafe device-tree resource name passed")
+
+with tempfile.TemporaryDirectory() as temporary:
+    root = pathlib.Path(temporary)
+    (root / "proc").mkdir()
+    (root / "proc/device-tree").symlink_to("/sys/firmware/devicetree/base")
+    (root / "sys").mkdir()
+    (root / "outside").mkdir()
+    (root / "sys/firmware").symlink_to(root / "outside")
+    try:
+        outer.device_tree_resource(root, "rp1-gpclk")
+    except ValueError as error:
+        assert "symlink in controlled path" in str(error)
+    else:
+        raise AssertionError("symlinked canonical device-tree component passed")
 
 with tempfile.TemporaryDirectory() as temporary:
     root = pathlib.Path(temporary)

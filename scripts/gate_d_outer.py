@@ -240,6 +240,29 @@ def rooted(root: pathlib.Path, absolute: str) -> pathlib.Path:
     return current
 
 
+def device_tree_resource(root: pathlib.Path, name: str) -> pathlib.Path:
+    """Resolve one fixed resource below the canonical kernel DT filesystem."""
+    if not re.fullmatch(r"[a-z0-9][a-z0-9,._+-]*", name):
+        raise ValueError("unsafe device-tree resource name")
+    alias = root / "proc/device-tree"
+    if not alias.is_symlink() or os.readlink(alias) != "/sys/firmware/devicetree/base":
+        raise ValueError("canonical /proc/device-tree alias differs")
+    canonical = rooted(root, "/sys/firmware/devicetree/base")
+    expected_uid = 0 if root == pathlib.Path("/") else os.getuid()
+    if (canonical.is_symlink() or not canonical.is_dir() or
+            canonical.stat().st_uid != expected_uid or
+            stat.S_IMODE(canonical.stat().st_mode) & 0o022):
+        raise ValueError("canonical device-tree root identity differs")
+    resource = rooted(root, f"/sys/firmware/devicetree/base/{name}")
+    if resource.exists():
+        if not resource.is_dir():
+            raise ValueError("device-tree resource is not a direct directory")
+        for descendant in resource.rglob("*"):
+            if descendant.is_symlink():
+                raise ValueError("symlink below canonical device-tree resource")
+    return resource
+
+
 def module_signing_policy(root: pathlib.Path, kernel_release: str) -> dict:
     config = rooted(root, f"/boot/config-{kernel_release}")
     if config.is_symlink() or not config.is_file():
@@ -881,8 +904,8 @@ def default_internal(operation: str, document: dict, root: pathlib.Path) -> None
         overlays = command(["/usr/bin/dtoverlay", "-l"], accepted=(0, 1))
         if "rp1-gpclk-gpio4" in overlays or "rp1-gpclk-gpio20" in overlays:
             raise ValueError("a Gate D route overlay is already active")
-        resource = rooted(root, "/proc/device-tree/rp1-gpclk")
-        if resource.exists() or resource.is_symlink():
+        resource = device_tree_resource(root, "rp1-gpclk")
+        if resource.exists():
             raise ValueError("foreign or stale RP1 GPCLK resource exists")
         tool_hashes = {}
         for name, item in inputs["tooling"].items():

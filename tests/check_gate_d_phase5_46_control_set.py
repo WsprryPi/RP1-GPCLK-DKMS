@@ -143,7 +143,8 @@ for phase in ("phase5.42", "phase5.43", "phase5.45"):
         historical_paths.update(runtime_paths(json.loads((directory / record["file"]).read_text())))
 assert not all_paths.intersection(historical_paths)
 for item in envelope["transitionFiles"]:
-    assert sha(ROOT / item["destination"]) == item["sha256"]
+    assert hashlib.sha256(frozen_payload(
+        item["destination"], item["sha256"])).hexdigest() == item["sha256"]
 
 subprocess.run([sys.executable, str(ROOT / "scripts/gate_d_live_snapshot_validate.py"),
                 str(snapshot_path), "--envelope",
