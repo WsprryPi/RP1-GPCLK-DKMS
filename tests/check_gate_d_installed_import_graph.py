@@ -26,7 +26,7 @@ with tempfile.TemporaryDirectory() as temporary:
     graph={name:identity(name) for name in MODULES}; executor_identity=identity("gate_d_outer"); executor_identity["installedPath"]="/usr/libexec/rp1-gpclk-dkms/gate-d-executor"
     plan={"schemaVersion":5,"qualificationRoot":reference,"pythonModules":graph,"tooling":{"rootValidator":graph["gate_d_root"],"permanentExecutor":executor_identity}}
     plan_path=release/"plan.json"; plan_path.write_text(json.dumps(plan,sort_keys=True)+"\n")
-    instance={"schemaVersion":4,"kind":"gate-d-representative-system-execution-instance","qualificationRoot":reference,"executionPolicy":{"targetPlan":"release/plan.json","targetPlanSha256":sha(plan_path)}}
+    instance={"schemaVersion":5,"kind":"gate-d-representative-system-execution-instance","qualificationRoot":reference,"executionPolicy":{"targetPlan":"release/plan.json","targetPlanSha256":sha(plan_path)}}
     instance_path=release/"instance.json"; instance_path.write_text(json.dumps(instance,sort_keys=True)+"\n")
     loader=importlib.machinery.SourceFileLoader("installed_gate_d_executor",str(installed_executor))
     spec=importlib.util.spec_from_loader(loader.name,loader); assert spec and spec.loader
@@ -34,6 +34,17 @@ with tempfile.TemporaryDirectory() as temporary:
     override=pathlib.Path("/usr/libexec/rp1-gpclk-dkms/gate-d-executor")
     loaded,loaded_root=executor.bootstrap_root_validator(instance_path,installed_root=fake_root,current_executor_override=override)
     assert loaded==instance and loaded_root==qualification and set(MODULES).issubset(sys.modules)
+    legacy_instance=copy.deepcopy(instance); legacy_instance["schemaVersion"]=4
+    legacy_instance_path=release/"legacy-instance.json"; legacy_instance_path.write_text(json.dumps(legacy_instance,sort_keys=True)+"\n")
+    loaded,loaded_root=executor.bootstrap_root_validator(legacy_instance_path,installed_root=fake_root,current_executor_override=override)
+    assert loaded==legacy_instance and loaded_root==qualification
+    mismatched_plan=copy.deepcopy(plan); mismatched_plan["schemaVersion"]=4
+    mismatched_plan_path=release/"mismatched-plan.json"; mismatched_plan_path.write_text(json.dumps(mismatched_plan,sort_keys=True)+"\n")
+    mismatched_instance=copy.deepcopy(instance); mismatched_instance["executionPolicy"]={"targetPlan":"release/mismatched-plan.json","targetPlanSha256":sha(mismatched_plan_path)}
+    mismatched_instance_path=release/"mismatched-instance.json"; mismatched_instance_path.write_text(json.dumps(mismatched_instance,sort_keys=True)+"\n")
+    try: executor.bootstrap_root_validator(mismatched_instance_path,installed_root=fake_root,current_executor_override=override)
+    except ValueError as error: assert "target-plan root trust binding differs" in str(error)
+    else: raise AssertionError("schema-5 instance accepted schema-4 target plan")
     attempt=json.loads((ROOT/"release/gate-d-attempts-phase5.16-v1/gd-current-supported-kernel-gpio4.json").read_text())
     sys.modules["gate_d_attempts"].validate_document(attempt); assert sys.modules["gate_d_outer"].ClosedDispatcher(attempt).plan()
     for name in MODULES:

@@ -120,7 +120,7 @@ def bootstrap_root_validator(instance_path: pathlib.Path, *, installed_root: pat
     plan_bytes=plan_path.read_bytes()
     if hashlib.sha256(plan_bytes).hexdigest()!=policy["targetPlanSha256"]: raise ValueError("target-plan trust identity differs")
     plan=json.loads(plan_bytes); tooling=plan.get("tooling")
-    expected_plan_schema=5 if instance_schema==4 else 4
+    expected_plan_schema={3:4,4:5,5:5}[instance_schema]
     if plan.get("schemaVersion")!=expected_plan_schema or plan.get("qualificationRoot")!=reference or not isinstance(tooling,dict):
         raise ValueError("target-plan root trust binding differs")
     item=tooling.get("rootValidator"); executor=tooling.get("permanentExecutor")

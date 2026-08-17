@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+import tempfile
 import subprocess
 import sys
 
@@ -25,6 +26,17 @@ def load(relative: str) -> dict:
 
 def sha(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def frozen_payload(relative: str, expected: str) -> bytes:
+    path = ROOT / relative
+    if path.is_file() and sha(path) == expected:
+        return path.read_bytes()
+    payload = subprocess.check_output([
+        "git", "show", f"4b50db7868b7fe5ca9d830f51cd404c250192188:{relative}"
+    ], cwd=ROOT)
+    assert hashlib.sha256(payload).hexdigest() == expected
+    return payload
 
 
 def runtime_paths(value: object) -> set[str]:
@@ -66,16 +78,39 @@ assert instance["inputsReady"] is True and instance["executionReady"] is True
 assert sum(row["status"] == "ready" for row in instance["rows"]) == 10
 assert sum(row["status"] == "deferred-environmental" for row in instance["rows"]) == 5
 
-old_root = gate_d_root.validate
-gate_d_root.validate = lambda reference, verify=True: ROOT
-try:
-    assert gate_d_target_plan.validate(plan, verify_tools=False)["attemptCount"] == 38
-    assert gate_d_bootstrap.validate(bootstrap)["outputDisabled"] is True
-    assert gate_d_preroot.validate(envelope)["outputDisabled"] is True
-    result = gate_d_instance.validate(instance)
-    assert result["inputsReady"] is True and result["executionReady"] is True
-finally:
-    gate_d_root.validate = old_root
+with tempfile.TemporaryDirectory() as temporary:
+    frozen_root = pathlib.Path(temporary) / "qualification"
+    frozen_root.mkdir(mode=0o700)
+    marker = frozen_root / instance["qualificationRoot"]["identityFile"]
+    marker.write_text(json.dumps(envelope["proposedRoot"]["marker"], sort_keys=True,
+                                 separators=(",", ":")) + "\n")
+    marker.chmod(0o400)
+    assert sha(marker) == instance["qualificationRoot"]["identitySha256"]
+    for item in envelope["transitionFiles"]:
+        target = frozen_root / item["destination"]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(frozen_payload(item["destination"], item["sha256"]))
+    matrix_relative = instance["executionPolicy"]["matrixPolicy"]
+    matrix_target = frozen_root / matrix_relative
+    matrix_target.parent.mkdir(parents=True, exist_ok=True)
+    matrix_target.write_bytes(frozen_payload(
+        matrix_relative, instance["executionPolicy"]["matrixPolicySha256"]))
+    for module_identity in plan["pythonModules"].values():
+        source_relative = module_identity["sourcePath"]
+        source_target = frozen_root / source_relative
+        source_target.parent.mkdir(parents=True, exist_ok=True)
+        source_target.write_bytes(frozen_payload(
+            source_relative, module_identity["sourceSha256"]))
+    old_root = gate_d_root.validate
+    gate_d_root.validate = lambda reference, verify=True: frozen_root
+    try:
+        assert gate_d_target_plan.validate(plan, verify_tools=False)["attemptCount"] == 38
+        assert gate_d_bootstrap.validate(bootstrap)["outputDisabled"] is True
+        assert gate_d_preroot.validate(envelope)["outputDisabled"] is True
+        result = gate_d_instance.validate(instance)
+        assert result["inputsReady"] is True and result["executionReady"] is True
+    finally:
+        gate_d_root.validate = old_root
 
 attempt_dir = ROOT / "release/gate-d-attempts-phase5.45-v1"
 index = load("release/gate-d-attempts-phase5.45-v1/index.json")
