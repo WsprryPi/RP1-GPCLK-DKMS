@@ -60,6 +60,7 @@ fi
 python3 "$repo_dir/tests/check_gate_d_phase5_45_control_set.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_45_preauthorization.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_45_authorization_decision.py"
+python3 "$repo_dir/tests/check_gate_d_phase5_45_authorization.py"
 if [ -n "${PHASE5_45_RELEASE_ARCHIVE:-}" ]; then
     python3 "$repo_dir/tests/check_gate_d_phase5_45_archived_preroot.py" "$PHASE5_45_RELEASE_ARCHIVE"
 else

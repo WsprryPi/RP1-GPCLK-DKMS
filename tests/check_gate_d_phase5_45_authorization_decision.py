@@ -3,6 +3,7 @@
 """Ensure the Phase 5.45 decision prompt is exact and non-authorizing."""
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,7 +21,9 @@ expected = {
 assert all(identity in prompt for identity in expected)
 attestation = ROOT / "docs/evidence/gate-d-phase5.45-preauthorization-recapture-attestation.json"
 assert hashlib.sha256(attestation.read_bytes()).hexdigest() in prompt
-instance = json.loads((ROOT / "release/gate-d-execution-instance-phase5.45-v1.json").read_text())
+instance = json.loads(subprocess.check_output([
+    "git", "show", "d25abbf877fb889435b16e0b7d033291d0388af5:release/gate-d-execution-instance-phase5.45-v1.json"
+], cwd=ROOT))
 assert instance["authorization"]["targetExecutionApproved"] is False
 assert instance["executionReady"] is False
 assert "This prompt does not itself record authorization" in prompt
