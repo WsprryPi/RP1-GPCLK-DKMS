@@ -101,15 +101,11 @@ with tempfile.TemporaryDirectory() as temporary:
     archived_root_validator.validate = lambda reference, verify=True: frozen_root
     archived_instance = importlib.import_module("gate_d_instance")
     result = archived_instance.validate(instance)
-    if result["inputsReady"] is not True or result["executionReady"] is not False:
-        raise SystemExit("archived validator changed preauthorization readiness")
-    try:
-        archived_instance.validate(instance, require_ready=True)
-    except ValueError as error:
-        if str(error) != "fresh target-execution authorization is required":
-            raise
-    else:
-        raise SystemExit("archived validator accepted unapproved execution")
+    if result["inputsReady"] is not True or result["executionReady"] is not True:
+        raise SystemExit("archived validator changed authorized readiness")
+    ready = archived_instance.validate(instance, require_ready=True)
+    if ready["executionReady"] is not True:
+        raise SystemExit("archived validator rejected exact authorization")
     archived_attempts = importlib.import_module("gate_d_attempts")
     expected = archived_attempts.generate(instance, plan, schema_version=2)
     if len(expected) != 38 or any(item.get("schemaVersion") != 2 for item in expected):
