@@ -40,6 +40,8 @@ assert [(item["name"], item["sha256"]) for item in inventory["artifacts"]] == \
        [(item["name"], item["sha256"]) for item in result["releaseInputs"]]
 assert value["target"]["transactionJournalSha256"] == \
     "bdc113ca499f920097affe3e31a96bc98b4cd10fdd23b85e8e59880bb6f40378"
+assert value["target"]["terminalRecoveryJournalSha256"] == \
+    "b76bb27c57af55136042559be4bbc385d6e3498755d3bd39737800703963c514"
 assert value["preflight"] == {
     "moduleLoaded": False, "endpointPresent": False, "overlayActivated": False,
     "dkmsRegistered": False, "relevantServicesActive": False,

@@ -106,6 +106,12 @@ fi
 python3 "$repo_dir/tests/check_gate_d_live_snapshot.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_49_snapshot.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_50_snapshot.py"
+python3 "$repo_dir/tests/check_gate_d_phase5_50_control_set.py"
+if [ -n "${PHASE5_50_RELEASE_ARCHIVE:-}" ]; then
+    python3 "$repo_dir/tests/check_gate_d_phase5_50_archived_control_set.py" "$PHASE5_50_RELEASE_ARCHIVE"
+else
+    echo "Phase 5.50 exact archived control-set validation: SKIP (archive not supplied)"
+fi
 python3 "$repo_dir/tests/check_gate_d_outer.py"
 python3 "$repo_dir/tests/check_gate_d_schema2_terminal_cleanup.py"
 python3 "$repo_dir/tests/check_gate_d_target_path_topology_audit.py"
