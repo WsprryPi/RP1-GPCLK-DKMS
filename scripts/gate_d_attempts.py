@@ -31,9 +31,13 @@ ENVELOPE_BEFORE = (
     "create-evidence", "capture-preflight", "verify-input-hashes",
     "snapshot-services", "quiesce-services", "stage-source",
 )
-ENVELOPE_AFTER = (
+ENVELOPE_AFTER_V1 = (
     "restore-services", "audit-residue", "capture-kernel-log-delta",
     "verify-final-safety", "seal-evidence",
+)
+ENVELOPE_AFTER_V2 = (
+    "restore-services", "remove-attempt-residue", "audit-residue",
+    "capture-kernel-log-delta", "verify-final-safety", "seal-evidence",
 )
 ROW_ACTIONS = {
     "current-supported-kernel": ("install-successor", "apply-route", "load-disabled", "query-release", "unbind-rebind", "unload", "remove-route", "remove-test-state"),
@@ -47,7 +51,7 @@ ROW_ACTIONS = {
     "removal-open-or-active": ("install-successor", "apply-route", "load-disabled", "start-busy-injector", "expect-removal-refusal", "stop-busy-injector", "unload", "remove-route", "remove-test-state"),
     "reinstall-after-removal": ("prove-empty-package-state", "install-successor", "apply-route", "load-disabled", "query-release", "unload", "remove-route", "remove-test-state", "verify-empty-package-state"),
 }
-OPERATIONS = set(ENVELOPE_BEFORE + ENVELOPE_AFTER)
+OPERATIONS = set(ENVELOPE_BEFORE + ENVELOPE_AFTER_V1 + ENVELOPE_AFTER_V2)
 for actions in ROW_ACTIONS.values():
     OPERATIONS.update(actions)
 
@@ -161,7 +165,21 @@ def bind_services_to_snapshot(plan: dict, snapshot: dict) -> dict:
     return result
 
 
-def generate(instance: dict, plan: dict) -> list[dict]:
+def row_actions(row_id: str, schema_version: int) -> tuple[str, ...]:
+    actions = ROW_ACTIONS[row_id]
+    if schema_version == 2:
+        actions = tuple(action for action in actions if action != "remove-attempt-residue")
+    return actions
+
+
+def attempt_recipe(row_id: str, schema_version: int) -> tuple[str, ...]:
+    if schema_version not in {1, 2}:
+        raise ValueError("unsupported attempt schema")
+    after = ENVELOPE_AFTER_V1 if schema_version == 1 else ENVELOPE_AFTER_V2
+    return ENVELOPE_BEFORE + row_actions(row_id, schema_version) + after
+
+
+def generate(instance: dict, plan: dict, *, schema_version: int = 1) -> list[dict]:
     candidate = instance["candidate"]
     policy = instance["executionPolicy"]
     rows = {row["id"]: row for row in instance["rows"]}
@@ -191,10 +209,10 @@ def generate(instance: dict, plan: dict) -> list[dict]:
                     raise ValueError("row evidence directory differs from attempt namespace")
                 staging_base = f"gate-d/runs/{path_namespace}/staging"
             evidence = f"/var/lib/rp1-gpclk-dkms/{evidence_base}/{operation_id}"
-            actions = ENVELOPE_BEFORE + ROW_ACTIONS[row_id] + ENVELOPE_AFTER
+            actions = attempt_recipe(row_id, schema_version)
             steps = [step(action, operation_id, number) for number, action in enumerate(actions, 1)]
             document = {
-                "SPDX-License-Identifier": "MIT", "schemaVersion": 1,
+                "SPDX-License-Identifier": "MIT", "schemaVersion": schema_version,
                 "kind": "gate-d-executable-attempt", "operationId": operation_id,
                 "matrixRow": row_id, "attempt": attempt, "hostId": "wspr5-stock",
                 "kernelRelease": row["kernel"], "route": route_for(row_id, attempt),
@@ -246,7 +264,7 @@ def validate_document(value: dict) -> dict:
                 "matrixRow", "attempt", "hostId", "kernelRelease", "route",
                 "deadlineSeconds", "evidenceDirectory", "journal", "inputs",
                 "services", "safety", "expectedFinalState", "steps"}
-    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or value.get("schemaVersion") != 1 or value.get("kind") != "gate-d-executable-attempt":
+    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or value.get("schemaVersion") not in {1, 2} or value.get("kind") != "gate-d-executable-attempt":
         raise ValueError("attempt document fields are incomplete or unknown")
     if not SAFE_ID.fullmatch(value["operationId"]):
         raise ValueError("unsafe operation ID")
@@ -330,7 +348,7 @@ def validate_document(value: dict) -> dict:
         flat = " ".join(action["argv"]).lower()
         if any(token in flat for token in PROHIBITED) or any("${" in token or "*" in token for token in action["argv"]):
             raise ValueError("prohibited or unresolved command token")
-    expected_actions = ENVELOPE_BEFORE + ROW_ACTIONS[value["matrixRow"]] + ENVELOPE_AFTER
+    expected_actions = attempt_recipe(value["matrixRow"], value["schemaVersion"])
     if tuple(item["operation"] for item in value["steps"]) != expected_actions:
         raise ValueError("attempt steps differ from exact row recipe")
     return {"valid": True, "operationId": value["operationId"], "readOnly": True}

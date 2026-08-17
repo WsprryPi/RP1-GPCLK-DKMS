@@ -696,6 +696,9 @@ class FilesystemFake:
                 raise ValueError("fake runtime residue")
             if operation == "verify-final-safety" and self.services != self.original_services:
                 raise ValueError("services were not restored")
+            if (operation == "audit-residue" and document.get("schemaVersion") == 2 and
+                    rooted(root, document["inputs"]["stagingDirectory"]).exists()):
+                raise ValueError("attempt staging residue remains")
         elif operation == "remove-attempt-residue":
             default_internal(operation, document, root)
             return
@@ -1135,6 +1138,15 @@ def default_internal(operation: str, document: dict, root: pathlib.Path) -> None
                 raise ValueError("symlink in attempt staging")
         shutil.rmtree(staging)
         return
+    if operation == "audit-residue" and document.get("schemaVersion") == 2:
+        try:
+            os.lstat(staging)
+        except FileNotFoundError:
+            pass
+        except PermissionError as error:
+            raise ValueError("attempt staging absence is not observable") from error
+        else:
+            raise ValueError("attempt staging residue remains")
     if operation == "seal-evidence":
         return
     marker = evidence / f"{operation}.json"

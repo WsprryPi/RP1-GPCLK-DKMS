@@ -3,6 +3,7 @@
 """Validate the sealed Phase 5.47 representative-build record."""
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -10,6 +11,11 @@ MANIFEST = ROOT / "release/gate-c-representative-build-manifest-phase5.47-v1.jso
 INVENTORY = ROOT / "docs/evidence/gate-c-phase5.47-release-input-inventory.json"
 manifest = json.loads(MANIFEST.read_text())
 inventory = json.loads(INVENTORY.read_text())
+SOURCE_COMMIT = "c5320ac5419a04d17345370204524f219b7ff403"
+
+
+def frozen(path: str) -> bytes:
+    return subprocess.check_output(["git", "show", f"{SOURCE_COMMIT}:{path}"], cwd=ROOT)
 
 assert manifest["candidate"] == {
     "release": "0.0.0-phase5.47",
@@ -29,13 +35,13 @@ assert result["moduleVersion"] == "0.0.0-phase5.47"
 assert result["moduleSha256"] == \
     "5c585105cfd5e11a83797bf34f52e9d0ed5a19c5f3ecf7bb74d771f01419ead3"
 assert result["bootstrapSha256"] == hashlib.sha256(
-    (ROOT / "scripts/gate_d_bootstrap.py").read_bytes()).hexdigest()
+    frozen("scripts/gate_d_bootstrap.py")).hexdigest()
 assert result["outerExecutorSha256"] == hashlib.sha256(
-    (ROOT / "scripts/gate_d_outer.py").read_bytes()).hexdigest()
+    frozen("scripts/gate_d_outer.py")).hexdigest()
 assert result["busyInjectorSourceSha256"] == hashlib.sha256(
-    (ROOT / "tools/gate_d_busy_injector.c").read_bytes()).hexdigest()
+    frozen("tools/gate_d_busy_injector.c")).hexdigest()
 assert result["uapiProbeSourceSha256"] == hashlib.sha256(
-    (ROOT / "tools/gate_d_uapi_probe.c").read_bytes()).hexdigest()
+    frozen("tools/gate_d_uapi_probe.c")).hexdigest()
 assert result["releaseInputInventory"]["sha256"] == hashlib.sha256(
     INVENTORY.read_bytes()).hexdigest()
 assert {item["name"]: item["sha256"] for item in result["releaseInputs"]} == \
