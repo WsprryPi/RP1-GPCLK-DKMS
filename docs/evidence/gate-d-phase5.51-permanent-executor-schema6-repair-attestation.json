@@ -1,0 +1,46 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-permanent-executor-schema6-repair-attestation",
+  "predecessorBlockerCommit": "a2c809a8822c218e8917ae8a5bebe5003e2ef5da",
+  "repairCommit": "e88e2912aec40bd1ceb1d10f3e5cb3512f977bfd",
+  "repair": {
+    "permanentExecutorPath": "scripts/gate_d_outer.py",
+    "permanentExecutorSha256": "33b5cb5ec1e50e7f2206873fe537a7d34e3237d6157d54f4cafebece5d84cd01",
+    "acceptedInstanceSchemas": [3, 4, 5, 6],
+    "schema6TargetPlanSchema": 5
+  },
+  "regression": {
+    "path": "tests/check_gate_d_installed_import_graph.py",
+    "sha256": "8ef5f4f1b8132ec9dcb0fa58ff479777a136d268988addf7695ee293c6503842",
+    "installedExecutorSelectionPath": "passed",
+    "schema6Bootstrap": "passed",
+    "exactIndexedAttemptSchemaVersion": 2,
+    "exactIndexedAttemptValidation": "passed",
+    "schema5Compatibility": "passed",
+    "schema4Compatibility": "passed",
+    "negativeTrustCases": "passed"
+  },
+  "validation": {
+    "focusedWorkspaceChecks": "passed",
+    "completeOfflineSuite": "passed",
+    "committedArchiveSha256": "e48b0cb3ce9e552688b84656445bf6760752f15fc5febdf3caeff39e310c8ada",
+    "committedArchiveExactEntrypointRegression": "passed",
+    "committedArchiveInstalledCliRehearsal": "passed",
+    "committedArchiveSchema6Validation": "passed"
+  },
+  "scope": {
+    "sourceFrozen": false,
+    "representativeBuildExecuted": false,
+    "controlSetGenerated": false,
+    "targetConnected": false,
+    "targetMutated": false,
+    "lifecycleAttemptExecuted": false,
+    "outputDisabled": true
+  },
+  "result": {
+    "blockerReproducedBeforeRepair": true,
+    "blockerResolvedInCommittedBytes": true,
+    "eligibleForSeparateFreezeDecision": true
+  }
+}
