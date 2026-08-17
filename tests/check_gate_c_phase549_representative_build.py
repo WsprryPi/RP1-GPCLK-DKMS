@@ -26,6 +26,8 @@ assert manifest["candidate"] == {
     "cleanSourceArchiveSha256": "1cc502f9630a8f1fedd133d9c8e610a5d61375fea27a81265d4810f961be5e5b",
 }
 result = manifest["result"]
+assert manifest["target"]["terminalRecoveryJournalSha256"] == \
+    "b76bb27c57af55136042559be4bbc385d6e3498755d3bd39737800703963c514"
 assert result["status"] == "passed" and result["exitStatus"] == 0
 assert result["diagnosticsCount"] == result["correctedOrchestrationDiagnostics"] == 3
 assert result["compatibilityState"] == "Compatible-unqualified"

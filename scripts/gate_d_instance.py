@@ -48,11 +48,11 @@ def validate(value: dict, *, require_ready: bool = False,
                 "executionPolicy", "candidate", "authorization", "systems", "recovery",
                 "rows", "inputsReady", "executionReady"}
     schema=value.get("schemaVersion")
-    if schema in {3,4,5}: required.add("qualificationRoot")
-    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or schema not in {1,2,3,4,5} or value.get("kind") != "gate-d-representative-system-execution-instance":
+    if schema in {3,4,5,6}: required.add("qualificationRoot")
+    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or schema not in {1,2,3,4,5,6} or value.get("kind") != "gate-d-representative-system-execution-instance":
         raise ValueError("invalid execution-instance identity")
     root=ROOT
-    if schema in {3,4,5}:
+    if schema in {3,4,5,6}:
         scripts=pathlib.Path(__file__).resolve().parent
         if str(scripts) not in __import__("sys").path: __import__("sys").path.insert(0,str(scripts))
         from gate_d_root import validate as validate_root
@@ -62,11 +62,12 @@ def validate(value: dict, *, require_ready: bool = False,
                      "routeDecisionSha256", "targetPlan", "targetPlanSha256",
                      "attemptIndex", "attemptIndexSha256",
                      "environmentalCoverageComplete"}
-    if schema in {2,3,4,5}: policy_fields.update({"qualificationBootstrap","qualificationBootstrapSha256"})
-    if schema == 5: policy_fields.add("attemptPathNamespace")
+    if schema in {2,3,4,5,6}: policy_fields.update({"qualificationBootstrap","qualificationBootstrapSha256"})
+    if schema in {5,6}: policy_fields.add("attemptPathNamespace")
+    if schema == 6: policy_fields.add("attemptSchemaVersion")
     if not isinstance(policy_ref, dict) or set(policy_ref) != policy_fields:
         raise ValueError("execution-policy references are incomplete")
-    if schema == 5:
+    if schema in {5,6}:
         candidate_identity = value.get("candidate", {})
         expected_namespace = (
             f"{str(candidate_identity.get('release', '')).removeprefix('0.0.0-')}-"
@@ -74,6 +75,8 @@ def validate(value: dict, *, require_ready: bool = False,
         if (policy_ref.get("attemptPathNamespace") != expected_namespace or
                 not re.fullmatch(r"[a-z0-9][a-z0-9._-]+", expected_namespace)):
             raise ValueError("attempt path namespace differs from candidate identity")
+    if schema == 6 and policy_ref.get("attemptSchemaVersion") != 2:
+        raise ValueError("attempt schema version differs")
     for path_field, hash_field in (("matrixPolicy", "matrixPolicySha256"),
                                    ("routeDecision", "routeDecisionSha256"),
                                    ("targetPlan", "targetPlanSha256"),
@@ -85,7 +88,7 @@ def validate(value: dict, *, require_ready: bool = False,
         path = root / relative
         if not path.is_file() or path.is_symlink() or sha256(path) != policy_ref[hash_field]:
             raise ValueError("execution-policy identity mismatch")
-    if schema in {2,3,4,5}:
+    if schema in {2,3,4,5,6}:
         relative=policy_ref["qualificationBootstrap"]
         path=root/relative
         if pathlib.PurePosixPath(relative).is_absolute() or ".." in pathlib.PurePosixPath(relative).parts or path.is_symlink() or not path.is_file() or sha256(path)!=policy_ref["qualificationBootstrapSha256"]:
@@ -102,9 +105,9 @@ def validate(value: dict, *, require_ready: bool = False,
         __import__("sys").path.insert(0, str(scripts))
     from gate_d_target_plan import validate as validate_target_plan
     target_plan = json.loads((root / policy_ref["targetPlan"]).read_text(encoding="utf-8"))
-    if schema in {3,4,5} and target_plan.get("qualificationRoot")!=value["qualificationRoot"]:
+    if schema in {3,4,5,6} and target_plan.get("qualificationRoot")!=value["qualificationRoot"]:
         raise ValueError("execution instance and target-plan qualification roots differ")
-    if schema in {2,3,4,5}:
+    if schema in {2,3,4,5,6}:
         target_bootstrap = target_plan.get("qualificationBootstrap")
         if (not isinstance(target_bootstrap, dict) or
                 target_bootstrap.get("path") != policy_ref["qualificationBootstrap"] or
@@ -131,8 +134,11 @@ def validate(value: dict, *, require_ready: bool = False,
     # executor/index hashes intentionally cease to be live-executable when the
     # permanent executor advances for a successor.
     if validate_attempt_bundle and not superseded:
-        attempt_result = validate_index(root / policy_ref["attemptIndex"], root=root,
-                                        expected_documents=generate_attempts(value, target_plan))
+        attempt_result = validate_index(
+            root / policy_ref["attemptIndex"], root=root,
+            expected_documents=generate_attempts(
+                value, target_plan,
+                schema_version=policy_ref.get("attemptSchemaVersion", 1)))
         if attempt_result["attemptCount"] != 38:
             raise ValueError("attempt bundle is incomplete")
     if target_plan.get("hostId") not in {system.get("id") for system in value.get("systems", [])}:
@@ -174,9 +180,14 @@ def validate(value: dict, *, require_ready: bool = False,
     auth_fields = {"approved", "targetExecutionApproved", "approvalScope", "administrator", "connection", "serviceChanges", "packagePrerequisites",
                    "dkms", "moduleAdministration", "overlayAdministration", "kernelSwitching",
                    "reboot", "failureInjection", "cleanup", "prohibitions"}
-    if not isinstance(authorization, dict) or set(authorization) != auth_fields or authorization["approved"] is not True:
-        raise ValueError("authorization fields are incomplete or unapproved")
-    if type(authorization["targetExecutionApproved"]) is not bool or not isinstance(authorization["approvalScope"], str) or not authorization["approvalScope"]:
+    if (not isinstance(authorization, dict) or set(authorization) != auth_fields or
+            type(authorization["approved"]) is not bool or
+            type(authorization["targetExecutionApproved"]) is not bool or
+            (schema != 6 and authorization["approved"] is not True) or
+            (schema == 6 and authorization["approved"] !=
+             authorization["targetExecutionApproved"])):
+        raise ValueError("authorization fields are incomplete or inconsistent")
+    if not isinstance(authorization["approvalScope"], str) or not authorization["approvalScope"]:
         raise ValueError("target execution authorization is ambiguous")
     if not isinstance(authorization["prohibitions"], list) or not authorization["prohibitions"]:
         raise ValueError("authorization prohibitions are absent")
@@ -228,7 +239,7 @@ def validate(value: dict, *, require_ready: bool = False,
         directory = row["evidenceDirectory"]
         if not isinstance(directory, str) or not directory or directory in evidence or ".." in pathlib.PurePosixPath(directory).parts or pathlib.PurePosixPath(directory).is_absolute():
             raise ValueError(f"unsafe or duplicate evidence directory for {row['id']}")
-        if (schema == 5 and directory !=
+        if (schema in {5,6} and directory !=
                 f"gate-d/runs/{policy_ref['attemptPathNamespace']}/{row['id']}"):
             raise ValueError(f"unscoped evidence directory for {row['id']}")
         evidence.add(directory)
@@ -256,7 +267,8 @@ def validate(value: dict, *, require_ready: bool = False,
     expected_inputs = candidate["status"] == "frozen" and not blocked and not superseded
     if value["inputsReady"] is not expected_inputs:
         raise ValueError("inputsReady disagrees with candidate and required rows")
-    expected_ready = expected_inputs and authorization["targetExecutionApproved"]
+    expected_ready = (expected_inputs and authorization["approved"] and
+                      authorization["targetExecutionApproved"])
     if value["executionReady"] is not expected_ready:
         raise ValueError("executionReady disagrees with candidate and rows")
     if require_ready and not expected_ready:
