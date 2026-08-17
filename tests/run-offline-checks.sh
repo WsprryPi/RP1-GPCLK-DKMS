@@ -67,6 +67,7 @@ else
     echo "Phase 5.45 exact archived pre-root envelope validation: SKIP (archive not supplied)"
 fi
 python3 "$repo_dir/tests/check_gate_d_phase5_46_control_set.py"
+python3 "$repo_dir/tests/check_gate_d_phase5_46_preauthorization.py"
 if [ -n "${PHASE5_46_RELEASE_ARCHIVE:-}" ]; then
     python3 "$repo_dir/tests/check_gate_d_phase5_46_archived_preroot.py" "$PHASE5_46_RELEASE_ARCHIVE"
 else
