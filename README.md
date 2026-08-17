@@ -52,7 +52,7 @@ exact-version removal, complete and repeated removal, reinstall,
 output-disabled UAPI query/acquire/release, and explicit unbind/rebind. Its
 concrete execution instance remains fail-closed and non-executable. Frozen
 `0.0.0-phase5.2` is retained as the genuine predecessor; distinct successor
-`0.0.0-phase5.47` is the selected frozen development successor. The output-disabled open and owner
+`0.0.0-phase5.48` is the selected frozen development successor. The output-disabled open and owner
 injector is separately tested and excluded from package bytes. Thirteen rows
 remain blocked by exact manifest or representative-system inputs, and no
 representative-system lifecycle row has executed. No qualified GPIO output is
