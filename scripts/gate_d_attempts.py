@@ -413,13 +413,13 @@ class FakeSystem:
         self.evidence_sealed = True
     def op_install_successor(self):
         if not self.source_staged: raise ValueError("source not staged")
-        self.dkms.add("0.0.0-phase5.48")
+        self.dkms.add("0.0.0-phase5.49")
     def op_install_predecessor(self): self.dkms.add("0.0.0-phase5.2")
     def op_apply_route(self):
         if self.document["route"] not in {"gpio4", "gpio20"}: raise ValueError("route required")
         self.overlay = self.document["route"]; self.endpoint = self.module_loaded
     def op_load_disabled(self):
-        if "0.0.0-phase5.48" not in self.dkms or not self.overlay: raise ValueError("load precondition")
+        if "0.0.0-phase5.49" not in self.dkms or not self.overlay: raise ValueError("load precondition")
         self.module_loaded = True; self.endpoint = True
     def op_query_release(self):
         if not self.module_loaded or not self.endpoint: raise ValueError("query unavailable")
@@ -452,7 +452,7 @@ class FakeSystem:
         if not self.injected: raise ValueError("build failure absent")
     def op_recover_predecessor(self):
         self.dkms = {"0.0.0-phase5.2"}; self.module_loaded = False; self.overlay = None
-    def op_remove_failed_successor(self): self.dkms.discard("0.0.0-phase5.48")
+    def op_remove_failed_successor(self): self.dkms.discard("0.0.0-phase5.49")
     def op_run_to_checkpoint(self): self.failed_journal = False
     def op_interrupt_after_checkpoint(self): self.failed_journal = True
     def op_freeze_failed_journal(self):

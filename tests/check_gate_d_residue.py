@@ -10,7 +10,7 @@ base_document=json.loads((ROOT/"release/gate-d-phase5.24-residue-recovery-v1.jso
 baseline=tool.BASELINE
 assert tool.validate(base_document)["outputDisabled"] is True
 for mutation in (
-    lambda v:v.update(host="other"), lambda v:v.update(candidate="0.0.0-phase5.48"),
+    lambda v:v.update(host="other"), lambda v:v.update(candidate="0.0.0-phase5.49"),
     lambda v:v["marker"].update(sha256="0"*63), lambda v:v["journal"].update(path="relative"),
     lambda v:v["administratorState"].update(expected="present"),
     lambda v:v["safety"].update(gpioAccess=True), lambda v:v["preservedPaths"].clear(),
@@ -92,7 +92,7 @@ with tempfile.TemporaryDirectory() as temporary:
 retirement=json.loads((ROOT/"release/gate-d-phase5.42-first-attempt-evidence-retirement-v1.json").read_text())
 assert tool.validate(retirement)["outputDisabled"] is True
 for mutation in (
-    lambda v:v.update(candidate="0.0.0-phase5.48"),
+    lambda v:v.update(candidate="0.0.0-phase5.49"),
     lambda v:v["source"]["journal"].update(sha256="0"*63),
     lambda v:v["destination"].update(evidenceDirectory=v["source"]["evidenceDirectory"]),
     lambda v:v["destination"].update(evidenceDirectory="/var/lib/rp1-gpclk-dkms/gate-d/history/other/evidence"),
