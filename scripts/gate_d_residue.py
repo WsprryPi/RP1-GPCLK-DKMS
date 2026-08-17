@@ -21,6 +21,8 @@ def digest(path: pathlib.Path) -> str:
 
 
 def validate(value: dict) -> dict:
+    if isinstance(value, dict) and value.get("kind") == "gate-d-failed-attempt-evidence-retirement":
+        return validate_evidence_retirement(value)
     if isinstance(value, dict) and value.get("kind") == "gate-d-failed-attempt-terminal-recovery":
         return validate_attempt_recovery(value)
     required = {"SPDX-License-Identifier", "schemaVersion", "kind", "operationId",
@@ -55,6 +57,125 @@ def validate(value: dict) -> dict:
             any(not pathlib.PurePosixPath(path).is_absolute() for path in value["preservedPaths"])):
         raise ValueError("residue-recovery preservation boundary differs")
     return {"valid": True, "readOnly": True, "outputDisabled": True}
+
+
+def validate_evidence_retirement(value: dict) -> dict:
+    required = {"SPDX-License-Identifier", "schemaVersion", "kind", "operationId",
+                "host", "candidate", "source", "destination", "expectedFailure",
+                "expectedBaseline", "safety"}
+    if (set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or
+            value.get("schemaVersion") != 1 or value.get("host") != "wspr5" or
+            value.get("candidate") != "0.0.0-phase5.42"):
+        raise ValueError("invalid evidence-retirement identity")
+    file_keys = {"path", "sha256", "mode", "ownerUid", "groupGid"}
+    source = value["source"]
+    if (set(source) != {"evidenceDirectory", "mode", "ownerUid", "groupGid",
+                        "journal", "manifest"} or source.get("mode") != "0500" or
+            source.get("ownerUid") != 0 or source.get("groupGid") != 0):
+        raise ValueError("invalid evidence-retirement source")
+    source_dir = pathlib.PurePosixPath(source.get("evidenceDirectory", ""))
+    if not source_dir.is_absolute():
+        raise ValueError("invalid evidence-retirement source path")
+    for item in (source.get("journal"), source.get("manifest")):
+        if (not isinstance(item, dict) or set(item) != file_keys or
+                pathlib.PurePosixPath(item.get("path", "")).parent != source_dir or
+                item.get("mode") != "0400" or item.get("ownerUid") != 0 or
+                item.get("groupGid") != 0 or not SHA.fullmatch(item.get("sha256", ""))):
+            raise ValueError("invalid evidence-retirement file")
+    destination = value["destination"]
+    if set(destination) != {"evidenceDirectory"}:
+        raise ValueError("invalid evidence-retirement destination")
+    destination_dir = pathlib.PurePosixPath(destination.get("evidenceDirectory", ""))
+    if (not destination_dir.is_absolute() or destination_dir == source_dir or
+            destination_dir.name != source_dir.name or
+            destination_dir.parent != pathlib.PurePosixPath(
+                "/var/lib/rp1-gpclk-dkms/gate-d/history/phase5.42")):
+        raise ValueError("invalid evidence-retirement destination path")
+    expected = value["expectedFailure"]
+    if set(expected) != {"operationId", "documentSha256", "indexSha256", "executorSha256",
+                         "failure", "nextStep", "completedOperation", "pendingOperation"}:
+        raise ValueError("invalid evidence-retirement failure contract")
+    for key in ("documentSha256", "indexSha256", "executorSha256"):
+        if not SHA.fullmatch(expected.get(key, "")):
+            raise ValueError("invalid evidence-retirement failure hash")
+    if (expected.get("failure") != "CalledProcessError" or expected.get("nextStep") != 1 or
+            expected.get("completedOperation") != "create-evidence" or
+            expected.get("pendingOperation") != "capture-preflight"):
+        raise ValueError("evidence-retirement failure boundary differs")
+    if value["expectedBaseline"] != BASELINE:
+        raise ValueError("evidence-retirement baseline differs")
+    safety = {"outputDisabled": True, "liveOutput": False, "gpioAccess": False,
+              "clockEnabled": False, "dmaActive": False, "sdrActive": False, "rf": False}
+    if value["safety"] != safety:
+        raise ValueError("evidence-retirement safety differs")
+    return {"valid": True, "readOnly": True, "outputDisabled": True}
+
+
+def execute_evidence_retirement(value: dict, *, prefix: pathlib.Path, probe,
+                                execute: bool = False, expected_owner_uid: int = 0,
+                                expected_owner_gid: int = 0, rename=os.rename) -> dict:
+    validate_evidence_retirement(value)
+    def rooted(raw: str) -> pathlib.Path:
+        pure = pathlib.PurePosixPath(raw)
+        current = prefix
+        for part in pure.parts[1:]:
+            current /= part
+            if current.exists() and current.is_symlink():
+                raise ValueError("symlink in evidence-retirement path")
+        return current
+    source = value["source"]
+    evidence = rooted(source["evidenceDirectory"])
+    journal_record = source["journal"]
+    manifest_record = source["manifest"]
+    journal = rooted(journal_record["path"])
+    manifest = rooted(manifest_record["path"])
+    destination = rooted(value["destination"]["evidenceDirectory"])
+    destination_parent = destination.parent
+    if (evidence.is_symlink() or not evidence.is_dir() or
+            stat.S_IMODE(evidence.stat().st_mode) != 0o500 or
+            evidence.stat().st_uid != expected_owner_uid or
+            evidence.stat().st_gid != expected_owner_gid or
+            set(evidence.iterdir()) != {journal, manifest}):
+        raise ValueError("evidence-retirement sealed directory differs")
+    for path, record in ((journal, journal_record), (manifest, manifest_record)):
+        metadata = path.lstat()
+        if (path.is_symlink() or not path.is_file() or digest(path) != record["sha256"] or
+                stat.S_IMODE(metadata.st_mode) != 0o400 or
+                metadata.st_uid != expected_owner_uid or
+                metadata.st_gid != expected_owner_gid):
+            raise ValueError("evidence-retirement sealed file differs")
+    if manifest.read_text(encoding="utf-8") != f"{journal_record['sha256']}  {journal.name}\n":
+        raise ValueError("evidence-retirement manifest content differs")
+    state = json.loads(journal.read_text(encoding="utf-8"))
+    expected = value["expectedFailure"]
+    records = state.get("records")
+    if (state.get("status") != "inactive-recovery-required" or state.get("sealed") is not True or
+            state.get("recoveryRequired") is not True or state.get("liveOutput") is not False or
+            state.get("operationId") != expected["operationId"] or
+            state.get("documentSha256") != expected["documentSha256"] or
+            state.get("indexSha256") != expected["indexSha256"] or
+            state.get("executorSha256") != expected["executorSha256"] or
+            state.get("failure") != expected["failure"] or state.get("nextStep") != expected["nextStep"] or
+            not isinstance(records, list) or len(records) != 2 or
+            records[0].get("operation") != expected["completedOperation"] or records[0].get("status") != 0 or
+            records[1].get("operation") != expected["pendingOperation"] or records[1].get("status") != "pending"):
+        raise ValueError("evidence-retirement journal boundary differs")
+    if probe() != BASELINE or destination.exists() or destination.is_symlink():
+        raise ValueError("evidence-retirement target baseline differs")
+    if not execute:
+        return {"status": "ready", "readOnly": True, "outputDisabled": True}
+    destination_parent.mkdir(parents=True, mode=0o700, exist_ok=True)
+    if destination.exists() or destination.is_symlink():
+        raise ValueError("evidence-retirement destination appeared")
+    rename(evidence, destination)
+    moved_journal = destination / journal.name
+    moved_manifest = destination / manifest.name
+    if (evidence.exists() or evidence.is_symlink() or digest(moved_journal) != journal_record["sha256"] or
+            digest(moved_manifest) != manifest_record["sha256"] or probe() != BASELINE):
+        raise ValueError("evidence-retirement post-state differs")
+    return {"status": "complete", "outputDisabled": True,
+            "sourceAbsent": True, "destination": value["destination"]["evidenceDirectory"],
+            "journalSha256": digest(moved_journal), "manifestSha256": digest(moved_manifest)}
 
 
 def validate_attempt_recovery(value: dict) -> dict:
@@ -165,6 +286,8 @@ def execute_attempt_recovery(value: dict, *, prefix: pathlib.Path, probe,
 
 
 def execute(value: dict, *, prefix: pathlib.Path, probe, execute: bool = False) -> dict:
+    if isinstance(value, dict) and value.get("kind") == "gate-d-failed-attempt-evidence-retirement":
+        return execute_evidence_retirement(value, prefix=prefix, probe=probe, execute=execute)
     if isinstance(value, dict) and value.get("kind") == "gate-d-failed-attempt-terminal-recovery":
         return execute_attempt_recovery(value, prefix=prefix, probe=probe, execute=execute)
     validate(value)
