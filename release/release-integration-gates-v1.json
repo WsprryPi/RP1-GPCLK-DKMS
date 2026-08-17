@@ -7,11 +7,10 @@
   "publishedReleaseRequiresPostDownloadVerification": true,
   "modulePublicationConfirmed": false,
   "candidateSnapshot": {
-    "archiveIdentity": "pending exact Phase 5.48 representative build",
-    "sealedArchiveMayBeTested": false,
+    "archiveIdentity": "rp1-gpclk-dkms-0.0.0-phase5.48.tar.gz sha256:18418395eac577d8718c1e74f6601e005160d2768ea7634a35d00e4ddead9120",
+    "sealedArchiveMayBeTested": true,
     "consumableByDependentRelease": false,
     "knownBlockers": [
-      "representative-build-not-performed",
       "representative-lifecycle-matrix-not-executed",
       "public-artifact-download-verification-not-performed",
       "module-release-not-published"
@@ -36,7 +35,7 @@
     "dependent-release-publication"
   ],
   "gates": [
-    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"passed","evidence":["Phase 5.48 source identity frozen by the candidate-freeze commit","module version packaging layout behavior notes and security notes agree on 0.0.0-phase5.48","canonical Phase 5.48 wspr5 live-target snapshot recorded before source freeze"],"claimCeiling":"frozen source candidate only; exact representative build remains pending"},
+    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"passed","evidence":["Phase 5.48 source identity frozen at commit ef96f246b66b25bb70536341b60a5f1e64708c65","module version packaging layout behavior notes and security notes agree on 0.0.0-phase5.48","canonical Phase 5.48 wspr5 live-target snapshot recorded before source freeze","two byte-identical release generations and exact representative stock-kernel build recorded in gate-c-representative-build-manifest-phase5.48-v1.json"],"claimCeiling":"frozen source candidate and representative stock-kernel build compatibility only"},
     {"id":"offline-checks-twice","owner":"RP1-GPCLK-DKMS","requires":["candidate-freeze"],"status":"blocked","evidence":["two complete offline suites must pass on the exact Phase 5.48 frozen commit","each run must bind and exercise the exact archived predecessor validators","declared host-only skips cannot establish a target result"],"claimCeiling":"not established"},
     {"id":"representative-lifecycle-matrix","owner":"RP1-GPCLK-DKMS","requires":["offline-checks-twice"],"status":"blocked","evidence":["every predeclared matrix row passed with independent sealed evidence","baseline cleanup and residue audits","output-disabled proof"],"claimCeiling":"representative lifecycle compatibility only; no calibrated or RF claim"},
     {"id":"independent-adversarial-review","owner":"RP1-GPCLK-DKMS","requires":["representative-lifecycle-matrix"],"status":"blocked","evidence":["all packaging lifecycle compatibility integrity and claim findings closed","affected evidence invalidated and rerun"],"claimCeiling":"reviewed evidence only"},
