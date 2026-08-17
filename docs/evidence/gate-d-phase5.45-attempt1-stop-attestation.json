@@ -1,0 +1,37 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-attempt-stop-attestation",
+  "host": "wspr5",
+  "attemptOrdinal": 1,
+  "operationId": "gd-current-supported-kernel-gpio4",
+  "attemptDocumentSha256": "581d3e83e06ce804f373561ceff2f29ccb0b38d4b8782e55ed701e101ab6b4db",
+  "executorSha256": "33f711e89d104fe3bced29723f0a1b868cd9a4a82e91911a206c65be8c59e42f",
+  "executionInstanceSha256": "0a4e2b88263262d408aa30c39e4843aa1204735333cedf6bb472dfc1a50ef228",
+  "attemptIndexSha256": "3375c809dd699949f991742716628016a680bcf7253fc30ba8f3de52c294f020",
+  "result": {
+    "status": "stopped-safe-before-attempt-step-1",
+    "errorType": "ValueError",
+    "error": "target-plan root trust binding differs",
+    "attemptEvidenceCreated": false,
+    "attemptStagingCreated": false,
+    "attemptJournalCreated": false,
+    "recoveryInvoked": false,
+    "nextAttemptStarted": false,
+    "liveOutput": false
+  },
+  "diagnosis": {
+    "installedInstanceSchemaVersion": 5,
+    "rootBoundTargetPlanSchemaVersion": 5,
+    "installedExecutorExpectedTargetPlanSchemaVersion": 4,
+    "cause": "the permanent executor maps every instance schema other than 4 to target-plan schema 4"
+  },
+  "postState": {
+    "moduleLoaded": false,
+    "endpointPresent": false,
+    "overlayActive": false,
+    "candidateDkmsTestVersionPresent": false,
+    "allSixServicesInactive": true,
+    "outputDisabled": true
+  }
+}
