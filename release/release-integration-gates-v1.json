@@ -7,11 +7,10 @@
   "publishedReleaseRequiresPostDownloadVerification": true,
   "modulePublicationConfirmed": false,
   "candidateSnapshot": {
-    "archiveIdentity": "pending exact Phase 5.50 representative build",
-    "sealedArchiveMayBeTested": false,
+    "archiveIdentity": "rp1-gpclk-dkms-0.0.0-phase5.50.tar.gz sha256:ef989bf79faa5c30ddaf8ac5651d75b1755ba2fa385680692183e6145b2927c2",
+    "sealedArchiveMayBeTested": true,
     "consumableByDependentRelease": false,
     "knownBlockers": [
-      "representative-build-not-performed",
       "representative-lifecycle-matrix-not-executed",
       "public-artifact-download-verification-not-performed",
       "module-release-not-published"
@@ -36,7 +35,7 @@
     "dependent-release-publication"
   ],
   "gates": [
-    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"passed","evidence":["Phase 5.50 source identity frozen by the candidate-freeze commit","module version packaging layout behavior and security notes agree on 0.0.0-phase5.50","execution-instance schema 6 attempt-version and preauthorization binding is the only control behavior change"],"claimCeiling":"frozen source candidate only; exact representative build remains pending"},
+    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"passed","evidence":["Phase 5.50 source identity frozen at commit c24160517b10900bf61243d4988f38247eeed58e","module version packaging layout behavior and security notes agree on 0.0.0-phase5.50","execution-instance schema 6 attempt-version and preauthorization binding is the only control behavior change","two byte-identical seven-file release generations and exact representative stock-kernel build recorded in gate-c-representative-build-manifest-phase5.50-v1.json"],"claimCeiling":"frozen source candidate and representative stock-kernel build compatibility only"},
     {"id":"offline-checks-twice","owner":"RP1-GPCLK-DKMS","requires":["candidate-freeze"],"status":"blocked","evidence":["two complete offline suites must pass on the exact Phase 5.50 frozen commit","declared host-only skips cannot establish a target result"],"claimCeiling":"not established"},
     {"id":"representative-lifecycle-matrix","owner":"RP1-GPCLK-DKMS","requires":["offline-checks-twice"],"status":"blocked","evidence":["every predeclared matrix row passed with independent sealed evidence","baseline cleanup and residue audits","output-disabled proof"],"claimCeiling":"representative lifecycle compatibility only; no calibrated or RF claim"},
     {"id":"independent-adversarial-review","owner":"RP1-GPCLK-DKMS","requires":["representative-lifecycle-matrix"],"status":"blocked","evidence":["all packaging lifecycle compatibility integrity and claim findings closed","affected evidence invalidated and rerun"],"claimCeiling":"reviewed evidence only"},
