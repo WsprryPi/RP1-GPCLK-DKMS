@@ -135,6 +135,32 @@ def step(operation: str, operation_id: str, number: int) -> dict:
             "deadlineScope": "attempt-total", "action": None}
 
 
+def bind_services_to_snapshot(plan: dict, snapshot: dict) -> dict:
+    """Return a copied plan whose service contract is bound to one snapshot."""
+    result = copy.deepcopy(plan)
+    services = result.get("services")
+    states = snapshot.get("services") if isinstance(snapshot, dict) else None
+    if not isinstance(services, list) or not services or not isinstance(states, dict):
+        raise ValueError("service plan or canonical snapshot is absent")
+    seen = set()
+    for item in services:
+        if (not isinstance(item, dict) or
+                set(item) != {"name", "action", "requiredPreState"} or
+                not isinstance(item.get("name"), str) or not item["name"]):
+            raise ValueError("malformed planned service")
+        name = item["name"]
+        if name in seen:
+            raise ValueError("duplicate planned service")
+        seen.add(name)
+        key = f"{name}.service"
+        state = states.get(key)
+        if state not in {"active", "inactive"}:
+            raise ValueError(f"canonical service state is unavailable: {key}")
+        item["requiredPreState"] = state
+        item["action"] = "stop-then-restore-exact" if state == "active" else "preserve"
+    return result
+
+
 def generate(instance: dict, plan: dict) -> list[dict]:
     candidate = instance["candidate"]
     policy = instance["executionPolicy"]
@@ -201,7 +227,7 @@ def generate(instance: dict, plan: dict) -> list[dict]:
                         plan["artifacts"]["predecessor"]["version"], attempt,
                         evidence_base=evidence_base),
                 },
-                "services": services, "safety": safety,
+                "services": copy.deepcopy(services), "safety": copy.deepcopy(safety),
                 "expectedFinalState": expected_final(row_id), "steps": steps,
             }
             from gate_d_outer import ClosedDispatcher
@@ -256,6 +282,20 @@ def validate_document(value: dict) -> dict:
         raise ValueError("owned path inventory is invalid")
     if not isinstance(inputs["boot"], dict) or not isinstance(inputs["tooling"], dict):
         raise ValueError("boot or tooling inputs are absent")
+    services = value["services"]
+    if not isinstance(services, list) or not services:
+        raise ValueError("attempt service contract is absent")
+    service_names = set()
+    for item in services:
+        if (not isinstance(item, dict) or
+                set(item) != {"name", "action", "requiredPreState"} or
+                not isinstance(item.get("name"), str) or not item["name"] or
+                item["action"] not in {"preserve", "stop-then-restore-exact"} or
+                item["requiredPreState"] not in {"active", "inactive"} or
+                (item["action"] == "preserve") != (item["requiredPreState"] == "inactive") or
+                item["name"] in service_names):
+            raise ValueError("attempt service contract is malformed")
+        service_names.add(item["name"])
     subordinate = inputs["subordinateLifecycle"]
     if value["matrixRow"] == "interrupted-upgrade":
         if not isinstance(subordinate, dict) or set(subordinate) != {"checkpoint", "transition", "recovery"}:
@@ -337,9 +377,12 @@ class FakeSystem:
     def op_verify_input_hashes(self): pass
     def op_snapshot_services(self): pass
     def op_quiesce_services(self):
-        for name in ("wsprrypi", "sdrplay", "SoapySDRServer"):
-            if self.services[name] != "active": raise ValueError("service pre-state drift")
-            self.services[name] = "inactive"
+        for item in self.document["services"]:
+            name = item["name"]
+            if self.services[name] != item["requiredPreState"]:
+                raise ValueError("service pre-state drift")
+            if item["action"] == "stop-then-restore-exact":
+                self.services[name] = "inactive"
     def op_stage_source(self): self.source_staged = True
     def op_restore_services(self): self.services = copy.deepcopy(self.original_services)
     def op_audit_residue(self):
