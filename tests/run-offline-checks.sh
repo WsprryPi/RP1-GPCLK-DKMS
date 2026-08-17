@@ -69,6 +69,7 @@ python3 "$repo_dir/tests/check_gate_d_installed_import_graph.py"
 python3 "$repo_dir/tests/check_gate_d_installed_cli_rehearsal.py"
 python3 "$repo_dir/tests/check_gate_d_version_pair.py"
 python3 "$repo_dir/tests/check_gate_c_representative_build.py"
+python3 "$repo_dir/tests/check_gate_c_phase545_representative_build.py"
 python3 "$repo_dir/tests/check_gate_d_matrix_policy.py"
 if command -v check-jsonschema >/dev/null 2>&1; then
 	check-jsonschema --schemafile "$repo_dir/schema/gate-d-execution-instance-v1.schema.json" \
