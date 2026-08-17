@@ -71,6 +71,7 @@ python3 "$repo_dir/tests/check_gate_d_phase5_46_preauthorization.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_46_authorization_decision.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_46_authorization.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_46_target_staging_preroot.py"
+python3 "$repo_dir/tests/check_gate_d_phase5_46_attempt1_failure.py"
 if [ -n "${PHASE5_46_RELEASE_ARCHIVE:-}" ]; then
     python3 "$repo_dir/tests/check_gate_d_phase5_46_archived_preroot.py" "$PHASE5_46_RELEASE_ARCHIVE"
 else
