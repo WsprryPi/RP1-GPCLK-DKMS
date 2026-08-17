@@ -105,6 +105,7 @@ else
 fi
 python3 "$repo_dir/tests/check_gate_d_live_snapshot.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_49_snapshot.py"
+python3 "$repo_dir/tests/check_gate_d_phase5_50_snapshot.py"
 python3 "$repo_dir/tests/check_gate_d_outer.py"
 python3 "$repo_dir/tests/check_gate_d_schema2_terminal_cleanup.py"
 python3 "$repo_dir/tests/check_gate_d_target_path_topology_audit.py"
