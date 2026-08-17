@@ -79,6 +79,7 @@ else
 fi
 python3 "$repo_dir/tests/check_gate_d_phase5_47_control_set.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_48_control_set.py"
+python3 "$repo_dir/tests/check_gate_d_phase5_48_preauthorization.py"
 if [ -n "${PHASE5_48_RELEASE_ARCHIVE:-}" ]; then
     python3 "$repo_dir/tests/check_gate_d_phase5_48_archived_preroot.py" "$PHASE5_48_RELEASE_ARCHIVE"
 else
