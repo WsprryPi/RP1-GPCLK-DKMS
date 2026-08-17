@@ -12,9 +12,10 @@ Before accepting the freeze, run the exact installed-path schema-6 permanent
 executor regression, all negative trust cases, and the complete offline suite.
 Commit and push the clean source freeze, then generate the release twice from
 independent detached worktrees of that exact commit. Require byte-identical
-seven-file release inventories and archives. From the extracted candidate
-archive, rerun the exact schema-6 permanent-executor regression and validate
-the exact indexed schema-2 attempt before any representative build.
+seven-file release inventories and archives. Validate the exact indexed Phase
+5.50 schema-2 attempt from the source freeze. From the extracted candidate
+archive, rerun the self-contained schema-6 permanent-executor regression before
+any representative build.
 
 Reject missing, extra, duplicate, AppleDouble, Finder metadata, extended
 attributes, VCS metadata, caches, links, special files, and every path outside

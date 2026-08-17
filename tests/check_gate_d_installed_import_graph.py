@@ -49,12 +49,6 @@ with tempfile.TemporaryDirectory() as temporary:
     try: executor.bootstrap_root_validator(mismatched_instance_path,installed_root=fake_root,current_executor_override=override)
     except ValueError as error: assert "target-plan root trust binding differs" in str(error)
     else: raise AssertionError("schema-5 instance accepted schema-4 target plan")
-    attempt_path=ROOT/"release/gate-d-attempts-phase5.50-v1/gd-current-supported-kernel-gpio4.json"
-    attempt=json.loads(attempt_path.read_text()); assert attempt["schemaVersion"]==2
-    phase550_index=json.loads((attempt_path.parent/"index.json").read_text())
-    record=next(item for item in phase550_index["attempts"] if item["file"]==attempt_path.name)
-    assert record["sha256"]==sha(attempt_path)
-    sys.modules["gate_d_attempts"].validate_document(attempt); assert sys.modules["gate_d_outer"].ClosedDispatcher(attempt).plan()
     for name in MODULES:
         absent=fake_root/INSTALLED[name].lstrip("/"); original_absent=absent.read_bytes(); absent.unlink()
         try: executor.bootstrap_root_validator(instance_path,installed_root=fake_root,current_executor_override=override)
