@@ -83,6 +83,7 @@ python3 "$repo_dir/tests/check_gate_d_phase5_48_preauthorization.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_48_authorization_decision.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_48_authorization.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_48_metadata_free_preroot.py"
+python3 "$repo_dir/tests/check_gate_d_phase5_48_attempt1_residue_blocker.py"
 if [ -n "${PHASE5_48_RELEASE_ARCHIVE:-}" ]; then
     python3 "$repo_dir/tests/check_gate_d_phase5_48_archived_preroot.py" "$PHASE5_48_RELEASE_ARCHIVE"
 else
