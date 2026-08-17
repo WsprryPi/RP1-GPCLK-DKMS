@@ -75,8 +75,8 @@ assert identity["packageTransitions"] and len(identity["packageTransitions"]) ==
 assert instance["schemaVersion"] == 5
 assert instance["executionPolicy"]["attemptPathNamespace"] == "phase5.48-ef96f246b66b"
 assert instance["authorization"]["approved"] is True
-assert instance["authorization"]["targetExecutionApproved"] is False
-assert instance["inputsReady"] is True and instance["executionReady"] is False
+assert instance["authorization"]["targetExecutionApproved"] is True
+assert instance["inputsReady"] is True and instance["executionReady"] is True
 assert sum(row["status"] == "ready" for row in instance["rows"]) == 10
 assert sum(row["status"] == "deferred-environmental" for row in instance["rows"]) == 5
 
@@ -113,7 +113,7 @@ with tempfile.TemporaryDirectory() as temporary:
         assert gate_d_bootstrap.validate(bootstrap)["outputDisabled"] is True
         assert gate_d_preroot.validate(envelope)["outputDisabled"] is True
         result = gate_d_instance.validate(instance)
-        assert result["inputsReady"] is True and result["executionReady"] is False
+        assert result["inputsReady"] is True and result["executionReady"] is True
     finally:
         gate_d_root.validate = old_root
 
