@@ -72,8 +72,8 @@ def bootstrap_root_validator(instance_path: pathlib.Path, *, installed_root: pat
     """Authenticate and load the complete Gate D import graph."""
     instance=load_json(instance_path)
     instance_schema=instance.get("schemaVersion")
-    if instance_schema not in {3,4} or instance.get("kind")!="gate-d-representative-system-execution-instance":
-        raise ValueError("installed trust bootstrap requires execution-instance schema 3 or 4")
+    if instance_schema not in {3,4,5} or instance.get("kind")!="gate-d-representative-system-execution-instance":
+        raise ValueError("installed trust bootstrap requires execution-instance schema 3, 4, or 5")
     reference=instance.get("qualificationRoot")
     if (not isinstance(reference,dict) or set(reference)!={"path","identityFile","identitySha256","ownerUid","mode"} or
             not isinstance(reference.get("path"),str) or not pathlib.PurePosixPath(reference["path"]).is_absolute() or

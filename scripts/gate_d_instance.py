@@ -48,11 +48,11 @@ def validate(value: dict, *, require_ready: bool = False,
                 "executionPolicy", "candidate", "authorization", "systems", "recovery",
                 "rows", "inputsReady", "executionReady"}
     schema=value.get("schemaVersion")
-    if schema in {3,4}: required.add("qualificationRoot")
-    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or schema not in {1,2,3,4} or value.get("kind") != "gate-d-representative-system-execution-instance":
+    if schema in {3,4,5}: required.add("qualificationRoot")
+    if set(value) != required or value.get("SPDX-License-Identifier") != "MIT" or schema not in {1,2,3,4,5} or value.get("kind") != "gate-d-representative-system-execution-instance":
         raise ValueError("invalid execution-instance identity")
     root=ROOT
-    if schema in {3,4}:
+    if schema in {3,4,5}:
         scripts=pathlib.Path(__file__).resolve().parent
         if str(scripts) not in __import__("sys").path: __import__("sys").path.insert(0,str(scripts))
         from gate_d_root import validate as validate_root
@@ -62,9 +62,18 @@ def validate(value: dict, *, require_ready: bool = False,
                      "routeDecisionSha256", "targetPlan", "targetPlanSha256",
                      "attemptIndex", "attemptIndexSha256",
                      "environmentalCoverageComplete"}
-    if schema in {2,3,4}: policy_fields.update({"qualificationBootstrap","qualificationBootstrapSha256"})
+    if schema in {2,3,4,5}: policy_fields.update({"qualificationBootstrap","qualificationBootstrapSha256"})
+    if schema == 5: policy_fields.add("attemptPathNamespace")
     if not isinstance(policy_ref, dict) or set(policy_ref) != policy_fields:
         raise ValueError("execution-policy references are incomplete")
+    if schema == 5:
+        candidate_identity = value.get("candidate", {})
+        expected_namespace = (
+            f"{str(candidate_identity.get('release', '')).removeprefix('0.0.0-')}-"
+            f"{str(candidate_identity.get('sourceCommit', ''))[:12]}")
+        if (policy_ref.get("attemptPathNamespace") != expected_namespace or
+                not re.fullmatch(r"[a-z0-9][a-z0-9._-]+", expected_namespace)):
+            raise ValueError("attempt path namespace differs from candidate identity")
     for path_field, hash_field in (("matrixPolicy", "matrixPolicySha256"),
                                    ("routeDecision", "routeDecisionSha256"),
                                    ("targetPlan", "targetPlanSha256"),
@@ -76,7 +85,7 @@ def validate(value: dict, *, require_ready: bool = False,
         path = root / relative
         if not path.is_file() or path.is_symlink() or sha256(path) != policy_ref[hash_field]:
             raise ValueError("execution-policy identity mismatch")
-    if schema in {2,3,4}:
+    if schema in {2,3,4,5}:
         relative=policy_ref["qualificationBootstrap"]
         path=root/relative
         if pathlib.PurePosixPath(relative).is_absolute() or ".." in pathlib.PurePosixPath(relative).parts or path.is_symlink() or not path.is_file() or sha256(path)!=policy_ref["qualificationBootstrapSha256"]:
@@ -93,9 +102,9 @@ def validate(value: dict, *, require_ready: bool = False,
         __import__("sys").path.insert(0, str(scripts))
     from gate_d_target_plan import validate as validate_target_plan
     target_plan = json.loads((root / policy_ref["targetPlan"]).read_text(encoding="utf-8"))
-    if schema in {3,4} and target_plan.get("qualificationRoot")!=value["qualificationRoot"]:
+    if schema in {3,4,5} and target_plan.get("qualificationRoot")!=value["qualificationRoot"]:
         raise ValueError("execution instance and target-plan qualification roots differ")
-    if schema in {2,3,4}:
+    if schema in {2,3,4,5}:
         target_bootstrap = target_plan.get("qualificationBootstrap")
         if (not isinstance(target_bootstrap, dict) or
                 target_bootstrap.get("path") != policy_ref["qualificationBootstrap"] or
@@ -219,6 +228,9 @@ def validate(value: dict, *, require_ready: bool = False,
         directory = row["evidenceDirectory"]
         if not isinstance(directory, str) or not directory or directory in evidence or ".." in pathlib.PurePosixPath(directory).parts or pathlib.PurePosixPath(directory).is_absolute():
             raise ValueError(f"unsafe or duplicate evidence directory for {row['id']}")
+        if (schema == 5 and directory !=
+                f"gate-d/runs/{policy_ref['attemptPathNamespace']}/{row['id']}"):
+            raise ValueError(f"unscoped evidence directory for {row['id']}")
         evidence.add(directory)
         if not isinstance(row["blockers"], list):
             raise ValueError(f"invalid blockers for {row['id']}")

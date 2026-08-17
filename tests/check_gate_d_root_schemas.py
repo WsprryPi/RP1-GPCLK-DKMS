@@ -41,4 +41,12 @@ target4["pythonModules"]=modules
 assert not accepted("gate-d-target-plan-v1.schema.json",target4)
 legacy=copy.deepcopy(instance); legacy["schemaVersion"]=1; legacy.pop("qualificationRoot"); legacy["executionPolicy"].pop("qualificationBootstrap"); legacy["executionPolicy"].pop("qualificationBootstrapSha256"); assert accepted(cases[3][0],legacy)
 legacy["executionPolicy"]["qualificationBootstrap"]="unexpected"; assert not accepted(cases[3][0],legacy)
+instance5=copy.deepcopy(instance); instance5["schemaVersion"]=5
+candidate=instance5["candidate"]
+namespace=f"{candidate['release'].removeprefix('0.0.0-')}-{candidate['sourceCommit'][:12]}"
+instance5["executionPolicy"]["attemptPathNamespace"]=namespace
+for row in instance5["rows"]: row["evidenceDirectory"]=f"gate-d/runs/{namespace}/{row['id']}"
+assert accepted(cases[3][0],instance5)
+missing_namespace=copy.deepcopy(instance5); missing_namespace["executionPolicy"].pop("attemptPathNamespace")
+assert not accepted(cases[3][0],missing_namespace)
 print("Gate D qualification-root JSON Schemas: PASS")

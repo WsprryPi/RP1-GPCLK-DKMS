@@ -49,6 +49,41 @@ for document in documents:
     assert result["servicesRestored"] and result["liveOutput"] is False
     assert result["commands"] == [[item["operation"]] for item in document["steps"]]
 
+scoped_instance = copy.deepcopy(instance)
+candidate = scoped_instance["candidate"]
+namespace = f"{candidate['release'].removeprefix('0.0.0-')}-{candidate['sourceCommit'][:12]}"
+scoped_instance["executionPolicy"]["attemptPathNamespace"] = namespace
+for row in scoped_instance["rows"]:
+    row["evidenceDirectory"] = f"gate-d/runs/{namespace}/{row['id']}"
+scoped_documents = attempts.generate(scoped_instance, plan)
+prefix = f"/var/lib/rp1-gpclk-dkms/gate-d/runs/{namespace}/"
+legacy_paths = set()
+scoped_paths = set()
+for legacy, scoped in zip(documents, scoped_documents):
+    legacy_paths.update({legacy["evidenceDirectory"], legacy["journal"],
+                         legacy["inputs"]["stagingDirectory"], *legacy["inputs"]["ownedPaths"]})
+    scoped_paths.update({scoped["evidenceDirectory"], scoped["journal"],
+                         scoped["inputs"]["stagingDirectory"], *scoped["inputs"]["ownedPaths"]})
+    assert scoped["evidenceDirectory"].startswith(prefix)
+    assert scoped["journal"].startswith(prefix)
+    assert scoped["inputs"]["stagingDirectory"].startswith(prefix)
+    subordinate = scoped["inputs"]["subordinateLifecycle"]
+    if subordinate:
+        for role in ("transition", "recovery"):
+            assert subordinate[role]["evidenceDirectory"].startswith(
+                f"gate-d/runs/{namespace}/")
+            scoped_paths.add(subordinate[role]["evidenceDirectory"])
+assert len({document["evidenceDirectory"] for document in scoped_documents}) == 38
+assert not legacy_paths & scoped_paths
+bad_namespace = copy.deepcopy(scoped_instance)
+bad_namespace["executionPolicy"]["attemptPathNamespace"] = "phase5.999-wrong"
+try:
+    attempts.generate(bad_namespace, plan)
+except ValueError:
+    pass
+else:
+    raise AssertionError("candidate-mismatched attempt path namespace accepted")
+
 with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
     first_path = pathlib.Path(first) / "bundle"
     second_path = pathlib.Path(second) / "bundle"

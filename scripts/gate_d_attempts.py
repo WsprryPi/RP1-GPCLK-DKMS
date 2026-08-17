@@ -101,10 +101,11 @@ def lifecycle_safety() -> dict:
 
 
 def subordinate_documents(operation_id: str, row: dict, candidate: dict,
-                          predecessor: str, attempt: str) -> dict | None:
+                          predecessor: str, attempt: str,
+                          evidence_base: str | None = None) -> dict | None:
     if row["id"] != "interrupted-upgrade":
         return None
-    base = row["evidenceDirectory"]
+    base = evidence_base or row["evidenceDirectory"]
     transition_id = f"{operation_id}-transition"
     recovery_id = f"{operation_id}-recovery"
     common = {
@@ -143,13 +144,27 @@ def generate(instance: dict, plan: dict) -> list[dict]:
     safety.update({"clockEnabled": False, "dmaActive": False, "gpioOutput": False,
                    "moduleLoaded": False, "platformBound": False,
                    "endpointOpen": False, "ownerPresent": False})
+    path_namespace = policy.get("attemptPathNamespace")
+    if path_namespace is not None:
+        expected_namespace = (
+            f"{candidate['release'].removeprefix('0.0.0-')}-{candidate['sourceCommit'][:12]}")
+        if (path_namespace != expected_namespace or
+                not SAFE_ID.fullmatch(path_namespace)):
+            raise ValueError("attempt path namespace differs from candidate identity")
     documents = []
     for row_plan in plan["rows"]:
         row = rows[row_plan["id"]]
         for attempt in row_plan["attempts"]:
             row_id = row_plan["id"]
             operation_id = f"gd-{row_id}-{attempt}".replace("_", "-")
-            evidence = f"/var/lib/rp1-gpclk-dkms/{row['evidenceDirectory']}/{operation_id}"
+            evidence_base = row["evidenceDirectory"]
+            staging_base = "gate-d/staging"
+            if path_namespace is not None:
+                expected_evidence_base = f"gate-d/runs/{path_namespace}/{row_id}"
+                if evidence_base != expected_evidence_base:
+                    raise ValueError("row evidence directory differs from attempt namespace")
+                staging_base = f"gate-d/runs/{path_namespace}/staging"
+            evidence = f"/var/lib/rp1-gpclk-dkms/{evidence_base}/{operation_id}"
             actions = ENVELOPE_BEFORE + ROW_ACTIONS[row_id] + ENVELOPE_AFTER
             steps = [step(action, operation_id, number) for number, action in enumerate(actions, 1)]
             document = {
@@ -177,13 +192,14 @@ def generate(instance: dict, plan: dict) -> list[dict]:
                     "targetPlanSha256": policy["targetPlanSha256"],
                     "boot": copy.deepcopy(plan["boot"]),
                     "tooling": copy.deepcopy(plan["tooling"]),
-                    "stagingDirectory": f"/var/lib/rp1-gpclk-dkms/gate-d/staging/{operation_id}",
+                    "stagingDirectory": f"/var/lib/rp1-gpclk-dkms/{staging_base}/{operation_id}",
                     "ownedPaths": [
-                        f"/var/lib/rp1-gpclk-dkms/gate-d/staging/{operation_id}", evidence
+                        f"/var/lib/rp1-gpclk-dkms/{staging_base}/{operation_id}", evidence
                     ],
                     "subordinateLifecycle": subordinate_documents(
                         operation_id, row, candidate,
-                        plan["artifacts"]["predecessor"]["version"], attempt),
+                        plan["artifacts"]["predecessor"]["version"], attempt,
+                        evidence_base=evidence_base),
                 },
                 "services": services, "safety": safety,
                 "expectedFinalState": expected_final(row_id), "steps": steps,
