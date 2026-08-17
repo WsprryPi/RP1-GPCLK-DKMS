@@ -8,7 +8,7 @@ Gate D control set for frozen source commit
 `21d05675e9d12ddb4c051868578c410737b733786357cee20eb2b0ce03f63356`,
 representative module SHA-256
 `977c6997fd87dfb68c61ab4b82db904e86310083741d3a41c0405a417aa36d95`,
-and attempt-path namespace `phase5.45-4b50db7868b`.
+and attempt-path namespace `phase5.45-4b50db7868b7`.
 
 Before generation, use the reviewed read-only capture tool on `wspr5` to
 derive a fresh canonical snapshot from the current terminal-complete
@@ -25,7 +25,7 @@ rows, five deferred environmental rows, predecessor and successor package
 inventories, qualification identity, target plan, bootstrap plan, execution
 instance, and pre-root envelope. Every attempt-owned path must be unique and
 strictly below
-`/var/lib/rp1-gpclk-dkms/gate-d/runs/phase5.45-4b50db7868b/`, with no
+`/var/lib/rp1-gpclk-dkms/gate-d/runs/phase5.45-4b50db7868b7/`, with no
 intersection with Phase 5.42, Phase 5.43, or retained historical evidence.
 Authorization fields and `executionReady` must remain false.
 

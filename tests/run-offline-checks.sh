@@ -57,6 +57,12 @@ if [ -n "${PHASE5_43_RELEASE_ARCHIVE:-}" ]; then
 else
     echo "Phase 5.43 exact archived pre-root envelope validation: SKIP (archive not supplied)"
 fi
+python3 "$repo_dir/tests/check_gate_d_phase5_45_control_set.py"
+if [ -n "${PHASE5_45_RELEASE_ARCHIVE:-}" ]; then
+    python3 "$repo_dir/tests/check_gate_d_phase5_45_archived_preroot.py" "$PHASE5_45_RELEASE_ARCHIVE"
+else
+    echo "Phase 5.45 exact archived pre-root envelope validation: SKIP (archive not supplied)"
+fi
 python3 "$repo_dir/tests/check_gate_d_live_snapshot.py"
 python3 "$repo_dir/tests/check_gate_d_outer.py"
 python3 "$repo_dir/tests/check_gate_d_bootstrap.py"
