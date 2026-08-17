@@ -80,13 +80,14 @@ decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_t
 assert decisions["entries"]
 assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False for entry in decisions["entries"])
 assert set(document["candidateSnapshot"]["knownBlockers"]) == {
+    "representative-build-not-performed",
     "representative-lifecycle-matrix-not-executed",
     "public-artifact-download-verification-not-performed",
     "module-release-not-published",
 }
 assert document["candidateSnapshot"]["archiveIdentity"] == \
-    "rp1-gpclk-dkms-0.0.0-phase5.46.tar.gz sha256:0e0debdd96560602bd61457afc59782cfad2a4fb1b6f9b54e0d2505453e6c8f2"
-assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is True
+    "pending exact Phase 5.47 representative build"
+assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is False
 offline_gate = next(gate for gate in document["gates"]
                     if gate["id"] == "offline-checks-twice")
 assert offline_gate["status"] == "blocked"
