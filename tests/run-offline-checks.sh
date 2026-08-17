@@ -92,6 +92,7 @@ python3 "$repo_dir/tests/check_gate_d_version_pair.py"
 python3 "$repo_dir/tests/check_gate_c_representative_build.py"
 python3 "$repo_dir/tests/check_gate_c_phase545_representative_build.py"
 python3 "$repo_dir/tests/check_gate_c_phase546_representative_build.py"
+python3 "$repo_dir/tests/check_gate_c_phase547_representative_build.py"
 python3 "$repo_dir/tests/check_gate_c_phase545_offline_twice.py"
 python3 "$repo_dir/tests/check_gate_d_matrix_policy.py"
 if command -v check-jsonschema >/dev/null 2>&1; then

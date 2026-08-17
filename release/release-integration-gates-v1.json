@@ -7,11 +7,10 @@
   "publishedReleaseRequiresPostDownloadVerification": true,
   "modulePublicationConfirmed": false,
   "candidateSnapshot": {
-    "archiveIdentity": "pending exact Phase 5.47 representative build",
-    "sealedArchiveMayBeTested": false,
+    "archiveIdentity": "rp1-gpclk-dkms-0.0.0-phase5.47.tar.gz sha256:497368ac11b32e5491dab76103ad3bb2da0975c086e9898a801c5c2df1be82be",
+    "sealedArchiveMayBeTested": true,
     "consumableByDependentRelease": false,
     "knownBlockers": [
-      "representative-build-not-performed",
       "representative-lifecycle-matrix-not-executed",
       "public-artifact-download-verification-not-performed",
       "module-release-not-published"
@@ -36,7 +35,7 @@
     "dependent-release-publication"
   ],
   "gates": [
-    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"passed","evidence":["Phase 5.47 source identity frozen by the Git commit containing this contract","module version packaging layout behavior notes and security notes agree on 0.0.0-phase5.47","no archive or representative-build identity claimed"],"claimCeiling":"frozen source candidate identity only"},
+    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"passed","evidence":["Phase 5.47 source identity frozen at commit c5320ac5419a04d17345370204524f219b7ff403","module version packaging layout behavior notes and security notes agree on 0.0.0-phase5.47","exact deterministic release archive and representative stock-kernel build recorded in gate-c-representative-build-manifest-phase5.47-v1.json"],"claimCeiling":"frozen source candidate and representative stock-kernel build compatibility only"},
     {"id":"offline-checks-twice","owner":"RP1-GPCLK-DKMS","requires":["candidate-freeze"],"status":"blocked","evidence":["complete offline suite must pass twice on the exact committed freeze","macOS host skips Linux-only UAPI client compiles; no representative target result may be inferred"],"claimCeiling":"offline and host build compatibility only"},
     {"id":"representative-lifecycle-matrix","owner":"RP1-GPCLK-DKMS","requires":["offline-checks-twice"],"status":"blocked","evidence":["every predeclared matrix row passed with independent sealed evidence","baseline cleanup and residue audits","output-disabled proof"],"claimCeiling":"representative lifecycle compatibility only; no calibrated or RF claim"},
     {"id":"independent-adversarial-review","owner":"RP1-GPCLK-DKMS","requires":["representative-lifecycle-matrix"],"status":"blocked","evidence":["all packaging lifecycle compatibility integrity and claim findings closed","affected evidence invalidated and rerun"],"claimCeiling":"reviewed evidence only"},
