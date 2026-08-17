@@ -193,10 +193,14 @@ def generate(output_root: pathlib.Path) -> list[pathlib.Path]:
     instance["schemaVersion"] = 5
     instance["qualificationRoot"].update(path=marker["rootPath"], identitySha256=marker_hash)
     instance["authorization"].update(
-        approved=True, targetExecutionApproved=False,
-        approvalScope=("Operator-authorized offline Phase 5.47 control-set construction "
-                       "only; target staging and lifecycle execution remain unauthorized."))
-    instance["executionReady"] = False
+        approved=True, targetExecutionApproved=True,
+        approvalScope=("Operator-authorized exact Phase 5.47 output-disabled Gate D scope "
+                       "committed at f307eac68aeee19abd096a7e3ea975c58e9ad457; limited to "
+                       "the 38 indexed namespaced attempts, ten ready rows, exact snapshot, "
+                       "release inputs, predecessor and successor inventories, authenticated "
+                       "schema-5 transition, sealed-root policy and module graph, recovery, "
+                       "and mandatory prohibitions."))
+    instance["executionReady"] = True
     instance["executionPolicy"].update(
         attemptPathNamespace=NAMESPACE,
         routeDecision=route_rel, routeDecisionSha256=file_sha(route_path),
