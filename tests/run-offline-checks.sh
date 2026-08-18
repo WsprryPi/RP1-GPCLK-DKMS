@@ -112,6 +112,7 @@ python3 "$repo_dir/tests/check_gate_d_phase5_51_control_set.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_52_snapshot.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_52_control_set.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_51_preauthorization.py"
+python3 "$repo_dir/tests/check_gate_d_phase5_52_preauthorization.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_51_authorization_decision.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_51_authorization.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_51_metadata_free_preroot.py"
@@ -132,6 +133,11 @@ if [ -n "${PHASE5_51_RELEASE_ARCHIVE:-}" ]; then
     python3 "$repo_dir/tests/check_gate_d_phase5_51_archived_control_set.py" "$PHASE5_51_RELEASE_ARCHIVE"
 else
     echo "Phase 5.51 exact archived control-set validation: SKIP (archive not supplied)"
+fi
+if [ -n "${PHASE5_52_RELEASE_ARCHIVE:-}" ]; then
+    python3 "$repo_dir/tests/check_gate_d_phase5_52_archived_control_set.py" "$PHASE5_52_RELEASE_ARCHIVE"
+else
+    echo "Phase 5.52 exact archived control-set validation: SKIP (archive not supplied)"
 fi
 python3 "$repo_dir/tests/check_gate_d_outer.py"
 python3 "$repo_dir/tests/check_gate_d_schema2_terminal_cleanup.py"
