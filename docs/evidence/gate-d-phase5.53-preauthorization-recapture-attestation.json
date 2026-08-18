@@ -35,6 +35,15 @@
     "attemptIndexSha256": "3a6a6047dc8e3ca5c77488a5029bb2165f5b9e71bf32fdc94ec60dcf15ec15e2",
     "controlTreeSha256": "f5c9012d0383ad771a184f31fccc0ea83ac41bd2c52a3715a6c6273747d6879c"
   },
+  "repairedOfflineControls": {
+    "executionInstanceSha256": "2b6dc7e2d81711c2179aec8a73bd5e9d54e9090cd82c1a7195f0272a35ed0890",
+    "envelopeSha256": "866c433bbf25ef71953fd79fb7f82ff103be18a62b1af8b4df57daaca9b4b8c2",
+    "attemptIndexSha256": "3a6a6047dc8e3ca5c77488a5029bb2165f5b9e71bf32fdc94ec60dcf15ec15e2",
+    "controlTreeSha256": "d484fe0ff19bdc2de2e1b78c8269f05ac278587b10bf0ca042f4eb9398af9b7c",
+    "approved": false,
+    "targetExecutionApproved": false,
+    "executionReady": false
+  },
   "authorization": {
     "explicit": true,
     "approved": true,
@@ -44,7 +53,7 @@
     "preRootTransitionAuthorized": false
   },
   "result": {
-    "controlSetRetired": false,
+    "controlSetRetired": true,
     "authorizedOfflineControlsGenerated": true,
     "targetStaged": false,
     "preRootTransitionPerformed": false,

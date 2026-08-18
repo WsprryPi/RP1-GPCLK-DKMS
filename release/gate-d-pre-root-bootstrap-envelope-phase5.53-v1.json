@@ -231,7 +231,7 @@
     },
     {
       "path": "/home/pi/gate-d-inputs/phase5.53-1884c0f1c53c/control-set/release/gate-d-execution-instance-phase5.53-v1.json",
-      "sha256": "6b9125621ed7047feaf5649798edaca73c72c9685d08848bbe95f7b9ed857027"
+      "sha256": "2b6dc7e2d81711c2179aec8a73bd5e9d54e9090cd82c1a7195f0272a35ed0890"
     },
     {
       "path": "/home/pi/gate-d-inputs/phase5.53-1884c0f1c53c/control-set/release/gate-d-matrix-policy-v2.json",
@@ -636,7 +636,7 @@
   "operationId": "phase5.53-pre-root-transition",
   "packagePathsSha256": "c9f7068ae6c0c335ce2ddf003a36fc9d83da0c7da452e71b662c6cba78caa55d",
   "preRootModule": {
-    "path": "/home/pi/gate-d-inputs/phase5.53-1884c0f1c53c/extracted/rp1-gpclk-dkms-0.0.0-phase5.53/scripts/gate_d_preroot.py",
+    "path": "/home/pi/gate-d-inputs/phase5.53-1884c0f1c53c/control-set/scripts/gate_d_preroot.py",
     "sha256": "6484e718f148ee60889dd733a1ad99fcc9408b74bfe2371bc7a77c207ddffe37"
   },
   "predecessorPackagePaths": [
@@ -954,7 +954,7 @@
   },
   "schemaVersion": 6,
   "stagedExecutor": {
-    "path": "/home/pi/gate-d-inputs/phase5.53-1884c0f1c53c/extracted/rp1-gpclk-dkms-0.0.0-phase5.53/scripts/gate_d_outer.py",
+    "path": "/home/pi/gate-d-inputs/phase5.53-1884c0f1c53c/control-set/scripts/gate_d_outer.py",
     "sha256": "6a2c5aa04ac25fc5bf78331668136e05ecad5168a39cab2ad607ab4da3fc3983"
   },
   "transitionFiles": [
@@ -1207,7 +1207,7 @@
     {
       "destination": "release/gate-d-execution-instance-phase5.53-v1.json",
       "mode": "0400",
-      "sha256": "6b9125621ed7047feaf5649798edaca73c72c9685d08848bbe95f7b9ed857027",
+      "sha256": "2b6dc7e2d81711c2179aec8a73bd5e9d54e9090cd82c1a7195f0272a35ed0890",
       "sourcePath": "/home/pi/gate-d-inputs/phase5.53-1884c0f1c53c/control-set/release/gate-d-execution-instance-phase5.53-v1.json"
     },
     {

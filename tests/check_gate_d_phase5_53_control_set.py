@@ -68,6 +68,19 @@ inventory = load("docs/evidence/gate-d-phase5.53-predecessor-package-inventory.j
 index = load("release/gate-d-attempts-phase5.53-v1/index.json")
 construction = load("docs/evidence/gate-d-phase5.53-control-set-construction.json")
 
+
+def control_tree_sha256() -> str:
+    paths = [
+        ROOT / "docs/evidence/gate-d-phase5.53-qualification-install-identity.json",
+        ROOT / "docs/evidence/gate-d-phase5.53-predecessor-package-inventory.json",
+        *sorted((ROOT / "release").glob("gate-d-*-phase5.53-v1.json")),
+        *sorted((ROOT / "release/gate-d-attempts-phase5.53-v1").glob("*.json")),
+    ]
+    records = [{"path": path.relative_to(ROOT).as_posix(), "sha256": sha(path)}
+               for path in sorted(set(paths), key=lambda item: item.as_posix())]
+    payload = (json.dumps(records, sort_keys=True, separators=(",", ":")) + "\n").encode()
+    return hashlib.sha256(payload).hexdigest()
+
 assert sha(snapshot_path) == "df8e80bc4b3382d9213d52cbc273b398e85124a2d2f58169c3a6f6aa339dbcf7"
 assert route["candidate"]["sourceCommit"] == build["candidate"]["sourceCommit"] == \
     "1884c0f1c53c661495576bf10ce08d8bf7a90bc3"
@@ -90,9 +103,9 @@ assert identity["packageTransitions"] and len(identity["packageTransitions"]) ==
 assert instance["schemaVersion"] == 6
 assert instance["executionPolicy"]["attemptPathNamespace"] == "phase5.53-1884c0f1c53c"
 assert instance["executionPolicy"]["attemptSchemaVersion"] == 2
-assert instance["authorization"]["approved"] is True
-assert instance["authorization"]["targetExecutionApproved"] is True
-assert instance["inputsReady"] is True and instance["executionReady"] is True
+assert instance["authorization"]["approved"] is False
+assert instance["authorization"]["targetExecutionApproved"] is False
+assert instance["inputsReady"] is True and instance["executionReady"] is False
 assert envelope["schemaVersion"] == 6
 roles = {item["role"]: item for item in envelope["releaseInputs"]}
 assert set(roles) == {"archive", "qualificationArchive", "gpio4Dtbo", "gpio20Dtbo",
@@ -113,12 +126,13 @@ if release_directory:
 assert sum(row["status"] == "ready" for row in instance["rows"]) == 10
 assert sum(row["status"] == "deferred-environmental" for row in instance["rows"]) == 5
 assert construction["controlSet"]["treeSha256"] == \
-    "f5c9012d0383ad771a184f31fccc0ea83ac41bd2c52a3715a6c6273747d6879c"
-assert construction["authority"]["approved"] is True
-assert construction["authority"]["targetExecutionApproved"] is True
-assert construction["authority"]["executionReady"] is True
+    "d484fe0ff19bdc2de2e1b78c8269f05ac278587b10bf0ca042f4eb9398af9b7c"
+assert construction["controlSet"]["treeSha256"] == control_tree_sha256()
+assert construction["authority"]["approved"] is False
+assert construction["authority"]["targetExecutionApproved"] is False
+assert construction["authority"]["executionReady"] is False
 assert construction["disposition"] == \
-    "authorized-offline-controls-committed; target staging remains separately unauthorized"
+    "repaired-offline-controls-awaiting-new-explicit-authorization"
 
 with tempfile.TemporaryDirectory() as temporary:
     frozen_root = pathlib.Path(temporary) / "qualification"
@@ -153,7 +167,7 @@ with tempfile.TemporaryDirectory() as temporary:
         assert gate_d_bootstrap.validate(bootstrap)["outputDisabled"] is True
         assert gate_d_preroot.validate(envelope)["outputDisabled"] is True
         result = gate_d_instance.validate(instance)
-        assert result["inputsReady"] is True and result["executionReady"] is True
+        assert result["inputsReady"] is True and result["executionReady"] is False
     finally:
         gate_d_root.validate = old_root
 

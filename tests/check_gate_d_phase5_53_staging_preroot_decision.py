@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 """Validate the exact non-authorizing Phase 5.53 staging decision prompt."""
-import hashlib, json
+import hashlib, json, subprocess
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 prompt=(ROOT/"docs/contracts/gate-d-phase5.53-staging-preroot-authorization-decision-prompt.md").read_text()
@@ -11,9 +11,11 @@ envelope=json.loads((ROOT/"release/gate-d-pre-root-bootstrap-envelope-phase5.53-
 assert len(envelope["inputFiles"])==64 and len(envelope["releaseInputs"])==8
 assert len(envelope["transitionFiles"])==55 and len(envelope["installedTools"])==22
 attestation=json.loads((ROOT/"docs/evidence/gate-d-phase5.53-preauthorization-recapture-attestation.json").read_text())
-assert hashlib.sha256((ROOT/"docs/evidence/gate-d-phase5.53-preauthorization-recapture-attestation.json").read_bytes()).hexdigest() in prompt
+historical_attestation=subprocess.check_output(["git","show","ded5e4e0b3f44125bc6d266977d3d646f36a65d8:docs/evidence/gate-d-phase5.53-preauthorization-recapture-attestation.json"],cwd=ROOT)
+assert hashlib.sha256(historical_attestation).hexdigest() in prompt
 assert attestation["authorization"]["targetStagingAuthorized"] is False
 assert attestation["authorization"]["preRootTransitionAuthorized"] is False
 assert "This prompt does not itself authorize staging" in prompt
+assert "Superseded" in prompt and "must not be reused" in prompt
 assert "Stop before lifecycle attempt 1" in prompt
 print("Phase 5.53 staging and pre-root authorization decision: PASS")

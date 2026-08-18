@@ -203,15 +203,11 @@ def generate(output_root: pathlib.Path) -> list[pathlib.Path]:
     instance["schemaVersion"] = 6
     instance["qualificationRoot"].update(path=marker["rootPath"], identitySha256=marker_hash)
     instance["authorization"].update(
-        approved=True, targetExecutionApproved=True,
-        approvalScope=("Operator explicitly authorized the exact Phase 5.53 control set at "
-                       "2838380a639d7af71ddc53be20829efd56cedc1d after two byte-identical "
-                       "read-only preauthorization captures matched snapshot "
-                       "df8e80bc4b3382d9213d52cbc273b398e85124a2d2f58169c3a6f6aa339dbcf7. "
-                       "Authority is limited to regeneration and commit of these offline "
-                       "controls; target staging and the pre-root transition remain separately "
-                       "unauthorized."))
-    instance["executionReady"] = True
+        approved=False, targetExecutionApproved=False,
+        approvalScope=("The previously authorized Phase 5.53 envelope was retired after "
+                       "fail-closed split-staging validation. Repaired controls require a new "
+                       "explicit authorization before target staging or execution."))
+    instance["executionReady"] = False
     instance["executionPolicy"].update(
         attemptPathNamespace=NAMESPACE, attemptSchemaVersion=2,
         routeDecision=route_rel, routeDecisionSha256=file_sha(route_path),
@@ -299,6 +295,15 @@ def generate(output_root: pathlib.Path) -> list[pathlib.Path]:
             "mode": "0400",
         })
     envelope["transitionFiles"] = sorted(transition_files, key=lambda item: item["destination"])
+    transition_sources = {item["destination"]: item for item in envelope["transitionFiles"]}
+    envelope["stagedExecutor"] = {
+        "path": transition_sources["scripts/gate_d_outer.py"]["sourcePath"],
+        "sha256": transition_sources["scripts/gate_d_outer.py"]["sha256"],
+    }
+    envelope["preRootModule"] = {
+        "path": transition_sources["scripts/gate_d_preroot.py"]["sourcePath"],
+        "sha256": transition_sources["scripts/gate_d_preroot.py"]["sha256"],
+    }
     identity_source = next(item["sourcePath"] for item in envelope["transitionFiles"]
                            if item["destination"] == identity_rel)
     envelope["qualificationIdentity"] = {"path": identity_source,
@@ -310,6 +315,11 @@ def generate(output_root: pathlib.Path) -> list[pathlib.Path]:
         [{"path": item["sourcePath"], "sha256": item["sha256"]} for item in envelope["transitionFiles"]] +
         [{"path": envelope["administrator"]["path"], "sha256": envelope["administrator"]["sha256"]}],
         key=lambda item: item["path"])
+    input_identities = {item["path"]: item["sha256"] for item in envelope["inputFiles"]}
+    for field in ("stagedExecutor", "preRootModule", "administrator", "qualificationIdentity"):
+        identity_record = envelope[field]
+        if input_identities.get(identity_record["path"]) != identity_record["sha256"]:
+            raise ValueError(f"Phase 5.53 {field} is outside the reconstructed input closure")
     envelope_path = output_root / "release/gate-d-pre-root-bootstrap-envelope-phase5.53-v1.json"
     envelope_path.write_bytes(pretty(envelope))
     return [identity_path, inventory_path, route_path, plan_path, bootstrap_path,

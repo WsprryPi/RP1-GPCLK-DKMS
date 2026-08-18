@@ -2,6 +2,11 @@
 
 # Phase 5.53 target-staging and pre-root authorization decision prompt
 
+> **Superseded:** the envelope bound by this prompt failed closed because its
+> qualification executor paths still targeted the product archive. The exact
+> authorization phrase below is retired and must not be reused. Repaired
+> controls require a new decision prompt and new explicit authorization.
+
 The operator may authorize only the Phase 5.53 pre-attempt staging and
 authenticated pre-root transition bound by these exact identities:
 
