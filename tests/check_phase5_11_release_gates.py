@@ -97,7 +97,6 @@ assert decisions["entries"]
 assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False for entry in decisions["entries"])
 assert set(document["candidateSnapshot"]["knownBlockers"]) == {
     "representative-build-not-performed",
-    "offline-checks-twice-not-recorded",
     "representative-lifecycle-matrix-not-executed",
     "public-artifact-download-verification-not-performed",
     "module-release-not-published",
@@ -112,9 +111,9 @@ assert freeze_gate["claimCeiling"] == \
     "frozen split product and qualification artifacts only; no representative build claim"
 offline_gate = next(gate for gate in document["gates"]
                     if gate["id"] == "offline-checks-twice")
-assert offline_gate["status"] == "blocked"
+assert offline_gate["status"] == "passed"
 assert offline_gate["claimCeiling"] == \
-    "offline validation of the split artifacts only after two exact-freeze passes"
+    "exact frozen split artifacts passed two offline suites; no representative lifecycle or hardware claim"
 phase524 = json.loads((ROOT / "release/gate-d-successor-offline-identities-phase5.24-v1.json").read_text())
 assert phase524["release"] == "0.0.0-phase5.24"
 assert phase524["sourceCommit"] == "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5"
