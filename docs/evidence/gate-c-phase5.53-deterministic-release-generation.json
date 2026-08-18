@@ -1,0 +1,44 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "release": "0.0.0-phase5.53",
+  "sourceCommit": "d7099814e2021a7b206dc68517be542aa94fb162",
+  "builds": {
+    "count": 2,
+    "independentDetachedWorktrees": true,
+    "byteIdentical": true,
+    "regularFileCount": 7
+  },
+  "artifacts": {
+    "PROVENANCE.json": "0b6d70140e17c159e3e5ad9259b0452677ba939ee2b52055887c61a767f11716",
+    "SHA256SUMS": "743509322961092822ab7aa5dea103536781b7723b2d08e4cdeac82331e87916",
+    "release-metadata.json": "f33a041df53ab5196ef7e23b74c424f303021cec0d1ef91761cf4c7955262080",
+    "rp1-gpclk-compatibility-manifest.json": "ba0e64b7680b50a098a3505e1ab5fc9865cfdfeb38d1eaceddd52e40f36accd1",
+    "rp1-gpclk-dkms-0.0.0-phase5.53.tar.gz": "d5799c29eeaf6594c91620d76028112a4a3af6518f17b57efdfaf7283c129a8c",
+    "rp1-gpclk-gpio20.dtbo": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "rp1-gpclk-gpio4.dtbo": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6"
+  },
+  "archiveInspection": {
+    "memberCount": 805,
+    "regularFileCount": 805,
+    "directoryEntryCount": 0,
+    "singleImplicitRoot": "rp1-gpclk-dkms-0.0.0-phase5.53",
+    "unsafeDuplicateLinkSpecialOrForbiddenMemberCount": 0,
+    "extendedAttributeResourceForkOrAclHeaderCount": 0
+  },
+  "archivedRegressions": {
+    "gateDOuter": {
+      "result": "failed",
+      "reason": "release/gate-d-attempts-v1/gd-current-supported-kernel-gpio4.json is excluded from the archive"
+    },
+    "bootOperationConstruction": {
+      "result": "failed",
+      "reason": "release/gate-d-attempts-phase5.52-v1/gd-prior-supported-kernel-downgrade-gpio4.json is excluded from the archive"
+    }
+  },
+  "classification": "deterministic structurally safe release unit with failed archived self-containment regressions",
+  "candidatePromoted": false,
+  "representativeBuildPerformed": false,
+  "targetAccessPerformed": false,
+  "hardwareOrSystemMutationPerformed": false
+}

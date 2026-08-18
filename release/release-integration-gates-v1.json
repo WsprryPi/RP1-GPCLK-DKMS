@@ -7,11 +7,11 @@
   "publishedReleaseRequiresPostDownloadVerification": true,
   "modulePublicationConfirmed": false,
   "candidateSnapshot": {
-    "archiveIdentity": "pending deterministic Phase 5.53 release generation",
-    "sealedArchiveMayBeTested": false,
+    "archiveIdentity": "rp1-gpclk-dkms-0.0.0-phase5.53.tar.gz sha256:d5799c29eeaf6594c91620d76028112a4a3af6518f17b57efdfaf7283c129a8c from source d7099814e2021a7b206dc68517be542aa94fb162",
+    "sealedArchiveMayBeTested": true,
     "consumableByDependentRelease": false,
     "knownBlockers": [
-      "deterministic-release-not-generated",
+      "archived-regressions-not-self-contained",
       "representative-build-not-performed",
       "offline-checks-twice-not-recorded",
       "representative-lifecycle-matrix-not-executed",
