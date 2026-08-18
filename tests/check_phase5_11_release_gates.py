@@ -80,21 +80,26 @@ decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_t
 assert decisions["entries"]
 assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False for entry in decisions["entries"])
 assert set(document["candidateSnapshot"]["knownBlockers"]) == {
+    "deterministic-release-not-generated",
+    "representative-build-not-performed",
+    "offline-checks-twice-not-recorded",
     "representative-lifecycle-matrix-not-executed",
     "public-artifact-download-verification-not-performed",
     "module-release-not-published",
 }
 assert document["candidateSnapshot"]["archiveIdentity"] == \
-    "rp1-gpclk-dkms-0.0.0-phase5.52.tar.gz sha256:0c67dee49a26bf5ab103d04bcf493bba8ae373a9f45b87e5704f52ede96bce01"
-assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is True
+    "pending deterministic Phase 5.53 release generation"
+assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is False
 freeze_gate = next(gate for gate in document["gates"]
                    if gate["id"] == "candidate-freeze")
 assert freeze_gate["status"] == "passed"
-assert "representative stock-kernel build compatibility only" in freeze_gate["claimCeiling"]
+assert freeze_gate["claimCeiling"] == \
+    "frozen source candidate only; no release archive or representative build claim"
 offline_gate = next(gate for gate in document["gates"]
                     if gate["id"] == "offline-checks-twice")
-assert offline_gate["status"] == "passed"
-assert "two exact-freeze offline-suite passes" in offline_gate["claimCeiling"]
+assert offline_gate["status"] == "blocked"
+assert offline_gate["claimCeiling"] == \
+    "offline validation only after two exact-freeze passes"
 phase524 = json.loads((ROOT / "release/gate-d-successor-offline-identities-phase5.24-v1.json").read_text())
 assert phase524["release"] == "0.0.0-phase5.24"
 assert phase524["sourceCommit"] == "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5"
