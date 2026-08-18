@@ -407,6 +407,18 @@ checks are repeated, and the final manifest is reviewed again before release.
 The machine-readable policy is
 [`release/calibrated-review-release-policy-v1.json`](../../release/calibrated-review-release-policy-v1.json).
 
+For an unpublished split-artifact candidate, invalidation is scoped to the
+complete byte-input closure of the changed artifact. A qualification-only
+successor may retain the exact product archive, UAPI, DTBO, ordinary-install,
+offline-product, and representative-build evidence only when all product
+inputs and output identities remain byte-for-byte unchanged. It must receive a
+new qualification source identity, deterministic qualification archive,
+provenance, focused transitive-consumer validation, one complete offline
+regression pass, and renewed control-set evidence. Any unclassified or product-
+affecting change fails this exception closed. Published bytes remain immutable.
+The machine-readable policy is
+[`release/artifact-scoped-invalidation-policy-v1.json`](../../release/artifact-scoped-invalidation-policy-v1.json).
+
 Strict module-signing systems require a documented trusted local signing and
 key-enrollment workflow. A valid signature demonstrates provenance and load
 eligibility, not behavioral safety.

@@ -5,6 +5,7 @@
   "release": "0.0.0-phase5.53",
   "expectedTag": "v0.0.0-phase5.53",
   "artifacts": [
+    {"id":"artifact-scoped-invalidation-policy","kind":"archive","path":"release/artifact-scoped-invalidation-policy-v1.json","destination":"/usr/share/rp1-gpclk-dkms/0.0.0-phase5.53/artifact-scoped-invalidation-policy-v1.json","owner":"root","group":"root","mode":"0644","replacement":"exact-version-checksum","removalOwner":"package"},
     {"id":"representative-system-matrix","kind":"archive","path":"release/representative-system-matrix-v1.json","destination":"/usr/share/rp1-gpclk-dkms/0.0.0-phase5.53/representative-system-matrix-v1.json","owner":"root","group":"root","mode":"0644","replacement":"exact-version-checksum","removalOwner":"package"},
     {"id":"gate-d-bootstrap-schema","kind":"archive","path":"schema/gate-d-qualification-bootstrap-plan-v1.schema.json","destination":"/usr/share/rp1-gpclk-dkms/0.0.0-phase5.53/gate-d-qualification-bootstrap-plan-v1.schema.json","owner":"root","group":"root","mode":"0644","replacement":"exact-version-checksum","removalOwner":"package"},
     {"id":"gate-d-root-schema","kind":"archive","path":"schema/gate-d-qualification-root-v1.schema.json","destination":"/usr/share/rp1-gpclk-dkms/0.0.0-phase5.53/gate-d-qualification-root-v1.schema.json","owner":"root","group":"root","mode":"0644","replacement":"exact-version-checksum","removalOwner":"package"},
