@@ -85,8 +85,12 @@ assert set(document["candidateSnapshot"]["knownBlockers"]) == {
     "module-release-not-published",
 }
 assert document["candidateSnapshot"]["archiveIdentity"] == \
-    "pending Phase 5.52 deterministic generation"
-assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is False
+    "rp1-gpclk-dkms-0.0.0-phase5.52.tar.gz sha256:0c67dee49a26bf5ab103d04bcf493bba8ae373a9f45b87e5704f52ede96bce01"
+assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is True
+freeze_gate = next(gate for gate in document["gates"]
+                   if gate["id"] == "candidate-freeze")
+assert freeze_gate["status"] == "passed"
+assert "representative stock-kernel build compatibility only" in freeze_gate["claimCeiling"]
 offline_gate = next(gate for gate in document["gates"]
                     if gate["id"] == "offline-checks-twice")
 assert offline_gate["status"] == "blocked"
