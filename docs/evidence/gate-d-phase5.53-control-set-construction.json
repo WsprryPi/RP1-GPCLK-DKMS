@@ -14,7 +14,7 @@
   },
   "controlSet": {
     "files": 46,
-    "treeSha256": "1586b6a1cc9d35fd3a362189fc2835370a74423f7ea38e85b07def93231d151a",
+    "treeSha256": "f5c9012d0383ad771a184f31fccc0ea83ac41bd2c52a3715a6c6273747d6879c",
     "generations": 2,
     "byteIdentical": true,
     "attempts": 38,
@@ -25,9 +25,11 @@
     "exactSuccessorReleaseInputsValidated": true
   },
   "authority": {
-    "approved": false,
-    "targetExecutionApproved": false,
-    "executionReady": false
+    "recordedUtc": "2026-08-18T16:00:18Z",
+    "authorizedControlSetCommit": "2838380a639d7af71ddc53be20829efd56cedc1d",
+    "approved": true,
+    "targetExecutionApproved": true,
+    "executionReady": true
   },
   "validation": {
     "completeOfflineRegression": "passed",
@@ -36,6 +38,6 @@
     "productArchiveClosure": "unchanged",
     "qualificationArchiveClosure": "unchanged"
   },
-  "disposition": "offline-control-set-complete-awaiting-separate-authorization",
+  "disposition": "authorized-offline-controls-committed; target staging remains separately unauthorized",
   "claimCeiling": "offline-valid control construction only; representative lifecycle matrix remains blocked; no target, hardware, calibrated, transmission, or RF qualification"
 }

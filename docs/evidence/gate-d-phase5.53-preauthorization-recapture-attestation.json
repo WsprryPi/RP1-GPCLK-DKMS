@@ -1,0 +1,53 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-preauthorization-recapture-attestation",
+  "controlSetCommit": "2838380a639d7af71ddc53be20829efd56cedc1d",
+  "authorizationDecisionCommit": "41f85e999f77eea50b50e3d0210700d2b12f9a23",
+  "captureTool": {
+    "path": "scripts/gate_d_live_snapshot.py",
+    "sha256": "037b110911ec11055d53e5a4380d273c0a6e787c024382c2f4730019f138f1f5",
+    "installedOnTarget": false
+  },
+  "canonicalSnapshot": {
+    "path": "docs/evidence/gate-d-live-target-snapshot-wspr5-phase5.53-v1.json",
+    "size": 7083,
+    "sha256": "df8e80bc4b3382d9213d52cbc273b398e85124a2d2f58169c3a6f6aa339dbcf7"
+  },
+  "recapture": {
+    "capturedUtc": "2026-08-18T16:00:18Z",
+    "captureCount": 2,
+    "capturesByteIdentical": true,
+    "canonicalByteIdentical": true,
+    "size": 7083,
+    "sha256": "df8e80bc4b3382d9213d52cbc273b398e85124a2d2f58169c3a6f6aa339dbcf7",
+    "targetFilesCreated": false,
+    "targetMutationsPerformed": false
+  },
+  "preauthorizationControls": {
+    "executionInstanceSha256": "0cb6d2744b20ba5aa412df0702abe230e38b1e407db1c5bd31bfc36c976ac7f1",
+    "envelopeSha256": "e9865ebd6208aa4dac1ee60a9b0715936cef1d60b9357b9bdce370343c0087ac",
+    "attemptIndexSha256": "3a6a6047dc8e3ca5c77488a5029bb2165f5b9e71bf32fdc94ec60dcf15ec15e2"
+  },
+  "authorizedOfflineControls": {
+    "executionInstanceSha256": "6b9125621ed7047feaf5649798edaca73c72c9685d08848bbe95f7b9ed857027",
+    "envelopeSha256": "aa07ee829ee01d0bdcdfbc3c0882b2ddd582c9f48c5e8b69253b315522a47e9c",
+    "attemptIndexSha256": "3a6a6047dc8e3ca5c77488a5029bb2165f5b9e71bf32fdc94ec60dcf15ec15e2",
+    "controlTreeSha256": "f5c9012d0383ad771a184f31fccc0ea83ac41bd2c52a3715a6c6273747d6879c"
+  },
+  "authorization": {
+    "explicit": true,
+    "approved": true,
+    "targetExecutionApproved": true,
+    "executionReady": true,
+    "targetStagingAuthorized": false,
+    "preRootTransitionAuthorized": false
+  },
+  "result": {
+    "controlSetRetired": false,
+    "authorizedOfflineControlsGenerated": true,
+    "targetStaged": false,
+    "preRootTransitionPerformed": false,
+    "lifecycleExecuted": false
+  }
+}

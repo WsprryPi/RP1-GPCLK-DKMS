@@ -90,9 +90,9 @@ assert identity["packageTransitions"] and len(identity["packageTransitions"]) ==
 assert instance["schemaVersion"] == 6
 assert instance["executionPolicy"]["attemptPathNamespace"] == "phase5.53-1884c0f1c53c"
 assert instance["executionPolicy"]["attemptSchemaVersion"] == 2
-assert instance["authorization"]["approved"] is False
-assert instance["authorization"]["targetExecutionApproved"] is False
-assert instance["inputsReady"] is True and instance["executionReady"] is False
+assert instance["authorization"]["approved"] is True
+assert instance["authorization"]["targetExecutionApproved"] is True
+assert instance["inputsReady"] is True and instance["executionReady"] is True
 assert envelope["schemaVersion"] == 6
 roles = {item["role"]: item for item in envelope["releaseInputs"]}
 assert set(roles) == {"archive", "qualificationArchive", "gpio4Dtbo", "gpio20Dtbo",
@@ -113,11 +113,12 @@ if release_directory:
 assert sum(row["status"] == "ready" for row in instance["rows"]) == 10
 assert sum(row["status"] == "deferred-environmental" for row in instance["rows"]) == 5
 assert construction["controlSet"]["treeSha256"] == \
-    "1586b6a1cc9d35fd3a362189fc2835370a74423f7ea38e85b07def93231d151a"
-assert construction["authority"] == {
-    "approved": False, "targetExecutionApproved": False, "executionReady": False}
+    "f5c9012d0383ad771a184f31fccc0ea83ac41bd2c52a3715a6c6273747d6879c"
+assert construction["authority"]["approved"] is True
+assert construction["authority"]["targetExecutionApproved"] is True
+assert construction["authority"]["executionReady"] is True
 assert construction["disposition"] == \
-    "offline-control-set-complete-awaiting-separate-authorization"
+    "authorized-offline-controls-committed; target staging remains separately unauthorized"
 
 with tempfile.TemporaryDirectory() as temporary:
     frozen_root = pathlib.Path(temporary) / "qualification"
@@ -152,7 +153,7 @@ with tempfile.TemporaryDirectory() as temporary:
         assert gate_d_bootstrap.validate(bootstrap)["outputDisabled"] is True
         assert gate_d_preroot.validate(envelope)["outputDisabled"] is True
         result = gate_d_instance.validate(instance)
-        assert result["inputsReady"] is True and result["executionReady"] is False
+        assert result["inputsReady"] is True and result["executionReady"] is True
     finally:
         gate_d_root.validate = old_root
 

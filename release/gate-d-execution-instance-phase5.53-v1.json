@@ -2,8 +2,8 @@
   "SPDX-License-Identifier": "MIT",
   "authorization": {
     "administrator": "pi through sudo",
-    "approvalScope": "No Phase 5.53 target execution authority has been requested or granted.",
-    "approved": false,
+    "approvalScope": "Operator explicitly authorized the exact Phase 5.53 control set at 2838380a639d7af71ddc53be20829efd56cedc1d after two byte-identical read-only preauthorization captures matched snapshot df8e80bc4b3382d9213d52cbc273b398e85124a2d2f58169c3a6f6aa339dbcf7. Authority is limited to regeneration and commit of these offline controls; target staging and the pre-root transition remain separately unauthorized.",
+    "approved": true,
     "cleanup": "remove only exact attempt-owned state and preserve administrator, historical, and unrelated bytes",
     "connection": "ssh wspr5",
     "dkms": "exact test-owned register, build, install, uninstall, and remove",
@@ -30,7 +30,7 @@
     ],
     "reboot": "planned and noticed only after recovery preflight",
     "serviceChanges": "temporarily stop and restore wsprrypi, sdrplay, sdrconnect-server, and SoapySDRServer when present",
-    "targetExecutionApproved": false
+    "targetExecutionApproved": true
   },
   "candidate": {
     "archiveSha256": "ae6df3a66a9a26a6fb8474e5896c9053b9f69580d8c45383a5556fc397ebb549",
@@ -57,7 +57,7 @@
     "targetPlan": "release/gate-d-target-operation-plan-phase5.53-v1.json",
     "targetPlanSha256": "3f07f8b67dbeeec925f1b8a5ac258930b68b4a7b83fcd4d2b990dbb08057a2cf"
   },
-  "executionReady": false,
+  "executionReady": true,
   "inputsReady": true,
   "kind": "gate-d-representative-system-execution-instance",
   "matrixRelease": "0.0.0-phase5.53",
