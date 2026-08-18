@@ -38,6 +38,9 @@ assert value["failedAssertion"] == "pre-root release-input graph is incomplete"
 assert value["disposition"] == "blocked-fail-closed"
 assert value["invalidGeneratedControlsRetained"] is False
 assert value["prohibitedWorkPerformed"] is False
-assert not (ROOT / "release/gate-d-execution-instance-phase5.53-v1.json").exists()
-assert not (ROOT / "release/gate-d-attempts-phase5.53-v1").exists()
-print("Phase 5.53 split-input control-set blocker: PASS")
+successor = json.loads((ROOT / "docs/evidence/phase5.53-qualification-successor-construction.json").read_text())
+assert successor["qualificationSuccessor"]["sourceCommit"] == \
+    "834d05c5c5da0c383c4a229eaeff9dae07a4359b"
+assert (ROOT / "release/gate-d-execution-instance-phase5.53-v1.json").is_file()
+assert (ROOT / "release/gate-d-attempts-phase5.53-v1/index.json").is_file()
+print("Phase 5.53 historical split-input control-set blocker: PASS")
