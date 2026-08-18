@@ -58,13 +58,26 @@ def validate(value: dict) -> None:
     if "downloaded to a fresh location" not in " ".join(by_id["public-download-verification"]["evidence"]):
         raise ValueError("fresh public download evidence missing")
     public_evidence = " ".join(by_id["public-download-verification"]["evidence"])
-    if not all(term in public_evidence for term in ("outer SHA-256", "inner checksum", "distinct path")):
+    if not all(term in public_evidence for term in
+               ("outer SHA-256", "both archives", "inner checksum", "distinct paths",
+                "without the qualification archive")):
         raise ValueError("outer and inner public artifact verification incomplete")
+    offline_evidence = " ".join(by_id["offline-checks-twice"]["evidence"])
+    if not all(term in offline_evidence for term in
+               ("product archive", "qualification archive", "ordinary-install",
+                "qualification-mode")):
+        raise ValueError("split-artifact offline validation is incomplete")
+    reproduction = " ".join(by_id["artifact-reproduction"]["evidence"])
+    if not all(term in reproduction for term in
+               ("post-review", "product-archive", "qualification-archive",
+                "GPIO4", "GPIO20", "candidate-freeze builds alone")):
+        raise ValueError("post-review split-artifact reproduction is incomplete")
     uapi_evidence = " ".join(by_id["cross-repository-uapi-checks"]["evidence"])
     if "byte equality" not in uapi_evidence or "semantic ABI equality" not in uapi_evidence:
         raise ValueError("cross-repository UAPI checks incomplete")
     pin_evidence = " ".join(by_id["wsprrypi-exact-pin"]["evidence"])
-    for term in ("module tag", "archive SHA-256", "UAPI", "compatibility-manifest", "adapter identity"):
+    for term in ("module tag", "product archive SHA-256", "UAPI", "compatibility-manifest",
+                 "adapter identity"):
         if term not in pin_evidence:
             raise ValueError(f"WsprryPi exact pin lacks {term}")
     if "module-before-adapter-before-application" not in " ".join(by_id["dependent-release-publication"]["evidence"]):
@@ -101,7 +114,7 @@ offline_gate = next(gate for gate in document["gates"]
                     if gate["id"] == "offline-checks-twice")
 assert offline_gate["status"] == "blocked"
 assert offline_gate["claimCeiling"] == \
-    "offline validation only after two exact-freeze passes"
+    "offline validation of the split artifacts only after two exact-freeze passes"
 phase524 = json.loads((ROOT / "release/gate-d-successor-offline-identities-phase5.24-v1.json").read_text())
 assert phase524["release"] == "0.0.0-phase5.24"
 assert phase524["sourceCommit"] == "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5"

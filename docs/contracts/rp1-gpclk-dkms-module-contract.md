@@ -50,7 +50,7 @@ owner for each product item. The separate qualification inventory is
 [`release/qualification-layout-v1.json`](../../release/qualification-layout-v1.json).
 Together the release artifacts include:
 
-- a versioned deterministic source archive and one versioned archive root;
+- a versioned deterministic product source archive and one product archive root;
 - module source and internal headers, `Kbuild`, `Makefile`, and finalized
   `dkms.conf`;
 - the canonical versioned UAPI header;
@@ -68,12 +68,13 @@ Together the release artifacts include:
 
 Each generated release identity binds the module release, exact source commit,
 expected release tag, UAPI ABI and canonical-header hash, overlay source and
-DTBO hashes, source-archive hash, compatibility-manifest hash, installation
-inventory hash, and every byte-affecting build-tool identity and option. A
-mismatch among the source version, `dkms.conf`, `MODULE_VERSION`, UAPI,
-manifest, release metadata, release tag, archive root, or archive name fails
-validation. Generated compatibility, provenance, checksum, and release
-metadata remain sidecars so their hashes do not create a cyclic archive hash.
+DTBO hashes, product-archive hash, qualification-archive hash,
+compatibility-manifest hash, both layout hashes, installation inventory hash,
+and every byte-affecting build-tool identity and option. A mismatch among the
+source version, `dkms.conf`, `MODULE_VERSION`, UAPI, manifest, release metadata,
+release tag, either archive root, or either archive name fails validation.
+Generated compatibility, provenance, checksum, and release metadata remain
+sidecars so their hashes do not create a cyclic archive hash.
 
 An artifact is not implemented or qualified merely because it is enumerated in
 this contract or inventory; the release generator, validator, and applicable
@@ -389,9 +390,10 @@ installation, lifecycle, reproducibility, or publication success never creates
 or preserves final `Qualified` status.
 
 Calibrated qualification uses the exact frozen packaged candidate, including
-its commit, archive digest, UAPI, overlay, manifest, package/tool, and expected-
-tag identities. Calibrated results are incorporated into a newly reviewed
-final compatibility manifest and release decision. The Experimental
+its commit, product- and qualification-archive digests, UAPI, overlay,
+manifest, package/tool, and expected-tag identities. Calibrated results are
+incorporated into a newly reviewed final compatibility manifest and release
+decision. The Experimental
 prerelease remains immutable and is never relabeled in place. A final identity
 is `Qualified` only for the exact route, mode, system, and artifact whose
 complete required evidence passes; incomplete or failed rows retain the
@@ -419,7 +421,8 @@ Every consumable release must be tagged and include:
 - security and behavioral release notes.
 
 A release candidate is not a consumable release. A candidate is one exact
-reviewed commit plus a sealed deterministic archive and its checksum; it may be
+reviewed commit plus sealed deterministic product and qualification archives
+and their checksums; it may be
 used for authorized qualification before a release exists. An expected tag, a
 local tag, reproducible bytes, or locally verified checksums do not establish
 publication. A published release exists for consumers only after the module
@@ -436,14 +439,15 @@ limitations, and a claim-to-evidence audit with no over-broad statement. A
 missing, failed, stale, or indeterminate prerequisite leaves the identity a
 candidate. Published bytes are immutable under their version and tag.
 
-WsprryPi consumes only an explicitly allowed release artifact through its
-compatibility manifest. Module publication precedes the dependent WsprryPi
-release, which records the allowed module/UAPI range and exact artifact
-identity.
+WsprryPi consumes only an explicitly allowed product release artifact through
+its compatibility manifest. The qualification archive is release qualification
+tooling, not an application runtime dependency. Module publication precedes the
+dependent WsprryPi release, which records the allowed module/UAPI range and
+exact product-artifact identity.
 
 After confirmed module publication, `WSPR-Transmitter` first consumes the
 canonical UAPI and exact module release and passes byte-for-byte and semantic
-ABI checks. WsprryPi then pins the exact downloaded archive/tag/checksum,
+ABI checks. WsprryPi then pins the exact downloaded product archive/tag/checksum,
 compatibility-manifest identity, UAPI identity, and reviewed adapter identity.
 Application integration qualification follows under separate authority;
 dependent adapter and application releases follow only after their respective
