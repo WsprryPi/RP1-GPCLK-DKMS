@@ -103,9 +103,9 @@ assert identity["packageTransitions"] and len(identity["packageTransitions"]) ==
 assert instance["schemaVersion"] == 6
 assert instance["executionPolicy"]["attemptPathNamespace"] == "phase5.53-1884c0f1c53c"
 assert instance["executionPolicy"]["attemptSchemaVersion"] == 2
-assert instance["authorization"]["approved"] is False
-assert instance["authorization"]["targetExecutionApproved"] is False
-assert instance["inputsReady"] is True and instance["executionReady"] is False
+assert instance["authorization"]["approved"] is True
+assert instance["authorization"]["targetExecutionApproved"] is True
+assert instance["inputsReady"] is True and instance["executionReady"] is True
 assert envelope["schemaVersion"] == 6
 roles = {item["role"]: item for item in envelope["releaseInputs"]}
 assert set(roles) == {"archive", "qualificationArchive", "gpio4Dtbo", "gpio20Dtbo",
@@ -126,13 +126,13 @@ if release_directory:
 assert sum(row["status"] == "ready" for row in instance["rows"]) == 10
 assert sum(row["status"] == "deferred-environmental" for row in instance["rows"]) == 5
 assert construction["controlSet"]["treeSha256"] == \
-    "d484fe0ff19bdc2de2e1b78c8269f05ac278587b10bf0ca042f4eb9398af9b7c"
+    "36d03d421bedaf2904e0421dfd82e3f942c037e5ff9cad268a60746479dd4f93"
 assert construction["controlSet"]["treeSha256"] == control_tree_sha256()
-assert construction["authority"]["approved"] is False
-assert construction["authority"]["targetExecutionApproved"] is False
-assert construction["authority"]["executionReady"] is False
+assert construction["authority"]["approved"] is True
+assert construction["authority"]["targetExecutionApproved"] is True
+assert construction["authority"]["executionReady"] is True
 assert construction["disposition"] == \
-    "repaired-offline-controls-awaiting-new-explicit-authorization"
+    "repaired-offline-controls-authorized; target staging remains separately unauthorized"
 
 with tempfile.TemporaryDirectory() as temporary:
     frozen_root = pathlib.Path(temporary) / "qualification"
@@ -167,7 +167,7 @@ with tempfile.TemporaryDirectory() as temporary:
         assert gate_d_bootstrap.validate(bootstrap)["outputDisabled"] is True
         assert gate_d_preroot.validate(envelope)["outputDisabled"] is True
         result = gate_d_instance.validate(instance)
-        assert result["inputsReady"] is True and result["executionReady"] is False
+        assert result["inputsReady"] is True and result["executionReady"] is True
     finally:
         gate_d_root.validate = old_root
 

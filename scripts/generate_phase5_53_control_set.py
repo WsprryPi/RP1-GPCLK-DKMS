@@ -203,11 +203,15 @@ def generate(output_root: pathlib.Path) -> list[pathlib.Path]:
     instance["schemaVersion"] = 6
     instance["qualificationRoot"].update(path=marker["rootPath"], identitySha256=marker_hash)
     instance["authorization"].update(
-        approved=False, targetExecutionApproved=False,
-        approvalScope=("The previously authorized Phase 5.53 envelope was retired after "
-                       "fail-closed split-staging validation. Repaired controls require a new "
-                       "explicit authorization before target staging or execution."))
-    instance["executionReady"] = False
+        approved=True, targetExecutionApproved=True,
+        approvalScope=("Operator explicitly authorized the exact repaired Phase 5.53 control "
+                       "set at dff45f11720496a983327131972f7d78ca66ff70 after two "
+                       "byte-identical read-only captures matched snapshot "
+                       "df8e80bc4b3382d9213d52cbc273b398e85124a2d2f58169c3a6f6aa339dbcf7. "
+                       "Authority is limited to regeneration and commit of repaired offline "
+                       "controls; target staging, pre-root transition, and lifecycle attempts "
+                       "remain separately unauthorized."))
+    instance["executionReady"] = True
     instance["executionPolicy"].update(
         attemptPathNamespace=NAMESPACE, attemptSchemaVersion=2,
         routeDecision=route_rel, routeDecisionSha256=file_sha(route_path),

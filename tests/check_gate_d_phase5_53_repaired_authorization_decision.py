@@ -22,10 +22,10 @@ expected={
     'aa07ee829ee01d0bdcdfbc3c0882b2ddd582c9f48c5e8b69253b315522a47e9c',
 }
 assert all(value in prompt for value in expected)
-instance=json.loads((ROOT/'release/gate-d-execution-instance-phase5.53-v1.json').read_text())
+instance=json.loads(subprocess.check_output(['git','show','dff45f11720496a983327131972f7d78ca66ff70:release/gate-d-execution-instance-phase5.53-v1.json'],cwd=ROOT))
 envelope=json.loads((ROOT/'release/gate-d-pre-root-bootstrap-envelope-phase5.53-v1.json').read_text())
-assert sha(ROOT/'release/gate-d-execution-instance-phase5.53-v1.json') in prompt
-assert sha(ROOT/'release/gate-d-pre-root-bootstrap-envelope-phase5.53-v1.json') in prompt
+decision_envelope=subprocess.check_output(['git','show','dff45f11720496a983327131972f7d78ca66ff70:release/gate-d-pre-root-bootstrap-envelope-phase5.53-v1.json'],cwd=ROOT)
+assert hashlib.sha256(decision_envelope).hexdigest() in prompt
 assert instance['authorization']['approved'] is False
 assert instance['authorization']['targetExecutionApproved'] is False
 assert instance['executionReady'] is False

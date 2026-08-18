@@ -44,6 +44,33 @@
     "targetExecutionApproved": false,
     "executionReady": false
   },
+  "repairedRecapture": {
+    "capturedUtc": "2026-08-18T17:39:16Z",
+    "captureCount": 2,
+    "capturesByteIdentical": true,
+    "canonicalByteIdentical": true,
+    "size": 7083,
+    "sha256": "df8e80bc4b3382d9213d52cbc273b398e85124a2d2f58169c3a6f6aa339dbcf7",
+    "targetFilesCreated": false,
+    "targetMutationsPerformed": false
+  },
+  "authorizedRepairedOfflineControls": {
+    "executionInstanceSha256": "1062fd5e9a444c64efc2f240659e8d3d946891365976191b7b44f2c595a5b2b7",
+    "envelopeSha256": "6156391ff951b326dd0c303628d223e86ee491e08fdc83ec0af9a3c842618b1e",
+    "attemptIndexSha256": "3a6a6047dc8e3ca5c77488a5029bb2165f5b9e71bf32fdc94ec60dcf15ec15e2",
+    "controlTreeSha256": "36d03d421bedaf2904e0421dfd82e3f942c037e5ff9cad268a60746479dd4f93"
+  },
+  "repairedAuthorization": {
+    "decisionPromptCommit": "bd945a6d6e2de486a60673f152d17050dfce0904",
+    "authorizedControlSetCommit": "dff45f11720496a983327131972f7d78ca66ff70",
+    "authorizedInputEnvelopeSha256": "866c433bbf25ef71953fd79fb7f82ff103be18a62b1af8b4df57daaca9b4b8c2",
+    "explicit": true,
+    "approved": true,
+    "targetExecutionApproved": true,
+    "executionReady": true,
+    "targetStagingAuthorized": false,
+    "preRootTransitionAuthorized": false
+  },
   "authorization": {
     "explicit": true,
     "approved": true,
@@ -55,6 +82,7 @@
   "result": {
     "controlSetRetired": true,
     "authorizedOfflineControlsGenerated": true,
+    "repairedControlSetAuthorized": true,
     "targetStaged": false,
     "preRootTransitionPerformed": false,
     "lifecycleExecuted": false
