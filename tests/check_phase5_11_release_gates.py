@@ -80,7 +80,6 @@ decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_t
 assert decisions["entries"]
 assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False for entry in decisions["entries"])
 assert set(document["candidateSnapshot"]["knownBlockers"]) == {
-    "allowlisted-distribution-release-not-generated",
     "representative-build-not-performed",
     "offline-checks-twice-not-recorded",
     "representative-lifecycle-matrix-not-executed",
@@ -88,13 +87,13 @@ assert set(document["candidateSnapshot"]["knownBlockers"]) == {
     "module-release-not-published",
 }
 assert document["candidateSnapshot"]["archiveIdentity"] == \
-    "pending deterministic generation from the allowlisted Phase 5.53 source"
-assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is False
+    "rp1-gpclk-dkms-0.0.0-phase5.53.tar.gz sha256:702bb699fd9a79d28d0dc96b58b55c408f55a7699c75253852acebf1007fb8fa from source 92036edf05d269f1749bc3d573f0e74e7e87f372"
+assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is True
 freeze_gate = next(gate for gate in document["gates"]
                    if gate["id"] == "candidate-freeze")
-assert freeze_gate["status"] == "blocked"
+assert freeze_gate["status"] == "passed"
 assert freeze_gate["claimCeiling"] == \
-    "cleanup source only; prior over-inclusive archive is superseded"
+    "frozen allowlisted source and deterministic sealed archive only; no representative build claim"
 offline_gate = next(gate for gate in document["gates"]
                     if gate["id"] == "offline-checks-twice")
 assert offline_gate["status"] == "blocked"
