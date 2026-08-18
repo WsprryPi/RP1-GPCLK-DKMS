@@ -1,0 +1,39 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.53-final-qualification-successor-freeze",
+  "generatedUtc": "2026-08-18T22:44:25Z",
+  "release": "0.0.0-phase5.53",
+  "product": {
+    "sourceCommit": "4e7a64a0ca353d2fcab6e25891f5254746e2b91a",
+    "archiveSha256": "032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76",
+    "regenerated": false,
+    "retainedArtifactsByteIdentical": true
+  },
+  "qualificationSuccessor": {
+    "sourceCommit": "2482f0121d16cbd1e4be6cbd93da0eff8d9876e7",
+    "archiveSha256": "65761067fae7f0fd150a10bf8a7b2e491fb501be2c3fbda1ea5be0d977de4c81",
+    "layoutSha256": "cf71d1392d5c43e5a94dd9ccde1c5e06204c25fde97cd1382a6e8f14f36df738",
+    "members": 28,
+    "generations": 2,
+    "byteIdentical": true,
+    "completeReleaseDirectoryDigest": "6d51ef34d406b3849d50b77ca7d565f28ecd47471d3e4d47ca2b15e04bcc0290",
+    "independentValidationsPassed": 2,
+    "dirtySource": false
+  },
+  "retainedComponentIdentities": {
+    "uapiHeaderSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"
+  },
+  "validation": {
+    "frozenReleaseChecksums": "passed",
+    "completeDirectoryByteIdentity": "passed",
+    "qualificationInventoryAndMetadata": "passed",
+    "qualificationSourceBytes": "passed",
+    "oneCompleteOfflineSuite": "passed",
+    "macOsLinuxTargetOnlyCompileSkips": 3
+  },
+  "nextGate": "final split-candidate offline-checks-twice",
+  "claimCeiling": "qualification-only successor freeze; no lifecycle, target, GPIO, clock, DMA, transmission, or RF qualification"
+}
