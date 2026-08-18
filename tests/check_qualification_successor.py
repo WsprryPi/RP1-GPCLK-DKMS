@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 """Exercise deterministic qualification-only successor construction."""
-import hashlib, importlib.util, json, pathlib, tempfile
+import hashlib, importlib.util, json, pathlib, subprocess, tempfile
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location("qualification_successor",ROOT/"scripts/build_qualification_successor.py"); assert spec and spec.loader
 tool=importlib.util.module_from_spec(spec); spec.loader.exec_module(tool)
 def sha(path:pathlib.Path)->str: return hashlib.sha256(path.read_bytes()).hexdigest()
+dirty=bool(subprocess.check_output(["git","status","--porcelain","--untracked-files=all"],cwd=ROOT,text=True).strip())
 with tempfile.TemporaryDirectory() as temporary:
     root=pathlib.Path(temporary); frozen=root/"frozen"; first=root/"first"; second=root/"second"; frozen.mkdir()
     product=frozen/"rp1-gpclk-dkms-0.0.0-phase5.53.tar.gz"; product.write_bytes(b"frozen product bytes\n")
@@ -18,7 +19,7 @@ with tempfile.TemporaryDirectory() as temporary:
     tool.generate(frozen,first,sha(product),True); tool.generate(frozen,second,sha(product),True)
     assert {path.name:sha(path) for path in first.iterdir()}=={path.name:sha(path) for path in second.iterdir()}
     assert sha(first/product.name)==sha(product)
-    value=json.loads((first/"release-metadata.json").read_text()); assert value["sourceCommit"]=="1"*40 and value["qualificationSourceCommit"]!=value["sourceCommit"] and value["qualificationDirtySource"] is True and value["publishable"] is False
+    value=json.loads((first/"release-metadata.json").read_text()); assert value["sourceCommit"]=="1"*40 and value["qualificationSourceCommit"]!=value["sourceCommit"] and value["qualificationDirtySource"] is dirty and value["publishable"] is False
     (frozen/"SHA256SUMS").write_text("0"*64+f"  {product.name}\n")
     try: tool.load_frozen(frozen,sha(product))
     except SystemExit: pass
