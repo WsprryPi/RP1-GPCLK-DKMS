@@ -11,7 +11,7 @@ ready for a separately authorized product-only target installation.
 
 1. Two clean-source development builds produced byte-identical complete
    release directories and product archive SHA-256
-   `a4c9e6cbb0c25140062723edc5103004c6764b6622e4fe05f8795501c0e33800`.
+`d014e60f7a76d6c5b178ff5bec4caa1d4978f4a9fd0a2a6a5552614c7d6b2276`.
 2. The 54-file product archive contains the exact current administrator,
    installation model, lifecycle documentation, module source, DKMS metadata,
    and both overlay sources. It contains no Gate D tools.
@@ -23,6 +23,9 @@ ready for a separately authorized product-only target installation.
    graph participated.
 5. The separately emitted qualification archive is a release artifact only;
    it is not a deployment input and was not used to establish deployability.
+6. The extracted administrator removed its exact ledger-owned predecessor and
+   reinstalled the same DKMS version product-only. Tampered ownership stopped
+   before an external command, and injected DKMS failure remained fail-closed.
 
 ## Safety and claim ceiling
 

@@ -2,9 +2,9 @@
   "SPDX-License-Identifier": "MIT",
   "schemaVersion": 1,
   "kind": "phase5.53-product-only-development-candidate",
-  "generatedUtc": "2026-08-18T18:33:45Z",
+  "generatedUtc": "2026-08-18T19:52:50Z",
   "release": "0.0.0-phase5.53",
-  "sourceCommit": "9185b01454650d0f13aa0c66bb995576a688d571",
+  "sourceCommit": "83b1de0e82c30ab4c2781dc941eef0556d6bfede",
   "publishable": false,
   "tagPresent": false,
   "builds": {
@@ -13,26 +13,28 @@
     "completeReleaseDirectoriesIdentical": true
   },
   "artifacts": {
-    "productArchiveSha256": "a4c9e6cbb0c25140062723edc5103004c6764b6622e4fe05f8795501c0e33800",
-    "qualificationArchiveSha256": "ee84053040a7dd68faf27255f2b3abb01d91c9f4fa212db9320f7b822f849e3d",
+    "productArchiveSha256": "d014e60f7a76d6c5b178ff5bec4caa1d4978f4a9fd0a2a6a5552614c7d6b2276",
+    "qualificationArchiveSha256": "fd94d9a675441bd09b12bbc52695bb1b3fa316e32bd7ea033b594980cdc24e1b",
     "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
     "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
-    "compatibilityManifestSha256": "9bd3ce6d87df2cf2b1dc431f782b0a6d9a2414a47fe0883551a90c7cb441ee00",
-    "releaseMetadataSha256": "cefdd447c96f175585e8c698972c8801cb3992f743a0568418be39d898dd4610",
-    "provenanceSha256": "0d485808e00ac79376f25068d958f5ef82795be23ce84692721e4c53a76d25f1",
-    "checksumsSha256": "6c4b706bf978a140c508e87154c49cd76990d01fa214655fe0ef6dfcc2fb77e3"
+    "compatibilityManifestSha256": "d00392ec62074db74b8063e727933e03cf1ab39d9a9889b724ac4f4edcc6b084",
+    "releaseMetadataSha256": "3801b1a7079c241dc85078dc07dbb740feb0548d136c62d4cc5567967bbbcb27",
+    "provenanceSha256": "4dcce9d5f3ca0d7bbf7300c863eaafe2b2099b4ee85f07a8230f1daf7253c9b9",
+    "checksumsSha256": "3b9582a105b2218a9a6d16d0829c1e78d33d9ee8e083a3064549fda1e5c3548d"
   },
   "productArchive": {
     "regularFileCount": 54,
     "containsAllowDevelopmentInstaller": true,
     "installsBothInactiveOverlays": true,
-    "containsQualificationTools": false
+    "containsQualificationTools": false,
+    "containsLedgerBoundRemoval": true
   },
   "validation": {
     "completeReleaseValidationA": "passed",
     "completeReleaseValidationB": "passed",
     "extractedProductInstallerTest": "passed",
-    "qualificationArchivePresentDuringInstallerTest": false
+    "qualificationArchivePresentDuringInstallerTest": false,
+    "sameVersionProductReinstall": "passed"
   },
   "deployment": {
     "performed": false,
