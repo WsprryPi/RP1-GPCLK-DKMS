@@ -374,6 +374,52 @@ with tempfile.TemporaryDirectory() as temporary:
         runner=fake_runner, allow_development=True)
     assert development_result["status"] == "complete"
     assert not (development_target / "usr/libexec/rp1-gpclk-dkms/gate-d-executor").exists()
+
+    # A same-version development successor is a complete removal followed by
+    # the ordinary product-only install. The terminal ledger, not a
+    # qualification identity, is the removal ownership authority.
+    development_state = development_target / "var/lib/rp1-gpclk-dkms/transaction.json"
+    removed = admin.remove(development_state, fake_runner)
+    assert removed["status"] == "removed" and removed["checkpoint"] == "inactive-clean"
+    assert not (development_target / "usr/src" / f"{admin.PACKAGE}-{admin.VERSION}").exists()
+    for overlay_name in admin.ROUTES.values():
+        assert not (development_target / "boot/firmware/overlays" / overlay_name).exists()
+    add_built_module(development_target)
+    add_installed_module(development_target)
+    reinstalled = admin.execute(
+        release, "gpio20", False, None, None, root=development_target,
+        runner=fake_runner, allow_development=True)
+    assert reinstalled["status"] == "complete"
+    for overlay_name in admin.ROUTES.values():
+        assert (development_target / "boot/firmware/overlays" / overlay_name).is_file()
+    assert not (development_target / "usr/libexec/rp1-gpclk-dkms/gate-d-executor").exists()
+
+    # Preflight identity validation is mutation-free: a changed owned file
+    # prevents both DKMS commands and removal of every other owned path.
+    changed_admin = development_target / "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin"
+    changed_admin.write_bytes(b"foreign replacement\n")
+    command_count = len(commands)
+    try:
+        admin.remove(development_state, fake_runner)
+    except ValueError as error:
+        assert "differs from removal ledger" in str(error)
+        assert len(commands) == command_count
+        assert json.loads(development_state.read_text())["status"] == "complete"
+        assert (development_target / "boot/firmware/overlays/rp1-gpclk-gpio4.dtbo").is_file()
+    else:
+        raise AssertionError("tampered product installation was removed")
+    changed_admin.write_bytes((ROOT / "scripts/rp1-gpclk-admin.py").read_bytes())
+    try:
+        admin.remove(development_state,
+                     lambda command: (_ for _ in ()).throw(RuntimeError("injected DKMS failure")))
+    except RuntimeError:
+        failed_removal = json.loads(development_state.read_text())
+        assert failed_removal["status"] == "inactive-removal-recovery-required"
+        assert failed_removal["checkpoint"] == "remove-dkms"
+        assert failed_removal["recoveryRequired"] is True
+        assert changed_admin.is_file()
+    else:
+        raise AssertionError("injected DKMS removal failure unexpectedly succeeded")
     qualification_archive.write_bytes(qualification_bytes)
     identity = {
         "SPDX-License-Identifier": "MIT", "schemaVersion": 1,

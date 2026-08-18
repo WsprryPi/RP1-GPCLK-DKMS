@@ -613,7 +613,7 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
     state_path = rooted(root, "/var/lib/rp1-gpclk-dkms/transaction.json")
     if state_path.exists():
         old = json.loads(state_path.read_text())
-        if old.get("status") not in {"complete", "recovered"}:
+        if old.get("status") not in {"complete", "recovered", "removed"}:
             raise ValueError("unresolved transaction requires explicit recovery")
     transitions = ({item["path"]: item for item in qualification["toolTransitions"]}
                    if qualification and qualification["schemaVersion"] == 2 else
@@ -1043,11 +1043,109 @@ def recover(state_path: pathlib.Path, runner: Callable[[list[str]], str] = comma
     return state
 
 
+def remove(state_path: pathlib.Path,
+           runner: Callable[[list[str]], str] = command_runner) -> dict:
+    """Remove exactly one complete, inactive installation from its ledger."""
+    if state_path.is_symlink() or not state_path.is_file():
+        raise ValueError("no real transaction state to remove")
+    state_status = state_path.stat()
+    if (state_path == pathlib.Path("/var/lib/rp1-gpclk-dkms/transaction.json") and
+            (state_status.st_uid != 0 or state_status.st_gid != 0 or
+             state_status.st_mode & 0o777 != 0o600)):
+        raise ValueError("transaction state ownership or mode is unsafe")
+    state = json.loads(state_path.read_text())
+    if (state.get("status") != "complete" or state.get("checkpoint") != "commit-state" or
+            state.get("recoveryRequired") is not False or state.get("liveOutput") is not False):
+        raise ValueError("installation is not a complete inactive removable state")
+    if state.get("package") != PACKAGE or state.get("release") != VERSION:
+        raise ValueError("removal ledger package identity differs")
+    kernel = state.get("kernel")
+    if not isinstance(kernel, str) or not kernel:
+        raise ValueError("transaction lacks kernel identity")
+
+    install_root = state_path.parents[3]
+    allowed_trees = tuple(install_root / raw.lstrip("/") for raw in (
+        f"/usr/src/{PACKAGE}-{VERSION}", f"/usr/share/{PACKAGE}/{VERSION}",
+        f"/usr/libexec/{PACKAGE}", f"/usr/share/doc/{PACKAGE}", f"/etc/{PACKAGE}"))
+    allowed_leaves = {install_root / f"boot/firmware/overlays/{name}"
+                      for name in ROUTES.values()}
+    allowed_leaves.update(install_root / f"usr/sbin/{name}"
+                          for name in ("rp1-gpclk-admin", "rp1-gpclk-diagnostics"))
+    def allowed(path: pathlib.Path) -> bool:
+        return path in allowed_leaves or any(path == tree or path.is_relative_to(tree)
+                                             for tree in allowed_trees)
+
+    current: list[tuple[pathlib.Path, dict]] = []
+    seen: set[pathlib.Path] = set()
+    for item in state.get("ownedFiles", []):
+        path = pathlib.Path(item.get("path", ""))
+        if (not path.is_absolute() or ".." in path.parts or path in seen or
+                not allowed(path)):
+            raise ValueError("owned file path is unsafe or ambiguous")
+        seen.add(path)
+        current.append((path, item))
+    for item in state.get("replacedFiles", []):
+        path = pathlib.Path(item.get("path", ""))
+        if (item.get("status") != "committed" or not path.is_absolute() or
+                ".." in path.parts or path in seen or not allowed(path)):
+            raise ValueError("replaced file state is unsafe or ambiguous")
+        seen.add(path)
+        current.append((path, item))
+    for path, item in current:
+        if "symlink" in item:
+            valid = path.is_symlink() and os.readlink(path) == item["symlink"]
+        elif item.get("type") == "symlink":
+            valid = path.is_symlink() and os.readlink(path) == item.get("successorTarget")
+        else:
+            expected = item.get("successorSha256", item.get("sha256"))
+            valid = (not path.is_symlink() and path.is_file() and
+                     isinstance(expected, str) and digest(path) == expected)
+        if not valid:
+            raise ValueError(f"installed file differs from removal ledger: {path}")
+    directories = []
+    for value in state.get("ownedDirectories", []):
+        path = pathlib.Path(value)
+        if (not path.is_absolute() or ".." in path.parts or path in directories or
+                not allowed(path)):
+            raise ValueError("owned directory path is unsafe or ambiguous")
+        if path.is_symlink() or not path.is_dir():
+            raise ValueError(f"owned directory differs from removal ledger: {path}")
+        directories.append(path)
+
+    state.update({"status": "inactive-removal-in-progress", "checkpoint": "remove-dkms",
+                  "recoveryRequired": True})
+    atomic_json(state_path, state)
+    try:
+        for command in (["dkms", "uninstall", "-m", PACKAGE, "-v", VERSION, "-k", kernel],
+                        ["dkms", "remove", "-m", PACKAGE, "-v", VERSION, "--all"]):
+            state.setdefault("commands", []).append(command)
+            atomic_json(state_path, state)
+            runner(command)
+        state["checkpoint"] = "remove-files"
+        atomic_json(state_path, state)
+        for path, _ in reversed(current):
+            path.unlink()
+        for directory in sorted(directories, key=lambda value: len(value.parts), reverse=True):
+            try:
+                directory.rmdir()
+            except OSError:
+                pass
+        state.update({"status": "removed", "checkpoint": "inactive-clean",
+                      "recoveryRequired": False})
+        atomic_json(state_path, state)
+        return state
+    except BaseException as error:
+        state.update({"status": "inactive-removal-recovery-required",
+                      "recoveryRequired": True, "failure": type(error).__name__})
+        atomic_json(state_path, state)
+        raise
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=("plan", "route-change-plan", "permission-status",
                                             "enroll-experimental", "revoke-enrollment",
-                                            "install", "status", "recover"))
+                                            "install", "remove", "status", "recover"))
     parser.add_argument("--release-directory", type=pathlib.Path)
     parser.add_argument("--route", choices=tuple(ROUTES), default="gpio4")
     parser.add_argument("--signing-required", action="store_true")
@@ -1103,6 +1201,12 @@ def main() -> None:
         if os.geteuid() != 0:
             raise SystemExit("root required")
         result = recover(state)
+    elif args.action == "remove":
+        if not args.execute:
+            raise SystemExit("removal mutation requires --execute")
+        if os.geteuid() != 0:
+            raise SystemExit("root required")
+        result = remove(state)
     else:
         if not args.execute:
             raise SystemExit("install mutation requires --execute")

@@ -125,6 +125,23 @@ checkpoint or converges to an inactive state. Complete removal removes all and
 only exclusively package-owned state and then audits absence, restored hardware
 baselines, dependency metadata, key ownership, and preserved unrelated bytes.
 
+For an inactive installation completed by `rp1-gpclk-admin`, run
+`rp1-gpclk-admin remove --execute` before installing a different candidate
+that uses the same DKMS package version. Removal accepts only the terminal
+`commit-state` ledger, validates every current product file and link before
+running DKMS or deleting anything, runs exact-version DKMS uninstall/remove,
+and deletes only ledger-owned paths. A missing, changed, foreign, duplicated,
+or out-of-inventory path fails closed. A completed qualification installation
+may include qualification files in that same historical ledger; removal
+deletes those installed successors, after which the ordinary product-only
+installer does not recreate them.
+
+This removal command does not unload a module, deactivate an overlay, edit boot
+configuration, or reboot. Its accepted ledger is output-disabled and inactive;
+if runtime state is not independently known to meet that contract, stop rather
+than using it as forced teardown. A DKMS command failure leaves
+`inactive-removal-recovery-required` and must be resolved before reinstalling.
+
 `lifecycle-policy rollback-plan SNAPSHOT`, `recovery-plan SNAPSHOT`, and
 `removal-audit SNAPSHOT` are read-only. Their exact input and acceptance fields
 are frozen in `release/lifecycle-removal-contract-v1.json`. They do not invoke
