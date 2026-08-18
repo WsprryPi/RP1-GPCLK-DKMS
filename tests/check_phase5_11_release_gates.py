@@ -85,11 +85,11 @@ assert set(document["candidateSnapshot"]["knownBlockers"]) == {
     "module-release-not-published",
 }
 assert document["candidateSnapshot"]["archiveIdentity"] == \
-    "rp1-gpclk-dkms-0.0.0-phase5.51.tar.gz sha256:253bd54054eb0b673f9e61c58a46b6b7ca2cf78d756fe4e80656f4ac1233f549"
-assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is True
+    "pending Phase 5.52 deterministic generation"
+assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is False
 offline_gate = next(gate for gate in document["gates"]
                     if gate["id"] == "offline-checks-twice")
-assert offline_gate["status"] == "passed"
+assert offline_gate["status"] == "blocked"
 phase524 = json.loads((ROOT / "release/gate-d-successor-offline-identities-phase5.24-v1.json").read_text())
 assert phase524["release"] == "0.0.0-phase5.24"
 assert phase524["sourceCommit"] == "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5"

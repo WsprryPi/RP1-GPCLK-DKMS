@@ -1,14 +1,14 @@
 {
   "SPDX-License-Identifier": "MIT",
   "schemaVersion": 1,
-  "release": "0.0.0-phase5.51",
-  "expectedTag": "v0.0.0-phase5.51",
+  "release": "0.0.0-phase5.52",
+  "expectedTag": "v0.0.0-phase5.52",
   "currentClassification": "candidate",
   "publishedReleaseRequiresPostDownloadVerification": true,
   "modulePublicationConfirmed": false,
   "candidateSnapshot": {
-    "archiveIdentity": "rp1-gpclk-dkms-0.0.0-phase5.51.tar.gz sha256:253bd54054eb0b673f9e61c58a46b6b7ca2cf78d756fe4e80656f4ac1233f549",
-    "sealedArchiveMayBeTested": true,
+    "archiveIdentity": "pending Phase 5.52 deterministic generation",
+    "sealedArchiveMayBeTested": false,
     "consumableByDependentRelease": false,
     "knownBlockers": [
       "representative-lifecycle-matrix-not-executed",
@@ -35,8 +35,8 @@
     "dependent-release-publication"
   ],
   "gates": [
-    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"passed","evidence":["Phase 5.51 source identity frozen at commit cc87e0cdec7195eb69de2a6606f388e23ee0799c","two byte-identical seven-file release generations produced archive SHA-256 253bd54054eb0b673f9e61c58a46b6b7ca2cf78d756fe4e80656f4ac1233f549","the extracted archive passed the self-contained schema-6 permanent-executor regression","wspr5 representative stock-kernel build and final inactive inventory recorded in gate-c-representative-build-manifest-phase5.51-v1.json"],"claimCeiling":"frozen source candidate and representative stock-kernel build compatibility only"},
-    {"id":"offline-checks-twice","owner":"RP1-GPCLK-DKMS","requires":["candidate-freeze"],"status":"passed","evidence":["two complete byte-identical offline suites passed on exact frozen commit cc87e0cdec7195eb69de2a6606f388e23ee0799c","all six sealed Phase 5.43 Phase 5.45 Phase 5.46 Phase 5.47 Phase 5.48 and Phase 5.50 archived validators executed and passed","evidence and common transcript recorded in gate-c-phase5.51-offline-checks-twice.json","three declared macOS Linux-target-only UAPI client compile skips; no target result inferred"],"claimCeiling":"two exact-freeze offline-suite passes and representative stock-kernel build compatibility only"},
+    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"blocked","evidence":["Phase 5.52 source identity is not frozen until this source-freeze commit is recorded","deterministic release generation and representative build evidence are pending"],"claimCeiling":"unfrozen development source only"},
+    {"id":"offline-checks-twice","owner":"RP1-GPCLK-DKMS","requires":["candidate-freeze"],"status":"blocked","evidence":["exact-freeze repeated offline validation is pending"],"claimCeiling":"no exact-freeze repeated-suite claim"},
     {"id":"representative-lifecycle-matrix","owner":"RP1-GPCLK-DKMS","requires":["offline-checks-twice"],"status":"blocked","evidence":["every predeclared matrix row passed with independent sealed evidence","baseline cleanup and residue audits","output-disabled proof"],"claimCeiling":"representative lifecycle compatibility only; no calibrated or RF claim"},
     {"id":"independent-adversarial-review","owner":"RP1-GPCLK-DKMS","requires":["representative-lifecycle-matrix"],"status":"blocked","evidence":["all packaging lifecycle compatibility integrity and claim findings closed","affected evidence invalidated and rerun"],"claimCeiling":"reviewed evidence only"},
     {"id":"artifact-reproduction","owner":"RP1-GPCLK-DKMS","requires":["independent-adversarial-review"],"status":"blocked","evidence":["independent archive reproduction byte match","independent GPIO4 and GPIO20 DTBO byte matches","tool identities and commands"],"claimCeiling":"reproducible candidate artifacts only"},
