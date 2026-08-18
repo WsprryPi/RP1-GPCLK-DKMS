@@ -289,7 +289,7 @@ with tempfile.TemporaryDirectory() as temporary:
     result = admin.execute(release, "gpio4", False, None, None, root=target, runner=fake_runner)
     assert result["status"] == "complete" and result["liveOutput"] is False
     assert (target / "boot/firmware/overlays/rp1-gpclk-gpio4.dtbo").read_bytes() == b"gpio4"
-    assert not (target / "boot/firmware/overlays/rp1-gpclk-gpio20.dtbo").exists()
+    assert (target / "boot/firmware/overlays/rp1-gpclk-gpio20.dtbo").read_bytes() == b"gpio20"
     assert (target / "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin").is_file()
     assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.53/overlay-contract-v1.json").is_file()
     assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.53/permissions-enrollment-policy-v1.json").is_file()

@@ -19,8 +19,11 @@ performed and live output false. `status` does not repair or mutate state.
 `recover` deliberately refuses generic automatic repair: recovery must first
 classify the recorded checkpoint and verify every package-owned byte.
 
-Installation copies only the selected DTBO; it does not activate it or edit
-boot configuration. It never creates `/etc/rp1-gpclk-dkms/enrollment.json`.
+Installation copies both allowlisted DTBOs; it does not activate either one or
+edit boot configuration. GPIO4 versus GPIO20 selection is a separate
+administrative operation and never requires rebuilding or reinstalling the
+DKMS module. Installation never creates
+`/etc/rp1-gpclk-dkms/enrollment.json`.
 Key enrollment, overlay activation, and reboot are separately reported
 administrator actions. Existing configuration, enrollment, keys,
 certificates, overlays, and unmarked boot entries remain administrator- or

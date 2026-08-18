@@ -34,7 +34,7 @@ ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
                       "select-new-overlay", "revalidate-entire-compatibility-identity",
                       "renew-enrollment-if-policy-requires"]
 STEPS = ["preflight", "stage", "verify-staged-hashes", "dkms-add", "dkms-build",
-         "verify-dkms-signature", "verify-module", "dkms-install", "install-overlay-inactive",
+         "verify-dkms-signature", "verify-module", "dkms-install", "install-both-overlays-inactive",
          "install-policy", "verify-output-disabled", "commit-state"]
 SAFE_PATH = re.compile(r"^/[A-Za-z0-9._+/-]+$")
 IDENTITY_FIELDS = ("compatibilityEntryId", "compatibilityManifestSha256",
@@ -603,8 +603,8 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
             raise ValueError("qualification mode accepts only an unpublished development candidate")
         qualification = validate_qualification_identity(qualification_identity, metadata,
                                                         metadata["archiveSha256"])
-    if ROUTES[route] not in checksums:
-        raise ValueError("selected overlay is absent from checksums")
+    if any(name not in checksums for name in ROUTES.values()):
+        raise ValueError("one or more allowlisted overlays are absent from checksums")
     if key is not None or certificate is not None:
         raise ValueError("manual signing material is not accepted; configure DKMS native signing")
     if signing and (not expected_signer or not expected_key_id):
@@ -762,15 +762,19 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
             commands += [["modinfo", "-F", "signer", installed_module],
                          ["modinfo", "-F", "sig_key", installed_module]]
         run_commands(commands)
-        overlay_destination = overlays / ROUTES[route]
-        if overlay_destination.is_symlink() or (overlay_destination.exists() and digest(overlay_destination) != checksums[ROUTES[route]]):
-            raise ValueError("refusing unrelated or different overlay")
         overlays.mkdir(parents=True, mode=0o755, exist_ok=True)
-        if not overlay_destination.exists():
-            shutil.copyfile(release / ROUTES[route], overlay_destination)
-            overlay_destination.chmod(0o644)
-            transaction["ownedFiles"].append({"path": str(overlay_destination), "sha256": digest(overlay_destination)})
-            atomic_json(state_path, transaction)
+        for overlay_name in ROUTES.values():
+            overlay_destination = overlays / overlay_name
+            if (overlay_destination.is_symlink() or
+                    (overlay_destination.exists() and
+                     digest(overlay_destination) != checksums[overlay_name])):
+                raise ValueError("refusing unrelated or different overlay")
+            if not overlay_destination.exists():
+                shutil.copyfile(release / overlay_name, overlay_destination)
+                overlay_destination.chmod(0o644)
+                transaction["ownedFiles"].append({"path": str(overlay_destination),
+                                                  "sha256": digest(overlay_destination)})
+                atomic_json(state_path, transaction)
         release_data = rooted(root, f"/usr/share/{PACKAGE}/{VERSION}")
         release_data_created = not release_data.exists()
         release_data.mkdir(parents=True, mode=0o755, exist_ok=True)
