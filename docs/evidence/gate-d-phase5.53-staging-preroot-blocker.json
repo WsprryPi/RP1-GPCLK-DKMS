@@ -1,0 +1,47 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-staging-preroot-blocker",
+  "host": "wspr5",
+  "authorizedOfflineControlsCommit": "2d1a5c3e5ca2388679423aa4f2f0f07a56c2d830",
+  "envelopeSha256": "aa07ee829ee01d0bdcdfbc3c0882b2ddd582c9f48c5e8b69253b315522a47e9c",
+  "recapture": {
+    "count": 2,
+    "size": 7083,
+    "sha256": "df8e80bc4b3382d9213d52cbc273b398e85124a2d2f58169c3a6f6aa339dbcf7",
+    "byteIdentical": true,
+    "canonicalByteComparison": "identical"
+  },
+  "transport": {
+    "format": "ustar",
+    "sha256": "68cd63a8322647b96428f6b86da958ce6ced667a2ba7668f55b46f91892b3ce3",
+    "inputCount": 64,
+    "productArchiveRegularMemberCount": 54,
+    "qualificationArchiveRegularMemberCount": 28,
+    "stagedRegularFileCount": 118,
+    "stagedDirectoryCountIncludingRoot": 23,
+    "pathTypeHashModeOwnershipValidation": "passed",
+    "extendedAttributeCount": 0,
+    "forbiddenPathCount": 0
+  },
+  "failure": {
+    "checkpoint": "archived-executor-read-only-validation",
+    "message": "/usr/bin/python3: can't open file '/home/pi/gate-d-inputs/phase5.53-1884c0f1c53c/extracted/rp1-gpclk-dkms-0.0.0-phase5.53/scripts/gate_d_outer.py': [Errno 2] No such file or directory",
+    "cause": "The schema-6 envelope still binds stagedExecutor and preRootModule beneath the product extraction tree even though both files are qualification-only and absent from the cleaned product archive.",
+    "administratorPathPresent": true,
+    "executorInvoked": false,
+    "administratorInvoked": false,
+    "preRootTransitionStarted": false,
+    "lifecycleAttemptStarted": false
+  },
+  "cleanup": {
+    "transientStagingRemoved": true,
+    "qualificationRootAbsent": true,
+    "preRootJournalAbsent": true,
+    "attemptNamespaceAbsent": true,
+    "inactiveBaselinePreserved": true,
+    "liveOutput": false
+  },
+  "disposition": "blocked-fail-closed",
+  "requiredSuccessor": "Bind stagedExecutor and preRootModule to their exact control-set paths, regenerate the Phase 5.53 controls and authorization identities, and repeat offline validation before requesting new target authorization. Do not alter either frozen distribution archive."
+}
