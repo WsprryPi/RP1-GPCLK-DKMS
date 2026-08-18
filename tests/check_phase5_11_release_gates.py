@@ -93,7 +93,8 @@ assert freeze_gate["status"] == "passed"
 assert "representative stock-kernel build compatibility only" in freeze_gate["claimCeiling"]
 offline_gate = next(gate for gate in document["gates"]
                     if gate["id"] == "offline-checks-twice")
-assert offline_gate["status"] == "blocked"
+assert offline_gate["status"] == "passed"
+assert "two exact-freeze offline-suite passes" in offline_gate["claimCeiling"]
 phase524 = json.loads((ROOT / "release/gate-d-successor-offline-identities-phase5.24-v1.json").read_text())
 assert phase524["release"] == "0.0.0-phase5.24"
 assert phase524["sourceCommit"] == "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5"

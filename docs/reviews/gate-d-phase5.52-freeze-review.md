@@ -2,10 +2,10 @@
 
 # Phase 5.52 source-freeze review
 
-Status: PASS for the source freeze, deterministic release, and representative
-stock-kernel build. Repeated exact-freeze offline checks and Gate D lifecycle
-execution remain pending. Historical Phase 5.51 controls and evidence remain
-unchanged.
+Status: PASS for the source freeze, deterministic release, representative
+stock-kernel build, and repeated exact-freeze offline checks. Phase 5.52 Gate D
+control construction and lifecycle execution remain pending. Historical Phase
+5.51 controls and evidence remain unchanged.
 
 An initial freeze candidate exposed a release-archive regression dependency on
 an intentionally excluded historical attempt document. The regression was
