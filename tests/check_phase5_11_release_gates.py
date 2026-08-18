@@ -83,7 +83,6 @@ decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_t
 assert decisions["entries"]
 assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False for entry in decisions["entries"])
 assert set(document["candidateSnapshot"]["knownBlockers"]) == {
-    "split-release-artifacts-not-generated",
     "representative-build-not-performed",
     "offline-checks-twice-not-recorded",
     "representative-lifecycle-matrix-not-executed",
@@ -91,13 +90,13 @@ assert set(document["candidateSnapshot"]["knownBlockers"]) == {
     "module-release-not-published",
 }
 assert document["candidateSnapshot"]["archiveIdentity"] == \
-    "pending deterministic product and qualification archive split"
-assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is False
+    "product sha256:ae6df3a66a9a26a6fb8474e5896c9053b9f69580d8c45383a5556fc397ebb549; qualification sha256:8bd6eff31a90b95c43372d96bac47a4c6fe92b74de92da10e58d99a8ed63c052; source 1884c0f1c53c661495576bf10ce08d8bf7a90bc3"
+assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is True
 freeze_gate = next(gate for gate in document["gates"]
                    if gate["id"] == "candidate-freeze")
-assert freeze_gate["status"] == "blocked"
+assert freeze_gate["status"] == "passed"
 assert freeze_gate["claimCeiling"] == \
-    "artifact-split source only; prior combined archive is superseded"
+    "frozen split product and qualification artifacts only; no representative build claim"
 offline_gate = next(gate for gate in document["gates"]
                     if gate["id"] == "offline-checks-twice")
 assert offline_gate["status"] == "blocked"

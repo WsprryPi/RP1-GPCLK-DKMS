@@ -7,11 +7,10 @@
   "publishedReleaseRequiresPostDownloadVerification": true,
   "modulePublicationConfirmed": false,
   "candidateSnapshot": {
-    "archiveIdentity": "pending deterministic product and qualification archive split",
-    "sealedArchiveMayBeTested": false,
+    "archiveIdentity": "product sha256:ae6df3a66a9a26a6fb8474e5896c9053b9f69580d8c45383a5556fc397ebb549; qualification sha256:8bd6eff31a90b95c43372d96bac47a4c6fe92b74de92da10e58d99a8ed63c052; source 1884c0f1c53c661495576bf10ce08d8bf7a90bc3",
+    "sealedArchiveMayBeTested": true,
     "consumableByDependentRelease": false,
     "knownBlockers": [
-      "split-release-artifacts-not-generated",
       "representative-build-not-performed",
       "offline-checks-twice-not-recorded",
       "representative-lifecycle-matrix-not-executed",
@@ -38,7 +37,7 @@
     "dependent-release-publication"
   ],
   "gates": [
-    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"blocked","evidence":["product and qualification distribution contracts are split","new exact source and dual-archive identities must be recorded"],"claimCeiling":"artifact-split source only; prior combined archive is superseded"},
+    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"passed","evidence":["Phase 5.53 split source identity is 1884c0f1c53c661495576bf10ce08d8bf7a90bc3","two independent generations produced byte-identical 54-member product and 25-member qualification archives","product SHA-256 is ae6df3a66a9a26a6fb8474e5896c9053b9f69580d8c45383a5556fc397ebb549 and qualification SHA-256 is 8bd6eff31a90b95c43372d96bac47a4c6fe92b74de92da10e58d99a8ed63c052"],"claimCeiling":"frozen split product and qualification artifacts only; no representative build claim"},
     {"id":"offline-checks-twice","owner":"RP1-GPCLK-DKMS","requires":["candidate-freeze"],"status":"blocked","evidence":["two complete offline suites must pass on the exact frozen Phase 5.53 commit","archived validators must receive each required exact archive","declared platform skips must remain explicit"],"claimCeiling":"offline validation only after two exact-freeze passes"},
     {"id":"representative-lifecycle-matrix","owner":"RP1-GPCLK-DKMS","requires":["offline-checks-twice"],"status":"blocked","evidence":["every predeclared matrix row passed with independent sealed evidence","baseline cleanup and residue audits","output-disabled proof"],"claimCeiling":"representative lifecycle compatibility only; no calibrated or RF claim"},
     {"id":"independent-adversarial-review","owner":"RP1-GPCLK-DKMS","requires":["representative-lifecycle-matrix"],"status":"blocked","evidence":["all packaging lifecycle compatibility integrity and claim findings closed","affected evidence invalidated and rerun"],"claimCeiling":"reviewed evidence only"},
