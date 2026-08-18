@@ -7,10 +7,11 @@
   "publishedReleaseRequiresPostDownloadVerification": true,
   "modulePublicationConfirmed": false,
   "candidateSnapshot": {
-    "archiveIdentity": "rp1-gpclk-dkms-0.0.0-phase5.53.tar.gz sha256:50d1fb885b927aa4f0aaa4542cd43d563d2cd0819f71d248a7af845e4095f3e0 from source 32a5f0c7e7aaf89f3b993b554160707fcb477c6d",
-    "sealedArchiveMayBeTested": true,
+    "archiveIdentity": "pending deterministic generation from the allowlisted Phase 5.53 source",
+    "sealedArchiveMayBeTested": false,
     "consumableByDependentRelease": false,
     "knownBlockers": [
+      "allowlisted-distribution-release-not-generated",
       "representative-build-not-performed",
       "offline-checks-twice-not-recorded",
       "representative-lifecycle-matrix-not-executed",
@@ -37,7 +38,7 @@
     "dependent-release-publication"
   ],
   "gates": [
-    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"passed","evidence":["Phase 5.53 corrected source identity is 32a5f0c7e7aaf89f3b993b554160707fcb477c6d","two independent release generations were byte-identical at archive SHA-256 50d1fb885b927aa4f0aaa4542cd43d563d2cd0819f71d248a7af845e4095f3e0","both extracted archives passed the boot-operation construction regression"],"claimCeiling":"frozen source and deterministic sealed archive only; no representative build claim"},
+    {"id":"candidate-freeze","owner":"RP1-GPCLK-DKMS","requires":[],"status":"blocked","evidence":["distribution archive is being reduced to the explicit release-contract allowlist","a new exact source and deterministic archive identity must be recorded"],"claimCeiling":"cleanup source only; prior over-inclusive archive is superseded"},
     {"id":"offline-checks-twice","owner":"RP1-GPCLK-DKMS","requires":["candidate-freeze"],"status":"blocked","evidence":["two complete offline suites must pass on the exact frozen Phase 5.53 commit","archived validators must receive each required exact archive","declared platform skips must remain explicit"],"claimCeiling":"offline validation only after two exact-freeze passes"},
     {"id":"representative-lifecycle-matrix","owner":"RP1-GPCLK-DKMS","requires":["offline-checks-twice"],"status":"blocked","evidence":["every predeclared matrix row passed with independent sealed evidence","baseline cleanup and residue audits","output-disabled proof"],"claimCeiling":"representative lifecycle compatibility only; no calibrated or RF claim"},
     {"id":"independent-adversarial-review","owner":"RP1-GPCLK-DKMS","requires":["representative-lifecycle-matrix"],"status":"blocked","evidence":["all packaging lifecycle compatibility integrity and claim findings closed","affected evidence invalidated and rerun"],"claimCeiling":"reviewed evidence only"},

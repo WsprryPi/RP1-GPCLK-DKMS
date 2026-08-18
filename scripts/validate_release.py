@@ -13,6 +13,12 @@ import subprocess
 import tarfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+SOURCE_RELEASE_EXACT = {
+    "Kbuild", "LICENSE.md", "Makefile", "README.md", "SECURITY.md",
+    "dkms.conf", "release/release-layout-v1.json", "uapi-identity.json",
+    "scripts/build_release.py", "scripts/validate_release.py",
+}
+SOURCE_RELEASE_PATTERNS = ("LICENSES/*",)
 
 
 def fail(message: str) -> None:
@@ -99,19 +105,16 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
             fail("unsafe archive root or member")
         if names != sorted(names) or len(names) != len(set(names)):
             fail("archive member order/uniqueness differs")
-        required = {"Kbuild", "Makefile", "dkms.conf", "include/uapi/linux/rp1_gpclk.h", "release/release-layout-v1.json",
-                    "scripts/rp1-gpclk-lifecycle.sh", "scripts/rp1-gpclk-diagnostics.py", "docs/operator/signing.md",
-                    "scripts/rp1-gpclk-admin.py", "release/installation-model-v1.json",
-                    "release/overlay-contract-v1.json",
-                    "release/permissions-enrollment-policy-v1.json",
-                    "release/compatibility-decisions-v1.json", "scripts/compatibility_policy.py",
-                    "release/signing-policy-v1.json", "scripts/signing_policy.py",
-                    "release/release-integration-gates-v1.json",
-                    "release/calibrated-review-release-policy-v1.json",
-                    f"docs/releases/{layout['release']}-security.md", f"docs/releases/{layout['release']}-behavior.md",
-                    "overlays/rp1-gpclk-gpio4.dts", "overlays/rp1-gpclk-gpio20.dts"}
-        if not required <= set(names):
-            fail(f"archive lacks required inputs: {sorted(required-set(names))}")
+        patterns = SOURCE_RELEASE_PATTERNS + tuple(
+            item["path"] for item in layout["artifacts"]
+            if item["kind"] in {"archive", "archive-tree"})
+        expected_members = {
+            name for name in tracked
+            if name in SOURCE_RELEASE_EXACT or
+            any(pathlib.PurePosixPath(name).match(pattern) for pattern in patterns)
+        }
+        if set(names) != expected_members:
+            fail(f"archive inventory differs: missing={sorted(expected_members-set(names))} extra={sorted(set(names)-expected_members)}")
         for member in members:
             if not member.isfile() or member.issym() or member.islnk() or member.uid or member.gid or member.uname or member.gname:
                 fail(f"unsafe archive metadata: {member.name}")

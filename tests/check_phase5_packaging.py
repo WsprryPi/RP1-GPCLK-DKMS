@@ -72,19 +72,19 @@ sha256sum "$input" | awk '{print $1}' >"$out"
         subprocess.run([str(ROOT / "scripts/validate_release.py"), destination, "--allow-development"], check=True, env=environment)
     archive = pathlib.Path(first) / f"rp1-gpclk-dkms-{release}.tar.gz"
     listing = subprocess.check_output(["tar", "-tzf", archive], text=True)
-    for excluded in (
-        "release/gate-d-execution-instance-v1.json",
-        "release/gate-d-version-pair-v1.json",
-        "release/gate-d-matrix-policy-v2.json",
-        "release/gate-d-route-compatibility-decision-v1.json",
-        "release/gate-d-target-operation-plan-v1.json",
-        "release/gate-d-candidate-status-v1.json",
-        "release/gate-d-attempts-v1/index.json",
-        "release/gate-c-representative-build-manifest-phase5.14-v1.json",
-        "docs/evidence/gate-c-representative-build-wspr5-phase5.14.md",
-        "tests/gate_d_busy_injector_test.c",
-    ):
-        assert excluded not in listing
+    archived = {name.split("/", 1)[1] for name in listing.splitlines()}
+    for prefix in ("docs/contracts/", "docs/development/", "docs/evidence/",
+                   "docs/reviews/", "tests/", "release/gate-d-attempts"):
+        assert not any(name.startswith(prefix) for name in archived)
+    assert "AGENTS.md" not in archived
+    assert "docs/releases/0.0.0-phase5.52-security.md" not in archived
+    assert f"docs/releases/{release}-security.md" in archived
+    assert f"docs/releases/{release}-behavior.md" in archived
+    assert "release/gate-d-phase5.24-residue-recovery-v1.json" in archived
+    assert "scripts/build_release.py" in archived
+    assert "scripts/validate_release.py" in archived
+    assert not any(re.match(r"release/gate-d-(?:pre-root-bootstrap-envelope|qualification-bootstrap-plan)-phase", name)
+                   for name in archived)
     names = sorted(path.name for path in pathlib.Path(first).iterdir())
     assert names == sorted(path.name for path in pathlib.Path(second).iterdir())
     for name in names:

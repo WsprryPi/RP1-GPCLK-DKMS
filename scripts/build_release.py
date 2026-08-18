@@ -20,25 +20,12 @@ import tempfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LAYOUT_PATH = ROOT / "release/release-layout-v1.json"
 KEY_SUFFIXES = {".key", ".pem", ".p12", ".pfx", ".der"}
-EXCLUDED_PREFIXES = (".git/", "dist/", "build/", "build-",
-                     "release/gate-d-attempts-v1/", "docs/evidence/")
-EXCLUDED_EXACT = {
-    "release/gate-d-execution-instance-v1.json",
-    "release/gate-d-version-pair-v1.json",
-    "release/gate-d-matrix-policy-v2.json",
-    "release/gate-d-route-compatibility-decision-v1.json",
-    "release/gate-d-target-operation-plan-v1.json",
-    "release/gate-d-candidate-status-v1.json",
-    "release/gate-d-successor-offline-identities-v1.json",
-    "release/gate-d-successor-offline-identities-phase5.15-v1.json",
-    "release/gate-c-representative-build-manifest-v1.json",
-    "release/gate-c-representative-build-manifest-phase5.14-v1.json",
-    "release/gate-c-representative-build-manifest-phase5.15-v1.json",
-    "tests/gate_d_busy_injector_test.c",
+SOURCE_RELEASE_EXACT = {
+    "Kbuild", "LICENSE.md", "Makefile", "README.md", "SECURITY.md",
+    "dkms.conf", "release/release-layout-v1.json", "uapi-identity.json",
+    "scripts/build_release.py", "scripts/validate_release.py",
 }
-ARCHIVED_REGRESSION_INPUTS = {
-    "release/gate-d-attempts-phase5.52-v1/gd-prior-supported-kernel-downgrade-gpio4.json",
-}
+SOURCE_RELEASE_PATTERNS = ("LICENSES/*",)
 VERSION_RE = re.compile(r'^#define RP1_GPCLK_MODULE_VERSION "([0-9A-Za-z][0-9A-Za-z._+-]*)"$', re.M)
 
 
@@ -85,7 +72,7 @@ def validate_versions(layout: dict) -> None:
         raise SystemExit("UAPI ABI and release layout differ")
 
 
-def source_files(development: bool) -> tuple[list[pathlib.Path], bool]:
+def source_files(development: bool, layout: dict) -> tuple[list[pathlib.Path], bool]:
     dirty = bool(run("git", "status", "--porcelain", "--untracked-files=all"))
     if dirty and not development:
         raise SystemExit("refusing publishable output from a dirty worktree")
@@ -96,13 +83,10 @@ def source_files(development: bool) -> tuple[list[pathlib.Path], bool]:
             continue
         rel = pathlib.Path(raw)
         posix = rel.as_posix()
-        qualification_sidecar = (
-            re.fullmatch(r"release/gate-d-attempts-phase[^/]+/.*", posix) or
-            re.fullmatch(r"release/gate-d-(?:execution-instance|route-compatibility-decision|successor-offline-identities|target-operation-plan|version-pair)-phase[^/]+\.json", posix) or
-            re.fullmatch(r"release/gate-c-representative-build-manifest-phase[^/]+\.json", posix))
-        if (posix in EXCLUDED_EXACT or posix.startswith(EXCLUDED_PREFIXES) or
-                (qualification_sidecar and posix not in ARCHIVED_REGRESSION_INPUTS) or
-                any(part in {"__pycache__", ".pytest_cache"} for part in rel.parts)):
+        patterns = SOURCE_RELEASE_PATTERNS + tuple(
+            item["path"] for item in layout["artifacts"]
+            if item["kind"] in {"archive", "archive-tree"})
+        if posix not in SOURCE_RELEASE_EXACT and not any(rel.match(pattern) for pattern in patterns):
             continue
         path = ROOT / rel
         if path.is_symlink() or not path.is_file():
@@ -113,6 +97,13 @@ def source_files(development: bool) -> tuple[list[pathlib.Path], bool]:
         if mode not in {0o644, 0o755}:
             raise SystemExit(f"unexpected release input mode {mode:04o}: {rel}")
         paths.append(rel)
+    found = {path.as_posix() for path in paths}
+    missing = SOURCE_RELEASE_EXACT - found
+    if missing:
+        raise SystemExit(f"missing source-release input: {sorted(missing)[0]}")
+    for pattern in patterns:
+        if not any(pathlib.PurePosixPath(name).match(pattern) for name in found):
+            raise SystemExit(f"missing source-release pattern: {pattern}")
     return sorted(paths, key=lambda path: path.as_posix()), dirty
 
 
@@ -166,7 +157,7 @@ def create_archive(path: pathlib.Path, files: list[pathlib.Path], prefix: str, e
 def generate(output: pathlib.Path, development: bool) -> None:
     layout = load_layout()
     validate_versions(layout)
-    files, dirty = source_files(development)
+    files, dirty = source_files(development, layout)
     commit = run("git", "rev-parse", "HEAD")
     epoch = int(run("git", "show", "-s", "--format=%ct", "HEAD"))
     tags = run("git", "tag", "--points-at", "HEAD").splitlines()
