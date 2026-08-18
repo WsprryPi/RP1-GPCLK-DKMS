@@ -6,13 +6,16 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 import pathlib
 import subprocess
 import tarfile
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("rp1_admin", ROOT / "scripts/rp1-gpclk-admin.py")
+ADMIN_PATH = pathlib.Path(os.environ.get(
+    "RP1_GPCLK_ADMIN_PATH", ROOT / "scripts/rp1-gpclk-admin.py"))
+spec = importlib.util.spec_from_file_location("rp1_admin", ADMIN_PATH)
 assert spec and spec.loader
 admin = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(admin)

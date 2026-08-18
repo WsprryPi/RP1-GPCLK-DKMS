@@ -1,0 +1,42 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.53-product-only-development-candidate",
+  "generatedUtc": "2026-08-18T18:33:45Z",
+  "release": "0.0.0-phase5.53",
+  "sourceCommit": "9185b01454650d0f13aa0c66bb995576a688d571",
+  "publishable": false,
+  "tagPresent": false,
+  "builds": {
+    "count": 2,
+    "byteIdentical": true,
+    "completeReleaseDirectoriesIdentical": true
+  },
+  "artifacts": {
+    "productArchiveSha256": "a4c9e6cbb0c25140062723edc5103004c6764b6622e4fe05f8795501c0e33800",
+    "qualificationArchiveSha256": "ee84053040a7dd68faf27255f2b3abb01d91c9f4fa212db9320f7b822f849e3d",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "compatibilityManifestSha256": "9bd3ce6d87df2cf2b1dc431f782b0a6d9a2414a47fe0883551a90c7cb441ee00",
+    "releaseMetadataSha256": "cefdd447c96f175585e8c698972c8801cb3992f743a0568418be39d898dd4610",
+    "provenanceSha256": "0d485808e00ac79376f25068d958f5ef82795be23ce84692721e4c53a76d25f1",
+    "checksumsSha256": "6c4b706bf978a140c508e87154c49cd76990d01fa214655fe0ef6dfcc2fb77e3"
+  },
+  "productArchive": {
+    "regularFileCount": 54,
+    "containsAllowDevelopmentInstaller": true,
+    "installsBothInactiveOverlays": true,
+    "containsQualificationTools": false
+  },
+  "validation": {
+    "completeReleaseValidationA": "passed",
+    "completeReleaseValidationB": "passed",
+    "extractedProductInstallerTest": "passed",
+    "qualificationArchivePresentDuringInstallerTest": false
+  },
+  "deployment": {
+    "performed": false,
+    "qualificationArchiveRequired": false,
+    "nextGate": "separately authorized product-only target installation"
+  }
+}
