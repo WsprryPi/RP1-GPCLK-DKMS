@@ -316,6 +316,28 @@ def module_signing_policy(root: pathlib.Path, kernel_release: str) -> dict:
             "commandLineEnforced": command_line_enforced, "lockdown": lockdown_value}
 
 
+def initial_preflight_kernel(document: dict) -> str:
+    """Return the sealed kernel required before any attempt mutation."""
+    kernel = document.get("kernelRelease")
+    if not isinstance(kernel, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._+-]*", kernel):
+        raise ValueError("attempt kernel identity is invalid")
+    if document.get("matrixRow") != "prior-supported-kernel-downgrade":
+        return kernel
+    inputs = document.get("inputs")
+    if not isinstance(inputs, dict):
+        raise ValueError("prior-kernel preflight inputs are invalid")
+    boot = inputs.get("boot")
+    if not isinstance(boot, dict):
+        raise ValueError("prior-kernel preflight boot identity is absent")
+    normal = boot.get("normalKernel")
+    prior = boot.get("priorKernel")
+    if (not isinstance(normal, str) or
+            not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._+-]*", normal) or
+            not isinstance(prior, str) or prior != kernel or normal == prior):
+        raise ValueError("prior-kernel preflight boot identity is inconsistent")
+    return normal
+
+
 def safe_extract(archive: pathlib.Path, destination: pathlib.Path) -> None:
     if archive.is_symlink() or not archive.is_file():
         raise ValueError("archive is absent or unsafe")
@@ -892,8 +914,9 @@ def default_internal(operation: str, document: dict, root: pathlib.Path) -> None
         if rooted(root, "/sys/module/rp1_gpclk_dkms").exists() or rooted(root, "/dev/rp1-gpclk").exists():
             raise ValueError("candidate runtime is already present")
         inputs = document["inputs"]
+        expected_kernel = initial_preflight_kernel(document)
         running_kernel = command(["/usr/bin/uname", "-r"]).strip()
-        if running_kernel != document["kernelRelease"]:
+        if running_kernel != expected_kernel:
             raise ValueError("running kernel differs from attempt")
         boot_id_path = rooted(root, "/proc/sys/kernel/random/boot_id")
         if boot_id_path.is_symlink() or not boot_id_path.is_file():
@@ -901,7 +924,7 @@ def default_internal(operation: str, document: dict, root: pathlib.Path) -> None
         boot_id = boot_id_path.read_text(encoding="ascii").strip()
         if not re.fullmatch(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}", boot_id):
             raise ValueError("boot identity is malformed")
-        signing = module_signing_policy(root, running_kernel)
+        signing = module_signing_policy(root, expected_kernel)
         if signing["enforced"] is not False:
             raise ValueError("signing policy differs from reviewed non-enforcing row")
         overlays = command(["/usr/bin/dtoverlay", "-l"], accepted=(0, 1))

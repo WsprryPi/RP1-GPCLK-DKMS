@@ -48,6 +48,26 @@ assert len(plan) == len(document["steps"])
 assert all(action["kind"] in {"internal", "command", "service-transaction"} for action in plan)
 assert all(not any(token in " ".join(action["argv"]).lower()
                        for token in outer.PROHIBITED) for action in plan)
+assert outer.initial_preflight_kernel(document) == document["kernelRelease"]
+
+failed_prior_path = (ROOT / "release/gate-d-attempts-phase5.51-v1/"
+                     "gd-prior-supported-kernel-downgrade-gpio4.json")
+failed_prior = json.loads(failed_prior_path.read_text())
+assert outer.initial_preflight_kernel(failed_prior) == failed_prior["inputs"]["boot"]["normalKernel"]
+for mutation in (
+        lambda value: value.update(inputs=None),
+        lambda value: value["inputs"].pop("boot"),
+        lambda value: value["inputs"]["boot"].pop("normalKernel"),
+        lambda value: value["inputs"]["boot"].update(normalKernel=value["kernelRelease"]),
+        lambda value: value["inputs"]["boot"].update(priorKernel="different-kernel")):
+    invalid = copy.deepcopy(failed_prior)
+    mutation(invalid)
+    try:
+        outer.initial_preflight_kernel(invalid)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("malformed prior-kernel preflight identity passed")
 
 with tempfile.TemporaryDirectory() as temporary:
     root = pathlib.Path(temporary)
@@ -243,6 +263,28 @@ with tempfile.TemporaryDirectory() as temporary:
             "sysctl": None, "configPath": f"/boot/config-{preflight_doc['kernelRelease']}",
             "commandLineEnforced": False, "lockdown": None,
         } and captured["liveOutput"] is False
+        prior_preflight = copy.deepcopy(preflight_doc)
+        prior_preflight["matrixRow"] = "prior-supported-kernel-downgrade"
+        prior_preflight["inputs"]["boot"]["priorKernel"] = "prior-test-kernel"
+        prior_preflight["kernelRelease"] = "prior-test-kernel"
+        outer.default_internal("capture-preflight", prior_preflight, root)
+        captured = json.loads((evidence / "preflight.json").read_text())
+        assert captured["runningKernel"] == preflight_doc["kernelRelease"]
+        assert captured["moduleSigningPolicy"]["configPath"] == (
+            f"/boot/config-{preflight_doc['kernelRelease']}")
+
+        def prior_kernel_run(argv, **kwargs):
+            outputs = {("/usr/bin/uname", "-r"): "prior-test-kernel\n",
+                       ("/usr/bin/dtoverlay", "-l"): "No overlays loaded\n"}
+            return outer.subprocess.CompletedProcess(argv, 0, outputs[tuple(argv)], "")
+        outer.subprocess.run = prior_kernel_run
+        try:
+            outer.default_internal("capture-preflight", prior_preflight, root)
+        except ValueError as error:
+            assert str(error) == "running kernel differs from attempt"
+        else:
+            raise AssertionError("prior kernel passed initial downgrade preflight")
+        outer.subprocess.run = preflight_run
         victim = next(iter(preflight_doc["inputs"]["tooling"].values()))
         outer.rooted(root, victim["installedPath"]).write_bytes(b"changed")
         try:
