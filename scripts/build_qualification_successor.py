@@ -57,6 +57,6 @@ def generate(frozen:pathlib.Path,output:pathlib.Path,expected_product_sha256:str
         raise
 
 def main()->None:
-    parser=argparse.ArgumentParser(); parser.add_argument("frozen",type=pathlib.Path); parser.add_argument("output",type=pathlib.Path); parser.add_argument("--expected-product-sha256",required=True,choices=["ae6df3a66a9a26a6fb8474e5896c9053b9f69580d8c45383a5556fc397ebb549"]); parser.add_argument("--development",action="store_true")
+    parser=argparse.ArgumentParser(); parser.add_argument("frozen",type=pathlib.Path); parser.add_argument("output",type=pathlib.Path); parser.add_argument("--expected-product-sha256",required=True,choices=["032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76"]); parser.add_argument("--development",action="store_true")
     args=parser.parse_args(); generate(args.frozen.resolve(),args.output.resolve(),args.expected_product_sha256,args.development)
 if __name__=="__main__": main()

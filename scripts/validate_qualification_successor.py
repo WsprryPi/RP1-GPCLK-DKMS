@@ -42,5 +42,5 @@ def validate(frozen:pathlib.Path,successor:pathlib.Path,expected_product_sha256:
             if source.extractfile(member).read()!=(ROOT/rel).read_bytes(): fail(f"qualification archive byte differs: {rel}")
     print("qualification-only successor validation: PASS")
 def main()->None:
-    parser=argparse.ArgumentParser(); parser.add_argument("frozen",type=pathlib.Path); parser.add_argument("successor",type=pathlib.Path); parser.add_argument("--expected-product-sha256",required=True,choices=["ae6df3a66a9a26a6fb8474e5896c9053b9f69580d8c45383a5556fc397ebb549"]); args=parser.parse_args(); validate(args.frozen.resolve(),args.successor.resolve(),args.expected_product_sha256)
+    parser=argparse.ArgumentParser(); parser.add_argument("frozen",type=pathlib.Path); parser.add_argument("successor",type=pathlib.Path); parser.add_argument("--expected-product-sha256",required=True,choices=["032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76"]); args=parser.parse_args(); validate(args.frozen.resolve(),args.successor.resolve(),args.expected_product_sha256)
 if __name__=="__main__": main()
