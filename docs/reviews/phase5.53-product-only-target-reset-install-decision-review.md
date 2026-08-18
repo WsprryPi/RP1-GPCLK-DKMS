@@ -9,6 +9,8 @@ Pass as a non-authorizing decision boundary.
 The prompt binds the exact source and product bytes, excludes the qualification
 archive, requires the packaged successor administrator, and permits only one
 ledger-owned removal followed by one ordinary inactive product installation.
+It additionally binds the live Phase 5.52 predecessor ledger and closure
+identities captured from `wspr5`, including the observed absent DKMS row.
 It requires a final read-only target recapture before mutation and exhausts
 authorization on any identity, ownership, runtime, service, physical-safety,
 DKMS, or cleanup discrepancy.

@@ -11,7 +11,7 @@ ready for a separately authorized product-only target installation.
 
 1. Two clean-source development builds produced byte-identical complete
    release directories and product archive SHA-256
-`d014e60f7a76d6c5b178ff5bec4caa1d4978f4a9fd0a2a6a5552614c7d6b2276`.
+`c46cec7641fc7e0aae31a86ce2e9ec78948deb8f22fe55cdfdde34636b2e4d3b`.
 2. The 54-file product archive contains the exact current administrator,
    installation model, lifecycle documentation, module source, DKMS metadata,
    and both overlay sources. It contains no Gate D tools.
@@ -26,6 +26,11 @@ ready for a separately authorized product-only target installation.
 6. The extracted administrator removed its exact ledger-owned predecessor and
    reinstalled the same DKMS version product-only. Tampered ownership stopped
    before an external command, and injected DKMS failure remained fail-closed.
+7. The real `wspr5` Phase 5.52 closure was captured read-only: ledger SHA-256
+   `0261c25f785458a0ee3cd270e4a7afcb606f5a86fdb99fc019aae231388c78f1`,
+   782 owned files, 28 committed replacements, 26 owned directories, zero
+   identity mismatches, and no DKMS row. The extracted successor exercised
+   that version topology and DKMS-absent branch before reinstalling Phase 5.53.
 
 ## Safety and claim ceiling
 
