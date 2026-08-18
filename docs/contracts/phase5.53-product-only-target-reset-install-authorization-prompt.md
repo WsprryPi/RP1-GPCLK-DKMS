@@ -11,17 +11,17 @@ exact phrase below.
 
 ## Exact identities
 
-- repaired product source commit: `40b2ffd2fa944511b549737bcf6eb1a199125971`;
+- repaired product source commit: `4e7a64a0ca353d2fcab6e25891f5254746e2b91a`;
 - product archive SHA-256:
-  `c46cec7641fc7e0aae31a86ce2e9ec78948deb8f22fe55cdfdde34636b2e4d3b`;
+  `032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76`;
 - GPIO4 DTBO SHA-256:
   `c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6`;
 - GPIO20 DTBO SHA-256:
   `8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa`;
 - release metadata SHA-256:
-  `6d0be0c91315299fc9e93d8d40e9d48910f570da5fa099965df7c69593d76a7b`;
+  `2a3530faccdbedf996fae3f105bd80b66fe680dd0c44044d560f6d1aca675089`;
 - checksums SHA-256:
-  `484eb6c4c5eccc33c3ca72345051e2d08ed1f743ea80bc351b370841f4cb8c9c`;
+  `d55369bfacfba817c22d681aa9bc3377748d00b44bc08188708eb9fbabb32a41`;
 - predecessor ledger SHA-256:
   `0261c25f785458a0ee3cd270e4a7afcb606f5a86fdb99fc019aae231388c78f1`;
 - predecessor live-closure SHA-256:
@@ -69,10 +69,10 @@ GPIO4 and GPIO20 remain separately unactivated and unqualified by this slice.
 
 > I explicitly authorize the exact Phase 5.53 product-only target reset and
 > inactive installation on wspr5 bound to repaired source commit
-> 40b2ffd2fa944511b549737bcf6eb1a199125971, predecessor ledger
+> 4e7a64a0ca353d2fcab6e25891f5254746e2b91a, predecessor ledger
 > 0261c25f785458a0ee3cd270e4a7afcb606f5a86fdb99fc019aae231388c78f1,
 > and product archive
-> c46cec7641fc7e0aae31a86ce2e9ec78948deb8f22fe55cdfdde34636b2e4d3b,
+> 032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76,
 > beginning with final read-only recapture and, only if it passes, exactly one
 > ledger-bound removal and one product-only development installation with both
 > inactive overlays. I do not authorize qualification tooling, module load,

@@ -20,3 +20,7 @@ but neither may be applied; the module may be built and installed by DKMS but
 not loaded or bound. Gate D, boot edits, reboot, GPIO, clock, DMA, Si5351, SDR,
 antenna, transmission, and RF remain prohibited. No target contact or mutation
 occurred while constructing or reviewing this decision.
+
+The product archive's own validator has now been executed from the extracted
+product closure against the seven-file qualification-free staging shape. That
+exact formerly missing consumer path passes without repository inputs.

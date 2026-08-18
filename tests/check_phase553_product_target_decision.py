@@ -4,9 +4,9 @@ from pathlib import Path
 
 p = (Path(__file__).resolve().parents[1] / "docs/contracts/phase5.53-product-only-target-reset-install-authorization-prompt.md").read_text()
 for required in (
-    "40b2ffd2fa944511b549737bcf6eb1a199125971",
+    "4e7a64a0ca353d2fcab6e25891f5254746e2b91a",
     "0261c25f785458a0ee3cd270e4a7afcb606f5a86fdb99fc019aae231388c78f1",
-    "c46cec7641fc7e0aae31a86ce2e9ec78948deb8f22fe55cdfdde34636b2e4d3b",
+    "032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76",
     "qualification archive is explicitly excluded",
     "remove --execute",
     "install --execute --allow-development --route gpio4",

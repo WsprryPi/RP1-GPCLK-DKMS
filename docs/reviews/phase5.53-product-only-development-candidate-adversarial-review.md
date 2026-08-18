@@ -11,7 +11,7 @@ ready for a separately authorized product-only target installation.
 
 1. Two clean-source development builds produced byte-identical complete
    release directories and product archive SHA-256
-`c46cec7641fc7e0aae31a86ce2e9ec78948deb8f22fe55cdfdde34636b2e4d3b`.
+`032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76`.
 2. The 54-file product archive contains the exact current administrator,
    installation model, lifecycle documentation, module source, DKMS metadata,
    and both overlay sources. It contains no Gate D tools.
@@ -31,6 +31,10 @@ ready for a separately authorized product-only target installation.
    782 owned files, 28 committed replacements, 26 owned directories, zero
    identity mismatches, and no DKMS row. The extracted successor exercised
    that version topology and DKMS-absent branch before reinstalling Phase 5.53.
+8. The validator was invoked from the extracted 54-file product root against a
+   seven-file staged release while the qualification archive and qualification
+   layout were physically absent. It validated only product-closure inputs and
+   passed; the repository validator did not participate.
 
 ## Safety and claim ceiling
 
