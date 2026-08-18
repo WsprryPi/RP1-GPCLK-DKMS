@@ -80,7 +80,6 @@ decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_t
 assert decisions["entries"]
 assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False for entry in decisions["entries"])
 assert set(document["candidateSnapshot"]["knownBlockers"]) == {
-    "deterministic-release-not-generated",
     "representative-build-not-performed",
     "offline-checks-twice-not-recorded",
     "representative-lifecycle-matrix-not-executed",
@@ -88,13 +87,13 @@ assert set(document["candidateSnapshot"]["knownBlockers"]) == {
     "module-release-not-published",
 }
 assert document["candidateSnapshot"]["archiveIdentity"] == \
-    "pending deterministic Phase 5.53 release generation"
-assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is False
+    "rp1-gpclk-dkms-0.0.0-phase5.53.tar.gz sha256:50d1fb885b927aa4f0aaa4542cd43d563d2cd0819f71d248a7af845e4095f3e0 from source 32a5f0c7e7aaf89f3b993b554160707fcb477c6d"
+assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is True
 freeze_gate = next(gate for gate in document["gates"]
                    if gate["id"] == "candidate-freeze")
 assert freeze_gate["status"] == "passed"
 assert freeze_gate["claimCeiling"] == \
-    "frozen source candidate only; no release archive or representative build claim"
+    "frozen source and deterministic sealed archive only; no representative build claim"
 offline_gate = next(gate for gate in document["gates"]
                     if gate["id"] == "offline-checks-twice")
 assert offline_gate["status"] == "blocked"
