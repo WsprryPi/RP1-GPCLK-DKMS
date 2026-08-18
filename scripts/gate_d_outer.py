@@ -338,6 +338,50 @@ def initial_preflight_kernel(document: dict) -> str:
     return normal
 
 
+def build_boot_operation(document: dict) -> dict:
+    """Derive the boot selector input solely from one sealed prior-kernel attempt."""
+    if document.get("matrixRow") != "prior-supported-kernel-downgrade":
+        raise ValueError("boot operation requires a prior-kernel attempt")
+    inputs = document.get("inputs")
+    boot = inputs.get("boot") if isinstance(inputs, dict) else None
+    staging = inputs.get("stagingDirectory") if isinstance(inputs, dict) else None
+    if not isinstance(boot, dict) or not isinstance(staging, str):
+        raise ValueError("boot operation inputs are incomplete")
+    staging_path = pathlib.PurePosixPath(staging)
+    if not staging_path.is_absolute() or ".." in staging_path.parts or staging_path == pathlib.PurePosixPath("/"):
+        raise ValueError("boot operation staging path is unsafe")
+    prior = boot.get("priorKernel")
+    if (not isinstance(prior, str) or prior != document.get("kernelRelease") or
+            prior == boot.get("normalKernel") or
+            not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._+-]*", prior)):
+        raise ValueError("boot operation kernel identity is inconsistent")
+    required = {
+        "config", "configSha256", "tryboot", "trybootSha256",
+        "priorKernelSource", "priorKernelSha256", "priorInitramfsSource",
+        "priorInitramfsSha256",
+    }
+    if not required <= set(boot):
+        raise ValueError("boot operation identities are incomplete")
+    safe_name = prior.replace("+", "-")
+    return {
+        "schemaVersion": 1,
+        "operationId": f"{document['operationId']}-boot",
+        "targetKernel": prior,
+        "sourceKernel": boot["priorKernelSource"],
+        "sourceKernelSha256": boot["priorKernelSha256"],
+        "sourceInitramfs": boot["priorInitramfsSource"],
+        "sourceInitramfsSha256": boot["priorInitramfsSha256"],
+        "config": boot["config"],
+        "configSha256": boot["configSha256"],
+        "tryboot": boot["tryboot"],
+        "trybootSha256": boot["trybootSha256"],
+        "stagedKernel": f"/boot/firmware/gate-d-stock-{safe_name}.img",
+        "stagedInitramfs": f"/boot/firmware/gate-d-stock-{safe_name}-initramfs",
+        "backupConfig": f"{staging}/config.txt.original",
+        "state": f"{staging}/boot-state.json",
+    }
+
+
 def safe_extract(archive: pathlib.Path, destination: pathlib.Path) -> None:
     if archive.is_symlink() or not archive.is_file():
         raise ValueError("archive is absent or unsafe")
@@ -999,6 +1043,8 @@ def default_internal(operation: str, document: dict, root: pathlib.Path) -> None
         if subordinate is not None:
             atomic_json(staging / "transition-operation.json", subordinate["transition"])
             atomic_json(staging / "recovery-operation.json", subordinate["recovery"])
+        if document.get("matrixRow") == "prior-supported-kernel-downgrade":
+            atomic_json(staging / "boot-operation.json", build_boot_operation(document))
         return
     if operation == "inject-build-failure":
         wrapper = staging / "compiler-failure"
