@@ -379,9 +379,27 @@ with tempfile.TemporaryDirectory() as temporary:
     # the ordinary product-only install. The terminal ledger, not a
     # qualification identity, is the removal ownership authority.
     development_state = development_target / "var/lib/rp1-gpclk-dkms/transaction.json"
+    predecessor_version = "0.0.0-phase5.52"
+    current_source = development_target / "usr/src" / f"{admin.PACKAGE}-{admin.VERSION}"
+    predecessor_source = development_target / "usr/src" / f"{admin.PACKAGE}-{predecessor_version}"
+    current_source.rename(predecessor_source)
+    current_data = development_target / "usr/share" / admin.PACKAGE / admin.VERSION
+    predecessor_data = development_target / "usr/share" / admin.PACKAGE / predecessor_version
+    current_data.rename(predecessor_data)
+    predecessor_state = json.loads(development_state.read_text())
+    predecessor_state["release"] = predecessor_version
+    encoded = json.dumps(predecessor_state)
+    encoded = encoded.replace(f"{admin.PACKAGE}-{admin.VERSION}",
+                              f"{admin.PACKAGE}-{predecessor_version}")
+    encoded = encoded.replace(f"/{admin.PACKAGE}/{admin.VERSION}",
+                              f"/{admin.PACKAGE}/{predecessor_version}")
+    development_state.write_text(encoded + "\n")
     removed = admin.remove(development_state, fake_runner)
     assert removed["status"] == "removed" and removed["checkpoint"] == "inactive-clean"
-    assert not (development_target / "usr/src" / f"{admin.PACKAGE}-{admin.VERSION}").exists()
+    assert removed["predecessorRelease"] == predecessor_version
+    assert removed["predecessorDkmsPresent"] is False
+    assert not predecessor_source.exists()
+    assert not any(command[:2] == ["dkms", "uninstall"] for command in commands[-2:])
     for overlay_name in admin.ROUTES.values():
         assert not (development_target / "boot/firmware/overlays" / overlay_name).exists()
     add_built_module(development_target)
@@ -409,9 +427,12 @@ with tempfile.TemporaryDirectory() as temporary:
     else:
         raise AssertionError("tampered product installation was removed")
     changed_admin.write_bytes((ROOT / "scripts/rp1-gpclk-admin.py").read_bytes())
+    def failing_removal_runner(command: list[str]) -> str:
+        if command[:2] == ["dkms", "status"]:
+            return f"{admin.PACKAGE}/{admin.VERSION}, {admin.platform.release()}, installed"
+        raise RuntimeError("injected DKMS failure")
     try:
-        admin.remove(development_state,
-                     lambda command: (_ for _ in ()).throw(RuntimeError("injected DKMS failure")))
+        admin.remove(development_state, failing_removal_runner)
     except RuntimeError:
         failed_removal = json.loads(development_state.read_text())
         assert failed_removal["status"] == "inactive-removal-recovery-required"

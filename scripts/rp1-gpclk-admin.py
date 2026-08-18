@@ -28,6 +28,7 @@ from typing import Callable
 PACKAGE = "rp1-gpclk-dkms"
 MODULE = "rp1_gpclk_dkms"
 VERSION = "0.0.0-phase5.53"
+REMOVABLE_PREDECESSOR_RELEASES = frozenset({"0.0.0-phase5.52", VERSION})
 ROUTES = {"gpio4": "rp1-gpclk-gpio4.dtbo", "gpio20": "rp1-gpclk-gpio20.dtbo"}
 ROUTE_CHANGE_STEPS = ["prove-idle", "disable-live-eligibility",
                       "remove-old-binding-proven-cleanup", "verify-both-pins-safe",
@@ -1057,7 +1058,9 @@ def remove(state_path: pathlib.Path,
     if (state.get("status") != "complete" or state.get("checkpoint") != "commit-state" or
             state.get("recoveryRequired") is not False or state.get("liveOutput") is not False):
         raise ValueError("installation is not a complete inactive removable state")
-    if state.get("package") != PACKAGE or state.get("release") != VERSION:
+    predecessor_release = state.get("release")
+    if (state.get("package") != PACKAGE or
+            predecessor_release not in REMOVABLE_PREDECESSOR_RELEASES):
         raise ValueError("removal ledger package identity differs")
     kernel = state.get("kernel")
     if not isinstance(kernel, str) or not kernel:
@@ -1065,7 +1068,8 @@ def remove(state_path: pathlib.Path,
 
     install_root = state_path.parents[3]
     allowed_trees = tuple(install_root / raw.lstrip("/") for raw in (
-        f"/usr/src/{PACKAGE}-{VERSION}", f"/usr/share/{PACKAGE}/{VERSION}",
+        f"/usr/src/{PACKAGE}-{predecessor_release}",
+        f"/usr/share/{PACKAGE}/{predecessor_release}",
         f"/usr/libexec/{PACKAGE}", f"/usr/share/doc/{PACKAGE}", f"/etc/{PACKAGE}"))
     allowed_leaves = {install_root / f"boot/firmware/overlays/{name}"
                       for name in ROUTES.values()}
@@ -1112,12 +1116,20 @@ def remove(state_path: pathlib.Path,
             raise ValueError(f"owned directory differs from removal ledger: {path}")
         directories.append(path)
 
+    dkms_status_command = ["dkms", "status", "-m", PACKAGE, "-v", predecessor_release]
+    dkms_status = runner(dkms_status_command)
+    dkms_identity = f"{PACKAGE}/{predecessor_release}"
+    dkms_present = any(line.strip().startswith(dkms_identity + ",")
+                       for line in dkms_status.splitlines())
     state.update({"status": "inactive-removal-in-progress", "checkpoint": "remove-dkms",
+                  "predecessorRelease": predecessor_release,
+                  "predecessorDkmsPresent": dkms_present,
                   "recoveryRequired": True})
     atomic_json(state_path, state)
     try:
-        for command in (["dkms", "uninstall", "-m", PACKAGE, "-v", VERSION, "-k", kernel],
-                        ["dkms", "remove", "-m", PACKAGE, "-v", VERSION, "--all"]):
+        commands = (["dkms", "uninstall", "-m", PACKAGE, "-v", predecessor_release, "-k", kernel],
+                    ["dkms", "remove", "-m", PACKAGE, "-v", predecessor_release, "--all"])
+        for command in commands if dkms_present else ():
             state.setdefault("commands", []).append(command)
             atomic_json(state_path, state)
             runner(command)
