@@ -36,11 +36,19 @@ DKMS. It supplements rather than replaces the stock Raspberry Pi `clk-rp1`
 driver. WsprryPi will not distribute or maintain a custom kernel for this
 feature.
 
-Every release unit includes all of the following; the machine-readable
-installation inventory in
+Every release unit separates the DKMS product source archive from the
+release-qualification tooling archive. The product archive is the operator and
+DKMS distribution payload. The qualification archive is a separately hashed
+release artifact for controlled validation and is not installed as part of the
+ordinary product lifecycle. Historical controls, target identities, evidence,
+reviews, prompts, and tests remain repository-only.
+
+The machine-readable product installation inventory in
 [`release/release-layout-v1.json`](../../release/release-layout-v1.json) freezes
 the exact destination, owner, group, mode, replacement policy, and removal
-owner for each item:
+owner for each product item. The separate qualification inventory is
+[`release/qualification-layout-v1.json`](../../release/qualification-layout-v1.json).
+Together the release artifacts include:
 
 - a versioned deterministic source archive and one versioned archive root;
 - module source and internal headers, `Kbuild`, `Makefile`, and finalized
@@ -54,7 +62,9 @@ owner for each item:
   read-only diagnostic tooling;
 - module-signing and administrator key-enrollment guidance;
 - operator documentation and security/behavioral release notes; and
-- machine-readable release metadata and restrictive device-node policy.
+- machine-readable release metadata and restrictive device-node policy;
+- a separately rooted qualification archive containing generic Gate D tools,
+  schemas, probes, matrices, and release-gate policy only.
 
 Each generated release identity binds the module release, exact source commit,
 expected release tag, UAPI ABI and canonical-header hash, overlay source and

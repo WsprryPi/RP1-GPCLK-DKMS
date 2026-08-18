@@ -84,53 +84,59 @@ def rooted_leaf(root: pathlib.Path, absolute: str) -> pathlib.Path:
     return parent / pure.name
 
 
-def qualification_package_paths(archive_path: pathlib.Path) -> dict[str, dict]:
-    """Expand canonical unversioned package destinations from the sealed layout."""
-    with tarfile.open(archive_path, "r:gz") as archive:
-        members = archive.getmembers()
-        roots = {pathlib.PurePosixPath(item.name).parts[0] for item in members
-                 if pathlib.PurePosixPath(item.name).parts}
-        if len(roots) != 1:
-            raise ValueError("candidate archive root is absent or ambiguous")
-        prefix = next(iter(roots))
-        layout_member = archive.getmember(f"{prefix}/release/release-layout-v1.json")
-        stream = archive.extractfile(layout_member)
-        if stream is None:
-            raise ValueError("candidate installation layout is unreadable")
-        layout = json.loads(stream.read())
-        archive_names = [str(pathlib.PurePosixPath(item.name).relative_to(prefix))
-                         for item in members if item.isfile()]
+def qualification_package_paths(*archive_paths: pathlib.Path) -> dict[str, dict]:
+    """Expand product and qualification destinations from their sealed layouts."""
+    layouts: list[tuple[dict, list[str]]] = []
+    for archive_path in archive_paths:
+        with tarfile.open(archive_path, "r:gz") as archive:
+            members = archive.getmembers()
+            roots = {pathlib.PurePosixPath(item.name).parts[0] for item in members
+                     if pathlib.PurePosixPath(item.name).parts}
+            if len(roots) != 1:
+                raise ValueError("candidate archive root is absent or ambiguous")
+            prefix = next(iter(roots))
+            layout_name = ("qualification-layout-v1.json"
+                           if "qualification" in prefix else "release-layout-v1.json")
+            layout_member = archive.getmember(f"{prefix}/release/{layout_name}")
+            stream = archive.extractfile(layout_member)
+            if stream is None:
+                raise ValueError("candidate installation layout is unreadable")
+            layout = json.loads(stream.read())
+            archive_names = [str(pathlib.PurePosixPath(item.name).relative_to(prefix))
+                             for item in members if item.isfile()]
+            layouts.append((layout, archive_names))
     result: dict[str, dict] = {}
-    for artifact in layout.get("artifacts", []):
-        destination = artifact.get("destination")
-        kind = artifact.get("kind")
-        source_pattern = artifact.get("path")
-        if (not isinstance(destination, str) or not destination.startswith("/") or
-                VERSION in destination or "KERNEL" in destination or
-                kind in {"generated", "dkms-output", "installed-state"}):
-            continue
-        expanded: list[tuple[str, str]] = []
-        if kind == "archive-tree" and isinstance(source_pattern, str):
-            import fnmatch
-            matches = sorted(name for name in archive_names if fnmatch.fnmatch(name, source_pattern))
-            if not matches:
-                raise ValueError("installation layout archive tree expands to no files")
-            expanded = [(name, destination.rstrip("/") + "/" + pathlib.PurePosixPath(name).name)
-                        for name in matches]
-        elif kind in {"archive", "installed-build"}:
-            expanded = [(str(source_pattern), destination)]
-        elif kind == "installed-link":
-            expanded = [(str(source_pattern), destination)]
-        elif kind == "installed-directory":
-            expanded = [(str(source_pattern), destination.rstrip("/"))]
-        for source_name, path in expanded:
-            if not SAFE_PATH.fullmatch(path) or ".." in pathlib.PurePosixPath(path).parts:
-                raise ValueError("installation layout contains an unsafe canonical path")
-            if path in result:
-                raise ValueError("installation layout expands a duplicate canonical path")
-            result[path] = {"kind": kind, "source": source_name,
-                            "mode": artifact.get("mode"), "owner": artifact.get("owner"),
-                            "group": artifact.get("group")}
+    for layout, archive_names in layouts:
+        for artifact in layout.get("artifacts", []):
+            destination = artifact.get("destination")
+            kind = artifact.get("kind")
+            source_pattern = artifact.get("path")
+            if (not isinstance(destination, str) or not destination.startswith("/") or
+                    VERSION in destination or "KERNEL" in destination or
+                    kind in {"generated", "dkms-output", "installed-state"}):
+                continue
+            expanded: list[tuple[str, str]] = []
+            if kind == "archive-tree" and isinstance(source_pattern, str):
+                import fnmatch
+                matches = sorted(name for name in archive_names if fnmatch.fnmatch(name, source_pattern))
+                if not matches:
+                    raise ValueError("installation layout archive tree expands to no files")
+                expanded = [(name, destination.rstrip("/") + "/" + pathlib.PurePosixPath(name).name)
+                            for name in matches]
+            elif kind in {"archive", "installed-build"}:
+                expanded = [(str(source_pattern), destination)]
+            elif kind == "installed-link":
+                expanded = [(str(source_pattern), destination)]
+            elif kind == "installed-directory":
+                expanded = [(str(source_pattern), destination.rstrip("/"))]
+            for source_name, path in expanded:
+                if not SAFE_PATH.fullmatch(path) or ".." in pathlib.PurePosixPath(path).parts:
+                    raise ValueError("installation layout contains an unsafe canonical path")
+                if path in result:
+                    raise ValueError("installation layout expands a duplicate canonical path")
+                result[path] = {"kind": kind, "source": source_name,
+                                "mode": artifact.get("mode"), "owner": artifact.get("owner"),
+                                "group": artifact.get("group")}
     if not result:
         raise ValueError("installation layout has no canonical package paths")
     return result
@@ -242,7 +248,8 @@ def dkms_installed_module(root: pathlib.Path, kernel: str) -> pathlib.Path:
     return selected
 
 
-def load_checksums(release: pathlib.Path) -> dict[str, str]:
+def load_checksums(release: pathlib.Path,
+                   optional_missing: frozenset[str] = frozenset()) -> dict[str, str]:
     checksums: dict[str, str] = {}
     for line in (release / "SHA256SUMS").read_text().splitlines():
         match = re.fullmatch(r"([0-9a-f]{64})  ([A-Za-z0-9][A-Za-z0-9._+-]*)", line)
@@ -251,6 +258,8 @@ def load_checksums(release: pathlib.Path) -> dict[str, str]:
         checksums[match.group(2)] = match.group(1)
     for name, expected in checksums.items():
         path = release / name
+        if name in optional_missing and not path.exists() and not path.is_symlink():
+            continue
         if path.is_symlink() or not path.is_file() or digest(path) != expected:
             raise ValueError(f"release checksum mismatch: {name}")
     return checksums
@@ -567,16 +576,23 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
     metadata = json.loads((release / "release-metadata.json").read_text())
     if metadata.get("release") != VERSION:
         raise ValueError("release identity differs")
-    checksums = load_checksums(release)
+    qualification_name = metadata.get("qualificationArchive", "")
+    optional_qualification = (frozenset({qualification_name})
+                              if qualification_identity is None and qualification_name else frozenset())
+    checksums = load_checksums(release, optional_qualification)
     archive_path = release / metadata.get("archive", "")
     if (archive_path.is_symlink() or not archive_path.is_file() or
             digest(archive_path) != metadata.get("archiveSha256")):
         raise ValueError("staged archive hash mismatch")
+    qualification_archive_path = release / metadata.get("qualificationArchive", "")
     qualification = None
     if qualification_identity is None:
         if metadata.get("publishable") is not True:
             raise ValueError("only the exact publishable release is installable")
     else:
+        if (qualification_archive_path.is_symlink() or not qualification_archive_path.is_file() or
+                digest(qualification_archive_path) != metadata.get("qualificationArchiveSha256")):
+            raise ValueError("staged qualification archive hash mismatch")
         if metadata.get("publishable") is not False or metadata.get("tagPresent") is not False:
             raise ValueError("qualification mode accepts only an unpublished development candidate")
         qualification = validate_qualification_identity(qualification_identity, metadata,
@@ -616,7 +632,7 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                 digest(destination) != transition["predecessorSha256"]):
             raise ValueError(f"qualification predecessor tool differs: {destination}")
     if qualification and qualification["schemaVersion"] == 3:
-        package_paths = qualification_package_paths(archive_path)
+        package_paths = qualification_package_paths(archive_path, qualification_archive_path)
         existing = set()
         for raw, spec in package_paths.items():
             destination = rooted_leaf(root, raw)
@@ -667,32 +683,41 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
         source.chmod(0o755)
         transaction["ownedDirectories"].append(str(source))
         atomic_json(state_path, transaction)
-        prefix = f"{PACKAGE}-{VERSION}/"
-        with tarfile.open(archive_path, "r:gz") as archive:
-            members = archive.getmembers()
-            if not members:
-                raise ValueError("empty source archive")
-            for member in members:
-                pure = pathlib.PurePosixPath(member.name)
-                if (not member.isfile() or member.issym() or member.islnk() or
-                        not member.name.startswith(prefix) or ".." in pure.parts):
-                    raise ValueError("unsafe source archive member")
-                relative = pathlib.PurePosixPath(member.name.removeprefix(prefix))
-                destination = source.joinpath(*relative.parts)
-                missing_parents = []
-                parent = destination.parent
-                while parent != source and not parent.exists():
-                    missing_parents.append(parent)
-                    parent = parent.parent
-                destination.parent.mkdir(parents=True, mode=0o755, exist_ok=True)
-                transaction["ownedDirectories"].extend(str(path) for path in reversed(missing_parents))
-                payload = archive.extractfile(member)
-                if payload is None:
-                    raise ValueError("unreadable source archive member")
-                destination.write_bytes(payload.read())
-                destination.chmod(member.mode)
-                transaction["ownedFiles"].append({"path": str(destination), "sha256": digest(destination)})
-                atomic_json(state_path, transaction)
+        staged_archives = [archive_path]
+        if qualification is not None:
+            staged_archives.append(qualification_archive_path)
+        for staged_archive in staged_archives:
+            with tarfile.open(staged_archive, "r:gz") as archive:
+                members = archive.getmembers()
+                if not members:
+                    raise ValueError("empty source archive")
+                roots = {pathlib.PurePosixPath(member.name).parts[0] for member in members}
+                if len(roots) != 1:
+                    raise ValueError("source archive root is absent or ambiguous")
+                prefix = next(iter(roots)) + "/"
+                for member in members:
+                    pure = pathlib.PurePosixPath(member.name)
+                    if (not member.isfile() or member.issym() or member.islnk() or
+                            not member.name.startswith(prefix) or ".." in pure.parts):
+                        raise ValueError("unsafe source archive member")
+                    relative = pathlib.PurePosixPath(member.name.removeprefix(prefix))
+                    destination = source.joinpath(*relative.parts)
+                    if destination.exists() or destination.is_symlink():
+                        raise ValueError("split archives contain a duplicate source path")
+                    missing_parents = []
+                    parent = destination.parent
+                    while parent != source and not parent.exists():
+                        missing_parents.append(parent)
+                        parent = parent.parent
+                    destination.parent.mkdir(parents=True, mode=0o755, exist_ok=True)
+                    transaction["ownedDirectories"].extend(str(path) for path in reversed(missing_parents))
+                    payload = archive.extractfile(member)
+                    if payload is None:
+                        raise ValueError("unreadable source archive member")
+                    destination.write_bytes(payload.read())
+                    destination.chmod(member.mode)
+                    transaction["ownedFiles"].append({"path": str(destination), "sha256": digest(destination)})
+                    atomic_json(state_path, transaction)
         for required in ("dkms.conf", "Kbuild", "include/rp1_gpclk/version.h"):
             if not (source / required).is_file():
                 raise ValueError(f"staged source lacks {required}")
@@ -784,52 +809,53 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
             shutil.copyfile(origin, prepared)
             prepared.chmod(mode)
             replace_qualification_tool(destination, prepared, transition, transaction, state_path)
-        probe_source = source / "tools/gate_d_uapi_probe.c"
-        probe_destination = libexec / "gate-d-uapi-probe"
-        if not probe_source.is_file() or probe_source.is_symlink() or probe_destination.is_symlink():
-            raise ValueError("unsafe Gate D UAPI probe")
-        probe_transition = transitions.pop("/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe", None)
-        if probe_destination.exists() and probe_transition is None:
-            raise ValueError("existing Gate D UAPI probe lacks a transition identity")
-        probe_output = (probe_destination.with_name(f".{probe_destination.name}.rp1-gpclk-successor")
-                        if probe_transition else probe_destination)
-        probe_command = ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror",
-                         f"-I{source / 'include/uapi'}", str(probe_source),
-                         "-o", str(probe_output)]
-        transaction["commands"].append(probe_command)
-        atomic_json(state_path, transaction)
-        runner(probe_command)
-        if not probe_output.is_file() or probe_output.is_symlink():
-            raise ValueError("Gate D UAPI probe build produced no real binary")
-        if probe_transition:
-            replace_qualification_tool(probe_destination, probe_output, probe_transition, transaction, state_path)
-        else:
-            probe_destination.chmod(0o755)
-            transaction["ownedFiles"].append({"path": str(probe_destination), "sha256": digest(probe_destination)})
+        if qualification is not None:
+            probe_source = source / "tools/gate_d_uapi_probe.c"
+            probe_destination = libexec / "gate-d-uapi-probe"
+            if not probe_source.is_file() or probe_source.is_symlink() or probe_destination.is_symlink():
+                raise ValueError("unsafe Gate D UAPI probe")
+            probe_transition = transitions.pop("/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe", None)
+            if probe_destination.exists() and probe_transition is None:
+                raise ValueError("existing Gate D UAPI probe lacks a transition identity")
+            probe_output = (probe_destination.with_name(f".{probe_destination.name}.rp1-gpclk-successor")
+                            if probe_transition else probe_destination)
+            probe_command = ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror",
+                             f"-I{source / 'include/uapi'}", str(probe_source),
+                             "-o", str(probe_output)]
+            transaction["commands"].append(probe_command)
             atomic_json(state_path, transaction)
-        busy_source = source / "tools/gate_d_busy_injector.c"
-        busy_destination = libexec / "gate-d-busy-injector"
-        if not busy_source.is_file() or busy_source.is_symlink() or busy_destination.is_symlink():
-            raise ValueError("unsafe Gate D busy injector")
-        busy_transition = transitions.pop("/usr/libexec/rp1-gpclk-dkms/gate-d-busy-injector", None)
-        if busy_destination.exists() and busy_transition is None:
-            raise ValueError("existing Gate D busy injector lacks a transition identity")
-        busy_output = (busy_destination.with_name(f".{busy_destination.name}.rp1-gpclk-successor")
-                       if busy_transition else busy_destination)
-        busy_command = ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror",
-                        f"-I{source / 'include/uapi'}", str(busy_source),
-                        "-o", str(busy_output)]
-        transaction["commands"].append(busy_command)
-        atomic_json(state_path, transaction)
-        runner(busy_command)
-        if not busy_output.is_file() or busy_output.is_symlink():
-            raise ValueError("Gate D busy injector build produced no real binary")
-        if busy_transition:
-            replace_qualification_tool(busy_destination, busy_output, busy_transition, transaction, state_path)
-        else:
-            busy_destination.chmod(0o755)
-            transaction["ownedFiles"].append({"path": str(busy_destination), "sha256": digest(busy_destination)})
+            runner(probe_command)
+            if not probe_output.is_file() or probe_output.is_symlink():
+                raise ValueError("Gate D UAPI probe build produced no real binary")
+            if probe_transition:
+                replace_qualification_tool(probe_destination, probe_output, probe_transition, transaction, state_path)
+            else:
+                probe_destination.chmod(0o755)
+                transaction["ownedFiles"].append({"path": str(probe_destination), "sha256": digest(probe_destination)})
+                atomic_json(state_path, transaction)
+            busy_source = source / "tools/gate_d_busy_injector.c"
+            busy_destination = libexec / "gate-d-busy-injector"
+            if not busy_source.is_file() or busy_source.is_symlink() or busy_destination.is_symlink():
+                raise ValueError("unsafe Gate D busy injector")
+            busy_transition = transitions.pop("/usr/libexec/rp1-gpclk-dkms/gate-d-busy-injector", None)
+            if busy_destination.exists() and busy_transition is None:
+                raise ValueError("existing Gate D busy injector lacks a transition identity")
+            busy_output = (busy_destination.with_name(f".{busy_destination.name}.rp1-gpclk-successor")
+                           if busy_transition else busy_destination)
+            busy_command = ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror",
+                            f"-I{source / 'include/uapi'}", str(busy_source),
+                            "-o", str(busy_output)]
+            transaction["commands"].append(busy_command)
             atomic_json(state_path, transaction)
+            runner(busy_command)
+            if not busy_output.is_file() or busy_output.is_symlink():
+                raise ValueError("Gate D busy injector build produced no real binary")
+            if busy_transition:
+                replace_qualification_tool(busy_destination, busy_output, busy_transition, transaction, state_path)
+            else:
+                busy_destination.chmod(0o755)
+                transaction["ownedFiles"].append({"path": str(busy_destination), "sha256": digest(busy_destination)})
+                atomic_json(state_path, transaction)
         package_files = ((source / "scripts/rp1-gpclk-admin.py", libexec / "rp1-gpclk-admin", 0o755),
                          (source / "scripts/rp1-gpclk-diagnostics.py", libexec / "rp1-gpclk-diagnostics", 0o755),
                          (model_source, release_data / "installation-model-v1.json", 0o644),
@@ -841,8 +867,10 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                           release_data / "diagnostics-contract-v1.json", 0o644),
                          (source / "release/lifecycle-removal-contract-v1.json",
                           release_data / "lifecycle-removal-contract-v1.json", 0o644),
-                         (source / "release/gate-d-phase5.24-residue-recovery-v1.json",
-                          release_data / "gate-d-phase5.24-residue-recovery-v1.json", 0o644),
+                         (source / "scripts/lifecycle_policy.py",
+                          libexec / "lifecycle-policy", 0o755))
+        if qualification is not None:
+            package_files += (
                          (source / "schema/gate-d-execution-instance-v1.schema.json",
                           release_data / "gate-d-execution-instance-v1.schema.json", 0o644),
                          (source / "schema/gate-d-qualification-root-v1.schema.json", release_data / "gate-d-qualification-root-v1.schema.json", 0o644),
@@ -850,8 +878,6 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                          (source / "schema/gate-d-target-plan-v1.schema.json", release_data / "gate-d-target-plan-v1.schema.json", 0o644),
                          (source / "schema/gate-d-pre-root-bootstrap-envelope-v1.schema.json", release_data / "gate-d-pre-root-bootstrap-envelope-v1.schema.json", 0o644),
                          (source / "schema/gate-d-attempt-index-v1.schema.json", release_data / "gate-d-attempt-index-v1.schema.json", 0o644),
-                         (source / "scripts/lifecycle_policy.py",
-                          libexec / "lifecycle-policy", 0o755),
                          (source / "scripts/gate_d_instance.py",
                           libexec / "gate-d-instance", 0o755),
                          (source / "scripts/gate_d_lifecycle.py",
@@ -877,8 +903,8 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
                          (source / "scripts/gate_d_lifecycle.py", libexec / "gate_d_lifecycle.py", 0o644),
                          (source / "scripts/gate_d_outer.py", libexec / "gate_d_outer.py", 0o644),
                          (source / "scripts/gate_d_attempts.py", libexec / "gate_d_attempts.py", 0o644),
-                         (source / "scripts/gate_d_instance.py", libexec / "gate_d_instance.py", 0o644))
-        package_files += ((source / "scripts/gate_d_preroot.py", libexec / "gate_d_preroot.py", 0o644),)
+                         (source / "scripts/gate_d_instance.py", libexec / "gate_d_instance.py", 0o644),
+                         (source / "scripts/gate_d_preroot.py", libexec / "gate_d_preroot.py", 0o644))
         for origin, destination, mode in package_files:
             if not origin.is_file() or origin.is_symlink() or destination.is_symlink():
                 raise ValueError(f"unsafe package file: {destination}")

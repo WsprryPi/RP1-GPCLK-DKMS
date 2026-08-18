@@ -180,17 +180,16 @@ with tempfile.TemporaryDirectory() as temporary:
     target = base / "target"
     release.mkdir()
     archive = release / f"{admin.PACKAGE}-{admin.VERSION}.tar.gz"
-    with tarfile.open(archive, "w:gz") as output:
-        fixtures = [("dkms.conf", f'PACKAGE_VERSION="{admin.VERSION}"\n'.encode(), 0o644),
+    qualification_archive = release / f"{admin.PACKAGE}-qualification-{admin.VERSION}.tar.gz"
+    fixtures = [("dkms.conf", f'PACKAGE_VERSION="{admin.VERSION}"\n'.encode(), 0o644),
                     ("Kbuild", b"obj-m := rp1_gpclk_dkms.o\n", 0o644),
                     ("include/rp1_gpclk/version.h", f'#define RP1_GPCLK_MODULE_VERSION "{admin.VERSION}"\n'.encode(), 0o644)]
-        for relative in ("scripts/rp1-gpclk-admin.py", "scripts/rp1-gpclk-diagnostics.py",
+    for relative in ("scripts/rp1-gpclk-admin.py", "scripts/rp1-gpclk-diagnostics.py",
                          "release/release-layout-v1.json",
                          "release/installation-model-v1.json", "release/overlay-contract-v1.json",
                          "release/permissions-enrollment-policy-v1.json",
                          "release/diagnostics-contract-v1.json",
                          "release/lifecycle-removal-contract-v1.json",
-                         "release/gate-d-phase5.24-residue-recovery-v1.json",
                          "schema/gate-d-execution-instance-v1.schema.json",
                          "schema/gate-d-qualification-root-v1.schema.json",
                          "schema/gate-d-qualification-bootstrap-plan-v1.schema.json",
@@ -207,9 +206,22 @@ with tempfile.TemporaryDirectory() as temporary:
                          "tools/gate_d_busy_injector.c",
                          "docs/operator/diagnostics.md", "docs/operator/gate-d-target-runbook.md",
                          "docs/operator/lifecycle.md", "docs/operator/signing.md"):
-            fixtures.append((relative, (ROOT / relative).read_bytes(), 0o755 if relative.startswith("scripts/") else 0o644))
-        for name, data, mode in fixtures:
+        fixtures.append((relative, (ROOT / relative).read_bytes(), 0o755 if relative.startswith("scripts/") else 0o644))
+    qualification_names = {name for name, _, _ in fixtures
+                           if name.startswith(("scripts/gate_d_", "schema/gate-d-", "tools/gate_d_")) or
+                           name == "docs/operator/gate-d-target-runbook.md"}
+    qualification_fixtures = [item for item in fixtures if item[0] in qualification_names]
+    qualification_fixtures.append(("release/qualification-layout-v1.json",
+                                   (ROOT / "release/qualification-layout-v1.json").read_bytes(), 0o644))
+    product_fixtures = [item for item in fixtures if item[0] not in qualification_names]
+    with tarfile.open(archive, "w:gz") as output:
+        for name, data, mode in product_fixtures:
             member = tarfile.TarInfo(f"{admin.PACKAGE}-{admin.VERSION}/{name}")
+            member.size = len(data); member.mode = mode
+            output.addfile(member, io.BytesIO(data))
+    with tarfile.open(qualification_archive, "w:gz") as output:
+        for name, data, mode in qualification_fixtures:
+            member = tarfile.TarInfo(f"{admin.PACKAGE}-qualification-{admin.VERSION}/{name}")
             member.size = len(data); member.mode = mode
             output.addfile(member, io.BytesIO(data))
     artifacts = {archive.name: archive.read_bytes(), "rp1-gpclk-gpio4.dtbo": b"gpio4",
@@ -217,13 +229,21 @@ with tempfile.TemporaryDirectory() as temporary:
                  "rp1-gpclk-compatibility-manifest.json": b"{}\n"}
     metadata = {"release": admin.VERSION, "publishable": True, "tagPresent": True,
                 "sourceCommit": "1" * 40, "archive": archive.name,
-                "archiveSha256": hashlib.sha256(archive.read_bytes()).hexdigest()}
+                "archiveSha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+                "qualificationArchive": qualification_archive.name,
+                "qualificationArchiveSha256": hashlib.sha256(qualification_archive.read_bytes()).hexdigest()}
+    artifacts[qualification_archive.name] = qualification_archive.read_bytes()
     artifacts["release-metadata.json"] = (json.dumps(metadata) + "\n").encode()
     for name, data in artifacts.items():
         (release / name).write_bytes(data)
     checksum_names = sorted(artifacts)
     (release / "SHA256SUMS").write_text("".join(f"{hashlib.sha256(artifacts[name]).hexdigest()}  {name}\n" for name in checksum_names))
-    package_paths = admin.qualification_package_paths(archive)
+    qualification_bytes = qualification_archive.read_bytes()
+    qualification_archive.unlink()
+    assert qualification_archive.name in admin.load_checksums(
+        release, frozenset({qualification_archive.name}))
+    qualification_archive.write_bytes(qualification_bytes)
+    package_paths = admin.qualification_package_paths(archive, qualification_archive)
     observed_retained = {
         *admin.QUALIFICATION_RETAINED_TOOLS,
         "/usr/share/doc/rp1-gpclk-dkms/diagnostics.md",
@@ -235,7 +255,7 @@ with tempfile.TemporaryDirectory() as temporary:
     }
     assert observed_retained.issubset(package_paths)
     assert package_paths["/usr/sbin/rp1-gpclk-admin"]["kind"] == "installed-link"
-    assert package_paths["/usr/share/doc/rp1-gpclk-dkms/diagnostics.md"]["kind"] == "archive-tree"
+    assert package_paths["/usr/share/doc/rp1-gpclk-dkms/diagnostics.md"]["kind"] == "archive"
     (target / "boot/firmware/overlays").mkdir(parents=True)
     target_headers = target / "usr/src/test-headers"
     target_headers.mkdir(parents=True)
@@ -275,26 +295,26 @@ with tempfile.TemporaryDirectory() as temporary:
     assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.53/permissions-enrollment-policy-v1.json").is_file()
     assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.53/diagnostics-contract-v1.json").is_file()
     assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.53/lifecycle-removal-contract-v1.json").is_file()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.53/gate-d-phase5.24-residue-recovery-v1.json").is_file()
+    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.53/gate-d-phase5.24-residue-recovery-v1.json").exists()
     assert (target / "usr/libexec/rp1-gpclk-dkms/lifecycle-policy").is_file()
     assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.53/gate-d-execution-instance-v1.json").exists()
-    assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.53/gate-d-execution-instance-v1.schema.json").is_file()
+    assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.53/gate-d-execution-instance-v1.schema.json").exists()
     for schema_name in ("gate-d-qualification-root-v1.schema.json", "gate-d-qualification-bootstrap-plan-v1.schema.json", "gate-d-target-plan-v1.schema.json", "gate-d-attempt-index-v1.schema.json", "gate-d-pre-root-bootstrap-envelope-v1.schema.json"):
-        assert (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.53" / schema_name).is_file()
-    assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-instance").is_file()
-    assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle").is_file()
-    assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-platform").is_file()
+        assert not (target / "usr/share/rp1-gpclk-dkms/0.0.0-phase5.53" / schema_name).exists()
+    assert not (target / "usr/libexec/rp1-gpclk-dkms/gate-d-instance").exists()
+    assert not (target / "usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle").exists()
+    assert not (target / "usr/libexec/rp1-gpclk-dkms/gate-d-platform").exists()
     for tool in ("gate-d-boot", "gate-d-target-plan", "gate-d-attempts", "gate-d-bootstrap",
                  "gate-d-executor", "gate-d-busy-injector", "gate-d-residue"):
-        assert (target / "usr/libexec/rp1-gpclk-dkms" / tool).is_file()
-    assert (target / "usr/libexec/rp1-gpclk-dkms/gate_d_root.py").is_file()
+        assert not (target / "usr/libexec/rp1-gpclk-dkms" / tool).exists()
+    assert not (target / "usr/libexec/rp1-gpclk-dkms/gate_d_root.py").exists()
     for module_name in ("gate_d_bootstrap.py", "gate_d_target_plan.py",
                         "gate_d_lifecycle.py", "gate_d_outer.py",
                         "gate_d_attempts.py", "gate_d_instance.py",
                         "gate_d_preroot.py"):
         module_path = target / "usr/libexec/rp1-gpclk-dkms" / module_name
-        assert module_path.is_file() and module_path.stat().st_mode & 0o777 == 0o644
-    assert (target / "usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe").is_file()
+        assert not module_path.exists()
+    assert not (target / "usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe").exists()
     assert (target / "usr/sbin/rp1-gpclk-admin").is_symlink()
     assert (target / "etc/rp1-gpclk-dkms").is_dir()
     assert not (target / "etc/rp1-gpclk-dkms/enrollment.json").exists()

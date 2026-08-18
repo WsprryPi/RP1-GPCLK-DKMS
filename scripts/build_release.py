@@ -19,6 +19,7 @@ import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 LAYOUT_PATH = ROOT / "release/release-layout-v1.json"
+QUALIFICATION_LAYOUT_PATH = ROOT / "release/qualification-layout-v1.json"
 KEY_SUFFIXES = {".key", ".pem", ".p12", ".pfx", ".der"}
 SOURCE_RELEASE_EXACT = {
     "Kbuild", "LICENSE.md", "Makefile", "README.md", "SECURITY.md",
@@ -26,6 +27,7 @@ SOURCE_RELEASE_EXACT = {
     "scripts/build_release.py", "scripts/validate_release.py",
 }
 SOURCE_RELEASE_PATTERNS = ("LICENSES/*",)
+QUALIFICATION_RELEASE_EXACT = {"release/qualification-layout-v1.json"}
 VERSION_RE = re.compile(r'^#define RP1_GPCLK_MODULE_VERSION "([0-9A-Za-z][0-9A-Za-z._+-]*)"$', re.M)
 
 
@@ -72,7 +74,8 @@ def validate_versions(layout: dict) -> None:
         raise SystemExit("UAPI ABI and release layout differ")
 
 
-def source_files(development: bool, layout: dict) -> tuple[list[pathlib.Path], bool]:
+def selected_files(development: bool, layout: dict, exact: set[str],
+                   base_patterns: tuple[str, ...]) -> tuple[list[pathlib.Path], bool]:
     dirty = bool(run("git", "status", "--porcelain", "--untracked-files=all"))
     if dirty and not development:
         raise SystemExit("refusing publishable output from a dirty worktree")
@@ -83,10 +86,10 @@ def source_files(development: bool, layout: dict) -> tuple[list[pathlib.Path], b
             continue
         rel = pathlib.Path(raw)
         posix = rel.as_posix()
-        patterns = SOURCE_RELEASE_PATTERNS + tuple(
+        patterns = base_patterns + tuple(
             item["path"] for item in layout["artifacts"]
             if item["kind"] in {"archive", "archive-tree"})
-        if posix not in SOURCE_RELEASE_EXACT and not any(rel.match(pattern) for pattern in patterns):
+        if posix not in exact and not any(rel.match(pattern) for pattern in patterns):
             continue
         path = ROOT / rel
         if path.is_symlink() or not path.is_file():
@@ -98,7 +101,7 @@ def source_files(development: bool, layout: dict) -> tuple[list[pathlib.Path], b
             raise SystemExit(f"unexpected release input mode {mode:04o}: {rel}")
         paths.append(rel)
     found = {path.as_posix() for path in paths}
-    missing = SOURCE_RELEASE_EXACT - found
+    missing = exact - found
     if missing:
         raise SystemExit(f"missing source-release input: {sorted(missing)[0]}")
     for pattern in patterns:
@@ -156,8 +159,17 @@ def create_archive(path: pathlib.Path, files: list[pathlib.Path], prefix: str, e
 
 def generate(output: pathlib.Path, development: bool) -> None:
     layout = load_layout()
+    qualification_layout = json.loads(QUALIFICATION_LAYOUT_PATH.read_text())
+    if (qualification_layout.get("release") != layout["release"] or
+            qualification_layout.get("expectedTag") != layout["expectedTag"]):
+        raise SystemExit("product and qualification layouts differ")
     validate_versions(layout)
-    files, dirty = source_files(development, layout)
+    files, dirty = selected_files(development, layout, SOURCE_RELEASE_EXACT,
+                                  SOURCE_RELEASE_PATTERNS)
+    qualification_files, qualification_dirty = selected_files(
+        development, qualification_layout, QUALIFICATION_RELEASE_EXACT, ())
+    if dirty != qualification_dirty:
+        raise SystemExit("product and qualification source state differs")
     commit = run("git", "rev-parse", "HEAD")
     epoch = int(run("git", "show", "-s", "--format=%ct", "HEAD"))
     tags = run("git", "tag", "--points-at", "HEAD").splitlines()
@@ -179,6 +191,11 @@ def generate(output: pathlib.Path, development: bool) -> None:
         archive_name = f"{layout['package']}-{layout['release']}.tar.gz"
         archive = output / archive_name
         create_archive(archive, files, f"{layout['package']}-{layout['release']}", epoch)
+        qualification_archive_name = (
+            f"{qualification_layout['package']}-{layout['release']}.tar.gz")
+        qualification_archive = output / qualification_archive_name
+        create_archive(qualification_archive, qualification_files,
+                       f"{qualification_layout['package']}-{layout['release']}", epoch)
         overlay_hashes = {}
         for route in ("gpio4", "gpio20"):
             source = ROOT / f"overlays/rp1-gpclk-{route}.dts"
@@ -212,6 +229,8 @@ def generate(output: pathlib.Path, development: bool) -> None:
             "release": layout["release"], "sourceCommit": commit, "expectedTag": layout["expectedTag"], "tagPresent": tagged,
             "dirtySource": dirty, "publishable": publishable, "sourceDateEpoch": epoch, "archive": archive_name,
             "archiveSha256": sha256(archive), "uapiAbi": layout["uapiAbi"], "uapiHeaderSha256": uapi_hash,
+            "qualificationArchive": qualification_archive_name,
+            "qualificationArchiveSha256": sha256(qualification_archive),
             "overlays": overlay_hashes, "compatibilityManifestSha256": sha256(compatibility_path),
             "compatibilitySchemaSha256": sha256(ROOT / "schema/rp1-gpclk-compatibility-manifest-v1.schema.json"),
             "releaseLayoutSha256": sha256(LAYOUT_PATH), "tools": tools
@@ -219,7 +238,9 @@ def generate(output: pathlib.Path, development: bool) -> None:
         metadata_path = output / "release-metadata.json"
         json_write(metadata_path, metadata)
         provenance = dict(metadata)
-        provenance.update({"generationCommand": "scripts/build_release.py OUTPUT [--development]", "sourceFiles": [path.as_posix() for path in files]})
+        provenance.update({"generationCommand": "scripts/build_release.py OUTPUT [--development]",
+                           "sourceFiles": [path.as_posix() for path in files],
+                           "qualificationSourceFiles": [path.as_posix() for path in qualification_files]})
         provenance_path = output / "PROVENANCE.json"
         json_write(provenance_path, provenance)
         distributable = sorted(path for path in output.iterdir() if path.name != "SHA256SUMS")

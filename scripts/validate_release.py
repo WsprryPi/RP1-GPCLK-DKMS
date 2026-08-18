@@ -13,12 +13,14 @@ import subprocess
 import tarfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+QUALIFICATION_LAYOUT_PATH = ROOT / "release/qualification-layout-v1.json"
 SOURCE_RELEASE_EXACT = {
     "Kbuild", "LICENSE.md", "Makefile", "README.md", "SECURITY.md",
     "dkms.conf", "release/release-layout-v1.json", "uapi-identity.json",
     "scripts/build_release.py", "scripts/validate_release.py",
 }
 SOURCE_RELEASE_PATTERNS = ("LICENSES/*",)
+QUALIFICATION_RELEASE_EXACT = {"release/qualification-layout-v1.json"}
 
 
 def fail(message: str) -> None:
@@ -33,6 +35,11 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
     if output.is_symlink() or not output.is_dir():
         fail("release unit must be a real directory")
     layout = json.loads((ROOT / "release/release-layout-v1.json").read_text())
+    qualification_layout = json.loads(QUALIFICATION_LAYOUT_PATH.read_text())
+    if (qualification_layout.get("schemaVersion") != 1 or
+            qualification_layout.get("release") != layout["release"] or
+            qualification_layout.get("expectedTag") != layout["expectedTag"]):
+        fail("qualification layout identity differs")
     expected = {item["path"] for item in layout["artifacts"] if item["kind"] == "generated" and item["destination"] == "release-download"}
     expected |= {"rp1-gpclk-gpio4.dtbo", "rp1-gpclk-gpio20.dtbo", "rp1-gpclk-compatibility-manifest.json", "PROVENANCE.json", "SHA256SUMS", "release-metadata.json"}
     actual = {path.name for path in output.iterdir()}
@@ -53,7 +60,9 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
     provenance = json.loads((output / "PROVENANCE.json").read_text())
     compatibility = json.loads((output / "rp1-gpclk-compatibility-manifest.json").read_text())
     for value in (metadata, provenance):
-        for key in ("release", "sourceCommit", "uapiAbi", "uapiHeaderSha256", "archiveSha256", "compatibilityManifestSha256", "overlays", "tools"):
+        for key in ("release", "sourceCommit", "uapiAbi", "uapiHeaderSha256", "archiveSha256",
+                    "qualificationArchive", "qualificationArchiveSha256",
+                    "compatibilityManifestSha256", "overlays", "tools"):
             if value.get(key) != metadata.get(key):
                 fail(f"provenance and metadata differ at {key}")
     if metadata["release"] != layout["release"] or metadata["expectedTag"] != layout["expectedTag"]:
@@ -65,6 +74,10 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
     archive = output / metadata["archive"]
     if archive.name != f"{layout['package']}-{layout['release']}.tar.gz" or sha256(archive) != metadata["archiveSha256"]:
         fail("archive identity differs")
+    qualification_archive = output / metadata["qualificationArchive"]
+    if (qualification_archive.name != f"{qualification_layout['package']}-{layout['release']}.tar.gz" or
+            sha256(qualification_archive) != metadata["qualificationArchiveSha256"]):
+        fail("qualification archive identity differs")
     if compatibility["module"] != {"name": layout["module"], "release": layout["release"], "sourceCommit": metadata["sourceCommit"],
                                     "sourceArchiveSha256": metadata["archiveSha256"], "uapiAbi": layout["uapiAbi"],
                                     "uapiHeaderSha256": metadata["uapiHeaderSha256"]}:
@@ -97,7 +110,9 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
     else:
         jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(compatibility)
     prefix = f"{layout['package']}-{layout['release']}/"
-    tracked = subprocess.check_output(["git", "-C", str(ROOT), "ls-files", "-z"]).decode().split("\0")
+    tracked = subprocess.check_output(
+        ["git", "-C", str(ROOT), "ls-files", "--cached", "--others",
+         "--exclude-standard", "-z"]).decode().split("\0")
     with tarfile.open(archive, "r:gz") as source:
         members = source.getmembers()
         names = [member.name.removeprefix(prefix) for member in members]
@@ -126,6 +141,29 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
         uapi_member = source.getmember(prefix + "include/uapi/linux/rp1_gpclk.h")
         if hashlib.sha256(source.extractfile(uapi_member).read()).hexdigest() != metadata["uapiHeaderSha256"]:
             fail("archived UAPI hash differs")
+    qualification_patterns = tuple(
+        item["path"] for item in qualification_layout["artifacts"]
+        if item["kind"] in {"archive", "archive-tree"})
+    expected_qualification = {
+        name for name in tracked
+        if name in QUALIFICATION_RELEASE_EXACT or
+        any(pathlib.PurePosixPath(name).match(pattern) for pattern in qualification_patterns)
+    }
+    qualification_prefix = f"{qualification_layout['package']}-{layout['release']}/"
+    with tarfile.open(qualification_archive, "r:gz") as source:
+        members = source.getmembers()
+        names = [member.name.removeprefix(qualification_prefix) for member in members]
+        if (not members or names != sorted(names) or len(names) != len(set(names)) or
+                any(not member.name.startswith(qualification_prefix) or
+                    not member.isfile() or member.issym() or member.islnk() or
+                    member.uid or member.gid or member.uname or member.gname or
+                    member.mtime != metadata["sourceDateEpoch"] or
+                    member.mode not in {0o644, 0o755} or
+                    ".." in pathlib.PurePosixPath(member.name).parts
+                    for member in members)):
+            fail("unsafe or nondeterministic qualification archive")
+        if set(names) != expected_qualification:
+            fail(f"qualification inventory differs: missing={sorted(expected_qualification-set(names))} extra={sorted(set(names)-expected_qualification)}")
     if sha256(output / "rp1-gpclk-compatibility-manifest.json") != metadata["compatibilityManifestSha256"]:
         fail("compatibility manifest hash differs")
     for route in ("GPIO4", "GPIO20"):
@@ -137,6 +175,11 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
     ids = [item["id"] for item in layout["artifacts"]]
     if len(ids) != len(set(ids)) or any(item["owner"] == "" or item["destination"] == "" for item in layout["artifacts"]):
         fail("release installation inventory is incomplete or ambiguous")
+    qualification_ids = [item["id"] for item in qualification_layout["artifacts"]]
+    if (len(qualification_ids) != len(set(qualification_ids)) or set(ids) & set(qualification_ids) or
+            any(item["owner"] == "" or item["destination"] == ""
+                for item in qualification_layout["artifacts"])):
+        fail("qualification installation inventory is incomplete or ambiguous")
     print(f"release unit validation: PASS ({metadata['release']}, publishable={str(metadata['publishable']).lower()})")
 
 

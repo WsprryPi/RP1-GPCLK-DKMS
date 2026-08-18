@@ -73,13 +73,17 @@ def validate(value: dict) -> None:
 
 validate(document)
 layout = json.loads((ROOT / "release/release-layout-v1.json").read_text())
+qualification_layout = json.loads((ROOT / "release/qualification-layout-v1.json").read_text())
 assert document["release"] == layout["release"]
 assert document["expectedTag"] == layout["expectedTag"]
-assert any(item["path"] == "release/release-integration-gates-v1.json" for item in layout["artifacts"])
+assert document["release"] == qualification_layout["release"]
+assert any(item["path"] == "release/release-integration-gates-v1.json"
+           for item in qualification_layout["artifacts"])
 decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_text())
 assert decisions["entries"]
 assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False for entry in decisions["entries"])
 assert set(document["candidateSnapshot"]["knownBlockers"]) == {
+    "split-release-artifacts-not-generated",
     "representative-build-not-performed",
     "offline-checks-twice-not-recorded",
     "representative-lifecycle-matrix-not-executed",
@@ -87,13 +91,13 @@ assert set(document["candidateSnapshot"]["knownBlockers"]) == {
     "module-release-not-published",
 }
 assert document["candidateSnapshot"]["archiveIdentity"] == \
-    "rp1-gpclk-dkms-0.0.0-phase5.53.tar.gz sha256:702bb699fd9a79d28d0dc96b58b55c408f55a7699c75253852acebf1007fb8fa from source 92036edf05d269f1749bc3d573f0e74e7e87f372"
-assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is True
+    "pending deterministic product and qualification archive split"
+assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is False
 freeze_gate = next(gate for gate in document["gates"]
                    if gate["id"] == "candidate-freeze")
-assert freeze_gate["status"] == "passed"
+assert freeze_gate["status"] == "blocked"
 assert freeze_gate["claimCeiling"] == \
-    "frozen allowlisted source and deterministic sealed archive only; no representative build claim"
+    "artifact-split source only; prior combined archive is superseded"
 offline_gate = next(gate for gate in document["gates"]
                     if gate["id"] == "offline-checks-twice")
 assert offline_gate["status"] == "blocked"
