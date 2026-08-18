@@ -116,6 +116,13 @@ sha256sum "$input" | awk '{print $1}' >"$out"
         source = pathlib.Path(extracted) / f"rp1-gpclk-dkms-{release}"
         qualification = pathlib.Path(extracted) / f"rp1-gpclk-dkms-qualification-{release}"
         assert (qualification / "tools/gate_d_busy_injector.h").is_file()
+        held_qualification = pathlib.Path(extracted) / qualification_archive.name
+        qualification_archive.rename(held_qualification)
+        try:
+            subprocess.run([str(source / "scripts/validate_release.py"), first,
+                            "--allow-development"], check=True, env=environment)
+        finally:
+            held_qualification.rename(qualification_archive)
         if platform.system() == "Linux":
             for source_name, output_name in (("gate_d_busy_injector.c", "gate-d-busy-injector"),
                                              ("gate_d_uapi_probe.c", "gate-d-uapi-probe")):
