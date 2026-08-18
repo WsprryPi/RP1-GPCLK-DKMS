@@ -5,6 +5,8 @@ import hashlib, importlib.util, json, pathlib, subprocess, tempfile
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location("qualification_successor",ROOT/"scripts/build_qualification_successor.py"); assert spec and spec.loader
 tool=importlib.util.module_from_spec(spec); spec.loader.exec_module(tool)
+validator_spec=importlib.util.spec_from_file_location("release_validator",ROOT/"scripts/validate_release.py"); assert validator_spec and validator_spec.loader
+release_validator=importlib.util.module_from_spec(validator_spec); validator_spec.loader.exec_module(release_validator)
 def sha(path:pathlib.Path)->str: return hashlib.sha256(path.read_bytes()).hexdigest()
 dirty=bool(subprocess.check_output(["git","status","--porcelain","--untracked-files=all"],cwd=ROOT,text=True).strip())
 with tempfile.TemporaryDirectory() as temporary:
@@ -24,4 +26,9 @@ with tempfile.TemporaryDirectory() as temporary:
     try: tool.load_frozen(frozen,sha(product))
     except SystemExit: pass
     else: raise AssertionError("corrupted frozen checksum accepted")
+    actual=root/"actual"; actual_successor=root/"actual-successor"
+    subprocess.check_call(["python3",str(ROOT/"scripts/build_release.py"),str(actual),"--development"],cwd=ROOT)
+    actual_metadata=json.loads((actual/"release-metadata.json").read_text())
+    tool.generate(actual,actual_successor,actual_metadata["archiveSha256"],True)
+    release_validator.validate(actual_successor,True)
 print("qualification-only successor construction: PASS")

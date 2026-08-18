@@ -70,6 +70,10 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
                     "compatibilityManifestSha256", "overlays", "tools"):
             if value.get(key) != metadata.get(key):
                 fail(f"provenance and metadata differ at {key}")
+        for key in ("qualificationSourceCommit", "qualificationSourceDateEpoch",
+                    "qualificationLayoutSha256", "qualificationDirtySource"):
+            if key in metadata and value.get(key) != metadata.get(key):
+                fail(f"provenance and metadata differ at {key}")
     if metadata["release"] != layout["release"] or metadata["expectedTag"] != layout["expectedTag"]:
         fail("release/tag metadata differs from layout")
     if not metadata["publishable"] and not allow_development:
@@ -160,6 +164,8 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
     qualification_prefix = (f"{qualification_layout['package']}-{layout['release']}/"
                             if qualification_layout else "")
     if not product_only:
+        qualification_epoch = metadata.get("qualificationSourceDateEpoch",
+                                           metadata["sourceDateEpoch"])
         with tarfile.open(qualification_archive, "r:gz") as source:
             members = source.getmembers()
             names = [member.name.removeprefix(qualification_prefix) for member in members]
@@ -167,13 +173,17 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
                     any(not member.name.startswith(qualification_prefix) or
                         not member.isfile() or member.issym() or member.islnk() or
                         member.uid or member.gid or member.uname or member.gname or
-                        member.mtime != metadata["sourceDateEpoch"] or
+                        member.mtime != qualification_epoch or
                         member.mode not in {0o644, 0o755} or
                         ".." in pathlib.PurePosixPath(member.name).parts
                         for member in members)):
                 fail("unsafe or nondeterministic qualification archive")
             if set(names) != expected_qualification:
                 fail(f"qualification inventory differs: missing={sorted(expected_qualification-set(names))} extra={sorted(set(names)-expected_qualification)}")
+            for member in members:
+                rel = member.name.removeprefix(qualification_prefix)
+                if source.extractfile(member).read() != (ROOT / rel).read_bytes():
+                    fail(f"qualification archive byte mismatch: {rel}")
     if sha256(output / "rp1-gpclk-compatibility-manifest.json") != metadata["compatibilityManifestSha256"]:
         fail("compatibility manifest hash differs")
     for route in ("GPIO4", "GPIO20"):
