@@ -97,6 +97,7 @@ assert decisions["entries"]
 assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False for entry in decisions["entries"])
 assert set(document["candidateSnapshot"]["knownBlockers"]) == {
     "representative-lifecycle-matrix-not-executed",
+    "split-pre-root-release-input-contract-incompatible",
     "public-artifact-download-verification-not-performed",
     "module-release-not-published",
 }
