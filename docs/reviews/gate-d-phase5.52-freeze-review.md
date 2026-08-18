@@ -7,6 +7,10 @@ the reviewed prior-kernel initial-preflight ordering correction, its fail-closed
 regressions, active Phase 5.52 release identities, and release notes.
 Historical Phase 5.51 controls and evidence remain unchanged.
 
+An initial freeze candidate exposed a release-archive regression dependency on
+an intentionally excluded historical attempt document. The regression was
+made self-contained before accepting a freeze identity.
+
 The freeze cannot pass until two independent exact-commit release generations
 are byte-identical, both release units validate, the extracted candidate passes
 the permanent-executor regression, and wspr5 completes the bounded

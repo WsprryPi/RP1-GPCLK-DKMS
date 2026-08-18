@@ -50,9 +50,11 @@ assert all(not any(token in " ".join(action["argv"]).lower()
                        for token in outer.PROHIBITED) for action in plan)
 assert outer.initial_preflight_kernel(document) == document["kernelRelease"]
 
-failed_prior_path = (ROOT / "release/gate-d-attempts-phase5.51-v1/"
-                     "gd-prior-supported-kernel-downgrade-gpio4.json")
-failed_prior = json.loads(failed_prior_path.read_text())
+failed_prior = copy.deepcopy(document)
+failed_prior["matrixRow"] = "prior-supported-kernel-downgrade"
+failed_prior["kernelRelease"] = "6.12.75+rpt-rpi-2712"
+failed_prior["inputs"]["boot"]["normalKernel"] = "6.18.34+rpt-rpi-2712"
+failed_prior["inputs"]["boot"]["priorKernel"] = "6.12.75+rpt-rpi-2712"
 assert outer.initial_preflight_kernel(failed_prior) == failed_prior["inputs"]["boot"]["normalKernel"]
 for mutation in (
         lambda value: value.update(inputs=None),
