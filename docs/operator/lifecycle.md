@@ -26,6 +26,14 @@ administrator actions. Existing configuration, enrollment, keys,
 certificates, overlays, and unmarked boot entries remain administrator- or
 third-party-owned.
 
+For an unpublished development candidate, use the same product-only path with
+the additional explicit `--allow-development` flag. This mode accepts only a
+non-publishable, untagged release and retains the same checksum, transaction,
+DKMS, signing, inactive-overlay, recovery, and output-disabled safeguards. It
+does not consume the qualification archive, qualification identity, Gate D
+pre-root envelope, execution instance, or attempt graph. Qualification begins
+after product installation and is not a deployment dependency.
+
 ## Administrative route changes
 
 `release/overlay-contract-v1.json` freezes the two distinct production overlay

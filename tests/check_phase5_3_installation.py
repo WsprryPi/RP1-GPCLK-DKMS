@@ -353,6 +353,25 @@ with tempfile.TemporaryDirectory() as temporary:
     (release / "release-metadata.json").write_bytes(artifacts["release-metadata.json"])
     (release / "SHA256SUMS").write_text("".join(
         f"{hashlib.sha256(artifacts[name]).hexdigest()}  {name}\n" for name in checksum_names))
+    # An unpublished candidate uses the ordinary product-only lifecycle when
+    # --allow-development is explicit.  Prove the qualification archive is not
+    # read or required by removing it for the complete transaction.
+    qualification_archive.unlink()
+    development_target = base / "development-product-only-target"
+    (development_target / "boot/firmware/overlays").mkdir(parents=True)
+    (development_target / "usr/src/test-headers").mkdir(parents=True)
+    (development_target / "lib").symlink_to("usr/lib")
+    development_modules = development_target / f"usr/lib/modules/{admin.platform.release()}"
+    development_modules.mkdir(parents=True)
+    (development_modules / "build").symlink_to("/usr/src/test-headers")
+    add_built_module(development_target)
+    add_installed_module(development_target)
+    development_result = admin.execute(
+        release, "gpio4", False, None, None, root=development_target,
+        runner=fake_runner, allow_development=True)
+    assert development_result["status"] == "complete"
+    assert not (development_target / "usr/libexec/rp1-gpclk-dkms/gate-d-executor").exists()
+    qualification_archive.write_bytes(qualification_bytes)
     identity = {
         "SPDX-License-Identifier": "MIT", "schemaVersion": 1,
         "kind": "rp1-gpclk-gate-d-qualification-install-identity",
@@ -807,6 +826,13 @@ with tempfile.TemporaryDirectory() as temporary:
                                  stderr=subprocess.PIPE, text=True, check=False)
         assert outcome.returncode != 0
         assert "requires both --qualification-install and --qualification-identity" in outcome.stderr
+    ambiguous = subprocess.run([
+        str(ROOT / "scripts/rp1-gpclk-admin.py"), "install", "--execute",
+        "--release-directory", str(release), "--allow-development",
+        "--qualification-install", "--qualification-identity", str(identity_path),
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, check=False)
+    assert ambiguous.returncode != 0
+    assert "cannot be combined with qualification install" in ambiguous.stderr
 
 source = (ROOT / "scripts/rp1-gpclk-admin.py").read_text()
 for prohibited in ("live_output=1", "dtoverlay", "update-initramfs", "/dev/mem", "blacklist"):

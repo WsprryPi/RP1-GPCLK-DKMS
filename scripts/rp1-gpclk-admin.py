@@ -569,7 +569,8 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
             certificate: pathlib.Path | None, root: pathlib.Path = pathlib.Path("/"),
             runner: Callable[[list[str]], str] = command_runner,
             expected_signer: str | None = None, expected_key_id: str | None = None,
-            qualification_identity: pathlib.Path | None = None) -> dict:
+            qualification_identity: pathlib.Path | None = None,
+            allow_development: bool = False) -> dict:
     transaction = plan(route, signing)
     if release.is_symlink() or not release.is_dir():
         raise ValueError("release must be a real directory")
@@ -587,9 +588,14 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
     qualification_archive_path = release / metadata.get("qualificationArchive", "")
     qualification = None
     if qualification_identity is None:
-        if metadata.get("publishable") is not True:
-            raise ValueError("only the exact publishable release is installable")
+        if allow_development:
+            if metadata.get("publishable") is not False or metadata.get("tagPresent") is not False:
+                raise ValueError("development install accepts only an unpublished development candidate")
+        elif metadata.get("publishable") is not True:
+            raise ValueError("only the exact publishable release is installable without --allow-development")
     else:
+        if allow_development:
+            raise ValueError("development install cannot use qualification inputs")
         if (qualification_archive_path.is_symlink() or not qualification_archive_path.is_file() or
                 digest(qualification_archive_path) != metadata.get("qualificationArchiveSha256")):
             raise ValueError("staged qualification archive hash mismatch")
@@ -1050,6 +1056,7 @@ def main() -> None:
     parser.add_argument("--acknowledgement")
     parser.add_argument("--qualification-install", action="store_true")
     parser.add_argument("--qualification-identity", type=pathlib.Path)
+    parser.add_argument("--allow-development", action="store_true")
     args = parser.parse_args()
     state = pathlib.Path("/var/lib/rp1-gpclk-dkms/transaction.json")
     if args.action == "plan":
@@ -1099,6 +1106,8 @@ def main() -> None:
             raise SystemExit("--release-directory is required")
         if args.qualification_install != (args.qualification_identity is not None):
             raise SystemExit("qualification install requires both --qualification-install and --qualification-identity")
+        if args.allow_development and args.qualification_install:
+            raise SystemExit("--allow-development cannot be combined with qualification install")
         release_directory = (args.release_directory if args.release_directory.is_absolute()
                              else pathlib.Path.cwd() / args.release_directory)
         qualification_identity = args.qualification_identity
@@ -1109,7 +1118,8 @@ def main() -> None:
                          expected_signer=args.expected_signer,
                          expected_key_id=args.expected_signature_key_id,
                          qualification_identity=(qualification_identity
-                                                 if args.qualification_install else None))
+                                                 if args.qualification_install else None),
+                         allow_development=args.allow_development)
     print(json.dumps(result, indent=2, sort_keys=True))
 
 
