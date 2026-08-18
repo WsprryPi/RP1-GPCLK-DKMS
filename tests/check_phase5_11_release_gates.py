@@ -80,7 +80,7 @@ decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_t
 assert decisions["entries"]
 assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False for entry in decisions["entries"])
 assert set(document["candidateSnapshot"]["knownBlockers"]) == {
-    "archived-regressions-not-self-contained",
+    "deterministic-release-not-generated",
     "representative-build-not-performed",
     "offline-checks-twice-not-recorded",
     "representative-lifecycle-matrix-not-executed",
@@ -88,8 +88,8 @@ assert set(document["candidateSnapshot"]["knownBlockers"]) == {
     "module-release-not-published",
 }
 assert document["candidateSnapshot"]["archiveIdentity"] == \
-    "rp1-gpclk-dkms-0.0.0-phase5.53.tar.gz sha256:d5799c29eeaf6594c91620d76028112a4a3af6518f17b57efdfaf7283c129a8c from source d7099814e2021a7b206dc68517be542aa94fb162"
-assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is True
+    "pending deterministic Phase 5.53 release generation"
+assert document["candidateSnapshot"]["sealedArchiveMayBeTested"] is False
 freeze_gate = next(gate for gate in document["gates"]
                    if gate["id"] == "candidate-freeze")
 assert freeze_gate["status"] == "passed"

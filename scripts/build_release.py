@@ -36,6 +36,9 @@ EXCLUDED_EXACT = {
     "release/gate-c-representative-build-manifest-phase5.15-v1.json",
     "tests/gate_d_busy_injector_test.c",
 }
+ARCHIVED_REGRESSION_INPUTS = {
+    "release/gate-d-attempts-phase5.52-v1/gd-prior-supported-kernel-downgrade-gpio4.json",
+}
 VERSION_RE = re.compile(r'^#define RP1_GPCLK_MODULE_VERSION "([0-9A-Za-z][0-9A-Za-z._+-]*)"$', re.M)
 
 
@@ -97,7 +100,8 @@ def source_files(development: bool) -> tuple[list[pathlib.Path], bool]:
             re.fullmatch(r"release/gate-d-attempts-phase[^/]+/.*", posix) or
             re.fullmatch(r"release/gate-d-(?:execution-instance|route-compatibility-decision|successor-offline-identities|target-operation-plan|version-pair)-phase[^/]+\.json", posix) or
             re.fullmatch(r"release/gate-c-representative-build-manifest-phase[^/]+\.json", posix))
-        if (posix in EXCLUDED_EXACT or posix.startswith(EXCLUDED_PREFIXES) or qualification_sidecar or
+        if (posix in EXCLUDED_EXACT or posix.startswith(EXCLUDED_PREFIXES) or
+                (qualification_sidecar and posix not in ARCHIVED_REGRESSION_INPUTS) or
                 any(part in {"__pycache__", ".pytest_cache"} for part in rel.parts)):
             continue
         path = ROOT / rel
