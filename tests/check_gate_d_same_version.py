@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 """Exercise every same-version orchestration interruption boundary."""
-import importlib.util,json,pathlib,subprocess,tempfile
+import importlib.util,json,pathlib,subprocess,tempfile,types
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location("same",ROOT/"scripts/gate_d_same_version.py");assert spec and spec.loader
 same=importlib.util.module_from_spec(spec);spec.loader.exec_module(same)
@@ -49,4 +49,14 @@ with tempfile.TemporaryDirectory() as temporary:
  output=subprocess.check_output(["python3",str(ROOT/"scripts/gate_d_same_version_driver.py"),"validate",str(path),str(journal)],text=True)
  assert json.loads(output)=={"outputDisabled":True,"readOnly":True,"valid":True}
  assert not journal.exists()
+ probe_spec=importlib.util.spec_from_file_location("probe",ROOT/"scripts/gate_d_same_version_probe.py");assert probe_spec and probe_spec.loader
+ probe=importlib.util.module_from_spec(probe_spec);probe_spec.loader.exec_module(probe)
+ product_marker=pathlib.Path(temporary)/"product";qualification_marker=pathlib.Path(temporary)/"qualification"
+ product_marker.write_text("product\n")
+ def command(argv,**kwargs):
+  return types.SimpleNamespace(stdout=("rp1-gpclk-dkms/0.0.0-phase5.53\n" if argv[0].endswith("dkms") and product_marker.exists() else ""))
+ assert probe.capture(pathlib.Path(temporary),"/product","/qualification",command)==product
+ product_marker.unlink();assert probe.capture(pathlib.Path(temporary),"/product","/qualification",command)==absent
+ product_marker.write_text("product\n");qualification_marker.write_text("qualification\n")
+ assert probe.capture(pathlib.Path(temporary),"/product","/qualification",command)==qualified
 print("Gate D same-version orchestration: PASS")
