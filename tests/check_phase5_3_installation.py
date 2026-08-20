@@ -402,6 +402,32 @@ with tempfile.TemporaryDirectory() as temporary:
     assert not any(command[:2] == ["dkms", "uninstall"] for command in commands[-2:])
     for overlay_name in admin.ROUTES.values():
         assert not (development_target / "boot/firmware/overlays" / overlay_name).exists()
+    qualification_archive.write_bytes(qualification_bytes)
+    removed["release"]=admin.VERSION;removed["predecessorRelease"]=admin.VERSION
+    encoded=json.dumps(removed).replace(predecessor_version,admin.VERSION)
+    removed=json.loads(encoded);development_state.write_text(json.dumps(removed)+"\n")
+    predecessor=[]
+    for item in removed["ownedFiles"]+removed["replacedFiles"]:
+        if "symlink" in item: record={"path":item["path"],"type":"symlink","target":item["symlink"]}
+        elif item.get("type")=="symlink": record={"path":item["path"],"type":"symlink","target":item["successorTarget"]}
+        else: record={"path":item["path"],"type":"file","sha256":item.get("successorSha256") or item.get("sha256")}
+        predecessor.append(record)
+    predecessor.sort(key=lambda item:item["path"])
+    fresh_identity={"SPDX-License-Identifier":"MIT","schemaVersion":4,
+        "kind":"rp1-gpclk-gate-d-qualification-install-identity","release":admin.VERSION,
+        "sourceCommit":metadata["sourceCommit"],"archiveSha256":metadata["archiveSha256"],
+        "publishable":False,"tagPresent":False,"outputDisabled":True,"liveOutput":False,
+        "purpose":"gate-d-representative-system-qualification",
+        "preRemovalLedgerSha256":"1"*64,"predecessorPackagePaths":predecessor,
+        "predecessorPackagePathsSha256":hashlib.sha256((json.dumps(predecessor,sort_keys=True,separators=(",",":"))+"\n").encode()).hexdigest()}
+    fresh_path=base/"fresh-after-removal-identity.json";fresh_path.write_text(json.dumps(fresh_identity)+"\n")
+    add_built_module(development_target);add_installed_module(development_target)
+    qualified=admin.execute(release,"gpio4",False,None,None,root=development_target,
+                            runner=fake_runner,qualification_identity=fresh_path)
+    assert qualified["status"]=="complete" and (development_target/"usr/libexec/rp1-gpclk-dkms/gate-d-executor").is_file()
+    removed_qualified=admin.remove(development_state,fake_runner)
+    assert removed_qualified["status"]=="removed"
+    qualification_archive.unlink()
     add_built_module(development_target)
     add_installed_module(development_target)
     reinstalled = admin.execute(
