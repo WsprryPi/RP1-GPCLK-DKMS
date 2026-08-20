@@ -23,9 +23,9 @@ assert evidence["finalState"]["scopedKernelWarningsErrorsFailures"] == []
 assert all(evidence["cleanup"].values())
 assert not any(evidence["safety"].values())
 assert evidence["result"] == "pass-final-candidate-target-verified-inactive"
-assert roadmap["currentClassification"] == "target-verified-release-candidate-awaiting-review"
+assert roadmap["currentClassification"] == "reviewed-release-candidate-awaiting-publication"
 assert gates["final-candidate-target-verification"]["status"] == "passed"
-assert gates["release-review-and-claim-audit"]["status"] == "blocked"
+assert gates["release-review-and-claim-audit"]["status"] == "passed"
 assert evidence["nextGate"] == "release-review-and-claim-audit"
 
 print("Release 1.0.0 repaired final target verification: PASS")

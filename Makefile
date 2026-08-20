@@ -28,6 +28,8 @@ package-check:
 	python3 tests/check_release_1_0_0_target_gpio4_failure.py
 	python3 tests/check_release_1_0_0_overlay_id_repair.py
 	python3 tests/check_release_1_0_0_repaired_target_success.py
+	python3 tests/check_release_1_0_0_publication_finalizer.py
+	python3 tests/check_release_1_0_0_final_review.py
 
 release-unit:
 	./scripts/build_release.py "$(if $(OUTPUT_DIR),$(OUTPUT_DIR),dist)" $(if $(DEVELOPMENT),--development,)
