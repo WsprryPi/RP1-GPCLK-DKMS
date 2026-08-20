@@ -1,0 +1,6 @@
+rp1-gpclk-dkms (0.0.0~phase5.54-1) experimental; urgency=medium
+
+  * Replace the experimental product installer with conventional DKMS
+    packaging while keeping release qualification tooling separate.
+
+ -- Lee Bussy <lee@bussy.org>  Thu, 20 Aug 2026 00:00:00 -0500

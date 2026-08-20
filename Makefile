@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 
-.PHONY: all modules check release-unit validate-release clean
+.PHONY: all modules check package-check release-unit validate-release clean
 
 all: modules
 
@@ -10,6 +10,9 @@ modules:
 
 check:
 	./tests/run-offline-checks.sh
+
+package-check:
+	python3 tests/check_debian_packaging.py
 
 release-unit:
 	./scripts/build_release.py "$(if $(OUTPUT_DIR),$(OUTPUT_DIR),dist)" $(if $(DEVELOPMENT),--development,)

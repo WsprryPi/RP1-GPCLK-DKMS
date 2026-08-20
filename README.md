@@ -81,6 +81,13 @@ Nothing in this repository generally authorizes module installation, target
 binding, system configuration, GPIO operation, transmission, or RF activity;
 each target task still requires explicit bounded authority.
 
+Phase 5.54 replaces the experimental Phase 5.53 product installer with a
+conventional Debian `rp1-gpclk-dkms` package. The package owns the versioned
+DKMS source tree and both inactive overlays; standard `dpkg` and `dkms`
+maintainer scripts own installation, upgrade, and removal. Release-
+qualification tools remain a separate artifact and are not installed with the
+product package. See [Debian packaging](docs/operator/debian-packaging.md).
+
 ## Intended scope
 
 This project will own:

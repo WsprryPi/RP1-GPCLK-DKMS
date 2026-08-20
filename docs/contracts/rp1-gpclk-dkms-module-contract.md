@@ -36,43 +36,42 @@ DKMS. It supplements rather than replaces the stock Raspberry Pi `clk-rp1`
 driver. WsprryPi will not distribute or maintain a custom kernel for this
 feature.
 
-Every release unit separates the DKMS product source archive from the
-release-qualification tooling archive. The product archive is the operator and
-DKMS distribution payload. The qualification archive is a separately hashed
-release artifact for controlled validation and is not installed as part of the
-ordinary product lifecycle. Historical controls, target identities, evidence,
-reviews, prompts, and tests remain repository-only.
+Every release unit separates the installable DKMS product package from the
+release-qualification tooling archive. The product is a conventional Debian
+`-dkms` package whose files, maintainer scripts, upgrades, and removal are
+owned by `dpkg` and `dh-dkms`. The qualification archive is a separately
+hashed release artifact for controlled validation and is not installed as
+part of the ordinary product lifecycle. Historical controls, target
+identities, evidence, reviews, prompts, and tests remain repository-only.
 
-The machine-readable product installation inventory in
-[`release/release-layout-v1.json`](../../release/release-layout-v1.json) freezes
-the exact destination, owner, group, mode, replacement policy, and removal
-owner for each product item. The separate qualification inventory is
+The Phase 5.53 machine-readable product installation inventory in
+[`release/release-layout-v1.json`](../../release/release-layout-v1.json) is a
+frozen historical contract for that experimental archive and administrator;
+it is not an installation engine for the Debian package. The Debian binary
+package's literal member inventory and package-manager metadata are the
+Phase 5.54 product installation contract. The separate qualification inventory is
 [`release/qualification-layout-v1.json`](../../release/qualification-layout-v1.json).
 Together the release artifacts include:
 
-- a versioned deterministic product source archive and one product archive root;
+- a versioned deterministic Debian DKMS product package;
 - module source and internal headers, `Kbuild`, `Makefile`, and finalized
   `dkms.conf`;
 - the canonical versioned UAPI header;
 - GPIO4 and GPIO20 overlay source plus reproducibly generated DTBO files;
-- the compatibility-manifest schema and populated release compatibility
-  manifest;
-- provenance and checksum manifests;
-- installation, update, downgrade, rollback, recovery, complete-removal, and
-  read-only diagnostic tooling;
-- module-signing and administrator key-enrollment guidance;
-- operator documentation and security/behavioral release notes; and
-- machine-readable release metadata and restrictive device-node policy;
-- a separately rooted qualification archive containing generic Gate D tools,
-  schemas, probes, matrices, and release-gate policy only.
+- package-manager installation, update, downgrade, rollback, and complete
+  removal behavior;
+- a separately rooted qualification archive containing compatibility and
+  provenance metadata, checksums, generic Gate D tools, schemas, probes,
+  matrices, release-gate policy, and qualification documentation only.
 
 Each generated release identity binds the module release, exact source commit,
 expected release tag, UAPI ABI and canonical-header hash, overlay source and
-DTBO hashes, product-archive hash, qualification-archive hash,
-compatibility-manifest hash, both layout hashes, installation inventory hash,
+DTBO hashes, product-package hash, qualification-archive hash,
+compatibility-manifest hash, qualification-layout hash, and product
+package-member inventory hash,
 and every byte-affecting build-tool identity and option. A mismatch among the
 source version, `dkms.conf`, `MODULE_VERSION`, UAPI, manifest, release metadata,
-release tag, either archive root, or either archive name fails validation.
+release tag, product package, or qualification archive fails validation.
 Generated compatibility, provenance, checksum, and release metadata remain
 sidecars so their hashes do not create a cyclic archive hash.
 

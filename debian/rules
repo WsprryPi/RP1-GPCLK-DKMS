@@ -1,0 +1,32 @@
+#!/usr/bin/make -f
+# SPDX-License-Identifier: MIT
+
+PACKAGE := rp1-gpclk-dkms
+MODULE_VERSION := 0.0.0-phase5.54
+SOURCE_DEST := debian/$(PACKAGE)/usr/src/$(PACKAGE)-$(MODULE_VERSION)
+
+%:
+	dh $@ --with dkms
+
+override_dh_auto_build:
+	mkdir -p debian/build
+	python3 -c 'import pathlib; from scripts.build_release import build_dtbo; root=pathlib.Path("."); [build_dtbo(root / "overlays" / (name + ".dts"), root / "debian" / "build" / (name + ".dtbo"), "dtc") for name in ("rp1-gpclk-gpio4", "rp1-gpclk-gpio20")]'
+
+override_dh_auto_test:
+	python3 tests/check_debian_packaging.py
+
+override_dh_auto_install:
+	mkdir -p $(SOURCE_DEST)/src $(SOURCE_DEST)/include/rp1_gpclk $(SOURCE_DEST)/include/uapi/linux $(SOURCE_DEST)/overlays
+	cp Kbuild Makefile $(SOURCE_DEST)/
+	cp src/*.c $(SOURCE_DEST)/src/
+	cp include/rp1_gpclk/*.h $(SOURCE_DEST)/include/rp1_gpclk/
+	cp include/uapi/linux/rp1_gpclk.h $(SOURCE_DEST)/include/uapi/linux/
+	cp overlays/rp1-gpclk-gpio4.dts overlays/rp1-gpclk-gpio20.dts $(SOURCE_DEST)/overlays/
+	mkdir -p debian/$(PACKAGE)/boot/firmware/overlays
+	cp debian/build/rp1-gpclk-gpio4.dtbo debian/build/rp1-gpclk-gpio20.dtbo debian/$(PACKAGE)/boot/firmware/overlays/
+
+override_dh_dkms:
+	dh_dkms -V $(MODULE_VERSION)
+
+override_dh_auto_clean:
+	rm -rf debian/build
