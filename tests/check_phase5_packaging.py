@@ -34,7 +34,7 @@ required_ids = {"source-archive", "qualification-archive", "module-source", "mod
                 "security-notes", "behavioral-notes"}
 qualification_ids = [item["id"] for item in qualification_layout["artifacts"]]
 required_ids.update({"qualification-successor-validator", "gate-d-same-version-tool", "gate-d-same-version-driver", "gate-d-same-version-probe",
-                     "gate-d-same-version-contract"})
+                     "gate-d-same-version-contract", "gate-d-matrix-policy"})
 assert len(qualification_ids) == len(set(qualification_ids))
 assert required_ids == set(artifact_ids) | set(qualification_ids)
 assert set(artifact_ids).isdisjoint(qualification_ids)
@@ -102,6 +102,7 @@ sha256sum "$input" | awk '{print $1}' >"$out"
     assert "schema/gate-d-qualification-root-v1.schema.json" in qualified
     assert "tools/gate_d_busy_injector.c" in qualified
     assert "release/representative-system-matrix-v1.json" in qualified
+    assert "release/gate-d-matrix-policy-v2.json" in qualified
     assert "docs/operator/gate-d-target-runbook.md" in qualified
     assert "release/gate-d-phase5.24-residue-recovery-v1.json" not in qualified
     assert not any(name.startswith(("tests/", "release/gate-d-attempts")) for name in qualified)
