@@ -251,4 +251,21 @@ bad=copy.deepcopy(schema7);bad["priorTerminalState"]["status"]="complete"
 try:tool.validate(bad)
 except ValueError:pass
 else:raise AssertionError("schema 7 accepted non-removed predecessor ledger")
+with tempfile.TemporaryDirectory() as temporary:
+ removed_path=pathlib.Path(temporary)/"removed.json"
+ records=schema7["predecessorPackagePaths"]
+ owned=[]
+ for item in records:
+  owned.append({"path":item["path"],**({"sha256":item["sha256"]} if item["type"]=="file" else {"symlink":item["target"]})})
+ removed={"status":"removed","checkpoint":"inactive-clean","recoveryRequired":False,"liveOutput":False,
+          "package":"rp1-gpclk-dkms","release":schema7["candidate"]["release"],
+          "predecessorRelease":schema7["candidate"]["release"],"ownedFiles":owned,"replacedFiles":[]}
+ removed_path.write_text(json.dumps(removed)+"\n")
+ tool.validate_removed_ledger(removed_path,schema7,schema7["priorTerminalState"])
+ file_index=next(i for i,item in enumerate(owned) if "sha256" in item)
+ for mutate in (lambda v:v.update(status="complete"),lambda v:v["ownedFiles"].pop(),lambda v:v["ownedFiles"][file_index].update(sha256="0"*64)):
+  bad=copy.deepcopy(removed);mutate(bad);removed_path.write_text(json.dumps(bad)+"\n")
+  try:tool.validate_removed_ledger(removed_path,schema7,schema7["priorTerminalState"])
+  except ValueError:pass
+  else:raise AssertionError("schema 7 accepted changed removed ledger")
 print("Gate D pre-root trust transition: PASS")

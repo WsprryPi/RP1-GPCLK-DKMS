@@ -69,6 +69,32 @@ def verify_package_path(prefix:pathlib.Path,item:dict)->None:
         if path.is_symlink() or not path.is_file() or digest(path)!=item["sha256"]: raise ValueError("typed package file differs")
     elif not path.is_symlink() or os.readlink(path)!=item["target"]: raise ValueError("typed package symlink differs")
 
+def validate_removed_ledger(path:pathlib.Path,value:dict,prior:dict)->None:
+    """Bind a schema-7 removed ledger to the captured predecessor inventory."""
+    if path.is_symlink() or not path.is_file(): raise ValueError("removed predecessor ledger is absent")
+    state=json.loads(path.read_text())
+    candidate=value["candidate"]
+    if (state.get("status")!="removed" or state.get("checkpoint")!="inactive-clean" or
+            state.get("recoveryRequired") is not False or state.get("liveOutput") is not False or
+            state.get("package")!="rp1-gpclk-dkms" or state.get("release")!=candidate["release"] or
+            state.get("predecessorRelease")!=candidate["release"]):
+        raise ValueError("removed predecessor ledger state differs")
+    expected={item["path"]:item for item in value["predecessorPackagePaths"]}
+    actual={}
+    for item in state.get("ownedFiles",[])+state.get("replacedFiles",[]):
+        raw=item.get("path")
+        if not isinstance(raw,str) or raw in actual: raise ValueError("removed predecessor inventory is ambiguous")
+        if "symlink" in item: current={"type":"symlink","target":item["symlink"]}
+        elif item.get("type")=="symlink": current={"type":"symlink","target":item.get("successorTarget")}
+        else: current={"type":"file","sha256":item.get("successorSha256",item.get("sha256"))}
+        actual[raw]=current
+    if set(actual)!=set(expected): raise ValueError("removed predecessor inventory paths differ")
+    for raw,current in actual.items():
+        wanted=expected[raw]
+        if current["type"]!=wanted["type"] or (current.get("sha256") or current.get("target"))!=(wanted.get("sha256") or wanted.get("target")):
+            raise ValueError("removed predecessor inventory identity differs")
+    if not SHA256.fullmatch(prior.get("sha256","")): raise ValueError("pre-removal ledger identity differs")
+
 
 def rooted(prefix: pathlib.Path, absolute: str) -> pathlib.Path:
     pure = pathlib.PurePosixPath(absolute)
@@ -349,9 +375,10 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
         elif prior_contract:
             if old["administratorInvoked"]:
                 raise ValueError("invoked administrator has no recoverable transaction state")
-            if (prior_archive is None or prior_archive.is_symlink() or not prior_archive.is_file() or
-                    digest(prior_archive) != prior_contract["sha256"]):
+            if prior_archive is None or prior_archive.is_symlink() or not prior_archive.is_file():
                 raise ValueError("archived prior terminal state differs during recovery")
+            if value["schemaVersion"]==7: validate_removed_ledger(prior_archive,value,prior_contract)
+            elif digest(prior_archive)!=prior_contract["sha256"]: raise ValueError("archived prior terminal state differs during recovery")
             os.replace(prior_archive, administrator_state)
             administrator_state.chmod(int(prior_contract["mode"], 8))
             try:
@@ -396,13 +423,14 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
         if (administrator_state.is_symlink() or not administrator_state.is_file() or
                 administrator_state.stat().st_uid != prior_contract["ownerUid"] or
                 stat.S_IMODE(administrator_state.stat().st_mode) != int(prior_contract["mode"], 8) or
-                digest(administrator_state) != prior_contract["sha256"]):
+                (value["schemaVersion"]!=7 and digest(administrator_state) != prior_contract["sha256"])):
             raise ValueError("prior terminal administrator state differs")
         prior_value = json.loads(administrator_state.read_text())
         if (prior_value.get("status") != prior_contract["status"] or
                 prior_value.get("recoveryRequired") is not prior_contract["recoveryRequired"] or
                 prior_value.get("liveOutput") is not prior_contract["liveOutput"]):
             raise ValueError("prior administrator state is not terminal recovered")
+        if value["schemaVersion"]==7: validate_removed_ledger(administrator_state,value,prior_contract)
         if prior_archive is None or prior_archive.exists() or prior_archive.is_symlink():
             raise ValueError("prior terminal archive destination exists")
     elif administrator_state.exists() or administrator_state.is_symlink():
