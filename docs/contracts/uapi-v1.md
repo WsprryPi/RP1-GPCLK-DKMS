@@ -5,9 +5,12 @@
 ## Authority and status
 
 The byte-authoritative header is `include/uapi/linux/rp1_gpclk.h`. This
-document defines its validation and state semantics. Phase 2A provides no
-device endpoint or functional dispatcher, so every operation remains a public
-contract for later implementation rather than implemented behavior.
+document defines its validation and state semantics. Phase 3 freezes ABI v1 at
+the exact byte identity recorded in `uapi-identity.json`; see Decision 0006.
+Phase 4A implements every frozen ABI v1 operation. Submission remains
+administratively fail-closed unless the immutable-at-load live-output gate and
+the exact compatibility policy both permit it. Implemented-operation
+capabilities therefore remain distinct from `LIVE_ELIGIBLE`.
 
 ## Common validation
 
@@ -90,3 +93,7 @@ An extended structure receives a new command number and explicit suffix; it
 does not enlarge an existing `_IOC_SIZE`. New capabilities, enum values, and
 reasons are additive. Reserved values and fields remain unavailable until a
 reviewed revision assigns them.
+
+The stable administrative routes are GPIO4 value 1 and GPIO20 value 2. A
+queried route reports the overlay-bound route; `ACQUIRE.expected_route` must
+match it and cannot remux or change the administrative route.

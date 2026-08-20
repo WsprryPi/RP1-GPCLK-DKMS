@@ -1,0 +1,35 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.54-lifecycle-controls-offline",
+  "sourceCommit": "9151cb35ce982cc127029d4de679530fd275f2a3",
+  "installedEvidenceCommit": "c5f278cccb2398875198e1d7d2e7727aee757a7f",
+  "packageSha256": "f61286a6e63c2735413a0e86d13c5dc2d91f4581e8a20aab7291234b1991f90b",
+  "bundle": {
+    "path": "dist/phase5.54-lifecycle-controls/rp1-gpclk-dkms-phase5.54-lifecycle-controls.tar.gz",
+    "sha256": "f9e03ffa9b5b1b142dff67288ff8924f1d2a21eaf4623c2596a10919c70a74ef",
+    "memberInventorySha256": "0add9be4a03d3b83b4b8997bc0cad0ec440e84be00e31800fdb9d3cf03a84e48",
+    "members": [
+      "rp1-gpclk-dkms-phase5.54-lifecycle-controls/phase5.54-lifecycle-attempt1-v1.json",
+      "rp1-gpclk-dkms-phase5.54-lifecycle-controls/phase554_lifecycle_controls.py",
+      "rp1-gpclk-dkms-phase5.54-lifecycle-controls/gate_d_uapi_probe.c"
+    ],
+    "twoBuildsByteIdentical": true,
+    "linksOrSpecialFiles": false
+  },
+  "attempt": {"number": 1, "route": "gpio4", "kernel": "6.18.34+rpt-rpi-2712", "liveOutput": false},
+  "checks": [
+    {"name": "plan validation", "result": "pass"},
+    {"name": "fixed command rendering", "result": "pass"},
+    {"name": "deterministic bundle build", "result": "pass"},
+    {"name": "literal member inventory", "result": "pass"},
+    {"name": "Linux probe compilation against exact UAPI bytes", "result": "pass"},
+    {"name": "SPDX policy", "result": "pass"},
+    {"name": "git diff --check", "result": "pass"}
+  ],
+  "hostCompileNote": "macOS lacks Linux UAPI dependency linux/ioctl.h; the probe compiled with -Werror in an isolated Debian arm64 environment instead.",
+  "targetContacted": false,
+  "targetExecutionAuthorized": false,
+  "moduleOverlayGpioClockDmaTransmissionRf": false,
+  "result": "offline-pass-target-staging-and-attempt-1-unauthorized"
+}

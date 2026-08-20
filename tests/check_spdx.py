@@ -3,6 +3,7 @@
 """Check the repository's per-file SPDX policy for governed source files."""
 
 from pathlib import Path
+import json
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,13 +16,27 @@ EXPECTED = {
     ".sh": {"MIT"},
 }
 SCAN = ["docs", "include", "schema", "src", "tests"]
+ROOT_FILES = ["Kbuild", "Makefile", "dkms.conf"]
 
 
 def identifier(path: Path) -> str | None:
+    if path.suffix == ".json":
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return None
+        if not isinstance(value, dict):
+            return None
+        found = value.get("SPDX-License-Identifier")
+        if isinstance(found, str):
+            return found
+        comment = value.get("$comment")
+        marker = "SPDX-License-Identifier:"
+        if isinstance(comment, str) and marker in comment:
+            return comment.split(marker, 1)[1].strip()
+        return None
     for line in path.read_text(encoding="utf-8").splitlines()[:5]:
         marker = "SPDX-License-Identifier:"
-        if '"SPDX-License-Identifier": "MIT"' in line:
-            return "MIT"
         if marker in line:
             value = line.split(marker, 1)[1].strip().rstrip(" -->*/,")
             return value.strip('"')
@@ -29,6 +44,11 @@ def identifier(path: Path) -> str | None:
 
 
 failures = []
+for name in ROOT_FILES:
+    path = ROOT / name
+    found = identifier(path)
+    if found != "MIT":
+        failures.append(f"{name}: unexpected SPDX {found!r}")
 for directory in SCAN:
     for path in (ROOT / directory).rglob("*"):
         if not path.is_file() or path.suffix not in EXPECTED:

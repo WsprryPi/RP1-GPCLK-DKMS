@@ -38,6 +38,8 @@ modules.order
 *.dtbo
 
 # Coverage, analysis, and test outputs
+__pycache__/
+*.py[cod]
 *.gcda
 *.gcno
 *.lcov

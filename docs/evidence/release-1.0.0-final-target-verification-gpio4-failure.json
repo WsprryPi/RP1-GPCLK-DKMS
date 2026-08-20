@@ -1,0 +1,71 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "release-final-target-verification-failure",
+  "capturedUtc": "2026-08-20T20:01:26Z",
+  "target": "wspr5",
+  "authorizationCommit": "fde4eafb2fbeae38b6bc9ee0d67b09ee85b1cd51",
+  "candidateSourceCommit": "a20abc828ec300ad3227a34be7572f4fa28525b2",
+  "preauthorizationRecaptureSha256": "41f45616f3521b74c61e443aeed552a6c173a5b4dc2367b3d42b8c3ba8f04089",
+  "finalRecaptureSha256": "41f45616f3521b74c61e443aeed552a6c173a5b4dc2367b3d42b8c3ba8f04089",
+  "productPackageSha256": "951289ee5d0e44cff41b59756f00161aba16f43f1450715ba57c4a3679a2e6b8",
+  "qualificationArchiveSha256": "fa11f86c8a5f1443560d71720e44a4fa1e3d209d64542c0d416e00debc9dea5e",
+  "staging": {
+    "directory": "/home/pi/rp1-gpclk-release-1.0.0-951289ee",
+    "userOwned": true,
+    "outerChecksumsPassed": true,
+    "regularArchiveMemberCount": 16,
+    "memberListingSha256": "e511b714588d4499738c54edc12134a755ae39707621d3be5c9ad802076cdd4e",
+    "archiveControlsValidated": true,
+    "renderedStepCount": 9,
+    "retainedForFailureEvidence": true
+  },
+  "installation": {
+    "attemptCount": 1,
+    "packageStatus": "installed",
+    "packageVersion": "1.0.0-1",
+    "dpkgAuditEmpty": true,
+    "stockDkmsInstallCount": 4,
+    "customKernelExcluded": true,
+    "installedIdentitiesMatched": true,
+    "inactiveVerificationPassed": true
+  },
+  "gpio4Attempt": {
+    "attemptCount": 1,
+    "moduleLoadedWithLiveOutputDisabled": true,
+    "overlayApplied": true,
+    "failureType": "qualification-control-defect",
+    "failure": "dtoverlay apply returned empty stdout and the control indexed the nonexistent last stdout line",
+    "exception": "IndexError: list index out of range",
+    "probeExecuted": false,
+    "uapiQueryAcquireReleaseExecuted": false
+  },
+  "cleanup": {
+    "readOnlyOverlayListing": "0: rp1-gpclk-gpio4",
+    "soleAttemptOverlayIdentifier": "0",
+    "overlayRemoved": true,
+    "moduleLoadedAfterCleanup": false,
+    "endpointPresentAfterCleanup": false,
+    "activeOverlayCountAfterCleanup": 0,
+    "packageVersionAfterCleanup": "1.0.0-1",
+    "dpkgAuditEmptyAfterCleanup": true,
+    "inactiveBaselineRestored": true
+  },
+  "notAttempted": [
+    "GPIO4 probe or lifecycle completion",
+    "GPIO20 lifecycle",
+    "package removal audit",
+    "package reinstall"
+  ],
+  "safety": {
+    "liveOutputEnabled": false,
+    "clockEnabledOrRateChanged": false,
+    "dmaSubmitted": false,
+    "gpioOutput": false,
+    "bootChanged": false,
+    "rebooted": false,
+    "transmissionOrRf": false
+  },
+  "nextGate": "offline qualification-control repair and full fake-system exercise before new target authorization",
+  "result": "failed-closed-inactive-final-package-restored"
+}

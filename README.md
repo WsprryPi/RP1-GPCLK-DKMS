@@ -14,21 +14,86 @@ clock operations.
 
 ## Current status
 
-Phase 2A public contracts and an inert kernel source skeleton are implemented.
-Phase 2B adds a portable lifecycle core and deterministic host tests for
+Phase 2A public contracts and a kernel source skeleton are implemented. Phase
+2B adds a portable lifecycle core and deterministic host tests for
 ownership, leases, generations, bounded request validation, finite work,
 STOP/RELEASE, stable terminal outcomes, stale-event rejection, and cleanup
-faults. The core consumes already-copied bounded inputs; it is not connected to
-an ioctl endpoint or any kernel resource.
+faults. Phase 2C adds a platform driver, reference-counted misc endpoint, and
+fail-closed discovery of the GPCLK0 DT, clock, pinctrl, and DMAengine resources.
+It derives and DMA-maps the divider target from the provider resource.
+Phase 2D adds an explicit prerelease module version, DKMS build configuration,
+and identity-specific representative stock Raspberry Pi kernel-header build
+evidence. Phase 2E adds the GPIO4 safe/default overlay, exact resource and UAPI
+identity checks, and a bounded target lifecycle runner. The complete
+clock-disabled matrix passed on the recorded `wspr5` Pi 5 / stock
+`6.18.34+rpt-rpi-2712` identity; this closes the Phase 2 gate for that exact
+identity while retaining the `Compatible-unqualified` compatibility ceiling.
+Phase 3 now injects GPIO20 as the second independently allowlisted route,
+requires exact route/pin pairs, adds a route-specific safe/default overlay, and
+freezes UAPI ABI 1 plus the first overlay/name/manifest contracts. Phase 3B's
+complete clock-disabled target matrix passed independently for GPIO4 and
+GPIO20 on the recorded `wspr5` identity. This closes the Phase 3 target gate
+for that exact identity while retaining the `Compatible-unqualified` ceiling;
+neither route inherits evidence from the other. Phase 4A implements the bounded
+stock-kernel submission, state, STOP, DMA-pacing, exact-readback, and restoration
+path behind an immutable-at-load `live_output` gate. Its complete two-route
+clock-disabled regression passed on the same exact `wspr5` identity with the
+gate false.
 
-The skeleton still registers no platform driver or device, exposes no ioctl
-dispatcher, and performs no clock, DMA, pinctrl, device-tree, GPIO, or other
-hardware operation. No device-tree overlay, DKMS package, installer, kernel
-lifetime integration, or qualified GPIO output is implemented. Host lifecycle
-tests do not prove kernel concurrency or target cleanup.
+`QUERY`, `ACQUIRE`, `SUBMIT_WSPR`, `SUBMIT_EVENTS`, `STOP`, `GET_STATE`, and
+`RELEASE` now have production dispatch. With `live_output=false`, submission is
+rejected before plan allocation or any pinctrl, clock, tick, or DMA mutation;
+`LIVE_ELIGIBLE` is not reported. The implementation and build evidence do not
+qualify GPIO output, timing, a mode, or RF, and do not generalize to another
+kernel, DT, firmware, route, or host. Phase 5 includes a guarded
+output-disabled DKMS install transaction and an offline-tested Gate D
+coordinator for upgrade, downgrade, rollback, checkpoint recovery,
+exact-version removal, complete and repeated removal, reinstall,
+output-disabled UAPI query/acquire/release, and explicit unbind/rebind. Its
+concrete execution instance remains fail-closed and non-executable. Frozen
+`0.0.0-phase5.2` is retained as the genuine predecessor. Phase 5.53 is
+historical experimental-archive evidence. Phase 5.54 produced the conventional
+Debian DKMS development candidate. Its exact `-2` package has passed inactive
+installation, separate output-disabled GPIO4 and GPIO20 lifecycle attempts,
+and complete removal followed by reinstall on the representative Raspberry Pi
+5. These results qualify only the tested inactive administrative paths; no live
+GPIO output, timing, transmission, or RF claim is made.
 
-Nothing in this repository currently authorizes module installation, target
-binding, system configuration, GPIO operation, transmission, or RF activity.
+Phase 5.2 adds a deterministic, machine-verified release unit and an explicit
+output-disabled DKMS, signing, overlay, and diagnostic tool surface. The
+release compatibility manifest is populated deny-by-default with no positive
+runtime entries; Phase 4 evidence belongs to an earlier exact module identity.
+See the [release-unit contract](docs/contracts/phase5-2-release-unit-execution-prompt.md)
+and [operator lifecycle guide](docs/operator/lifecycle.md).
+
+Phase 5.8 freezes the bounded read-only diagnostic contract and its six
+operator-visible outcome categories. Diagnostics report package, kernel,
+module, endpoint, UAPI, manifest, route, enrollment, cleanup, hardware
+identity, scoped kernel-log, and interrupted-transaction residue evidence;
+they never load, configure, repair, or operate hardware. See the
+[diagnostics guide](docs/operator/diagnostics.md).
+
+The comprehensive [Phase 5 exit-gate execution prompt](docs/contracts/phase5-exit-gate-execution-prompt.md)
+audits the remaining contract-to-implementation and external evidence gates.
+Its [adversarial assessment](docs/reviews/phase5-exit-gate-adversarial-assessment.md)
+records why passing offline policy tests is not yet a Phase 5 exit.
+
+Nothing in this repository generally authorizes module installation, target
+binding, system configuration, GPIO operation, transmission, or RF activity;
+each target task still requires explicit bounded authority.
+
+Phase 5.54 replaces the experimental Phase 5.53 product installer with a
+conventional Debian `rp1-gpclk-dkms` package. The package owns the versioned
+DKMS source tree and both inactive overlays; standard `dpkg` and `dkms`
+maintainer scripts own installation, upgrade, and removal. Release-
+qualification tools remain a separate artifact and are not installed with the
+product package. See [Debian packaging](docs/operator/debian-packaging.md).
+The active machine-readable roadmap is
+[`release/release-integration-gates-v1.json`](release/release-integration-gates-v1.json).
+The initial semantic release is selected as `1.0.0` with expected tag
+`v1.0.0`. Final artifact reproduction, exact-candidate verification,
+publication, fresh-download verification, and consuming-repository integration
+remain separate gates.
 
 ## Intended scope
 
@@ -43,10 +108,9 @@ This project will own:
 - kernel-header, lifecycle, static-contract, and target safety tests; and
 - tagged source releases with checksums.
 
-The initial feasibility route is GPIO4. GPIO20 will be introduced as a separate
-allowlisted route after GPIO4 proves the stock-kernel path and before route,
-UAPI, packaging, or operator contracts are frozen. Neither route inherits the
-other's qualification.
+The allowlisted routes are GPIO4 and GPIO20. They share route-neutral module
+machinery but use separate one-route overlays and compatibility evidence.
+Neither route inherits the other's qualification.
 
 ## Project boundary
 
@@ -83,12 +147,38 @@ with its bounded work preserved in the
 [Phase 2B execution prompt](docs/contracts/phase2b-portable-lifecycle-execution-prompt.md).
 Its independent offline result is recorded in the
 [Phase 2B adversarial assessment](docs/reviews/phase2b-adversarial-assessment.md).
+The Phase 2C slice is preserved in its
+[execution prompt](docs/contracts/phase2c-kernel-resource-integration-execution-prompt.md)
+and [Decision 0004](docs/development/decisions/0004-phase2c-resource-integration.md).
+Its bounded offline result is recorded in the
+[Phase 2C adversarial assessment](docs/reviews/phase2c-adversarial-assessment.md).
+The Phase 2D build slice is preserved in its
+[execution prompt](docs/contracts/phase2d-representative-build-qualification-execution-prompt.md).
+Its exact build identities and bounded result are in the
+[representative build evidence](docs/evidence/phase2d-representative-build-qualification.md),
+with the separate
+[Phase 2D adversarial assessment](docs/reviews/phase2d-adversarial-assessment.md).
+The separately authorized target slice is preserved in the
+[Phase 2E execution prompt](docs/contracts/phase2e-clock-disabled-target-execution-prompt.md),
+with its exact [target evidence](docs/evidence/phase2e-clock-disabled-target.md),
+[Decision 0005](docs/development/decisions/0005-phase2e-gpio4-clock-disabled.md),
+and independent
+[Phase 2E adversarial assessment](docs/reviews/phase2e-adversarial-assessment.md).
+The Phase 3 implementation and interface freeze are preserved in
+the [Phase 3 execution prompt](docs/contracts/phase3-gpio20-interface-freeze-execution-prompt.md),
+[GPIO20 route evidence](docs/development/gpio20-route-evidence.md),
+[Decision 0006](docs/development/decisions/0006-phase3-interface-freeze.md),
+and [Phase 3 adversarial assessment](docs/reviews/phase3-adversarial-assessment.md).
+The separately authorized closure is recorded in the
+[Phase 3B execution prompt](docs/contracts/phase3b-clock-disabled-route-closure-execution-prompt.md),
+[target evidence](docs/evidence/phase3b-clock-disabled-route-closure.md), and
+[Phase 3B adversarial assessment](docs/reviews/phase3b-adversarial-assessment.md).
 
 The canonical header is
 [`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The strict,
 deny-by-default compatibility format is
 [`schema/rp1-gpclk-compatibility-manifest-v1.schema.json`](schema/rp1-gpclk-compatibility-manifest-v1.schema.json).
-Run the offline contract suite with `make check`. Building the inert module
+Run the offline contract suite with `make check`. Building the module source
 requires an explicitly supplied local kernel build directory, for example
 `make KERNEL_BUILD=/path/to/kernel/build`; it is never installed or loaded by
 the repository build.

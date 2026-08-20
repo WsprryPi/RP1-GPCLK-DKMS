@@ -1,0 +1,22 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-successor-offline-identities",
+  "release": "0.0.0-phase5.28",
+  "sourceCommit": "9c408ec493ab3fc1aa58142592b427faa96c6b4a",
+  "tagPresent": false,
+  "publishable": false,
+  "builds": {
+    "count": 2,
+    "byteIdentical": true,
+    "archive": "rp1-gpclk-dkms-0.0.0-phase5.28.tar.gz",
+    "archiveSha256": "cd7e9d60f603101634d6f81e82edda311b724678c9ce9329ff98609911bcc3d6",
+    "compatibilityManifestSha256": "77ea325c8b6cad2f78f2cd66cca48122fbd3da333b0d761bde72bfab6487e080",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "provenanceSha256": "52c31e6f1cae53b046b5304baa7a79ef38bf61e938b1e21ff866ed44f0bf1e4d",
+    "checksumsSha256": "b364ded9b872c4cdf6d1dd23cca03a624a07ff39c377b2eb05b512787f851eb1",
+    "metadataSha256": "3808c356afbd7d80b631cea98da21b8751aa4520acf9d310dca4567356297010"
+  },
+  "claimCeiling": "offline reproducible and adversarially reviewed only"
+}

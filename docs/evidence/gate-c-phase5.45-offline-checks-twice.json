@@ -1,0 +1,23 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-c-offline-checks-twice",
+  "release": "0.0.0-phase5.45",
+  "sourceCommit": "4b50db7868b7fe5ca9d830f51cd404c250192188",
+  "worktreeState": "clean-detached-exact-commit",
+  "command": "PHASE5_43_RELEASE_ARCHIVE=<independent-exact-copy> tests/run-offline-checks.sh",
+  "archivedPhase543ArchiveSha256": "a8a200d069ad433353a8812ef6a9a4c585b75a9f6af3d6501ac3672e90c997c3",
+  "runs": [
+    {"id":1,"startedUtc":"2026-08-17T10:35:47Z","finishedUtc":"2026-08-17T10:38:02Z","exitStatus":0,"passLines":87,"skipLines":3,"failLines":0,"transcriptSha256":"5b777fe49c70a3e736bc7271eed361f9841311fe6cfd2fdf4a034bb631030c5b"},
+    {"id":2,"startedUtc":"2026-08-17T10:38:14Z","finishedUtc":"2026-08-17T10:40:25Z","exitStatus":0,"passLines":87,"skipLines":3,"failLines":0,"transcriptSha256":"5b777fe49c70a3e736bc7271eed361f9841311fe6cfd2fdf4a034bb631030c5b"}
+  ],
+  "transcriptsByteIdentical": true,
+  "durableTranscript": "docs/evidence/gate-c-phase5.45-offline-checks-twice-transcript.txt",
+  "declaredSkips": [
+    "Phase 2E UAPI client compile: Linux target only",
+    "Phase 3B UAPI client compile: Linux target only",
+    "Phase 4A UAPI client compile: Linux target only"
+  ],
+  "result": "passed",
+  "claimCeiling": "two complete offline-suite passes on the exact frozen source; no target lifecycle or hardware qualification"
+}

@@ -1,0 +1,67 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.53-final-qualification-only-split-offline-checks-twice",
+  "generatedUtc": "2026-08-20T13:07:07Z",
+  "product": {
+    "sourceCommit": "4e7a64a0ca353d2fcab6e25891f5254746e2b91a",
+    "archiveSha256": "032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76",
+    "regenerated": false,
+    "validationBeforeEachRun": "literal archived product validator"
+  },
+  "qualification": {
+    "sourceCommit": "17b8ed285450c37aaf858080b53857737638c6e9",
+    "archiveSha256": "6dd18ef1543cf824aba1c9d9057fd014c529df149ef705b721e9d75ad4bbe3bc",
+    "regenerated": false,
+    "validationBeforeEachRun": "producing-closure qualification successor validator",
+    "archivedInstallerFakeSystemInstallRemoveBeforeEachRun": "passed",
+    "productSentinelUnchanged": true
+  },
+  "runs": [
+    {
+      "id": 1,
+      "exitStatus": 0,
+      "passLines": 203,
+      "skipLines": 15,
+      "failLines": 0,
+      "transcriptSha256": "29051d30d06467b5bb4371323e4ce696a8263c248eddef583caa4d42e5ddd8f9"
+    },
+    {
+      "id": 2,
+      "exitStatus": 0,
+      "passLines": 203,
+      "skipLines": 15,
+      "failLines": 0,
+      "transcriptSha256": "29051d30d06467b5bb4371323e4ce696a8263c248eddef583caa4d42e5ddd8f9"
+    }
+  ],
+  "transcriptsByteIdentical": true,
+  "durableTranscript": "docs/evidence/phase5.53-final-qualification-only-split-offline-checks-twice-transcript.txt",
+  "declaredSkips": {
+    "historicalOrSeparatelySuppliedArchiveInputs": [
+      "Phase 5.53 final staging transport: SKIP (release directory not supplied)",
+      "Phase 5.53 bounded wrap-up archive readiness: SKIP (release directory not supplied)",
+      "Phase 5.43 exact archived pre-root envelope validation: SKIP (archive not supplied)",
+      "Phase 5.45 exact archived pre-root envelope validation: SKIP (archive not supplied)",
+      "Phase 5.46 exact archived pre-root envelope validation: SKIP (archive not supplied)",
+      "Phase 5.48 exact archived pre-root envelope validation: SKIP (archive not supplied)",
+      "Phase 5.47 exact archived pre-root envelope validation: SKIP (archive not supplied)",
+      "Phase 5.53 exact successor release-input validation: SKIP (directory not supplied)",
+      "Phase 5.53 complete split-staging transport: SKIP (release directory not supplied)",
+      "Phase 5.50 exact archived control-set validation: SKIP (archive not supplied)",
+      "Phase 5.51 exact archived control-set validation: SKIP (archive not supplied)",
+      "Phase 5.52 exact archived control-set validation: SKIP (archive not supplied)"
+    ],
+    "linuxTargetOnlyCompileChecks": [
+      "Phase 2E UAPI client compile: SKIP (Linux target only)",
+      "Phase 3B UAPI client compile: SKIP (Linux target only)",
+      "Phase 4A UAPI client compile: SKIP (Linux target only)"
+    ]
+  },
+  "result": "passed",
+  "nextGate": "qualification-tooling-installation",
+  "targetContactPerformed": false,
+  "targetMutationPerformed": false,
+  "hardwareOrRfActivityPerformed": false,
+  "claimCeiling": "two complete offline passes on the exact final split artifacts; no lifecycle, target, GPIO, clock, DMA, transmission, or RF qualification"
+}

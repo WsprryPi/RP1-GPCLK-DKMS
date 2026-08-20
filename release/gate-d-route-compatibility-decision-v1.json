@@ -1,0 +1,49 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-route-compatibility-decision",
+  "candidate": {
+    "release": "0.0.0-phase5.14",
+    "sourceCommit": "7bbdfe1b5c83e1417e9dc5e0c4a7385136fd094a",
+    "archiveSha256": "d0c17f2842716052bb49b1a4fc079d3d48a5674bae8610eee2ab9d17ac548bea",
+    "uapiSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb",
+    "representativeBuildManifestSha256": "b24233ac2b6de53ad1335c695c5296250ed9716abd05e8aa48452edf32159919"
+  },
+  "evidence": {
+    "representativeBuildEvidenceManifestSha256": "8cb7a946676bf31a79419b8bf7c7550bf3ebb9a49b618f3bc94868ea3842e56b",
+    "moduleSha256": "b41deafac7c5b49cafa9f13bbc4dba01585d5e013137c7e7015fb284a1990449",
+    "kernelRelease": "6.18.34+rpt-rpi-2712",
+    "kernelConfigSha256": "2a83d4324e9b47d418b4efac18d3af43d15cc956b71c5a8eb074060bf8383801",
+    "moduleSymversSha256": "681e9fe5710e43c785b39c9e9f410a860cba6a6037e51af23a408cb5ccbe2426",
+    "routeIdentityEvidenceSha256": "ac4ed1661fcaa5c938c45c0592df365a6afb77b09f00236a6ec0dfaecb0be2fa",
+    "firmwareIdentity": "2025-05-08 release 69471177 commit 69471177ba7e4cb7597cb2496f2a0b23f19c1113",
+    "baseDtSha256": "e67017e5d45b97af478ebc93d651a086f2adcb6a650fe453eb9f1cf47e66473f",
+    "liveDeviceTreePropertySetSha256": "c18f993d24dc67ba118d459cc30292b80b8caf9d56eb08600443251b09f19f71"
+  },
+  "routes": [
+    {
+      "route": "GPIO4",
+      "overlaySourceSha256": "0860a4c67d6977bbc041725675f8fa602d8aed0cc9a155aabae8f847a12a1cd6",
+      "overlayDtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+      "state": "Compatible-unqualified",
+      "liveEligible": false,
+      "reason": "Exact Phase 5.14 Gate C build plus the prior read-only firmware, base-device-tree, stock provider, resource, route, and static-conflict identity support output-disabled planning because the route source and DTBO bytes are unchanged; immediate read-only refresh and fail-closed preflight are required before execution."
+    },
+    {
+      "route": "GPIO20",
+      "overlaySourceSha256": "fa6fdeef8ca68a6c04123290c50dc5455c8ac685e34f511aee893fd99ecc8098",
+      "overlayDtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+      "state": "Compatible-unqualified",
+      "liveEligible": false,
+      "reason": "Exact Phase 5.14 Gate C build plus the prior read-only firmware, base-device-tree, stock provider, resource, route, and static-conflict identity support output-disabled planning because the route source and DTBO bytes are unchanged; immediate read-only refresh and fail-closed preflight are required before execution."
+    }
+  ],
+  "decisionBoundary": {
+    "routeSpecific": true,
+    "outputDisabled": true,
+    "positiveExecutionCompatibilityDecisionEstablished": true,
+    "installationOrBindingAuthorized": false,
+    "readOnlyTargetIdentityRefreshRequired": true,
+    "immediateFailClosedPreflightRequired": true
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "artifact-scoped-invalidation-policy",
+  "appliesBeforePublicationOnly": true,
+  "domains": {
+    "product": {
+      "layout": "release/release-layout-v1.json",
+      "identity": ["productArchiveSha256", "uapiHeaderSha256", "gpio4DtboSha256", "gpio20DtboSha256"],
+      "retainedEvidence": ["candidate-freeze.product", "offline-checks-twice.product", "ordinary-install", "representative-build"]
+    },
+    "qualification": {
+      "layout": "release/qualification-layout-v1.json",
+      "identity": ["qualificationSourceCommit", "qualificationArchiveSha256", "qualificationLayoutSha256"],
+      "invalidatedEvidence": ["candidate-freeze.qualification", "offline-checks.qualification-closure", "qualification-mode", "control-set", "representative-lifecycle-matrix"]
+    }
+  },
+  "qualificationOnlySuccessor": {
+    "requiredUnchangedProductIdentities": [
+      "product archive bytes and SHA-256",
+      "product layout and complete product input closure",
+      "canonical UAPI bytes and ABI",
+      "GPIO4 and GPIO20 overlay source and DTBO bytes",
+      "module source, headers, Kbuild, Makefile, and dkms.conf",
+      "installation, administration, diagnostics, lifecycle, signing, compatibility, and operator product inputs",
+      "representative kernel, headers, compiler, module bytes, and vermagic"
+    ],
+    "requiredRenewedEvidence": [
+      "two deterministic qualification-archive generations from one exact qualification source commit",
+      "independent qualification archive inventory, metadata, and hash validation",
+      "focused changed-input and transitive-consumer tests",
+      "qualification-mode product-plus-qualification binding tests",
+      "one complete offline regression suite",
+      "new qualification provenance and release checksums",
+      "new control-set deterministic generation and independent frozen-root validation"
+    ],
+    "explicitlyNotRequiredWhenProductClosureIsUnchanged": [
+      "product archive regeneration",
+      "a second pair of complete offline product suites",
+      "representative module rebuild",
+      "ordinary product installation requalification"
+    ],
+    "failClosedTriggers": [
+      "any product-layout or product-archive input change",
+      "any UAPI, overlay, module, DKMS, installation, administration, diagnostics, lifecycle, signing, compatibility, or product documentation change",
+      "any product archive, DTBO, UAPI, module, helper, kernel, header, compiler, or vermagic identity mismatch",
+      "incomplete input-closure classification",
+      "published candidate bytes"
+    ]
+  },
+  "publication": {
+    "requiresOneFinalProductIdentity": true,
+    "requiresOneFinalQualificationIdentity": true,
+    "supersededQualificationCandidatesAreNotPublished": true,
+    "publishedBytesAreImmutable": true
+  },
+  "claimCeiling": "artifact-scoped evidence retention only; no lifecycle, hardware, calibrated, transmission, or RF qualification"
+}

@@ -1,0 +1,36 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-preauthorization-recapture-attestation",
+  "capturedAt": "2026-08-16T23:32:15Z",
+  "host": "wspr5",
+  "controlSetCommit": "71a9c3a6a27967d6c30398af9f9b01ef087738d7",
+  "canonicalSnapshot": {
+    "path": "docs/evidence/gate-d-live-target-snapshot-wspr5-v1.json",
+    "size": 7057,
+    "sha256": "d228a5fe8eaa52a2fa44d003947d51b2a3a6798e4535c0570c3836ab5b283b9a"
+  },
+  "recapture": {
+    "installedOnTarget": false,
+    "size": 7057,
+    "sha256": "d228a5fe8eaa52a2fa44d003947d51b2a3a6798e4535c0570c3836ab5b283b9a"
+  },
+  "validation": {
+    "independentValidator": "passed",
+    "jsonSchema": "passed",
+    "rawByteComparison": "identical"
+  },
+  "physicalSafety": {
+    "si5351Disconnected": true,
+    "si5351Unused": true,
+    "sdrUnused": true,
+    "antennaDisconnected": true
+  },
+  "result": {
+    "controlSetRetired": false,
+    "authorizationRecorded": false,
+    "targetStaged": false,
+    "lifecycleExecuted": false,
+    "outputDisabled": true
+  }
+}

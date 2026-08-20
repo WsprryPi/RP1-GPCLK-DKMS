@@ -1,0 +1,16 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-route-compatibility-decision",
+  "candidate": {
+    "release": "0.0.0-new",
+    "sourceCommit": "1111111111111111111111111111111111111111"
+  },
+  "routes": [
+    {"route":"GPIO4","state":"Compatible-unqualified","liveEligible":false},
+    {"route":"GPIO20","state":"Compatible-unqualified","liveEligible":false}
+  ],
+  "decisionBoundary": {
+    "positiveExecutionCompatibilityDecisionEstablished": true
+  }
+}

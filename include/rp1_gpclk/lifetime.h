@@ -4,8 +4,8 @@
 
 struct rp1_gpclk_device;
 
-/* Future object lifetime must outlive platform removal and open descriptors. */
 int rp1_gpclk_lifetime_init(struct rp1_gpclk_device *device);
+bool rp1_gpclk_lifetime_get_live(struct rp1_gpclk_device *device);
 void rp1_gpclk_lifetime_mark_dead(struct rp1_gpclk_device *device);
 void rp1_gpclk_lifetime_put(struct rp1_gpclk_device *device);
 

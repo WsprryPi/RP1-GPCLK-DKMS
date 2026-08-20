@@ -52,6 +52,10 @@ explicit; and adversarial review finds no unresolved architectural blocker.
 
 ## Phase 2 - GPIO4 clock-disabled prototype
 
+Status: complete for the exact `wspr5` Raspberry Pi 5 / stock
+`6.18.34+rpt-rpi-2712` identity recorded in the Phase 2E evidence. This is not
+a general compatibility or live-output qualification.
+
 - Build an out-of-tree module against explicitly identified representative
   kernel headers and prepare it for DKMS integration.
 - Use DMAengine for DMA-channel allocation, pinctrl for GPIO4 routing, and
@@ -71,6 +75,10 @@ Exit gate: every GPIO4 clock-disabled safety and lifecycle test passes on the
 exact target. Compilation alone does not satisfy the gate.
 
 ## Phase 3 - GPIO20 injection before interface freeze
+
+Status: complete for the exact `wspr5` Raspberry Pi 5 / stock
+`6.18.34+rpt-rpi-2712` clock-disabled identity recorded in the Phase 3B
+evidence. This does not authorize or qualify live output.
 
 This is the deliberate point to add GPIO20: after the central GPIO4
 stock-kernel feasibility result is known, but before freezing the UAPI, overlay
@@ -92,6 +100,12 @@ administrative route changes.
 ## Phase 4 - Timing and controlled live-output qualification
 
 This phase requires separately authorized target GPIO and RF operation.
+
+Phase 4A has implemented and clock-disabled-tested the gated stock-kernel live
+path on the exact recorded `wspr5` identity. That result is prerequisite
+engineering evidence only: it does not qualify a route, timing, mode, GPIO
+output, or RF. Controlled output begins only in a separately reviewed Phase 4B
+slice.
 
 - Measure scheduled common-clock enable/disable latency and jitter.
 - Validate DMA divider sequencing and neighboring-register integrity.
@@ -130,9 +144,9 @@ or qualification boundaries.
 | Phase | No RP1 Pi access | RP1 administration with output disabled |
 | --- | --- | --- |
 | 1 - Contract and feasibility | Complete | Complete |
-| 2 - GPIO4 clock-disabled prototype | Partial implementation only | Completable with exact target evidence |
-| 3 - GPIO20 before interface freeze | Partial implementation only | Completable with exact target evidence |
-| 4 - Controlled live qualification | Not completable | Not completable |
+| 2 - GPIO4 clock-disabled prototype | Partial implementation only | Complete for the exact recorded `wspr5` identity |
+| 3 - GPIO20 before interface freeze | Implementation complete | Complete for the exact recorded `wspr5` identity |
+| 4 - Controlled live qualification | Live path implemented offline | Phase 4A clock-disabled prerequisite complete; live qualification incomplete |
 | 5 - Packaging and enablement | Partial implementation only | Mostly; representative lifecycle systems remain required |
 
 Module binding and every target-Pi operation require explicit authorization,

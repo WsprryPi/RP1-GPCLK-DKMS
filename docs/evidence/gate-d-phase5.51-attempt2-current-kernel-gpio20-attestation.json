@@ -1,0 +1,61 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-attempt-result-attestation",
+  "host": "wspr5",
+  "authorizationCommit": "f25ecb5f57cec4f255861e8f790aea11e4e804eb",
+  "preRootEvidenceCommit": "81e2a93ab6438d8715f74dbe3cbd48f261640a0c",
+  "priorAttemptEvidenceCommit": "3f4e1c907dbff8708a62807c40e2f358dd03015a",
+  "attempt": {
+    "ordinal": 2,
+    "operationId": "gd-current-supported-kernel-gpio20",
+    "documentSha256": "7daa31d418905a8b218f25f35ef8b6dcc87a5c79b472db743abf5ff8f2cd0f9b",
+    "indexSha256": "a1d547226090dbcb58375774983ebe7a0fa3cd05e30963b58d7dc2e5524f2960",
+    "executorPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-executor",
+    "executorSha256": "33b5cb5ec1e50e7f2206873fe537a7d34e3237d6157d54f4cafebece5d84cd01"
+  },
+  "preflight": {
+    "installedExecutorCliValidation": "passed",
+    "installedExecutorCliPlan": "passed",
+    "attemptPathAbsent": true,
+    "attemptStagingAbsent": true,
+    "servicesInactive": 6,
+    "runtimeInactive": true,
+    "phase551ForbiddenPathCount": 0,
+    "phase551ExtendedAttributeKeyCount": 0,
+    "historicalNamespacesExcludedFromMutation": true
+  },
+  "result": {
+    "status": "complete",
+    "sealed": true,
+    "recoveryRequired": false,
+    "recordCount": 20,
+    "nextStep": 20,
+    "completedUtc": "2026-08-17T23:55:23.838919Z",
+    "liveOutput": false,
+    "journalSha256": "fbc9657f9d3f825a8893a8449f112b4f25b0029c27f411d2bbc64db383ca6f98",
+    "evidenceSha256SumsSha256": "d79cbff2075bbd8e688a5f19e89a3886f429567267a4ffd39d2729dfd575d047"
+  },
+  "uapiResult": "route=gpio20 build=0.0.0-phase5.51 live_eligible=0 released=1",
+  "evidenceFiles": [
+    "SHA256SUMS",
+    "audit-residue.json",
+    "capture-kernel-log-delta.json",
+    "preflight.json",
+    "services-before.json",
+    "transaction.json",
+    "verify-final-safety.json"
+  ],
+  "postState": {
+    "attemptStagingAbsent": true,
+    "moduleLoaded": false,
+    "endpointPresent": false,
+    "overlayActive": false,
+    "candidateDkmsTestVersionPresent": false,
+    "allSixServicesInactive": true,
+    "phase551ForbiddenPathCount": 0,
+    "phase551ExtendedAttributeKeyCount": 0,
+    "historicalNamespacesExcludedFromMutation": true,
+    "outputDisabled": true
+  }
+}

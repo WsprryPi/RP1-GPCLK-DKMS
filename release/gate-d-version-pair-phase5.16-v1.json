@@ -1,0 +1,41 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "kind": "gate-d-version-pair",
+  "predecessor": {
+    "archive": "rp1-gpclk-dkms-0.0.0-phase5.2.tar.gz",
+    "archiveSha256": "f334853d9c94d733ea22e9b7b93961a005e63442ec4efc4edbe2b12d6321aaf4",
+    "evidence": [
+      "docs/evidence/gate-d-candidate-preflight.md"
+    ],
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "manifestSha256": "49bb49ecd89fe2f5fe1405215ffe1b0000ebc7226743df2ad111c8eaa73c0bd5",
+    "packageComplete": true,
+    "sourceCommit": "a1aed8cbb3e717758dcf34f1b35a9fb3c781ca2a",
+    "uapiSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb",
+    "version": "0.0.0-phase5.2"
+  },
+  "schemaVersion": 1,
+  "successor": {
+    "archive": "rp1-gpclk-dkms-0.0.0-phase5.16.tar.gz",
+    "archiveSha256": "7c7b7c4741717796b0a128c3f163f2921a25ea646d815b6ba59aae3fedd3ae8d",
+    "evidence": [
+      "release/gate-c-representative-build-manifest-phase5.16-v1.json",
+      "release/gate-d-successor-offline-identities-phase5.16-v1.json"
+    ],
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "manifestSha256": "e92f3dbdd2b97730ee01b6c72f526a7af196854bc2a0815f4b1091f473053b2d",
+    "packageComplete": true,
+    "sourceCommit": "ff92ffcbc588494dd89f303b73c31fe24554583a",
+    "uapiSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb",
+    "version": "0.0.0-phase5.16"
+  },
+  "transition": {
+    "downgrade": "successor-to-predecessor",
+    "interruption": "exactly-one-complete-inactive-version",
+    "outputEnabled": false,
+    "rollback": "failed-successor-to-exact-predecessor",
+    "upgrade": "predecessor-to-successor"
+  }
+}

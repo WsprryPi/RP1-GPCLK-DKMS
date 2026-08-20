@@ -1,0 +1,17 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.53-representative-build-transfer",
+  "builtSourceCommit": "1884c0f1c53c661495576bf10ce08d8bf7a90bc3",
+  "finalProductSourceCommit": "4e7a64a0ca353d2fcab6e25891f5254746e2b91a",
+  "finalProductArchiveSha256": "032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76",
+  "representativeBuildManifest": "release/gate-c-representative-build-manifest-phase5.53-v1.json",
+  "representativeModuleSha256": "5c4dd52fb86487f79f72c4f0bcebbe9cb76ee42f53fa682fc12f0ad640e6c87b",
+  "kernelRelease": "6.18.34+rpt-rpi-2712",
+  "compilationClosure": ["Kbuild", "Makefile", "dkms.conf", "include", "src"],
+  "gitDiffEmpty": true,
+  "finalArchiveMembersMatchFinalCommit": true,
+  "transferableClaim": "representative stock-kernel build compatibility only",
+  "nonTransferable": ["packaging identity", "qualification tooling", "control paths", "authorization", "lifecycle evidence"],
+  "nextGate": "generate final unauthorized controls with transferred build evidence and reconstructed qualification paths"
+}

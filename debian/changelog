@@ -1,0 +1,16 @@
+rp1-gpclk-dkms (1.0.0-1) unstable; urgency=medium
+
+  * Initial semantic release candidate.
+  * Provide the stock-kernel RP1 GPCLK DKMS source and inactive GPIO4 and
+    GPIO20 overlays through conventional Debian packaging.
+
+ -- Lee Bussy <lee@bussy.org>  Thu, 20 Aug 2026 13:55:00 -0500
+
+rp1-gpclk-dkms (0.0.0~phase5.54-2) experimental; urgency=medium
+
+  * Restrict automatic builds to stock Raspberry Pi kernel package names so
+    unrelated historical custom kernel trees are skipped by DKMS.
+  * Stage overlays below /usr/lib and copy them with guarded maintainer
+    scripts, avoiding dpkg hard-link backups on /boot/firmware filesystems.
+
+ -- Lee Bussy <lee@bussy.org>  Thu, 20 Aug 2026 00:00:00 -0500

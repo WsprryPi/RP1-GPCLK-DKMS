@@ -1,0 +1,42 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.54-closure-reconciliation",
+  "capturedUtc": "2026-08-20T18:48:09Z",
+  "reconciliationCommit": "4405babbeb192cdd3f8277f51d7d497283560643",
+  "validatedPackageSha256": "f61286a6e63c2735413a0e86d13c5dc2d91f4581e8a20aab7291234b1991f90b",
+  "results": {
+    "activeRoadmapReconstructedForDebianPackage": true,
+    "phase553PreservedAsHistorical": true,
+    "legacyDkmsTemplateConsumersRepaired": [
+      "tests/check_phase2d_build.py",
+      "tests/check_phase5_packaging.py"
+    ],
+    "documentationReconciled": true,
+    "claimCeilingsReconciled": true,
+    "cleanWorktreePassCount": 2,
+    "offlineSuitePassedTwice": true,
+    "packageSuitePassedTwice": true,
+    "transcriptsByteIdentical": true,
+    "transcriptLineCountEach": 284,
+    "transcriptSha256Each": "c5b8565ec4dc9ed3e82bc5fdae4f63f815ae725e4e28b236a8db96a2f9691061",
+    "explicitSkipCountEach": 15
+  },
+  "environmentSkips": [
+    "exact archived Phase 5.43 through Phase 5.53 inputs were not supplied to their optional historical validators",
+    "Phase 5.53 release directories were not supplied to optional historical archive validators",
+    "Linux-only Phase 2E Phase 3B and Phase 4A target-client compilation was skipped on macOS"
+  ],
+  "nextGate": "semantic-version-selection",
+  "notPerformed": [
+    "target contact or mutation",
+    "package installation or removal",
+    "module or overlay activity",
+    "boot change or reboot",
+    "GPIO clock or DMA activity",
+    "transmission or RF",
+    "tag creation or publication",
+    "consumer repository modification"
+  ],
+  "result": "pass-next-gate-semantic-version-selection"
+}

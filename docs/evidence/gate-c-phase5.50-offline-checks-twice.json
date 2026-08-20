@@ -1,0 +1,31 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-c-offline-checks-twice",
+  "release": "0.0.0-phase5.50",
+  "sourceCommit": "c24160517b10900bf61243d4988f38247eeed58e",
+  "worktreeState": "clean-detached-exact-commit",
+  "command": "PHASE5_43_RELEASE_ARCHIVE=<exact-copy> PHASE5_45_RELEASE_ARCHIVE=<exact-copy> PHASE5_46_RELEASE_ARCHIVE=<exact-copy> PHASE5_47_RELEASE_ARCHIVE=<exact-copy> PHASE5_48_RELEASE_ARCHIVE=<exact-copy> tests/run-offline-checks.sh",
+  "archivedReleaseInputs": [
+    {"release":"0.0.0-phase5.43","sha256":"a8a200d069ad433353a8812ef6a9a4c585b75a9f6af3d6501ac3672e90c997c3"},
+    {"release":"0.0.0-phase5.45","sha256":"21d05675e9d12ddb4c051868578c410737b733786357cee20eb2b0ce03f63356"},
+    {"release":"0.0.0-phase5.46","sha256":"0e0debdd96560602bd61457afc59782cfad2a4fb1b6f9b54e0d2505453e6c8f2"},
+    {"release":"0.0.0-phase5.47","sha256":"497368ac11b32e5491dab76103ad3bb2da0975c086e9898a801c5c2df1be82be"},
+    {"release":"0.0.0-phase5.48","sha256":"18418395eac577d8718c1e74f6601e005160d2768ea7634a35d00e4ddead9120"}
+  ],
+  "runs": [
+    {"id":1,"startedUtc":"2026-08-17T20:50:56Z","finishedUtc":"2026-08-17T20:53:30Z","exitStatus":0,"passLines":133,"skipLines":3,"failLines":0,"transcriptSha256":"2fdf92ca5a3c60539295d3bae4af0609f4a682b279baedb861e1da4c0c885cc3"},
+    {"id":2,"startedUtc":"2026-08-17T20:53:53Z","finishedUtc":"2026-08-17T20:56:27Z","exitStatus":0,"passLines":133,"skipLines":3,"failLines":0,"transcriptSha256":"2fdf92ca5a3c60539295d3bae4af0609f4a682b279baedb861e1da4c0c885cc3"}
+  ],
+  "transcriptsByteIdentical": true,
+  "durableTranscript": "docs/evidence/gate-c-phase5.50-offline-checks-twice-transcript.txt",
+  "archivedValidatorsPassed": ["0.0.0-phase5.43","0.0.0-phase5.45","0.0.0-phase5.46","0.0.0-phase5.47","0.0.0-phase5.48"],
+  "representativeBuildValidator": {"commit":"739365a8bc3702da907aef00e6291b8658fe035c","result":"passed","execution":"independent-after-frozen-runs"},
+  "declaredSkips": [
+    "Phase 2E UAPI client compile: Linux target only",
+    "Phase 3B UAPI client compile: Linux target only",
+    "Phase 4A UAPI client compile: Linux target only"
+  ],
+  "result": "passed",
+  "claimCeiling": "two complete offline-suite passes on the exact frozen source; no target lifecycle or hardware qualification"
+}

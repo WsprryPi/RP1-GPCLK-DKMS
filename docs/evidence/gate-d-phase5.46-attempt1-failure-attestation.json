@@ -1,0 +1,60 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-attempt-failure-attestation",
+  "host": "wspr5",
+  "authorizationCommit": "6b3dcc83c817e6c0011e6dde649b146df88abc91",
+  "preRootEvidenceCommit": "74b9cd0abe2565ea9fa3a8795cc7b100995f3cb7",
+  "attempt": {
+    "indexEntry": 1,
+    "operationId": "gd-current-supported-kernel-gpio4",
+    "documentSha256": "3a5271f0e789ef3223d20d2fc3484b73884e07f9587a282b2deb53055d0f3985",
+    "indexSha256": "e1858c68af8362a3c9ac969b5335317617e8e67491ddc916c3190c2eb6a8243d",
+    "executorSha256": "1d93c918a57414d379b9bd6af3ae170195687c93d017c55595cb5c0750c57917"
+  },
+  "result": {
+    "status": "inactive-recovery-required",
+    "failure": "ValueError",
+    "failedStep": 1,
+    "failedStepId": "02-capture-preflight",
+    "failedOperation": "capture-preflight",
+    "nextStep": 1,
+    "failureMessage": "symlink in controlled path: /proc/device-tree/rp1-gpclk",
+    "failedUtc": "2026-08-17T15:15:45.437092Z",
+    "liveOutput": false,
+    "sealed": true
+  },
+  "evidence": {
+    "directory": "/var/lib/rp1-gpclk-dkms/gate-d/runs/phase5.46-b43e2744b212/current-supported-kernel/gd-current-supported-kernel-gpio4",
+    "transactionSize": 1676,
+    "transactionSha256": "2b2a579f1e0308819ce7b2f4bd0d04d09bd1d5e3bdb3765e3f7d3774f2d0c6a4",
+    "manifestSize": 83,
+    "manifestSha256": "ab4bdaf736aeb8837ab6234ee42e6768ed486f0c3de76a6f1ded9a455781b446"
+  },
+  "mutationBoundary": {
+    "completedOperations": ["create-evidence"],
+    "dkmsOperationStarted": false,
+    "serviceOperationStarted": false,
+    "overlayOperationStarted": false,
+    "moduleOperationStarted": false,
+    "gpioOperationStarted": false,
+    "clockOperationStarted": false,
+    "dmaOperationStarted": false,
+    "lifecycleAttempt2Started": false
+  },
+  "postState": {
+    "moduleLoaded": false,
+    "endpointPresent": false,
+    "overlayActive": false,
+    "candidateDkmsTestVersionPresent": false,
+    "allSixServicesInactive": true,
+    "outputDisabled": true
+  },
+  "recovery": {
+    "journalReportsRecoveryRequired": true,
+    "sameOperationResumeAuthorized": false,
+    "separatelyIndexedRecoveryOperationAvailable": false,
+    "recoveryInvoked": false,
+    "evidencePreserved": true
+  }
+}

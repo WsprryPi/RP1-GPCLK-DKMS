@@ -1,0 +1,31 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "builds": {
+    "archive": "rp1-gpclk-dkms-0.0.0-phase5.16.tar.gz",
+    "archiveSha256": "7c7b7c4741717796b0a128c3f163f2921a25ea646d815b6ba59aae3fedd3ae8d",
+    "byteIdentical": true,
+    "compatibilityManifestSha256": "e92f3dbdd2b97730ee01b6c72f526a7af196854bc2a0815f4b1091f473053b2d",
+    "count": 2,
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "uapiHeaderSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb"
+  },
+  "claimCeiling": "offline reproducible and representative-build compatible only; fresh target execution authorization required",
+  "controlSet": {
+    "attemptIndexSha256": "2ebda9f31bff59b855cd7ab4db932e5c83ef2e4e654add1425087fb1223b0a61",
+    "executionInstanceSha256": "08d19e3e81c8ea611db0f8ef4f12d34f2b08fe1ae20bbcae32079135d1ff4563",
+    "routeDecisionSha256": "5845794ac14809138235b44037fe41c0f3301f76f469ab89e7df84e6135a8d7a",
+    "targetPlanSha256": "ae05a31e00890e477b556b20bb591990f8dd7c5953c8bf5557e84b88df6bf9ca"
+  },
+  "kind": "gate-d-successor-offline-identities",
+  "publishable": false,
+  "release": "0.0.0-phase5.16",
+  "schemaVersion": 1,
+  "sourceCommit": "ff92ffcbc588494dd89f303b73c31fe24554583a",
+  "tagPresent": false,
+  "targetBuiltHelpers": {
+    "busyInjectorSha256": "c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd",
+    "evidenceManifestSha256": "ba9576eb0e0f62b96e65840efdae19e8f54a52210d8ec550c3f22b0cf6ad9348",
+    "uapiProbeSha256": "1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742"
+  }
+}

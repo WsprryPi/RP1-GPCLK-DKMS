@@ -1,0 +1,19 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wsprrypi.org/schemas/gate-d-attempt-index-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["SPDX-License-Identifier", "schemaVersion", "kind", "attemptCount", "executors", "attempts"],
+  "properties": {
+    "SPDX-License-Identifier": {"const": "MIT"},
+    "schemaVersion": {"enum": [1, 2]},
+    "kind": {"const": "gate-d-attempt-index"},
+    "qualificationRoot": {"$ref": "gate-d-qualification-root-v1.schema.json"},
+    "attemptCount": {"const": 38}, "executors": {"type": "object"}, "attempts": {"type": "array", "minItems": 38, "maxItems": 38}
+  },
+  "allOf": [
+    {"if": {"properties": {"schemaVersion": {"const": 2}}, "required": ["schemaVersion"]}, "then": {"required": ["qualificationRoot"]}},
+    {"if": {"properties": {"schemaVersion": {"const": 1}}, "required": ["schemaVersion"]}, "then": {"not": {"required": ["qualificationRoot"]}}}
+  ]
+}

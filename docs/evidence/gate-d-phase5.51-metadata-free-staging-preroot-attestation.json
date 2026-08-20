@@ -1,0 +1,70 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-metadata-free-staging-preroot-attestation",
+  "host": "wspr5",
+  "authorizationCommit": "f25ecb5f57cec4f255861e8f790aea11e4e804eb",
+  "controlSetCommit": "64baef473a04810627598015b32797e46e6e43a2",
+  "preauthorizationCommit": "cd81650bd324ec3e8d608bfe2cc67252d34e4e88",
+  "candidate": {
+    "sourceCommit": "cc87e0cdec7195eb69de2a6606f388e23ee0799c",
+    "archiveSha256": "253bd54054eb0b673f9e61c58a46b6b7ca2cf78d756fe4e80656f4ac1233f549"
+  },
+  "recapture": {
+    "captureCount": 2,
+    "size": 7082,
+    "sha256": "badb3633cdf6bacce6fa3292174d3cea993a1ed4f0278f75c597bd204ee63e9a",
+    "capturesByteIdentical": true,
+    "canonicalByteComparison": "identical",
+    "targetArchivedValidation": "passed",
+    "localArchivedValidation": "passed"
+  },
+  "transport": {
+    "format": "ustar",
+    "sha256": "038607efc4bc8838939715f745c4dc68f038deb83684f83469f6c5f79fdb0929",
+    "regularFileCount": 792,
+    "directoryCountIncludingRoot": 34,
+    "forbiddenPathCount": 0,
+    "extendedAttributeKeyCountOnTarget": 0,
+    "outerPaxHeaderCount": 0,
+    "targetPathSetIdentical": true,
+    "targetContentHashesIdentical": true
+  },
+  "staging": {
+    "path": "/home/pi/gate-d-inputs/phase5.51-cc87e0cdec71",
+    "inputCount": 63,
+    "archiveRegularMemberCount": 729,
+    "allInputHashesVerifiedOnTarget": true,
+    "envelopeSha256": "1acccb9e8c0e8aa9bd215e088bcb761ccaf449f15208fbb23000c0c6ac4271f6",
+    "archivedExecutorReadOnlyValidation": "passed"
+  },
+  "transition": {
+    "operationId": "phase5.51-pre-root-transition",
+    "status": "complete",
+    "checkpoint": "commit",
+    "completedAt": "2026-08-17T23:35:29.551210+00:00",
+    "administratorInvoked": true,
+    "liveOutput": false,
+    "journalSha256": "2f7b94973dff0a6b093436400bcafb2a66b6dd515576983fad2410508e99e615"
+  },
+  "installedIdentities": {
+    "executionInstanceSha256": "3e3dadb4a553b2e9f083e05301a711b28d3b1e287082080d3f5437109607c532",
+    "attemptIndexSha256": "a1d547226090dbcb58375774983ebe7a0fa3cd05e30963b58d7dc2e5524f2960",
+    "transitionFilesVerified": 55,
+    "installedToolsVerified": 22,
+    "installedExecutorSchema6Validation": "passed",
+    "administratorLedgerSha256": "9683e2cb97f6d302bdcab74ec2a33748581302fc2023f178b7511edf437c884a",
+    "archivedPredecessorLedgerSha256": "3877dece6b50b866246d3fc01bdc8c9aa036e5876f87d84d37557954c4d14fc2"
+  },
+  "postState": {
+    "moduleLoaded": false,
+    "endpointPresent": false,
+    "overlayActive": false,
+    "candidateDkmsTestVersionPresent": false,
+    "allSixServicesInactive": true,
+    "transientFilesRemoved": true,
+    "forbiddenPathCount": 0,
+    "lifecycleAttemptStarted": false,
+    "outputDisabled": true
+  }
+}

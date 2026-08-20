@@ -1,0 +1,165 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "administrator": {
+    "bootstrapPath": "/home/pi/gate-d-inputs/phase5.24-2a6ddeb8e0f7/extracted/rp1-gpclk-dkms-0.0.0-phase5.24/scripts/rp1-gpclk-admin.py",
+    "installedPath": "/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin",
+    "installedSha256": "63fbd3cb9148b324bdd5f68f21198d820f194c8f9058314e534ba026a036e776",
+    "sourcePath": "scripts/rp1-gpclk-admin.py",
+    "sourceSha256": "63fbd3cb9148b324bdd5f68f21198d820f194c8f9058314e534ba026a036e776"
+  },
+  "argv": [
+    "/usr/bin/python3",
+    "/home/pi/gate-d-inputs/phase5.24-2a6ddeb8e0f7/extracted/rp1-gpclk-dkms-0.0.0-phase5.24/scripts/rp1-gpclk-admin.py",
+    "install",
+    "--execute",
+    "--release-directory",
+    "/home/pi/gate-d-inputs/phase5.24-2a6ddeb8e0f7",
+    "--route",
+    "gpio4",
+    "--qualification-install",
+    "--qualification-identity",
+    "/home/pi/gate-d-inputs/phase5.24-2a6ddeb8e0f7/gate-d-phase5.24-qualification-install-identity.json"
+  ],
+  "candidate": {
+    "archive": "/home/pi/gate-d-inputs/phase5.24-2a6ddeb8e0f7/rp1-gpclk-dkms-0.0.0-phase5.24.tar.gz",
+    "archiveSha256": "0da181f1ccfa9fb9edbd34456cec95730be8922283d1c5b207af376491413d8a",
+    "release": "0.0.0-phase5.24",
+    "sourceCommit": "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5"
+  },
+  "cleanupArgv": [
+    "/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle",
+    "dispatch",
+    "complete-removal",
+    "0.0.0-phase5.2",
+    "0.0.0-phase5.24",
+    "6.18.34+rpt-rpi-2712",
+    "/var/lib/rp1-gpclk-dkms/gate-d/bootstrap-phase5.24",
+    "--execute"
+  ],
+  "cleanupPaths": [
+    "/var/lib/rp1-gpclk-dkms/gate-d/bootstrap-phase5.24"
+  ],
+  "deadlineSeconds": 1800,
+  "expectedPostState": {
+    "dkmsTestVersions": false,
+    "endpointPresent": false,
+    "liveOutput": false,
+    "moduleLoaded": false,
+    "overlayActive": false
+  },
+  "expectedPreState": {
+    "dkmsTestVersions": false,
+    "endpointPresent": false,
+    "liveOutput": false,
+    "moduleLoaded": false,
+    "overlayActive": false
+  },
+  "hostId": "wspr5-stock",
+  "journal": "/var/lib/rp1-gpclk-dkms/gate-d/bootstrap-phase5.24.json",
+  "kernelRelease": "6.18.34+rpt-rpi-2712",
+  "kind": "gate-d-qualification-bootstrap-plan",
+  "operationId": "phase5.24-qualification-bootstrap",
+  "predecessorVersion": "0.0.0-phase5.2",
+  "qualificationIdentity": {
+    "path": "/home/pi/gate-d-inputs/phase5.24-2a6ddeb8e0f7/gate-d-phase5.24-qualification-install-identity.json",
+    "sha256": "203d7d72b935772a4be5b46f1818d2328ca9b1500befe3f7118b5a993b1fa82e"
+  },
+  "qualificationRoot": {
+    "identityFile": ".gate-d-root.json",
+    "identitySha256": "8e87f7ceb3b576bdd7a349c72d481ddd7aad7ec5f3a94ea797815a85fb896cf4",
+    "mode": "0700",
+    "ownerUid": 1000,
+    "path": "/home/pi/gate-d-qualification/phase5.24-2a6ddeb8e0f7"
+  },
+  "recoveryArgv": [
+    "/usr/bin/python3",
+    "/home/pi/gate-d-inputs/phase5.24-2a6ddeb8e0f7/extracted/rp1-gpclk-dkms-0.0.0-phase5.24/scripts/rp1-gpclk-admin.py",
+    "recover",
+    "--execute"
+  ],
+  "retainedTools": [
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-boot",
+      "sha256": "731b122fbc154e4945397bf844bdb093865175f16b92376972fd72e352893bf3"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-bootstrap",
+      "sha256": "a656e17673f1799e7d43d9f9992ff975a745e796f80d9035de33e02328276dfe"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-busy-injector",
+      "sha256": "c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-executor",
+      "sha256": "49b26b3f056df6855f7e0530b2f64d2f9a423836bf4b5b773c3db31980505864"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-instance",
+      "sha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle",
+      "sha256": "c55dee9ce430b30b52972a9d6312b593b5d3c9ab15b8c17a270a6b7066a7480d"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-platform",
+      "sha256": "d749859b0c915c4cfde8df85aa088359f7ed87d77183ae927c82bc1f149afb3c"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-target-plan",
+      "sha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe",
+      "sha256": "1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_attempts.py",
+      "sha256": "53fc7e07e78b964c7424ad3b2127aaac70cbbb67dbdd4d4b24cced60df4fe6de"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_bootstrap.py",
+      "sha256": "a656e17673f1799e7d43d9f9992ff975a745e796f80d9035de33e02328276dfe"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_instance.py",
+      "sha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_lifecycle.py",
+      "sha256": "c55dee9ce430b30b52972a9d6312b593b5d3c9ab15b8c17a270a6b7066a7480d"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_outer.py",
+      "sha256": "49b26b3f056df6855f7e0530b2f64d2f9a423836bf4b5b773c3db31980505864"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_preroot.py",
+      "sha256": "1f52e5775adffca385f2af757c4ac133e3e02d8a69c83eace9339bfd57ef7516"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_root.py",
+      "sha256": "d8227d99dda0fd8c3383e7b080b23d7407ff26520cc73a18ab3882d06ca4b94d"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/gate_d_target_plan.py",
+      "sha256": "f8becd4ea0b33f3f7021e97e882630afcd6a343eb0be8cd8e57473a09099d756"
+    },
+    {
+      "path": "/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-admin",
+      "sha256": "63fbd3cb9148b324bdd5f68f21198d820f194c8f9058314e534ba026a036e776"
+    }
+  ],
+  "safety": {
+    "clockEnabled": false,
+    "dmaActive": false,
+    "gpioAccess": false,
+    "liveOutput": false,
+    "outputDisabled": true,
+    "rf": false,
+    "sdrActive": false
+  },
+  "schemaVersion": 3,
+  "stagingDirectory": "/var/lib/rp1-gpclk-dkms/gate-d/bootstrap-phase5.24"
+}

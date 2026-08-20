@@ -1,0 +1,39 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "release-module-publication-success",
+  "release": "1.0.0",
+  "tag": {
+    "name": "v1.0.0",
+    "annotatedObject": "9641e4e4d591081364a7179d245274b5f3e9993d",
+    "peeledCommit": "d8c45a33e9a8b16cf5ea9a89736347347bc14817"
+  },
+  "githubRelease": {
+    "url": "https://github.com/WsprryPi/RP1-GPCLK-DKMS/releases/tag/v1.0.0",
+    "name": "RP1-GPCLK-DKMS 1.0.0",
+    "draft": false,
+    "prerelease": false
+  },
+  "assets": {
+    "COMPATIBILITY.json": {"size":6357,"sha256":"370a9ba42f765932783ae6016ee620c9f691d7b55dbb9ba5c2029279ee4d1acf"},
+    "PRODUCT-INVENTORY.json": {"size":9991,"sha256":"794af5cd56b036ec3ad46fd9d8cc87767dc0cfcbdf1a38c6a24042719798af9a"},
+    "QUALIFICATION.json": {"size":819,"sha256":"54ab1395af6fc15f2c67d19f074da490b3b7644af15d253cb59f9f026e10e620"},
+    "SHA256SUMS": {"size":643,"sha256":"b59e245cadf9cccdff160f57a83608fafe1753be974c76a2ae51ab5710941ba4"},
+    "TARGET-VERIFICATION.json": {"size":3374,"sha256":"7c6575961632ef3e0abb1717e67e9c609194953a555826ff17bc1a49e06d973e"},
+    "release-metadata.json": {"size":4793,"sha256":"881c4836cce29618e8ebcc0bf637dd68a9d79b8c1dfb8243a27877f4292773f7"},
+    "rp1-gpclk-dkms-qualification-1.0.0.tar.gz": {"size":21457,"sha256":"c05f2f2adc20b9e99bf37d775c4bddd6cafd27e5da5e9c62410784fb835727d2"},
+    "rp1-gpclk-dkms_1.0.0-1_all.deb": {"size":21172,"sha256":"951289ee5d0e44cff41b59756f00161aba16f43f1450715ba57c4a3679a2e6b8"}
+  },
+  "verification": {
+    "githubKeyringAuthenticationPassed": true,
+    "tagTargetVerifiedRemote": true,
+    "assetInventoryExact": true,
+    "assetSizesMatchLocalFinalizedSet": true,
+    "serverReportedDigestsMatchLocalFinalizedSet": true
+  },
+  "publicAssetsDownloadedFresh": false,
+  "publicDownloadVerificationPassed": false,
+  "consumerIntegrationAuthorized": false,
+  "nextGate": "fresh public-download verification",
+  "result": "published-awaiting-fresh-download-verification"
+}

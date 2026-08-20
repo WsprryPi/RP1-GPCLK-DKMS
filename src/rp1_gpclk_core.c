@@ -408,6 +408,27 @@ int rp1_gpclk_core_fail(struct rp1_gpclk_core *core, __u64 owner_id,
     return rp1_gpclk_cleanup_and_publish(core, RP1_GPCLK_STATE_FAILED, reason);
 }
 
+int rp1_gpclk_core_cleanup_failed(struct rp1_gpclk_core *core,
+				  __u64 owner_id, __u64 lease_id,
+				  __u64 generation)
+{
+	if (!core || !rp1_gpclk_generation_matches(core, owner_id, lease_id,
+						   generation))
+		return RP1_GPCLK_CORE_STALE;
+	core->value.cleanup_fault = 1;
+	if (rp1_gpclk_terminal(core->value.state)) {
+		core->value.state = RP1_GPCLK_STATE_FAILED;
+		core->value.terminal_reason = RP1_GPCLK_REASON_CLEANUP_FAILED;
+		return RP1_GPCLK_CORE_OK;
+	}
+	if (core->value.plan_loaded) {
+		core->value.plan_loaded = 0;
+		core->value.plan_releases++;
+	}
+	return rp1_gpclk_publish_terminal(core, RP1_GPCLK_STATE_FAILED,
+					  RP1_GPCLK_REASON_CLEANUP_FAILED);
+}
+
 int rp1_gpclk_core_release(struct rp1_gpclk_core *core, __u64 owner_id,
                           __u64 lease_id)
 {

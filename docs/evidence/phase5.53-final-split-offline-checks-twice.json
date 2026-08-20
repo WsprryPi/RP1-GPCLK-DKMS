@@ -1,0 +1,42 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.53-final-split-offline-checks-twice",
+  "generatedUtc": "2026-08-18T23:12:30Z",
+  "release": "0.0.0-phase5.53",
+  "product": {
+    "sourceCommit": "4e7a64a0ca353d2fcab6e25891f5254746e2b91a",
+    "archiveSha256": "032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76",
+    "regenerated": false
+  },
+  "qualificationSuccessor": {
+    "sourceCommit": "e074c9dc01244f7efb73b95a8007bca3625b9c85",
+    "archiveSha256": "31dd96079930d4c77788aea506cd0fa549d2ec101c1cf93ab3d5b392e76caaf5",
+    "completeReleaseDirectoryDigest": "7b2e04fcff8f69ff7979bbbf4b49b52e4e258bb9d5e9f1969c92ad9d0dc5f730",
+    "generations": 2,
+    "byteIdentical": true,
+    "independentValidationBeforeEachRun": true,
+    "dirtySource": false
+  },
+  "historicalArchivedValidatorsPassed": [
+    "0.0.0-phase5.43", "0.0.0-phase5.45", "0.0.0-phase5.46",
+    "0.0.0-phase5.47", "0.0.0-phase5.48", "0.0.0-phase5.50",
+    "0.0.0-phase5.51", "0.0.0-phase5.52"
+  ],
+  "runs": [
+    {"id":1,"exitStatus":0,"passLines":192,"skipLines":5,"failLines":0,"transcriptSha256":"268b49b9775ff6df574125093aca60d55f05b310245b9fcc38cd9fa4368e604f"},
+    {"id":2,"exitStatus":0,"passLines":192,"skipLines":5,"failLines":0,"transcriptSha256":"268b49b9775ff6df574125093aca60d55f05b310245b9fcc38cd9fa4368e604f"}
+  ],
+  "transcriptsByteIdentical": true,
+  "durableTranscript": "docs/evidence/phase5.53-final-split-offline-checks-twice-transcript.txt",
+  "declaredSkips": [
+    "historical Phase 5.53 exact successor release-input validation: current directory intentionally not supplied",
+    "historical Phase 5.53 complete split-staging transport: current directory intentionally not supplied",
+    "Phase 2E UAPI client compile: Linux target only",
+    "Phase 3B UAPI client compile: Linux target only",
+    "Phase 4A UAPI client compile: Linux target only"
+  ],
+  "result": "passed",
+  "nextGate": "reconstruct exact-closure representative lifecycle controls",
+  "claimCeiling": "two complete offline passes on exact final split artifacts; no lifecycle, target, GPIO, clock, DMA, transmission, or RF qualification"
+}

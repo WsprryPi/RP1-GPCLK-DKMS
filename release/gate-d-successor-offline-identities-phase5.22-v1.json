@@ -1,0 +1,43 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-successor-offline-identities",
+  "release": "0.0.0-phase5.22",
+  "sourceCommit": "f7ddea06a68dedceb57aeec0ddedb67598a797e1",
+  "tagPresent": false,
+  "publishable": false,
+  "builds": {
+    "count": 2, "byteIdentical": true,
+    "archive": "rp1-gpclk-dkms-0.0.0-phase5.22.tar.gz",
+    "archiveSha256": "2601cadb4f2abe25b72c7ed3237c00307bbcc11a8ed671331fef677089f93be9",
+    "compatibilityManifestSha256": "21610246addd26a4a3419c0830b47d634650ea9aac47046f7a75db4b7eaa2d30",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "uapiHeaderSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb",
+    "provenanceSha256": "3a042248d18617239de3e44e25c3957a8b39d9585830cafeca43c43a997e731c",
+    "checksumsSha256": "33094548237b50d88d4622dc473d4bae80f68f4f02b2b0414ec13ffda3bfd217",
+    "metadataSha256": "f49b5a96c3c58a740d3aae8d54bec9bfb9499b50ea8f75931733cc9b3b169c95"
+  },
+  "publishedSchemas": {
+    "qualificationRootSha256": "72c10ba9e3e1db33a2c6c2019cc0940974b6c6dc17d5e2d11a62284912062742",
+    "bootstrapSha256": "563b98d35b2ff0acfd9ea531a5ca95fe9f30949b545c5a3cefe138f24bee014e",
+    "targetPlanSha256": "24300bc283fe297fcefca00d8a189c861031b4a844b6e8debadcba7be9ffcb56",
+    "attemptIndexSha256": "6872e59dc5957e8e88cb8e50801d5df9249130d8615b4eb07165c95e613b62cd",
+    "executionInstanceSha256": "453016f49a281b1067c930c9a5ae4e19f82252456e73172a46ed74b4e51940c5"
+  },
+  "permanentTooling": {
+    "rootValidatorSha256": "d8227d99dda0fd8c3383e7b080b23d7407ff26520cc73a18ab3882d06ca4b94d",
+    "outerExecutorSha256": "5a07ced38eae469c2f888202f0df071bd85896a426b1ffa817e102143cd5326c",
+    "targetPlanValidatorSha256": "ac73cf689502af0c2b23ce58516594ee131fc4861e85152f9b8a9a6d50483d89",
+    "bootstrapValidatorSha256": "8beacd3f4aebded1b0af0e0da45cdad9215887e7f03c9d932a637b6cc39aa78c",
+    "lifecycleCoordinatorSha256": "c55dee9ce430b30b52972a9d6312b593b5d3c9ab15b8c17a270a6b7066a7480d",
+    "attemptGeneratorSha256": "41fe23e020eec357d07ba2b43aa94c0cdd1294f6cabeb01ab81f5ebc8c3b9373",
+    "instanceValidatorSha256": "dcf3bc81646d71bc6ab431077fda06b3c61d7b06750d7354436aee24cad8b907"
+  },
+  "targetBuiltHelpers": {
+    "busyInjectorSourceSha256": "1bebe7cd10be210a2dcedb9de3db701888f40c38f3210470d777b69bcf5b7582",
+    "uapiProbeSourceSha256": "178de464eeed875fc0906f7c19b7e2d1ac0e33313d1d1074c57616a4e7fa1133",
+    "representativeBuildManifest": "release/gate-c-representative-build-manifest-phase5.22-v1.json"
+  },
+  "claimCeiling": "offline reproducible, adversarially reviewed, and representative-build compatible only; no installation, lifecycle, route qualification, GPIO, clock, DMA, transmission, SDR, or RF claim"
+}

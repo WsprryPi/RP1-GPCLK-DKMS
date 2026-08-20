@@ -1,0 +1,30 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-successor-offline-identities",
+  "release": "0.0.0-phase5.18",
+  "sourceCommit": "333f0dde549ed1d8b3b6e41f3611814e6eecde0a",
+  "tagPresent": false,
+  "publishable": false,
+  "builds": {
+    "count": 2,
+    "byteIdentical": true,
+    "archive": "rp1-gpclk-dkms-0.0.0-phase5.18.tar.gz",
+    "archiveSha256": "de8531f94bcf2fc0f251787ad0374e6f18abcd22d8cafa2096fd3f8d4edb835d",
+    "compatibilityManifestSha256": "2f88449b6f600e30f91956fb47b834cacf4faa8008f1d264baab2b0ee100a02f",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "uapiHeaderSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb"
+  },
+  "bootstrapTools": {
+    "administratorSourceSha256": "05d3ab6def8d5cce94584dfb172e09d96c6dfccacb8bab7e07543cc7b02657ed",
+    "bootstrapExecutorSourceSha256": "5da7590e3b4297404e24293f1dd94d26b50dc64464da2330e381b6c62b19bb37",
+    "outerExecutorSourceSha256": "9b5590d6116a034e0d413edd239eb7a584c18ee3f972375e15c4ccd26f0a3615"
+  },
+  "targetBuiltHelpers": {
+    "busyInjectorSha256": "c01d97301fcbad4266e6fd41c040f561da0c106affc28cf353455e4a071331dd",
+    "uapiProbeSha256": "1ee335da403784a775efc049f49eb598e3541c625418b65015b322e29b0a1742",
+    "representativeBuildManifest": "release/gate-c-representative-build-manifest-phase5.18-v1.json"
+  },
+  "claimCeiling": "offline reproducible and representative-build compatible only; blocked before Gate D plan sealing by missing explicit qualification-root binding"
+}

@@ -143,7 +143,7 @@ static void test_routes_capabilities_and_wrap(void)
           RP1_GPCLK_CORE_INVALID);
     CHECK(memcmp(&before, &core, sizeof(core)) == 0);
     CHECK(rp1_gpclk_core_acquire(&core, OWNER_A, RP1_GPCLK_ROUTE_GPIO4,
-                                 RP1_GPCLK_CAP_LIVE_ELIGIBLE, &lease) ==
+                                 1ULL << 63, &lease) ==
           RP1_GPCLK_CORE_INVALID);
     CHECK(memcmp(&before, &core, sizeof(core)) == 0);
     core.value.next_lease_id = ~(__u64)0;
@@ -392,6 +392,29 @@ static void test_cleanup_latch(void)
     CHECK(core.value.terminal_publications == 1);
     CHECK(rp1_gpclk_core_release(&core, OWNER_A, lease) ==
           RP1_GPCLK_CORE_LATCHED);
+}
+
+static void test_runtime_cleanup_failure_latch(void)
+{
+    struct rp1_gpclk_core core;
+    __u64 lease;
+    __u64 generation;
+
+    rp1_gpclk_core_init(&core);
+    lease = acquire(&core, OWNER_A);
+    generation = submit_events(&core, OWNER_A, lease, 2);
+    CHECK(rp1_gpclk_core_cleanup_failed(&core, OWNER_A, lease, generation) ==
+          RP1_GPCLK_CORE_OK);
+    CHECK(core.value.state == RP1_GPCLK_STATE_FAILED);
+    CHECK(core.value.terminal_reason == RP1_GPCLK_REASON_CLEANUP_FAILED);
+    CHECK(core.value.cleanup_fault == 1);
+    CHECK(core.value.plan_loaded == 0);
+    CHECK(core.value.plan_releases == 1);
+    CHECK(core.value.terminal_publications == 1);
+    CHECK(rp1_gpclk_core_release(&core, OWNER_A, lease) ==
+          RP1_GPCLK_CORE_LATCHED);
+    CHECK(rp1_gpclk_core_acquire(&core, OWNER_B, RP1_GPCLK_ROUTE_GPIO4, 0,
+                                 &lease) == RP1_GPCLK_CORE_LATCHED);
 }
 
 static void test_owner_close_during_stop_drain(void)
@@ -667,6 +690,7 @@ int main(void)
     RUN(test_stale_generation);
     RUN(test_release_and_owner_close);
     RUN(test_cleanup_latch);
+    RUN(test_runtime_cleanup_failure_latch);
     RUN(test_owner_close_during_stop_drain);
     RUN(test_generation_wrap);
     RUN(test_limit_boundaries);

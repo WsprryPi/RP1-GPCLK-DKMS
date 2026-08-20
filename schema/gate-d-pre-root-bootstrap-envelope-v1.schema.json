@@ -1,0 +1,35 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wsprrypi.org/schemas/gate-d-pre-root-bootstrap-envelope-v1.schema.json",
+  "type": "object", "additionalProperties": false,
+  "required": ["SPDX-License-Identifier", "schemaVersion", "kind", "operationId", "candidate", "proposedRoot", "stagedExecutor", "preRootModule", "administrator", "qualificationIdentity", "inputFiles", "transitionFiles", "installedTools", "argv", "cleanupArgv", "recoveryArgv", "journal", "cleanupPaths", "deadlineSeconds", "expectedPreState", "expectedPostState", "safety"],
+  "properties": {
+    "SPDX-License-Identifier": {"const": "MIT"}, "schemaVersion": {"enum": [1, 2, 3, 4, 5, 6, 7]},
+    "kind": {"const": "gate-d-pre-root-bootstrap-envelope"}, "operationId": {"type": "string", "minLength": 1},
+    "candidate": {"type": "object", "additionalProperties": false, "required": ["release", "sourceCommit", "archivePath", "archiveSha256"], "properties": {"release": {"type": "string"}, "sourceCommit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "archivePath": {"type": "string", "pattern": "^/"}, "archiveSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
+    "proposedRoot": {"type": "object", "additionalProperties": false, "required": ["path", "ownerUid", "mode", "marker", "markerSha256"], "properties": {"path": {"type": "string", "pattern": "^/"}, "ownerUid": {"type": "integer", "minimum": 0}, "mode": {"const": "0700"}, "marker": {"type": "object"}, "markerSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
+    "stagedExecutor": {"$ref": "#/$defs/identity"}, "preRootModule": {"$ref": "#/$defs/identity"}, "administrator": {"$ref": "#/$defs/identity"}, "qualificationIdentity": {"$ref": "#/$defs/identity"},
+    "inputFiles": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/identity"}},
+    "releaseInputs": {"type": "array", "minItems": 7, "maxItems": 8, "items": {"type": "object", "additionalProperties": false, "required": ["role", "path", "sha256"], "properties": {"role": {"enum": ["archive", "qualificationArchive", "gpio4Dtbo", "gpio20Dtbo", "compatibilityManifest", "provenance", "releaseMetadata", "checksums"]}, "path": {"type": "string", "pattern": "^/"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}}},
+    "administratorState": {"type": "object", "additionalProperties": false, "required": ["path", "absenceBeforeInvocation", "recoveryPolicy"], "properties": {"path": {"type": "string", "pattern": "^/"}, "absenceBeforeInvocation": {"const": true}, "recoveryPolicy": {"const": "invoke-only-for-real-owned-state"}}},
+    "priorTerminalState": {"type": "object", "additionalProperties": false, "required": ["path", "sha256", "status", "recoveryRequired", "liveOutput", "ownerUid", "mode", "archivePath", "archiveMode"], "properties": {"path": {"type": "string", "pattern": "^/"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "status": {"enum": ["recovered", "complete", "removed"]}, "recoveryRequired": {"const": false}, "liveOutput": {"const": false}, "ownerUid": {"type": "integer", "minimum": 0}, "mode": {"const": "0600"}, "archivePath": {"type": "string", "pattern": "^/"}, "archiveMode": {"const": "0400"}}},
+    "transitionFiles": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["sourcePath", "destination", "sha256", "mode"], "properties": {"sourcePath": {"type": "string", "pattern": "^/"}, "destination": {"type": "string", "pattern": "^[^/]"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "mode": {"enum": ["0400", "0444"]}}}},
+    "installedTools": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/identity"}},
+    "installedPackagePaths": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/packagePath"}},
+    "packagePathsSha256": {"type":"string","pattern":"^[0-9a-f]{64}$"},
+    "predecessorPackagePaths": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/packagePath"}},
+    "predecessorPackagePathsSha256": {"type":"string","pattern":"^[0-9a-f]{64}$"},
+    "liveTargetSnapshotSha256": {"type":"string","pattern":"^[0-9a-f]{64}$"},
+    "argv": {"$ref": "#/$defs/argv"}, "cleanupArgv": {"$ref": "#/$defs/argv"}, "recoveryArgv": {"$ref": "#/$defs/argv"},
+    "journal": {"type": "string", "pattern": "^/"}, "cleanupPaths": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^/"}},
+    "deadlineSeconds": {"type": "integer", "minimum": 1, "maximum": 1800},
+    "expectedPreState": {"type": "object"}, "expectedPostState": {"type": "object"}, "safety": {"type": "object"}
+  },
+  "allOf": [{"if": {"properties": {"schemaVersion": {"enum": [2, 3, 4, 5, 6, 7]}}}, "then": {"required": ["releaseInputs", "administratorState"]}}, {"if": {"properties": {"schemaVersion": {"enum": [3, 4, 5, 6, 7]}}}, "then": {"required": ["priorTerminalState"]}}, {"if": {"properties": {"schemaVersion": {"enum": [4, 5, 6, 7]}}}, "then": {"required": ["installedPackagePaths","packagePathsSha256"]}}, {"if": {"properties": {"schemaVersion": {"enum": [5, 6, 7]}}}, "then": {"required": ["predecessorPackagePaths","predecessorPackagePathsSha256","liveTargetSnapshotSha256"]}}, {"if": {"properties": {"schemaVersion": {"enum": [1, 2, 3, 4, 5]}}}, "then": {"properties": {"releaseInputs": {"maxItems": 7, "not": {"contains": {"properties": {"role": {"const": "qualificationArchive"}}, "required": ["role"]}}}}}}, {"if": {"properties": {"schemaVersion": {"enum": [6, 7]}}}, "then": {"properties": {"releaseInputs": {"minItems": 8, "maxItems": 8, "contains": {"properties": {"role": {"const": "qualificationArchive"}}, "required": ["role"]}}}}}],
+  "$defs": {
+    "identity": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"type": "string", "pattern": "^/"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
+    "packagePath": {"oneOf":[{"type":"object","additionalProperties":false,"required":["path","type","sha256","mode","ownerUid","groupGid"],"properties":{"path":{"type":"string","pattern":"^/"},"type":{"const":"file"},"sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},"mode":{"enum":["0644","0755"]},"ownerUid":{"type":"integer","minimum":0},"groupGid":{"type":"integer","minimum":0}}},{"type":"object","additionalProperties":false,"required":["path","type","target","mode","ownerUid","groupGid"],"properties":{"path":{"type":"string","pattern":"^/"},"type":{"const":"symlink"},"target":{"type":"string","minLength":1,"pattern":"^[^/]"},"mode":{"enum":["0755","0777"]},"ownerUid":{"type":"integer","minimum":0},"groupGid":{"type":"integer","minimum":0}}}]},
+    "argv": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+  }
+}

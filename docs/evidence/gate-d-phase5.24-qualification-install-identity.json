@@ -1,0 +1,13 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "archiveSha256": "0da181f1ccfa9fb9edbd34456cec95730be8922283d1c5b207af376491413d8a",
+  "kind": "rp1-gpclk-gate-d-qualification-install-identity",
+  "liveOutput": false,
+  "outputDisabled": true,
+  "publishable": false,
+  "purpose": "gate-d-representative-system-qualification",
+  "release": "0.0.0-phase5.24",
+  "schemaVersion": 1,
+  "sourceCommit": "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5",
+  "tagPresent": false
+}

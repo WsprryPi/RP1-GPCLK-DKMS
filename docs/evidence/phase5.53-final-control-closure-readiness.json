@@ -1,0 +1,23 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.53-final-control-closure-readiness",
+  "productArchiveSha256": "032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76",
+  "retainedSnapshotSha256": "cbaed5a7972bb317a9dc27cabead9419ffde2db474df4de493373b6aa474524f",
+  "qualificationSourceCommit": "e86d5d58eb3c85dd6057b152f49205ec9138bb72",
+  "qualificationArchiveSha256": "aae3c0f546917aeefd92d36ed6fe4de5522806056d8fb22a5c7abd0f1b7cacb1",
+  "generations": 2,
+  "byteIdentical": true,
+  "independentValidationsPassed": 2,
+  "closure": {
+    "driver": "/usr/libexec/rp1-gpclk-dkms/gate-d-same-version",
+    "probe": "/usr/libexec/rp1-gpclk-dkms/gate-d-same-version-probe",
+    "preRootEntrypoint": "staged gate_d_outer.py pre-root-bootstrap",
+    "preRootSchemaVersion": 7,
+    "priorLedgerStatus": "removed",
+    "nonCyclic": true,
+    "authorizationInherited": false
+  },
+  "nextGate": "deterministically generate and fake-exercise final unauthorized controls from this exact closure",
+  "claimCeiling": "offline control-closure readiness only"
+}

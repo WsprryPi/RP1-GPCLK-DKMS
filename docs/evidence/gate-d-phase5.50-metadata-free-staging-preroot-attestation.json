@@ -1,0 +1,72 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-metadata-free-staging-preroot-attestation",
+  "host": "wspr5",
+  "authorizationCommit": "31cff85a746655eeac3a6e23b375a2ceacae8539",
+  "controlSetCommit": "8e908928642bf3a4052f13cfb087c77a9bcbc7f8",
+  "preauthorizationCommit": "dbc983e275ca6250c93d67d6dc3639f32ad3dff1",
+  "candidate": {
+    "sourceCommit": "c24160517b10900bf61243d4988f38247eeed58e",
+    "archiveSha256": "ef989bf79faa5c30ddaf8ac5651d75b1755ba2fa385680692183e6145b2927c2"
+  },
+  "recapture": {
+    "captureCount": 2,
+    "size": 7082,
+    "sha256": "3db85e0ada2427c997cdca878d0f2d53fc0c61d5aab68761e65a2a6cf349a6d5",
+    "capturesByteIdentical": true,
+    "rawByteComparison": "identical",
+    "targetIndependentValidation": "passed",
+    "localIndependentValidation": "passed"
+  },
+  "transport": {
+    "sha256": "c09acce021b49baec4576367a6475550a89564454a4c6b2a63653a2c78d3b5fd",
+    "allowlistSha256": "4d1ee5818b2d658f31b476ec459417d080ae235a5cd4c525514273843f3e432d",
+    "contentHashesSha256": "1f43732b1673aa85fe05a9881a41f940adb9fb6488d1ac2cd841c248528bb38e",
+    "regularFileCount": 759,
+    "directoryCount": 34,
+    "forbiddenPathCount": 0,
+    "extendedAttributeKeyCountOnTarget": 0,
+    "targetPathSetIdentical": true
+  },
+  "staging": {
+    "path": "/home/pi/gate-d-inputs/phase5.50-c24160517b10",
+    "inputCount": 63,
+    "allInputHashesVerifiedOnTarget": true,
+    "envelopeSha256": "f5b10feaf56524e8251386b3e6c65f13bb2616cc43e3b4a4ec08e9cc42b7e435",
+    "archivedExecutorReadOnlyValidation": "passed"
+  },
+  "transition": {
+    "operationId": "phase5.50-pre-root-transition",
+    "status": "complete",
+    "checkpoint": "commit",
+    "completedAt": "2026-08-17T21:51:52.498645+00:00",
+    "administratorInvoked": true,
+    "liveOutput": false,
+    "journalSha256": "0f513c50f8e4ed5b2f53967072c50433796b29395b5c474bd7a57b5efd12ec67"
+  },
+  "installedIdentities": {
+    "executionInstanceSha256": "90291e87686ef9771ff7ced3390465852371fdcc19775915ec90436063e65ac8",
+    "attemptIndexSha256": "44c7bdb65e71970f1f15ef2c9d36bb6b1172ddb33350e19c0a2e3874ea3dc66f",
+    "transitionFilesVerified": 55,
+    "installedToolsVerified": 22,
+    "standaloneInstanceValidation": "passed",
+    "installedExecutorValidation": "blocked"
+  },
+  "blocker": {
+    "stage": "installed-permanent-executor-validation",
+    "error": "installed trust bootstrap requires execution-instance schema 3, 4, or 5",
+    "cause": "The frozen permanent executor omits schema 6 from its trust-bootstrap allowlist.",
+    "requiresSuccessorCandidate": true
+  },
+  "postState": {
+    "moduleLoaded": false,
+    "endpointPresent": false,
+    "overlayActive": false,
+    "candidateDkmsTestVersionPresent": false,
+    "allSixServicesInactive": true,
+    "transientFilesRemoved": true,
+    "lifecycleAttemptStarted": false,
+    "outputDisabled": true
+  }
+}

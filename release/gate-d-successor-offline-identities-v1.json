@@ -1,0 +1,31 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "gate-d-successor-offline-identities",
+  "release": "0.0.0-phase5.14",
+  "sourceCommit": "7bbdfe1b5c83e1417e9dc5e0c4a7385136fd094a",
+  "tagPresent": false,
+  "publishable": false,
+  "builds": {
+    "count": 2,
+    "byteIdentical": true,
+    "archive": "rp1-gpclk-dkms-0.0.0-phase5.14.tar.gz",
+    "archiveSha256": "d0c17f2842716052bb49b1a4fc079d3d48a5674bae8610eee2ab9d17ac548bea",
+    "compatibilityManifestSha256": "2961272b62120a979d1f2483c87ca5df3dbca38acff9d29fac51b94e27a59587",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "uapiHeaderSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb"
+  },
+  "permanentTools": {
+    "bootSelectorSha256": "731b122fbc154e4945397bf844bdb093865175f16b92376972fd72e352893bf3",
+    "targetPlanValidatorSha256": "ff9040ef0534f75263f44fe2cc3320560da7298963908308cd2902bd7cbb9b45",
+    "instanceValidatorSha256": "236127207806d18530287c3f6f887b5a2534b645ad279f2bd01e82ec78fc3452",
+    "lifecycleCoordinatorSha256": "c55dee9ce430b30b52972a9d6312b593b5d3c9ab15b8c17a270a6b7066a7480d",
+    "platformCoordinatorSha256": "d749859b0c915c4cfde8df85aa088359f7ed87d77183ae927c82bc1f149afb3c",
+    "attemptGeneratorSha256": "2ec969b1cfefb906a9dadd331ba315a4b6e78f4d2433c88b0992662be9cfbb5a",
+    "permanentExecutorSha256": "bc8a651da0803168abfcd1f008a6a86701825fd2e17ae95f5dee8815f3f993ac",
+    "busyInjectorSourceSha256": "1bebe7cd10be210a2dcedb9de3db701888f40c38f3210470d777b69bcf5b7582",
+    "uapiProbeSourceSha256": "178de464eeed875fc0906f7c19b7e2d1ac0e33313d1d1074c57616a4e7fa1133"
+  },
+  "claimCeiling": "offline reproducible successor only; no representative build, route qualification, target execution, tag, publication, or consumer eligibility"
+}

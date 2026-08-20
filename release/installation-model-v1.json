@@ -1,0 +1,39 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "package": "rp1-gpclk-dkms",
+  "dkmsModule": "rp1-gpclk-dkms",
+  "kernelModule": "rp1_gpclk_dkms",
+  "release": "0.0.0-phase5.53",
+  "paths": {
+    "source": "/usr/src/rp1-gpclk-dkms-0.0.0-phase5.53",
+    "module": "/lib/modules/KERNEL/updates/dkms/rp1_gpclk_dkms.ko",
+    "overlays": "/boot/firmware/overlays",
+    "releaseData": "/usr/share/rp1-gpclk-dkms/0.0.0-phase5.53",
+    "configuration": "/etc/rp1-gpclk-dkms",
+    "enrollment": "/etc/rp1-gpclk-dkms/enrollment.json",
+    "state": "/var/lib/rp1-gpclk-dkms",
+    "administrationCommand": "/usr/sbin/rp1-gpclk-admin",
+    "diagnosticsCommand": "/usr/sbin/rp1-gpclk-diagnostics",
+    "implementations": "/usr/libexec/rp1-gpclk-dkms",
+    "documentation": "/usr/share/doc/rp1-gpclk-dkms"
+  },
+  "ownership": {
+    "packageDirectories": {"owner":"root","group":"root","mode":"0755","removalOwner":"package-if-empty-or-recorded"},
+    "ordinaryFiles": {"owner":"root","group":"root","mode":"0644","removalOwner":"package-if-identical"},
+    "commands": {"owner":"root","group":"root","mode":"0755","removalOwner":"package-if-identical"},
+    "transactionState": {"owner":"root","group":"root","mode":"0600","removalOwner":"package"},
+    "deviceNode": {"path":"/dev/rp1-gpclk","owner":"root","group":"root","mode":"0600","removalOwner":"module"},
+    "administratorFiles": {"paths":["/etc/rp1-gpclk-dkms/enrollment.json","administrator signing keys and certificates","DKMS global signing configuration","MOK or firmware trust entries"],"removalOwner":"administrator","replacement":"never","packageUninstall":"retain-and-report"}
+  },
+  "routes": {
+    "gpio4": "rp1-gpclk-gpio4.dtbo",
+    "gpio20": "rp1-gpclk-gpio20.dtbo"
+  },
+  "overlayContract": "release/overlay-contract-v1.json",
+  "permissionsEnrollmentPolicy": "release/permissions-enrollment-policy-v1.json",
+  "lifecycleRemovalContract": "release/lifecycle-removal-contract-v1.json",
+  "transaction": ["preflight","stage","verify-staged-hashes","dkms-add","dkms-build","verify-dkms-signature","verify-module","dkms-install","install-both-overlays-inactive","install-policy","verify-output-disabled","commit-state"],
+  "failureState": {"liveOutput":false,"overlayActivation":"not-performed","moduleLoad":"not-performed","recoveryRequired":true},
+  "implicitActions": {"bootConfiguration":false,"overlayActivation":false,"routeSelection":false,"liveOutput":false,"experimentalEnrollment":false,"moduleLoad":false,"fallbackBackend":false,"reboot":false}
+}

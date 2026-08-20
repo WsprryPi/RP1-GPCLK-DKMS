@@ -20,9 +20,13 @@ overlays, module compatibility metadata, and module release artifacts. If the
 contracts conflict, work stops until both repositories receive a reviewed,
 coordinated amendment; neither contract silently overrides the other.
 
-This contract does not authorize installation, loading, binding, system
+This contract does not itself authorize installation, loading, binding, system
 changes, GPIO output, transmission, or RF activity. Each target phase requires
-separately bounded authorization.
+separately bounded authorization. Phase 5.1 tasks may separately authorize
+offline packaging work and representative DKMS/signing/install/overlay/update/
+rollback/removal lifecycle administration. That lifecycle authority remains
+clock/output-disabled unless an exact test receives additional live-output
+authorization; it never implicitly authorizes GPIO output or RF.
 
 ## 2. Intended deliverable
 
@@ -32,21 +36,48 @@ DKMS. It supplements rather than replaces the stock Raspberry Pi `clk-rp1`
 driver. WsprryPi will not distribute or maintain a custom kernel for this
 feature.
 
-The release unit eventually includes:
+Every release unit separates the installable DKMS product package from the
+release-qualification tooling archive. The product is a conventional Debian
+`-dkms` package whose files, maintainer scripts, upgrades, and removal are
+owned by `dpkg` and `dh-dkms`. The qualification archive is a separately
+hashed release artifact for controlled validation and is not installed as
+part of the ordinary product lifecycle. Historical controls, target
+identities, evidence, reviews, prompts, and tests remain repository-only.
 
-- module source and Kbuild files;
-- `dkms.conf` and source-install packaging;
-- canonical versioned UAPI headers;
-- route-specific or safely parameterized device-tree overlay sources and
-  reviewed build artifacts;
-- compatibility, provenance, and artifact-integrity metadata;
-- module-signing, install, update, downgrade, rollback, removal, and diagnostic
-  support;
-- restrictive device-node policy; and
-- test definitions and exact evidence for claimed compatibility.
+The Phase 5.53 machine-readable product installation inventory in
+[`release/release-layout-v1.json`](../../release/release-layout-v1.json) is a
+frozen historical contract for that experimental archive and administrator;
+it is not an installation engine for the Debian package. The Debian binary
+package's literal member inventory and package-manager metadata are the
+Phase 5.54 product installation contract. The separate qualification inventory is
+[`release/qualification-layout-v1.json`](../../release/qualification-layout-v1.json).
+Together the release artifacts include:
 
-No item in that list is currently implemented merely because this contract
-exists.
+- a versioned deterministic Debian DKMS product package;
+- module source and internal headers, `Kbuild`, `Makefile`, and finalized
+  `dkms.conf`;
+- the canonical versioned UAPI header;
+- GPIO4 and GPIO20 overlay source plus reproducibly generated DTBO files;
+- package-manager installation, update, downgrade, rollback, and complete
+  removal behavior;
+- a separately rooted qualification archive containing compatibility and
+  provenance metadata, checksums, generic Gate D tools, schemas, probes,
+  matrices, release-gate policy, and qualification documentation only.
+
+Each generated release identity binds the module release, exact source commit,
+expected release tag, UAPI ABI and canonical-header hash, overlay source and
+DTBO hashes, product-package hash, qualification-archive hash,
+compatibility-manifest hash, qualification-layout hash, and product
+package-member inventory hash,
+and every byte-affecting build-tool identity and option. A mismatch among the
+source version, `dkms.conf`, `MODULE_VERSION`, UAPI, manifest, release metadata,
+release tag, product package, or qualification archive fails validation.
+Generated compatibility, provenance, checksum, and release metadata remain
+sidecars so their hashes do not create a cyclic archive hash.
+
+An artifact is not implemented or qualified merely because it is enumerated in
+this contract or inventory; the release generator, validator, and applicable
+evidence gates must pass for its exact identity.
 
 ## 3. Repository ownership
 
@@ -193,8 +224,8 @@ RP1_GPCLK_ROUTE_GPIO4  = 1
 RP1_GPCLK_ROUTE_GPIO20 = 2
 ```
 
-The numeric values remain proposed until the canonical UAPI is reviewed and
-frozen. Once released, they are additive and must not be repurposed.
+The numeric values are frozen by Phase 3 Decision 0006. They are additive and
+must not be repurposed.
 
 Requirements:
 
@@ -207,6 +238,22 @@ Requirements:
 - route changes are rejected while acquired, running, or draining;
 - one route must not reserve the other without reviewed target evidence; and
 - GPIO4 and GPIO20 have independent compatibility and qualification records.
+
+Exactly one production route overlay may be selected in persistent
+configuration. Production overlays expose no arbitrary GPIO parameter and no
+automatic route substitution. Their source and DTBO hashes and their exact
+compatible, endpoint, route, pin, clock, DMA, resource, and safe/default
+pinctrl identities are release identities. Deterministic compilation and
+semantic verification of the compiled artifact are both required.
+
+Conflict detection precedes every persistent route-configuration change. A
+bound route is never mutated in place. Changing routes is a controlled
+lifecycle: prove the module and endpoint idle; disable live eligibility;
+remove the old binding through the proven cleanup path; verify GPIO4 and
+GPIO20 safe; select the one new overlay; revalidate the entire compatibility
+identity; and renew enrollment whenever policy requires it. Failure stops the
+transition with live output disabled. Qualification or enrollment for one
+route never authorizes the other.
 
 The preferred boundary is one selected route per boot/admin overlay, exposing
 only that route's pinctrl mapping. GPIO4 is the Phase 2 feasibility route.
@@ -299,9 +346,77 @@ controlling compatibility boundary; headers, kernel configuration, exported
 symbols, compiler expectations, architecture, vermagic, module ABI, signing,
 device tree, firmware, and runtime behavior are.
 
+The packaging gate requires the predeclared, machine-readable representative
+system matrix in
+[`release/representative-system-matrix-v1.json`](../../release/representative-system-matrix-v1.json).
+One Pi and one kernel cannot close it. Before target testing, the matrix must
+name at least: the current supported Raspberry Pi OS kernel; a prior supported
+kernel and downgrade; a newer unknown kernel and demotion; signing not enforced;
+signing enforced with an enrolled key; deliberate build failure; deliberate
+signature rejection; missing headers; an overlay or resource conflict; an
+interrupted upgrade; a stale manifest; corrupted archive and route-specific
+DTBO attempts; removal while inactive; refused removal while open or active;
+and reinstall after proved complete removal.
+
+Every row freezes the system selection, preconditions, injection, exact
+compatibility state and reason, live gate, transaction state, cleanup result,
+prior-version retention, required diagnostics, allowed changes, final state,
+and residue audit. Missing or indeterminate evidence, an unexplained delta, or
+cleanup ambiguity fails the row. Rows are independent: evidence for one
+kernel, signing policy, route, failure, or lifecycle transition cannot satisfy
+another. All representative lifecycle rows remain output-disabled and cannot
+create `Qualified` or RF evidence.
+
+When the available inventory cannot supply a genuine environmental identity,
+a separately hashed execution-policy sidecar may classify that row
+`deferred-environmental`. This classification does not remove or pass the row,
+does not permit a fixture to stand in for representative evidence, and does
+not satisfy the representative-lifecycle publication gate. It only allows a
+separately authorized executable subset to proceed after every
+`required-executable` row is ready. Execution readiness and complete
+environmental coverage must be reported independently.
+
 Kernel updates may trigger a rebuild. Build success does not preserve
 qualification automatically. Build, signing, or load failure leaves the module
 unavailable and must not select another physical backend.
+
+Phase 5 packaging may produce and, under separate publication authority,
+publish an `Experimental` prerelease based on the existing receiver-relative
+evidence after every applicable packaging, representative-lifecycle,
+integrity, enrollment, and adversarial gate passes. The prerelease must state
+its exact lesser evidence scope and limitations. Packaging, signing,
+installation, lifecycle, reproducibility, or publication success never creates
+or preserves final `Qualified` status.
+
+Calibrated qualification uses the exact frozen packaged candidate, including
+its commit, product- and qualification-archive digests, UAPI, overlay,
+manifest, package/tool, and expected-tag identities. Calibrated results are
+incorporated into a newly reviewed final compatibility manifest and release
+decision. The Experimental
+prerelease remains immutable and is never relabeled in place. A final identity
+is `Qualified` only for the exact route, mode, system, and artifact whose
+complete required evidence passes; incomplete or failed rows retain the
+truthful lesser state.
+
+If calibrated testing changes module behavior or source, overlays, UAPI,
+timing, package contents or generated bytes, signing, compatibility policy, or
+lifecycle tooling, the revised bytes receive a new candidate identity. Every
+affected Phase 5 result is invalidated, the affected lifecycle and release
+checks are repeated, and the final manifest is reviewed again before release.
+The machine-readable policy is
+[`release/calibrated-review-release-policy-v1.json`](../../release/calibrated-review-release-policy-v1.json).
+
+For an unpublished split-artifact candidate, invalidation is scoped to the
+complete byte-input closure of the changed artifact. A qualification-only
+successor may retain the exact product archive, UAPI, DTBO, ordinary-install,
+offline-product, and representative-build evidence only when all product
+inputs and output identities remain byte-for-byte unchanged. It must receive a
+new qualification source identity, deterministic qualification archive,
+provenance, focused transitive-consumer validation, one complete offline
+regression pass, and renewed control-set evidence. Any unclassified or product-
+affecting change fails this exception closed. Published bytes remain immutable.
+The machine-readable policy is
+[`release/artifact-scoped-invalidation-policy-v1.json`](../../release/artifact-scoped-invalidation-policy-v1.json).
 
 Strict module-signing systems require a documented trusted local signing and
 key-enrollment workflow. A valid signature demonstrates provenance and load
@@ -316,10 +431,39 @@ Every consumable release must be tagged and include:
 - installation, rollback, and complete-removal instructions; and
 - security and behavioral release notes.
 
-WsprryPi consumes only an explicitly allowed release artifact through its
-compatibility manifest. Module publication precedes the dependent WsprryPi
-release, which records the allowed module/UAPI range and exact artifact
-identity.
+A release candidate is not a consumable release. A candidate is one exact
+reviewed commit plus sealed deterministic product and qualification archives
+and their checksums; it may be
+used for authorized qualification before a release exists. An expected tag, a
+local tag, reproducible bytes, or locally verified checksums do not establish
+publication. A published release exists for consumers only after the module
+publication gate passes, the reviewed tag and immutable artifacts are public,
+and every downloaded public artifact passes fresh outer and inner checksum,
+provenance, archive-layout, and install-input verification.
+
+The module publication gate requires the full offline suite, complete
+representative lifecycle matrix, closed independent adversarial review,
+independent artifact reproduction, exact tag/internal-version agreement,
+post-download checksum verification, a real populated compatibility manifest,
+verified install/rollback/recovery/removal instructions, documented known
+limitations, and a claim-to-evidence audit with no over-broad statement. A
+missing, failed, stale, or indeterminate prerequisite leaves the identity a
+candidate. Published bytes are immutable under their version and tag.
+
+WsprryPi consumes only an explicitly allowed product release artifact through
+its compatibility manifest. The qualification archive is release qualification
+tooling, not an application runtime dependency. Module publication precedes the
+dependent WsprryPi release, which records the allowed module/UAPI range and
+exact product-artifact identity.
+
+After confirmed module publication, `WSPR-Transmitter` first consumes the
+canonical UAPI and exact module release and passes byte-for-byte and semantic
+ABI checks. WsprryPi then pins the exact downloaded product archive/tag/checksum,
+compatibility-manifest identity, UAPI identity, and reviewed adapter identity.
+Application integration qualification follows under separate authority;
+dependent adapter and application releases follow only after their respective
+evidence and reviews pass. Each repository retains separate commits, reviews,
+tags, releases, and qualification claims.
 
 ## 13. Security and operator responsibility
 
@@ -412,17 +556,15 @@ not qualify untested hardware behavior.
 
 ## 18. Next implementation gate
 
-The next authorized slice should be offline-only Phase 2 foundation work:
+Phase 2 is closed only for the exact GPIO4 clock-disabled identity recorded in
+`docs/evidence/phase2e-clock-disabled-target.md`. Phase 3 GPIO20 injection and
+the first public interface freeze are implemented offline under Decision 0006.
+Phase 3B closes the Phase 3 target exit only for the exact clock-disabled
+identity recorded in `docs/evidence/phase3b-clock-disabled-route-closure.md`.
+GPIO4 and GPIO20 use independent allowlisted routes and evidence rows; the
+successful two-route matrix does not let either route inherit the other's
+qualification.
 
-- route-neutral source layout;
-- additive canonical UAPI and capability contract;
-- GPLv2/MIT SPDX enforcement and provenance checks;
-- tagged-release compatibility-manifest schema;
-- automated UAPI identity verification for the userspace consumer;
-- exported-kernel-API adapter boundaries;
-- portable lifecycle and validation tests;
-- representative kernel-header builds; and
-- a clock-disabled target test plan.
-
-It stops before DKMS installation, module loading, binding, overlay application,
-target system changes, GPIO operation, transmission, or RF activity.
+Phase 3 does not authorize active pinctrl selection, clock preparation or
+enablement, DMA execution, GPIO output, transmission, or RF. Phase 4 live
+qualification retains separately bounded GPIO and RF authorization gates.

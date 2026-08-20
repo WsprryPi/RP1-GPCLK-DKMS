@@ -1,0 +1,342 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "authorization": {
+    "administrator": "pi through sudo",
+    "approvalScope": "Operator-authorized exact Phase 5.45 output-disabled Gate D scope committed at d25abbf877fb889435b16e0b7d033291d0388af5; limited to the 38 indexed namespaced attempts, ten ready rows, exact snapshot, release inputs, predecessor and successor inventories, authenticated schema-5 transition, recovery, and mandatory prohibitions.",
+    "approved": true,
+    "cleanup": "remove only exact attempt-owned state and preserve administrator, historical, and unrelated bytes",
+    "connection": "ssh wspr5",
+    "dkms": "exact test-owned register, build, install, uninstall, and remove",
+    "failureInjection": "bounded attempt-owned build, signature, header, manifest, archive, DTBO, interruption, and busy-state failures",
+    "kernelSwitching": "reversible selection between installed stock 6.18.34+rpt-rpi-2712 and 6.12.75+rpt-rpi-2712 only",
+    "moduleAdministration": "exact candidate load-disabled, query, release, unbind, and unload; no forced teardown",
+    "overlayAdministration": "one allowlisted route per attempt; preserve foreign and historical artifacts",
+    "packagePrerequisites": "reviewed exact prerequisites only; no general or distribution upgrade",
+    "prohibitions": [
+      "active-pinctrl",
+      "clock-enable",
+      "dma-submit",
+      "gpio-output",
+      "si5351-operation",
+      "transmitter-keying",
+      "sdr-operation",
+      "antenna-connection",
+      "rf",
+      "devmem-fallback",
+      "custom-kernel-qualification",
+      "forced-removal",
+      "general-upgrade",
+      "unreviewed-persistent-boot-change"
+    ],
+    "reboot": "planned and noticed only after recovery preflight",
+    "serviceChanges": "temporarily stop and restore wsprrypi, sdrplay, sdrconnect-server, and SoapySDRServer when present",
+    "targetExecutionApproved": true
+  },
+  "candidate": {
+    "archiveSha256": "21d05675e9d12ddb4c051868578c410737b733786357cee20eb2b0ce03f63356",
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "manifestSha256": "1dcdde61d1ab8d3fba6529fc553470281f968a7bfae0eeff7429ea41983ecbd9",
+    "release": "0.0.0-phase5.45",
+    "sourceCommit": "4b50db7868b7fe5ca9d830f51cd404c250192188",
+    "status": "frozen",
+    "uapiSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb"
+  },
+  "executionPolicy": {
+    "attemptIndex": "release/gate-d-attempts-phase5.45-v1/index.json",
+    "attemptIndexSha256": "3375c809dd699949f991742716628016a680bcf7253fc30ba8f3de52c294f020",
+    "attemptPathNamespace": "phase5.45-4b50db7868b7",
+    "environmentalCoverageComplete": false,
+    "matrixPolicy": "release/gate-d-matrix-policy-v2.json",
+    "matrixPolicySha256": "31cfe5c8c1756067b9ba8f8cc31823ba1ee33d95db5149f1877e439a6f40f994",
+    "qualificationBootstrap": "release/gate-d-qualification-bootstrap-plan-phase5.45-v1.json",
+    "qualificationBootstrapSha256": "b4725faf14b60d9c570a7d5f4e9c53507c13fd8f1f318b6d7c594490a4efaba2",
+    "routeDecision": "release/gate-d-route-compatibility-decision-phase5.45-v1.json",
+    "routeDecisionSha256": "4e09096209f567b3e6034990f415f6d38520d020d70b1e13ec78af9759bc84ed",
+    "targetPlan": "release/gate-d-target-operation-plan-phase5.45-v1.json",
+    "targetPlanSha256": "8438b8e247cac0f529ccbdc978c576b87d371507f329d7d13a117e5b17dee444"
+  },
+  "executionReady": true,
+  "inputsReady": true,
+  "kind": "gate-d-representative-system-execution-instance",
+  "matrixRelease": "0.0.0-phase5.45",
+  "qualificationRoot": {
+    "identityFile": ".gate-d-root.json",
+    "identitySha256": "b082c7aebf46dd98058ff8b818cae085b9130c7e672a67e4d999ce27485f1ed3",
+    "mode": "0700",
+    "ownerUid": 1000,
+    "path": "/home/pi/gate-d-qualification/phase5.45-4b50db7868b7"
+  },
+  "recovery": {
+    "assistanceSeconds": 1800,
+    "automaticRecoverySeconds": 900,
+    "bootOrder": "SD then NVMe then USB mass storage",
+    "bootSource": "/dev/mmcblk0p1 PARTUUID c91c6519-01",
+    "nvmeVisibleUnmounted": true,
+    "rescueHost": "wspr5-rescue",
+    "rootSource": "/dev/mmcblk0p2 PARTUUID c91c6519-02",
+    "sshReturnSeconds": 600,
+    "validated": true
+  },
+  "rows": [
+    {
+      "blockers": [],
+      "deadlineSeconds": 1800,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/current-supported-kernel",
+      "expectedFinalState": "candidate absent; stock baseline restored",
+      "failureInjection": "none",
+      "id": "current-supported-kernel",
+      "kernel": "6.18.34+rpt-rpi-2712",
+      "routes": [
+        "gpio4",
+        "gpio20"
+      ],
+      "status": "ready",
+      "systemId": "wspr5-stock"
+    },
+    {
+      "blockers": [],
+      "deadlineSeconds": 1800,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/prior-supported-kernel-downgrade",
+      "expectedFinalState": "declared predecessor inactive and complete",
+      "failureInjection": "explicit downgrade to retained predecessor",
+      "id": "prior-supported-kernel-downgrade",
+      "kernel": "6.12.75+rpt-rpi-2712",
+      "routes": [
+        "gpio4",
+        "gpio20"
+      ],
+      "status": "ready",
+      "systemId": "wspr5-stock"
+    },
+    {
+      "blockers": [
+        "newer-unknown-stock-kernel-unavailable"
+      ],
+      "deadlineSeconds": 900,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/newer-unknown-kernel",
+      "expectedFinalState": "candidate rejected before install",
+      "failureInjection": "unknown stock kernel identity presented to preflight",
+      "id": "newer-unknown-kernel",
+      "kernel": null,
+      "routes": [
+        "route-neutral"
+      ],
+      "status": "deferred-environmental",
+      "systemId": null
+    },
+    {
+      "blockers": [],
+      "deadlineSeconds": 1800,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/signing-not-enforced",
+      "expectedFinalState": "candidate absent; trust state unchanged",
+      "failureInjection": "none",
+      "id": "signing-not-enforced",
+      "kernel": "6.18.34+rpt-rpi-2712",
+      "routes": [
+        "gpio4",
+        "gpio20"
+      ],
+      "status": "ready",
+      "systemId": "wspr5-stock"
+    },
+    {
+      "blockers": [
+        "representative-stock-signature-enforcing-system-unavailable"
+      ],
+      "deadlineSeconds": 1800,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/signing-enforced-enrolled-key",
+      "expectedFinalState": "signed candidate absent; administrator trust retained",
+      "failureInjection": "none",
+      "id": "signing-enforced-enrolled-key",
+      "kernel": null,
+      "routes": [
+        "gpio4",
+        "gpio20"
+      ],
+      "status": "deferred-environmental",
+      "systemId": null
+    },
+    {
+      "blockers": [],
+      "deadlineSeconds": 1800,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/deliberate-build-failure",
+      "expectedFinalState": "predecessor retained; successor absent",
+      "failureInjection": "attempt-owned compiler wrapper exits nonzero",
+      "id": "deliberate-build-failure",
+      "kernel": "6.18.34+rpt-rpi-2712",
+      "routes": [
+        "route-neutral"
+      ],
+      "status": "ready",
+      "systemId": "wspr5-stock"
+    },
+    {
+      "blockers": [
+        "representative-stock-signature-enforcing-system-unavailable"
+      ],
+      "deadlineSeconds": 1800,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/deliberate-signature-rejection",
+      "expectedFinalState": "rejected candidate absent; trust unchanged",
+      "failureInjection": "wrong signer and corrupted signature as separate attempts",
+      "id": "deliberate-signature-rejection",
+      "kernel": null,
+      "routes": [
+        "gpio4",
+        "gpio20"
+      ],
+      "status": "deferred-environmental",
+      "systemId": null
+    },
+    {
+      "blockers": [
+        "representative-installed-kernel-without-headers-unavailable"
+      ],
+      "deadlineSeconds": 900,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/missing-headers",
+      "expectedFinalState": "rejected before DKMS registration",
+      "failureInjection": "preflight exact installed kernel without matching headers",
+      "id": "missing-headers",
+      "kernel": null,
+      "routes": [
+        "route-neutral"
+      ],
+      "status": "deferred-environmental",
+      "systemId": null
+    },
+    {
+      "blockers": [
+        "qualifying-preexisting-conflict-not-identified"
+      ],
+      "deadlineSeconds": 900,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/overlay-or-resource-conflict",
+      "expectedFinalState": "foreign owner and baseline preserved",
+      "failureInjection": "preflight against recorded foreign owner without modifying it",
+      "id": "overlay-or-resource-conflict",
+      "kernel": null,
+      "routes": [
+        "gpio4",
+        "gpio20"
+      ],
+      "status": "deferred-environmental",
+      "systemId": null
+    },
+    {
+      "blockers": [],
+      "deadlineSeconds": 1800,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/interrupted-upgrade",
+      "expectedFinalState": "one complete inactive version; no mixed state",
+      "failureInjection": "separate interruption after every durable checkpoint",
+      "id": "interrupted-upgrade",
+      "kernel": "6.18.34+rpt-rpi-2712",
+      "routes": [
+        "gpio4",
+        "gpio20"
+      ],
+      "status": "ready",
+      "systemId": "wspr5-stock"
+    },
+    {
+      "blockers": [],
+      "deadlineSeconds": 900,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/stale-manifest",
+      "expectedFinalState": "stale copy absent; prior state retained",
+      "failureInjection": "one stale release, kernel, UAPI, overlay, or enrollment identity per attempt",
+      "id": "stale-manifest",
+      "kernel": "6.18.34+rpt-rpi-2712",
+      "routes": [
+        "gpio4",
+        "gpio20"
+      ],
+      "status": "ready",
+      "systemId": "wspr5-stock"
+    },
+    {
+      "blockers": [],
+      "deadlineSeconds": 900,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/corrupted-archive-or-dtbo",
+      "expectedFinalState": "corrupt copies absent; baseline unchanged",
+      "failureInjection": "separate byte flip in attempt-owned archive, GPIO4 DTBO, and GPIO20 DTBO",
+      "id": "corrupted-archive-or-dtbo",
+      "kernel": "6.18.34+rpt-rpi-2712",
+      "routes": [
+        "gpio4",
+        "gpio20"
+      ],
+      "status": "ready",
+      "systemId": "wspr5-stock"
+    },
+    {
+      "blockers": [],
+      "deadlineSeconds": 1800,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/removal-inactive",
+      "expectedFinalState": "all package-owned state absent",
+      "failureInjection": "none",
+      "id": "removal-inactive",
+      "kernel": "6.18.34+rpt-rpi-2712",
+      "routes": [
+        "gpio4",
+        "gpio20"
+      ],
+      "status": "ready",
+      "systemId": "wspr5-stock"
+    },
+    {
+      "blockers": [],
+      "deadlineSeconds": 900,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/removal-open-or-active",
+      "expectedFinalState": "removal refused; installation unchanged",
+      "failureInjection": "open descriptor and busy owner separately with output disabled",
+      "id": "removal-open-or-active",
+      "kernel": "6.18.34+rpt-rpi-2712",
+      "routes": [
+        "gpio4",
+        "gpio20"
+      ],
+      "status": "ready",
+      "systemId": "wspr5-stock"
+    },
+    {
+      "blockers": [],
+      "deadlineSeconds": 1800,
+      "evidenceDirectory": "gate-d/runs/phase5.45-4b50db7868b7/reinstall-after-removal",
+      "expectedFinalState": "second complete removal restores empty baseline",
+      "failureInjection": "none",
+      "id": "reinstall-after-removal",
+      "kernel": "6.18.34+rpt-rpi-2712",
+      "routes": [
+        "gpio4",
+        "gpio20"
+      ],
+      "status": "ready",
+      "systemId": "wspr5-stock"
+    }
+  ],
+  "schemaVersion": 5,
+  "systems": [
+    {
+      "architecture": "aarch64",
+      "compiler": "gcc 14.2.0",
+      "headers": [
+        "6.18.34+rpt-rpi-2712",
+        "6.12.75+rpt-rpi-2712"
+      ],
+      "host": "wspr5",
+      "id": "wspr5-stock",
+      "kernels": [
+        "6.18.34+rpt-rpi-2712",
+        "6.12.75+rpt-rpi-2712"
+      ],
+      "model": "Raspberry Pi 5 Model B Rev 1.0",
+      "os": "Debian GNU/Linux 13 (trixie)",
+      "revision": "c04170",
+      "role": "sole RP1 Gate D target",
+      "routes": [
+        "gpio4",
+        "gpio20"
+      ],
+      "signingEnforced": false,
+      "stableIdentifier": "wspr5-pi5-c04170"
+    }
+  ]
+}

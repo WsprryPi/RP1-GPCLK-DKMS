@@ -1,0 +1,19 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.53-final-control-package-construction-blocker",
+  "productArchiveSha256": "032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76",
+  "qualificationArchiveSha256": "31dd96079930d4c77788aea506cd0fa549d2ec101c1cf93ab3d5b392e76caaf5",
+  "snapshotSha256": "cbaed5a7972bb317a9dc27cabead9419ffde2db474df4de493373b6aa474524f",
+  "blocker": "same-version-product-already-installed-before-qualification-pre-root",
+  "facts": [
+    "the target ledger owns 72 Phase 5.53 product paths including /usr/src/rp1-gpclk-dkms-0.0.0-phase5.53",
+    "schema-6 pre-root archives the terminal administrator ledger before invoking its single install argv",
+    "the packaged administrator refuses installation when the same-version source destination already exists",
+    "the frozen workflow has no authenticated remove-before-install transition and recovery contract for this state"
+  ],
+  "disposition": "no controls generated",
+  "requiredSuccessor": "qualification-only orchestration successor supporting ledger-bound same-version product removal followed by qualification installation with recoverable pre-root state",
+  "authorizationConsumed": false,
+  "claimCeiling": "construction blocked before generation; no target mutation or lifecycle execution"
+}

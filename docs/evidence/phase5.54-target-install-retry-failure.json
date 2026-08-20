@@ -1,0 +1,56 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.54-target-install-retry-failure-evidence",
+  "capturedUtc": "2026-08-20T16:50:19Z",
+  "target": "wspr5",
+  "authorizationCommit": "3806efb3ddf0a410878bd252f9de0c85f4430303",
+  "priorFailureStateSha256": "603477ad4a34947dc56ef993cb177e92248dde9b01f7a0b1b9e442182d953b88",
+  "packageSha256": "a6bcc854bb807c298b07d81a0405960fbdc7e053df80802e2e95ebc2ca02f095",
+  "finalFailureCaptureCount": 2,
+  "finalFailureCapturesByteIdentical": true,
+  "finalFailureCaptureSha256": "74028d8a3ea0b620d37fc370eb1e53d8f70584bd09c2243fe52cfe941f7ed112",
+  "orphanRecovery": {
+    "preStateMatched": true,
+    "deletedPaths": ["/boot/firmware/overlays/rp1-gpclk-gpio4.dtbo"],
+    "deletedSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "packageRetryAttempts": 1
+  },
+  "packageState": {
+    "status": "install ok half-configured",
+    "version": "0.0.0~phase5.54-1",
+    "architecture": "all",
+    "dpkgAuditReportsHalfConfigured": true,
+    "sourceTreePresent": true,
+    "uapiSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"
+  },
+  "dkmsResults": {
+    "6.12.75+rpt-rpi-2712": "installed",
+    "6.12.75+rpt-rpi-v8": "installed",
+    "6.18.34+rpt-rpi-2712": "installed",
+    "6.18.34+rpt-rpi-v8": "installed",
+    "6.18.44-v8-16k+": "build-failed"
+  },
+  "firstCompilerDiagnostic": "include/rp1_gpclk/core.h:65:41: error: RP1_GPCLK_MAX_TONES undeclared",
+  "rootCause": {
+    "dhDkmsAutoinstallScope": "all installed kernel header identities",
+    "failedKernelBuildLink": "/home/pi/rpi-linux-phase6g",
+    "failedKernelClass": "historical custom 16K development kernel",
+    "conflictingUapiPath": "/home/pi/rpi-linux-phase6g/include/uapi/linux/rp1_gpclk.h",
+    "conflictingUapiSha256": "21ddbd321016b82a8265747ad030363df35b497ca5f7d915e7afda832d8d91e6",
+    "candidateUapiSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb",
+    "diagnosis": "The package succeeded for four Raspberry Pi stock-kernel identities, including the running kernel, then failed when unconstrained DKMS autoinstall selected a historical custom kernel tree containing a different same-path UAPI."
+  },
+  "safety": {
+    "moduleLoaded": false,
+    "endpointPresent": false,
+    "overlayApplied": false,
+    "bootOverlaySelected": false,
+    "stagedPackagePreserved": true,
+    "additionalRetryOrRepairPerformed": false,
+    "gpioClockDmaTransmissionRf": false
+  },
+  "status": "stopped-for-offline-dkms-kernel-scope-repair"
+}

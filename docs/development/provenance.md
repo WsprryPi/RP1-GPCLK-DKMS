@@ -71,3 +71,17 @@ review were authored cleanly in this repository from the Phase 2A contracts.
 No historical portable-core or provider implementation text was copied or
 adapted. Historical work informed only the already-recorded concepts of
 bounded ownership, generations, cancellation, and terminal outcomes.
+
+## Phase 2C through 2E clean implementation
+
+The platform integration, exact DT/provider validation, clock-disabled UAPI
+dispatcher, GPIO4 overlay and negative fixtures, target runner, evidence tools,
+decision records, and reviews were authored cleanly in this repository from
+the accepted contracts. Historical work informed the already-recorded numeric
+identities and failure scenarios; no historical provider, overlay, UAPI, KUnit,
+or portable-core implementation text was copied or adapted.
+
+Kernel-facing source and overlays retain `GPL-2.0-only OR MIT`. Independent
+tests, scripts, evidence, and documentation retain MIT. The canonical UAPI
+license is unchanged. Phase 2E introduces no imported third-party source and
+does not change the project licensing policy.

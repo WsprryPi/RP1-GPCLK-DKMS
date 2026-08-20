@@ -1,0 +1,74 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.54-package-removal-reinstall-success",
+  "target": "wspr5",
+  "capturedUtc": "2026-08-20T18:08:59Z",
+  "sourceCommit": "5b0cadd5eecb94e1a68ef138cbd0d688e232b080",
+  "package": {
+    "path": "dist/phase5.54-debian-revision2/rp1-gpclk-dkms_0.0.0~phase5.54-2_all.deb",
+    "version": "0.0.0~phase5.54-2",
+    "sha256": "f61286a6e63c2735413a0e86d13c5dc2d91f4581e8a20aab7291234b1991f90b",
+    "stagedOwner": "pi:pi",
+    "stagedMode": "0600"
+  },
+  "preflight": {
+    "kernel": "6.18.34+rpt-rpi-2712",
+    "packageStatus": "install ok installed",
+    "dpkgAuditEmpty": true,
+    "stockDkmsInstallCount": 4,
+    "uapiSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "unrelatedOverlayTreeSha256": "d6cafeb94275e7d1d84d1f679d8e893467bb217b2eea41866cb31e77445e140f",
+    "moduleLoaded": false,
+    "endpointPresent": false,
+    "activeOverlayCount": 0,
+    "bootSelectionCount": 0,
+    "conflictingServicesRunning": []
+  },
+  "removal": {
+    "attemptCount": 1,
+    "command": "dpkg --remove rp1-gpclk-dkms",
+    "packagePresentAfter": false,
+    "dpkgAuditEmpty": true,
+    "dkmsResidueCount": 0,
+    "usrSrcPresent": false,
+    "usrLibPresent": false,
+    "gpio4BootOverlayPresent": false,
+    "gpio20BootOverlayPresent": false,
+    "installedModuleFileCount": 0,
+    "unrelatedOverlayTreeUnchanged": true,
+    "inactiveBaselinePreserved": true
+  },
+  "reinstall": {
+    "attemptCount": 1,
+    "command": "dpkg --install rp1-gpclk-dkms_0.0.0~phase5.54-2_all.deb",
+    "packageStatus": "install ok installed",
+    "packageVersion": "0.0.0~phase5.54-2",
+    "dpkgAuditEmpty": true,
+    "stockDkmsInstallCount": 4,
+    "excludedCustomKernelInstallCount": 0,
+    "installedModuleFileCount": 4,
+    "uapiRestored": true,
+    "gpio4CanonicalAndBootIdentityRestored": true,
+    "gpio20CanonicalAndBootIdentityRestored": true,
+    "unrelatedOverlayTreeUnchanged": true
+  },
+  "terminal": {
+    "moduleLoaded": false,
+    "endpointPresent": false,
+    "activeOverlayCount": 0,
+    "bootSelectionCount": 0,
+    "conflictingServicesRunning": [],
+    "userOwnedStagingResidueRemoved": true
+  },
+  "safety": {
+    "moduleOrOverlayActivity": false,
+    "bootChanged": false,
+    "rebooted": false,
+    "gpioClockOrDmaActivity": false,
+    "transmissionOrRf": false
+  },
+  "result": "pass-package-removed-and-restored-inactive"
+}

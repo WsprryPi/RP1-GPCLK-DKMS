@@ -1,0 +1,207 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+"""Independently validate a generated RP1-GPCLK-DKMS release unit."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import pathlib
+import re
+import subprocess
+import tarfile
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+QUALIFICATION_LAYOUT_PATH = ROOT / "release/qualification-layout-v1.json"
+SOURCE_RELEASE_EXACT = {
+    "Kbuild", "LICENSE.md", "Makefile", "README.md", "SECURITY.md",
+    "dkms.conf", "release/release-layout-v1.json", "uapi-identity.json",
+    "scripts/build_release.py", "scripts/validate_release.py",
+}
+SOURCE_RELEASE_PATTERNS = ("LICENSES/*",)
+QUALIFICATION_RELEASE_EXACT = {"release/qualification-layout-v1.json"}
+
+
+def fail(message: str) -> None:
+    raise SystemExit(message)
+
+
+def sha256(path: pathlib.Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def validate(output: pathlib.Path, allow_development: bool) -> None:
+    if output.is_symlink() or not output.is_dir():
+        fail("release unit must be a real directory")
+    layout = json.loads((ROOT / "release/release-layout-v1.json").read_text())
+    product_only = not QUALIFICATION_LAYOUT_PATH.is_file()
+    qualification_layout = (None if product_only else
+                            json.loads(QUALIFICATION_LAYOUT_PATH.read_text()))
+    if (qualification_layout is not None and
+            (qualification_layout.get("schemaVersion") != 1 or
+            qualification_layout.get("release") != layout["release"] or
+            qualification_layout.get("expectedTag") != layout["expectedTag"])):
+        fail("qualification layout identity differs")
+    expected_complete = {item["path"] for item in layout["artifacts"] if item["kind"] == "generated" and item["destination"] == "release-download"}
+    expected_complete |= {"rp1-gpclk-gpio4.dtbo", "rp1-gpclk-gpio20.dtbo", "rp1-gpclk-compatibility-manifest.json", "PROVENANCE.json", "SHA256SUMS", "release-metadata.json"}
+    qualification_name = f"rp1-gpclk-dkms-qualification-{layout['release']}.tar.gz"
+    expected = expected_complete - ({qualification_name} if product_only else set())
+    actual = {path.name for path in output.iterdir()}
+    if actual != expected:
+        fail(f"release artifact set differs: missing={sorted(expected-actual)} extra={sorted(actual-expected)}")
+    checksum_lines = (output / "SHA256SUMS").read_text().splitlines()
+    checksum_names = []
+    for line in checksum_lines:
+        match = re.fullmatch(r"([0-9a-f]{64})  ([A-Za-z0-9][A-Za-z0-9._+-]*)", line)
+        if not match:
+            fail("malformed checksum line")
+        checksum_names.append(match.group(2))
+        if not (product_only and match.group(2) == qualification_name) and sha256(output / match.group(2)) != match.group(1):
+            fail(f"checksum mismatch: {match.group(2)}")
+    if checksum_names != sorted(expected_complete - {"SHA256SUMS"}):
+        fail("checksum coverage or order differs")
+    metadata = json.loads((output / "release-metadata.json").read_text())
+    provenance = json.loads((output / "PROVENANCE.json").read_text())
+    compatibility = json.loads((output / "rp1-gpclk-compatibility-manifest.json").read_text())
+    for value in (metadata, provenance):
+        for key in ("release", "sourceCommit", "uapiAbi", "uapiHeaderSha256", "archiveSha256",
+                    "qualificationArchive", "qualificationArchiveSha256",
+                    "compatibilityManifestSha256", "overlays", "tools"):
+            if value.get(key) != metadata.get(key):
+                fail(f"provenance and metadata differ at {key}")
+    if metadata["release"] != layout["release"] or metadata["expectedTag"] != layout["expectedTag"]:
+        fail("release/tag metadata differs from layout")
+    if not metadata["publishable"] and not allow_development:
+        fail("release unit is marked non-publishable")
+    if metadata["publishable"] != (metadata["tagPresent"] and not metadata["dirtySource"]):
+        fail("invalid publishable state")
+    archive = output / metadata["archive"]
+    if archive.name != f"{layout['package']}-{layout['release']}.tar.gz" or sha256(archive) != metadata["archiveSha256"]:
+        fail("archive identity differs")
+    qualification_archive = output / metadata["qualificationArchive"]
+    if not product_only and (qualification_archive.name != f"{qualification_layout['package']}-{layout['release']}.tar.gz" or
+                             sha256(qualification_archive) != metadata["qualificationArchiveSha256"]):
+        fail("qualification archive identity differs")
+    if compatibility["module"] != {"name": layout["module"], "release": layout["release"], "sourceCommit": metadata["sourceCommit"],
+                                    "sourceArchiveSha256": metadata["archiveSha256"], "uapiAbi": layout["uapiAbi"],
+                                    "uapiHeaderSha256": metadata["uapiHeaderSha256"]}:
+        fail("compatibility module identity differs")
+    decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_text())
+    if compatibility["defaultState"] != "Unavailable" or compatibility["entries"] != decisions["entries"]:
+        fail("compatibility manifest does not contain the reviewed populated decisions")
+    if not compatibility["entries"] or any(entry["liveEligible"] or entry["state"] != "Unavailable"
+                                           for entry in compatibility["entries"]):
+        fail("Phase 5.6 historical entries must remain unavailable and non-live")
+    ids = [entry["id"] for entry in compatibility["entries"]]
+    if len(ids) != len(set(ids)):
+        fail("compatibility entry IDs are not unique")
+    for entry in compatibility["entries"]:
+        if entry["uapiAbi"] != metadata["uapiAbi"] or entry["uapiHeaderSha256"] != metadata["uapiHeaderSha256"]:
+            fail("compatibility entry UAPI identity differs")
+        if any(entry["route"] not in evidence["routes"] or
+               not set(entry["supportedModes"]) <= set(evidence["modes"])
+               for evidence in entry["evidence"]):
+            fail("compatibility evidence does not cover its entry route and modes")
+    schema = json.loads((ROOT / "schema/rp1-gpclk-compatibility-manifest-v1.schema.json").read_text())
+    if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema" or schema.get("additionalProperties") is not False:
+        fail("compatibility schema identity differs")
+    if set(compatibility) != set(schema["required"]) or compatibility["schemaVersion"] != 1:
+        fail("compatibility manifest does not satisfy required top-level schema fields")
+    try:
+        import jsonschema
+    except ImportError:
+        pass
+    else:
+        jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(compatibility)
+    prefix = f"{layout['package']}-{layout['release']}/"
+    if product_only:
+        tracked = [str(path.relative_to(ROOT)) for path in ROOT.rglob("*") if path.is_file()]
+    else:
+        tracked = subprocess.check_output(
+            ["git", "-C", str(ROOT), "ls-files", "--cached", "--others",
+             "--exclude-standard", "-z"]).decode().split("\0")
+    with tarfile.open(archive, "r:gz") as source:
+        members = source.getmembers()
+        names = [member.name.removeprefix(prefix) for member in members]
+        if not members or any(not member.name.startswith(prefix) or member.name.startswith("/") or ".." in pathlib.PurePosixPath(member.name).parts for member in members):
+            fail("unsafe archive root or member")
+        if names != sorted(names) or len(names) != len(set(names)):
+            fail("archive member order/uniqueness differs")
+        patterns = SOURCE_RELEASE_PATTERNS + tuple(
+            item["path"] for item in layout["artifacts"]
+            if item["kind"] in {"archive", "archive-tree"})
+        expected_members = {
+            name for name in tracked
+            if name in SOURCE_RELEASE_EXACT or
+            any(pathlib.PurePosixPath(name).match(pattern) for pattern in patterns)
+        }
+        if set(names) != expected_members:
+            fail(f"archive inventory differs: missing={sorted(expected_members-set(names))} extra={sorted(set(names)-expected_members)}")
+        for member in members:
+            if not member.isfile() or member.issym() or member.islnk() or member.uid or member.gid or member.uname or member.gname:
+                fail(f"unsafe archive metadata: {member.name}")
+            if member.mtime != metadata["sourceDateEpoch"] or member.mode not in {0o644, 0o755}:
+                fail(f"nondeterministic archive metadata: {member.name}")
+            rel = member.name.removeprefix(prefix)
+            if rel in tracked and source.extractfile(member).read() != (ROOT / rel).read_bytes():
+                fail(f"archive byte mismatch: {rel}")
+        uapi_member = source.getmember(prefix + "include/uapi/linux/rp1_gpclk.h")
+        if hashlib.sha256(source.extractfile(uapi_member).read()).hexdigest() != metadata["uapiHeaderSha256"]:
+            fail("archived UAPI hash differs")
+    qualification_patterns = tuple(
+        item["path"] for item in qualification_layout["artifacts"]
+        if item["kind"] in {"archive", "archive-tree"}) if qualification_layout else ()
+    expected_qualification = {
+        name for name in tracked
+        if name in QUALIFICATION_RELEASE_EXACT or
+        any(pathlib.PurePosixPath(name).match(pattern) for pattern in qualification_patterns)
+    }
+    qualification_prefix = (f"{qualification_layout['package']}-{layout['release']}/"
+                            if qualification_layout else "")
+    if not product_only:
+        with tarfile.open(qualification_archive, "r:gz") as source:
+            members = source.getmembers()
+            names = [member.name.removeprefix(qualification_prefix) for member in members]
+            if (not members or names != sorted(names) or len(names) != len(set(names)) or
+                    any(not member.name.startswith(qualification_prefix) or
+                        not member.isfile() or member.issym() or member.islnk() or
+                        member.uid or member.gid or member.uname or member.gname or
+                        member.mtime != metadata["sourceDateEpoch"] or
+                        member.mode not in {0o644, 0o755} or
+                        ".." in pathlib.PurePosixPath(member.name).parts
+                        for member in members)):
+                fail("unsafe or nondeterministic qualification archive")
+            if set(names) != expected_qualification:
+                fail(f"qualification inventory differs: missing={sorted(expected_qualification-set(names))} extra={sorted(set(names)-expected_qualification)}")
+    if sha256(output / "rp1-gpclk-compatibility-manifest.json") != metadata["compatibilityManifestSha256"]:
+        fail("compatibility manifest hash differs")
+    for route in ("GPIO4", "GPIO20"):
+        lower = route.lower()
+        if sha256(ROOT / f"overlays/rp1-gpclk-{lower}.dts") != metadata["overlays"][route]["sourceSha256"]:
+            fail(f"{route} source hash differs")
+        if sha256(output / f"rp1-gpclk-{lower}.dtbo") != metadata["overlays"][route]["dtboSha256"]:
+            fail(f"{route} DTBO hash differs")
+    ids = [item["id"] for item in layout["artifacts"]]
+    if len(ids) != len(set(ids)) or any(item["owner"] == "" or item["destination"] == "" for item in layout["artifacts"]):
+        fail("release installation inventory is incomplete or ambiguous")
+    qualification_ids = ([item["id"] for item in qualification_layout["artifacts"]]
+                         if qualification_layout else [])
+    if (qualification_layout is not None and
+            (len(qualification_ids) != len(set(qualification_ids)) or set(ids) & set(qualification_ids) or
+            any(item["owner"] == "" or item["destination"] == ""
+                for item in qualification_layout["artifacts"]))):
+        fail("qualification installation inventory is incomplete or ambiguous")
+    print(f"release unit validation: PASS ({metadata['release']}, publishable={str(metadata['publishable']).lower()})")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("release_directory", type=pathlib.Path)
+    parser.add_argument("--allow-development", action="store_true")
+    args = parser.parse_args()
+    validate(args.release_directory.resolve(), args.allow_development)
+
+
+if __name__ == "__main__":
+    main()

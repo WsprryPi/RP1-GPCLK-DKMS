@@ -1,0 +1,16 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wsprrypi.org/schemas/gate-d-qualification-root-v1.schema.json",
+  "title": "Gate D sealed qualification root",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["path", "identityFile", "identitySha256", "ownerUid", "mode"],
+  "properties": {
+    "path": {"type": "string", "pattern": "^/(?!$)(?!.*(?:^|/)\\.\\.(?:/|$)).+", "not": {"enum": ["/", "/usr", "/var", "/home"]}},
+    "identityFile": {"type": "string", "pattern": "^[^/]+$", "not": {"enum": [".", ".."]}},
+    "identitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "ownerUid": {"type": "integer", "minimum": 0},
+    "mode": {"const": "0700"}
+  }
+}
