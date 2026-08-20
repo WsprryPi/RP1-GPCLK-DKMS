@@ -1,0 +1,24 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.53-final-control-reconstruction-prerequisite",
+  "productSourceCommit": "4e7a64a0ca353d2fcab6e25891f5254746e2b91a",
+  "productArchiveSha256": "032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76",
+  "retainedSnapshotSha256": "cbaed5a7972bb317a9dc27cabead9419ffde2db474df4de493373b6aa474524f",
+  "qualificationSourceCommit": "9534590a4adedd8338c93c9bbfd6a48b7c8035c3",
+  "qualificationArchiveSha256": "8d0ab952fa775f8f88ebdc529f173a995c15a97d20ee1546d74159602b2b3626",
+  "predecessorQualificationArchiveSha256": "e5614893f61fba63bc76dafa9d4d9ebab0e37437c3a7a8b2b997fa72891ffc59",
+  "generations": 2,
+  "byteIdentical": true,
+  "independentValidationsPassed": 2,
+  "productRetainedByteIdentical": true,
+  "consumer": {
+    "sourcePath": "scripts/gate_d_same_version_driver.py",
+    "installedPath": "/usr/libexec/rp1-gpclk-dkms/gate-d-same-version",
+    "qualificationOnly": true,
+    "readOnlyValidationExercised": true,
+    "targetExecutionApproved": false
+  },
+  "nextGate": "reconstruct and fake-exercise final unauthorized controls from the corrected product and qualification closures",
+  "claimCeiling": "offline executable-consumer repair and qualification artifact reproduction only"
+}
