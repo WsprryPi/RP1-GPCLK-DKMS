@@ -19,9 +19,9 @@ import gate_d_same_version
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 RELEASE = "0.0.0-phase5.53"
 PRODUCT_COMMIT = "4e7a64a0ca353d2fcab6e25891f5254746e2b91a"
-QUALIFICATION_COMMIT = "e1ed88b40f63e72960ae610747b2ada913687895"
+QUALIFICATION_COMMIT = "2f5769e3d80fbd4b232efc1a72b1e932935d08b3"
 PRODUCT_SHA = "032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76"
-QUALIFICATION_SHA = "c72ba1293815698d96a6045c7cf5a3c2f6c31302a88727cbc3d91e280c3b25b6"
+QUALIFICATION_SHA = "916a5522e3998ae43f203c217fedce90ad8d4c2d52ae0bd4491407e3cf17211d"
 SNAPSHOT = ROOT / "docs/evidence/gate-d-live-target-snapshot-wspr5-phase5.53-final-v1.json"
 SNAPSHOT_SHA = "cbaed5a7972bb317a9dc27cabead9419ffde2db474df4de493373b6aa474524f"
 LEDGER_SHA = "d4fe02f8d66ac298f2076b37be297097f392095904cc3809717713cd01a14f8d"
@@ -123,6 +123,10 @@ def generate(output: pathlib.Path, release_directory: pathlib.Path) -> list[path
     qualification = release_directory / f"rp1-gpclk-dkms-qualification-{RELEASE}.tar.gz"
     if digest(product) != PRODUCT_SHA or digest(qualification) != QUALIFICATION_SHA:
         raise ValueError("final split archive identity differs")
+    metadata = load(release_directory / "release-metadata.json")
+    if (metadata.get("sourceCommit") != PRODUCT_COMMIT or
+            metadata.get("qualificationSourceCommit") != QUALIFICATION_COMMIT):
+        raise ValueError("final split source identity differs")
     snapshot = load(SNAPSHOT)
     if digest(SNAPSHOT) != SNAPSHOT_SHA or snapshot["administratorLedger"]["sha256"] != LEDGER_SHA:
         raise ValueError("final retained target identity differs")
@@ -193,14 +197,19 @@ def generate(output: pathlib.Path, release_directory: pathlib.Path) -> list[path
     bootstrap["qualificationRoot"] = root_reference
     bootstrap["packagePaths"] = package_paths
     bootstrap["packagePathsSha256"] = digest_bytes(canonical(package_paths))
+    installed_by_path = {item["path"]: item for item in package_paths}
+    for item in bootstrap["retainedTools"]:
+        item["sha256"] = installed_by_path[item["path"]]["sha256"]
     admin_source = f"{STAGE}/extracted/rp1-gpclk-dkms-{RELEASE}/scripts/rp1-gpclk-admin.py"
     bootstrap["administrator"].update(bootstrapPath=admin_source,
                                       sourceSha256=digest_bytes(files["scripts/rp1-gpclk-admin.py"]),
                                       installedSha256=digest_bytes(files["scripts/rp1-gpclk-admin.py"]))
+    bootstrap["qualificationIdentity"] = {
+        "path": f"{STAGE}/control-set/{identity_rel}", "sha256": digest(identity_path)}
     bootstrap["argv"] = ["/usr/bin/python3", admin_source, "install", "--execute",
                          "--release-directory", STAGE, "--route", "gpio4",
                          "--qualification-install", "--qualification-identity",
-                         f"{STAGE}/control-set/{identity_rel}"]
+                         bootstrap["qualificationIdentity"]["path"]]
     bootstrap_rel = f"release/gate-d-qualification-bootstrap-plan-{TAG}.json"
     bootstrap_path = write(output, bootstrap_rel, bootstrap)
 
@@ -262,6 +271,8 @@ def generate(output: pathlib.Path, release_directory: pathlib.Path) -> list[path
     envelope["predecessorPackagePaths"] = snapshot["packagePaths"]
     envelope["predecessorPackagePathsSha256"] = snapshot["packagePathsSha256"]
     envelope["liveTargetSnapshotSha256"] = SNAPSHOT_SHA
+    for item in envelope["installedTools"]:
+        item["sha256"] = installed_by_path[item["path"]]["sha256"]
     envelope["priorTerminalState"].update(status="removed", sha256=LEDGER_SHA,
         archivePath="/var/lib/rp1-gpclk-dkms/recovery/phase5.53-final-product-removed.json")
     artifacts = {path.name: digest(path) for path in release_directory.iterdir() if path.is_file()}

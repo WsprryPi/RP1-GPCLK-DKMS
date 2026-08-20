@@ -39,6 +39,7 @@ python3 "$repo_dir/tests/check_phase553_final_control_reconstruction_prerequisit
 python3 "$repo_dir/tests/check_phase553_final_control_closure_readiness.py"
 python3 "$repo_dir/tests/check_phase553_fresh_qualification_after_removal.py"
 python3 "$repo_dir/tests/check_phase553_representative_build_transfer.py"
+python3 "$repo_dir/tests/check_phase553_final_control_set.py"
 python3 "$repo_dir/tests/check_phase553_product_only_candidate.py"
 python3 "$repo_dir/tests/check_phase553_product_target_decision.py"
 python3 "$repo_dir/tests/check_phase553_product_target_install.py"
