@@ -58,13 +58,20 @@ def validate(value: dict) -> None:
     for term in ("GPIO4", "GPIO20", "live_output=0", "SemVer", "fresh location", "module-before-adapter-before-application"):
         if term not in evidence:
             raise ValueError(f"required boundary absent: {term}")
+    by_id = {gate["id"]: gate for gate in gates}
+    if value["expectedTag"] is None and by_id["semantic-version-selection"]["status"] != "blocked":
+        raise ValueError("semantic version passed without an expected tag")
+    if value["modulePublicationConfirmed"] is False:
+        for identity in ("module-publication", "public-download-verification", "consumer-integration"):
+            if by_id[identity]["status"] != "blocked":
+                raise ValueError(f"{identity} passed before confirmed publication")
 
 
 validate(document)
 by_id = {gate["id"]: gate for gate in document["gates"]}
-for identity in ORDER[:5]:
+for identity in ORDER[:7]:
     assert by_id[identity]["status"] == "passed"
-for identity in ORDER[5:]:
+for identity in ORDER[7:]:
     assert by_id[identity]["status"] == "blocked"
 assert "phase5.54-lifecycle-attempt1-success.json" in " ".join(by_id["gpio4-output-disabled-lifecycle"]["evidence"])
 assert "phase5.54-lifecycle-attempt2-success.json" in " ".join(by_id["gpio20-output-disabled-lifecycle"]["evidence"])
@@ -74,7 +81,7 @@ for mutation in (
     lambda value: value.update(expectedTag="v0.1.0"),
     lambda value: value.update(modulePublicationConfirmed=True),
     lambda value: value["gates"].pop(),
-    lambda value: value["gates"][6].update(status="passed"),
+    lambda value: value["gates"][7].update(status="passed"),
     lambda value: value["gates"][1].update(requires=[]),
 ):
     invalid = copy.deepcopy(document)

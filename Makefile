@@ -20,6 +20,7 @@ package-check:
 	python3 tests/check_phase554_lifecycle_attempt2_controls.py
 	python3 tests/check_phase554_lifecycle_attempt2_success.py
 	python3 tests/check_phase554_package_removal_reinstall_success.py
+	python3 tests/check_phase554_closure_reconciliation.py
 
 release-unit:
 	./scripts/build_release.py "$(if $(OUTPUT_DIR),$(OUTPUT_DIR),dist)" $(if $(DEVELOPMENT),--development,)
