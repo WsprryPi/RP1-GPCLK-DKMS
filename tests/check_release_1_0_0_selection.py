@@ -22,7 +22,7 @@ assert roadmap["debianVersion"] == decision["debianVersion"] == "1.0.0-1"
 assert roadmap["expectedTag"] == decision["expectedTag"] == "v1.0.0"
 gates = {gate["id"]: gate for gate in roadmap["gates"]}
 assert gates["semantic-version-selection"]["status"] == "passed"
-assert gates["final-artifact-reproduction"]["status"] == "blocked"
+assert gates["final-artifact-reproduction"]["status"] == "passed"
 assert gates["final-candidate-target-verification"]["status"] == "blocked"
 assert roadmap["modulePublicationConfirmed"] is False
 assert decision["tagCreated"] is False

@@ -1,0 +1,51 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "release-final-artifact-reproduction",
+  "release": "1.0.0",
+  "debianVersion": "1.0.0-1",
+  "sourceCommit": "a20abc828ec300ad3227a34be7572f4fa28525b2",
+  "builder": {
+    "containerImage": "localhost/rp1-gpclk-release-builder:1.0.0",
+    "imageId": "89bb035c852a6d356e595703501f838df25bbaabf2ba4c9f0593b67cd5497022",
+    "imageDigest": "sha256:a373998f0bc003ca686842d89af1380e7fa051e1918f13c2d28d4a343ef43be1",
+    "baseImageDigest": "sha256:c94f5ddd41327aa2d4a7cfba7889056c02936182fd76a513fec6160c97181fc0",
+    "architecture": "arm64",
+    "packages": {"debhelper":"13.24.2","device-tree-compiler":"1.7.2-2+b1","dh-dkms":"3.2.2-1~deb13u1","dpkg":"1.22.22","gcc":"4:14.2.0-1","python3":"3.13.5-1"}
+  },
+  "independentBuilds": 2,
+  "byteIdenticalArtifactSets": true,
+  "offlineSuite": {"runs":2,"byteIdenticalTranscripts":true,"linesPerRun":290,"sha256":"ea7cedb3501faf901c571619c9643bc8718af885b084d71043c6e197653e2550","explicitSkipsPerRun":15},
+  "product": {
+    "file": "rp1-gpclk-dkms_1.0.0-1_all.deb",
+    "sha256": "951289ee5d0e44cff41b59756f00161aba16f43f1450715ba57c4a3679a2e6b8",
+    "dataMemberCount": 45,
+    "controlMemberCount": 5,
+    "canonicalInventorySha256": "897e005e6bf79f6676e0d763525fb6318c11b9283b57b6677c54128e81618c39"
+  },
+  "qualification": {
+    "file": "rp1-gpclk-dkms-qualification-1.0.0.tar.gz",
+    "sha256": "fa11f86c8a5f1443560d71720e44a4fa1e3d209d64542c0d416e00debc9dea5e",
+    "regularMemberCount": 16,
+    "canonicalInventorySha256": "26e3cc99001365f8b9f73e666d1a780607d68f1a0bd1f175f825fab4c3ac4bd6"
+  },
+  "installedIdentities": {
+    "uapiSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb",
+    "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"
+  },
+  "sidecars": {
+    "COMPATIBILITY.json": "843570cdedb98c1fa00bd9f16a3449f718c425952dab2835b61be9ac64068b08",
+    "PRODUCT-INVENTORY.json": "794af5cd56b036ec3ad46fd9d8cc87767dc0cfcbdf1a38c6a24042719798af9a",
+    "QUALIFICATION.json": "63e3ea40ffaeb41e7f212406edb0984f64558f3f24f11a7880c6379f46de032e",
+    "SHA256SUMS": "3bb3bd3109d20bef223639b756acf0d924f519664ec01bb114661fd58903b925",
+    "TARGET-VERIFICATION.json": "55787f84f8d29f9d7dfbfdcf0f5e4591635ffad9bc56ea5b20365eecfb446a7e",
+    "release-metadata.json": "ed8df9c5455f06b63ea47093b3dad8b502f138dcd42f09ff956c3425fe7a2067"
+  },
+  "validation": {"checksumsVerified":true,"literalInventoriesVerified":true,"qualificationControlsValidated":true,"probeCompiledAgainstProductUapi":true,"probeArchitecture":"aarch64","targetMutationsDefaultDenied":true},
+  "targetContacted": false,
+  "tagCreated": false,
+  "published": false,
+  "nextGate": "final-candidate-target-verification",
+  "result": "reproduced-not-target-verified-not-tagged-not-published"
+}

@@ -27,7 +27,7 @@ def validate(value: dict) -> None:
         raise ValueError("selected release identity differs")
     if value.get("expectedTag") != "v1.0.0":
         raise ValueError("selected release tag differs")
-    if value.get("currentClassification") != "release-candidate-source-selected":
+    if value.get("currentClassification") != "reproduced-release-candidate":
         raise ValueError("release candidate classification differs")
     if value.get("modulePublicationConfirmed") is not False:
         raise ValueError("module publication is not confirmed")
@@ -53,8 +53,12 @@ def validate(value: dict) -> None:
     snapshot = value["candidateSnapshot"]
     if snapshot["validatedDevelopmentPackageSha256"] != "f61286a6e63c2735413a0e86d13c5dc2d91f4581e8a20aab7291234b1991f90b":
         raise ValueError("validated development package digest differs")
-    if snapshot["sourceCommit"] is not None or snapshot["finalPackageSha256"] is not None:
-        raise ValueError("unbuilt final artifact has an invented identity")
+    if snapshot["sourceCommit"] != "a20abc828ec300ad3227a34be7572f4fa28525b2":
+        raise ValueError("final artifact source commit differs")
+    if snapshot["finalPackageSha256"] != "951289ee5d0e44cff41b59756f00161aba16f43f1450715ba57c4a3679a2e6b8":
+        raise ValueError("final product digest differs")
+    if snapshot["qualificationArchiveSha256"] != "fa11f86c8a5f1443560d71720e44a4fa1e3d209d64542c0d416e00debc9dea5e":
+        raise ValueError("qualification archive digest differs")
     if snapshot["consumableByDependentRelease"] is not False:
         raise ValueError("unpublished candidate cannot be consumed")
     evidence = " ".join(" ".join(g["evidence"]) for g in gates)
@@ -72,9 +76,9 @@ def validate(value: dict) -> None:
 
 validate(document)
 by_id = {gate["id"]: gate for gate in document["gates"]}
-for identity in ORDER[:8]:
+for identity in ORDER[:9]:
     assert by_id[identity]["status"] == "passed"
-for identity in ORDER[8:]:
+for identity in ORDER[9:]:
     assert by_id[identity]["status"] == "blocked"
 assert "phase5.54-lifecycle-attempt1-success.json" in " ".join(by_id["gpio4-output-disabled-lifecycle"]["evidence"])
 assert "phase5.54-lifecycle-attempt2-success.json" in " ".join(by_id["gpio20-output-disabled-lifecycle"]["evidence"])
@@ -84,7 +88,8 @@ for mutation in (
     lambda value: value.update(expectedTag="v0.1.0"),
     lambda value: value.update(modulePublicationConfirmed=True),
     lambda value: value["gates"].pop(),
-    lambda value: value["gates"][9].update(status="passed"),
+    lambda value: value["candidateSnapshot"].update(finalPackageSha256="0" * 64),
+    lambda value: value["gates"][10].update(status="passed"),
     lambda value: value["gates"][1].update(requires=[]),
 ):
     invalid = copy.deepcopy(document)
