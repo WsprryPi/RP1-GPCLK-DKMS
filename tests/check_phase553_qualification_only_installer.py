@@ -21,11 +21,11 @@ with tempfile.TemporaryDirectory() as temporary:
     root = pathlib.Path(temporary)
     source = root / "qualification-source"
     shutil.copytree(ROOT, source, ignore=shutil.ignore_patterns(".git", "__pycache__"))
-    include = root / "usr/include/linux"
+    include = root / "usr/src/rp1-gpclk-dkms-0.0.0-phase5.53/include/uapi/linux"
     include.mkdir(parents=True)
     shutil.copyfile(ROOT / "include/uapi/linux/rp1_gpclk.h", include / "rp1_gpclk.h")
     product = root / "usr/src/rp1-gpclk-dkms-0.0.0-phase5.53"
-    product.mkdir(parents=True)
+    product.mkdir(parents=True, exist_ok=True)
     sentinel = product / "dkms.conf"
     sentinel.write_text('PACKAGE_NAME="rp1-gpclk-dkms"\n')
     before = sentinel.read_bytes()
@@ -55,7 +55,7 @@ with tempfile.TemporaryDirectory() as temporary:
     root = pathlib.Path(temporary)
     source = root / "qualification-source"
     shutil.copytree(ROOT, source, ignore=shutil.ignore_patterns(".git", "__pycache__"))
-    include = root / "usr/include/linux"
+    include = root / "usr/src/rp1-gpclk-dkms-0.0.0-phase5.53/include/uapi/linux"
     include.mkdir(parents=True)
     shutil.copyfile(ROOT / "include/uapi/linux/rp1_gpclk.h", include / "rp1_gpclk.h")
 
@@ -88,6 +88,17 @@ with tempfile.TemporaryDirectory() as temporary:
         raise AssertionError("escaping qualification ledger unexpectedly removed")
     except ValueError as error:
         assert "escapes root" in str(error)
+
+with tempfile.TemporaryDirectory() as temporary:
+    root = pathlib.Path(temporary)
+    source = root / "qualification-source"
+    shutil.copytree(ROOT, source, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+    try:
+        installer.install(source, root, runner=lambda argv, **kwargs: None)
+        raise AssertionError("qualification install without product UAPI unexpectedly passed")
+    except ValueError as error:
+        assert "installed product UAPI is absent" in str(error)
+    installer.remove(root)
 
 source = (ROOT / "scripts/install_qualification.py").read_text()
 for prohibited in ('["dkms"', '["modprobe"', '["dtoverlay"', '["reboot"'):

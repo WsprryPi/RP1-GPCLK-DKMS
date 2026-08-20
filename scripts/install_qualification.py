@@ -127,7 +127,10 @@ def install(source: pathlib.Path, root: pathlib.Path, *, runner=subprocess.run) 
             state["ownedFiles"].append({"path": str(destination),
                                          "sha256": digest(destination)})
             atomic_json(ledger, state)
-        include = rooted(root, "/usr/include")
+        include = rooted(root, f"/usr/src/{PACKAGE}-{RELEASE}/include/uapi")
+        uapi = include / "linux/rp1_gpclk.h"
+        if uapi.is_symlink() or not uapi.is_file():
+            raise ValueError("installed product UAPI is absent or unsafe")
         builds = {
             "gate-d-uapi-probe": ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror",
                                   f"-I{include}", str(source / "tools/gate_d_uapi_probe.c")],
