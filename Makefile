@@ -30,6 +30,7 @@ package-check:
 	python3 tests/check_release_1_0_0_repaired_target_success.py
 	python3 tests/check_release_1_0_0_publication_finalizer.py
 	python3 tests/check_release_1_0_0_final_review.py
+	python3 tests/check_release_1_0_0_publication_success.py
 
 release-unit:
 	./scripts/build_release.py "$(if $(OUTPUT_DIR),$(OUTPUT_DIR),dist)" $(if $(DEVELOPMENT),--development,)

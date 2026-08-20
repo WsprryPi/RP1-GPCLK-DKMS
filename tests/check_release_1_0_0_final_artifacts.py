@@ -31,7 +31,7 @@ assert evidence["nextGate"] == "final-candidate-target-verification"
 assert evidence["targetContacted"] is False
 assert evidence["tagCreated"] is False
 assert evidence["published"] is False
-assert roadmap["modulePublicationConfirmed"] is False
+assert roadmap["modulePublicationConfirmed"] is True
 assert snapshot["consumableByDependentRelease"] is False
 
 print("Release 1.0.0 final artifact reproduction: PASS")

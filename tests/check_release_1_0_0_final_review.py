@@ -25,9 +25,9 @@ assert evidence["remoteState"]["publicationAuthenticationPrerequisiteSatisfied"]
 assert evidence["publicationAuthorized"] is False
 assert evidence["published"] is False
 assert evidence["publicDownloadVerified"] is False
-assert roadmap["currentClassification"] == "reviewed-release-candidate-awaiting-publication"
+assert roadmap["currentClassification"] == "published-release-awaiting-fresh-download-verification"
 assert gates["release-review-and-claim-audit"]["status"] == "passed"
-assert gates["module-publication"]["status"] == "blocked"
+assert gates["module-publication"]["status"] == "passed"
 for identity in (evidence["productPackageSha256"], evidence["qualificationArchiveSha256"]):
     assert identity in prompt
 for phrase in ("GitHub CLI", "annotated `v1.0.0` tag", "attach exactly", "do not delete", "treating the release"):

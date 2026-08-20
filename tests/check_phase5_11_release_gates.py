@@ -27,10 +27,10 @@ def validate(value: dict) -> None:
         raise ValueError("selected release identity differs")
     if value.get("expectedTag") != "v1.0.0":
         raise ValueError("selected release tag differs")
-    if value.get("currentClassification") != "reviewed-release-candidate-awaiting-publication":
+    if value.get("currentClassification") != "published-release-awaiting-fresh-download-verification":
         raise ValueError("release candidate classification differs")
-    if value.get("modulePublicationConfirmed") is not False:
-        raise ValueError("module publication is not confirmed")
+    if value.get("modulePublicationConfirmed") is not True:
+        raise ValueError("module publication confirmation differs")
     if value.get("publishedReleaseRequiresPostDownloadVerification") is not True:
         raise ValueError("fresh public-download verification is mandatory")
     if value.get("gateOrder") != ORDER:
@@ -80,9 +80,9 @@ def validate(value: dict) -> None:
 
 validate(document)
 by_id = {gate["id"]: gate for gate in document["gates"]}
-for identity in ORDER[:11]:
+for identity in ORDER[:12]:
     assert by_id[identity]["status"] == "passed"
-for identity in ORDER[11:]:
+for identity in ORDER[12:]:
     assert by_id[identity]["status"] == "blocked"
 assert "phase5.54-lifecycle-attempt1-success.json" in " ".join(by_id["gpio4-output-disabled-lifecycle"]["evidence"])
 assert "phase5.54-lifecycle-attempt2-success.json" in " ".join(by_id["gpio20-output-disabled-lifecycle"]["evidence"])
@@ -90,10 +90,10 @@ assert "phase5.54-package-removal-reinstall-success.json" in " ".join(by_id["pac
 
 for mutation in (
     lambda value: value.update(expectedTag="v0.1.0"),
-    lambda value: value.update(modulePublicationConfirmed=True),
+    lambda value: value.update(modulePublicationConfirmed=False),
     lambda value: value["gates"].pop(),
     lambda value: value["candidateSnapshot"].update(finalPackageSha256="0" * 64),
-    lambda value: value["gates"][12].update(status="passed"),
+    lambda value: value["gates"][13].update(status="passed"),
     lambda value: value["gates"][1].update(requires=[]),
 ):
     invalid = copy.deepcopy(document)

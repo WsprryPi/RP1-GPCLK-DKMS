@@ -23,7 +23,7 @@ assert evidence["finalState"]["scopedKernelWarningsErrorsFailures"] == []
 assert all(evidence["cleanup"].values())
 assert not any(evidence["safety"].values())
 assert evidence["result"] == "pass-final-candidate-target-verified-inactive"
-assert roadmap["currentClassification"] == "reviewed-release-candidate-awaiting-publication"
+assert roadmap["currentClassification"] == "published-release-awaiting-fresh-download-verification"
 assert gates["final-candidate-target-verification"]["status"] == "passed"
 assert gates["release-review-and-claim-audit"]["status"] == "passed"
 assert evidence["nextGate"] == "release-review-and-claim-audit"

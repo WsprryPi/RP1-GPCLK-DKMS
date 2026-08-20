@@ -24,7 +24,7 @@ gates = {gate["id"]: gate for gate in roadmap["gates"]}
 assert gates["semantic-version-selection"]["status"] == "passed"
 assert gates["final-artifact-reproduction"]["status"] == "passed"
 assert gates["final-candidate-target-verification"]["status"] == "passed"
-assert roadmap["modulePublicationConfirmed"] is False
+assert roadmap["modulePublicationConfirmed"] is True
 assert decision["tagCreated"] is False
 assert decision["artifactConstructed"] is False
 assert decision["targetContacted"] is False
