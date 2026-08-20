@@ -33,3 +33,27 @@ The Phase 5.53 archive administrator and product ledger are historical. A
 target that has that development installation requires one separately
 authorized, verified reset before the Debian package is installed; the Debian
 package must not guess at or silently remove those unowned files.
+
+## Phase 5.54 validation status
+
+The exact Debian revision `0.0.0~phase5.54-2`, SHA-256
+`f61286a6e63c2735413a0e86d13c5dc2d91f4581e8a20aab7291234b1991f90b`,
+has passed the following on `wspr5` running stock kernel
+`6.18.34+rpt-rpi-2712`:
+
+- inactive package installation with four supported stock-kernel DKMS builds;
+- one GPIO4 output-disabled load, bind, query/acquire/release, unbind, and
+  unload lifecycle;
+- one separately controlled GPIO20 output-disabled lifecycle; and
+- one complete package removal, residue audit, and reinstall.
+
+Both overlay files are installed together and remain inactive until an
+administrator selects one route. Changing the later route selection does not
+require reinstalling the module package.
+
+This evidence does not qualify `live_output=1`, clock or rate changes, DMA,
+GPIO output, timing behavior, transmission, RF, arbitrary matching kernels, or
+application integration. Phase 5.54 remains a development identity until a
+semantic release version is selected, final artifacts are reproduced and
+reviewed, the matching Git tag and release are explicitly authorized and
+published, and fresh public downloads pass identity verification.

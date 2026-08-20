@@ -12,13 +12,22 @@ import subprocess
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+dkms_text = (ROOT / "dkms.conf").read_text()
+if 'PACKAGE_VERSION="#MODULE_VERSION#"' in dkms_text:
+    subprocess.run(
+        ["python3", str(ROOT / "tests/check_debian_packaging.py")],
+        check=True,
+    )
+    print("Phase 5.54 Debian packaging route: PASS")
+    raise SystemExit(0)
+
 layout = json.loads((ROOT / "release/release-layout-v1.json").read_text())
 qualification_layout = json.loads((ROOT / "release/qualification-layout-v1.json").read_text())
 release = layout["release"]
 
 assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+-[0-9A-Za-z][0-9A-Za-z.-]*", release)
 assert layout["expectedTag"] == f"v{release}"
-assert f'PACKAGE_VERSION="{release}"' in (ROOT / "dkms.conf").read_text()
+assert f'PACKAGE_VERSION="{release}"' in dkms_text
 assert f'RP1_GPCLK_MODULE_VERSION "{release}"' in (ROOT / "include/rp1_gpclk/version.h").read_text()
 assert release in (ROOT / f"docs/releases/{release}-security.md").read_text()
 assert release in (ROOT / f"docs/releases/{release}-behavior.md").read_text()
