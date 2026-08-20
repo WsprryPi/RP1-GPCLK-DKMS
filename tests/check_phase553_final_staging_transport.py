@@ -59,6 +59,11 @@ with tempfile.TemporaryDirectory() as temporary:
     for item in envelope["inputFiles"]:
         path = pathlib.Path(item["path"].replace(base, str(stage)))
         assert path.is_file() and not path.is_symlink() and sha(path) == item["sha256"]
+    for field in ("probeArgv", "qualificationInstallArgv", "qualificationRecoveryArgv",
+                  "productRollbackArgv"):
+        staged_paths = [value for value in same[field] if value.startswith(base + "/")]
+        assert staged_paths and all(pathlib.Path(value.replace(base, str(stage))).is_file()
+                                    for value in staged_paths)
     driver = stage / f"extracted/rp1-gpclk-dkms-qualification-0.0.0-phase5.53/scripts/gate_d_same_version_driver.py"
     assert driver.is_file() and same["qualificationArchiveSha256"] == \
         "916a5522e3998ae43f203c217fedce90ad8d4c2d52ae0bd4491407e3cf17211d"

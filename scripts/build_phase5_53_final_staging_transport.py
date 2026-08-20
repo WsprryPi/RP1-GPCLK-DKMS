@@ -16,7 +16,7 @@ STAGE = "phase5.53-4e7a64a0ca35"
 PREFIX = f"/home/pi/gate-d-inputs/{STAGE}/"
 ENVELOPE = ROOT / "release/gate-d-pre-root-bootstrap-envelope-phase5.53-final-v1.json"
 SAME_VERSION = ROOT / "release/gate-d-same-version-transition-phase5.53-final-v1.json"
-SEALED_ENVELOPE = ENVELOPE.name
+SEALED_ENVELOPE = f"control-set/release/{ENVELOPE.name}"
 SEALED_SAME_VERSION = SAME_VERSION.name
 PRODUCT = "rp1-gpclk-dkms-0.0.0-phase5.53.tar.gz"
 QUALIFICATION = "rp1-gpclk-dkms-qualification-0.0.0-phase5.53.tar.gz"
@@ -113,6 +113,7 @@ def build(release_dir: pathlib.Path, output: pathlib.Path,
                 (ENVELOPE, SEALED_ENVELOPE, "separately-sealed-envelope"),
                 (SAME_VERSION, SEALED_SAME_VERSION, "separately-sealed-same-version-plan")):
             destination = stage / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(source.read_bytes())
             owners.append({"path": PREFIX + name, "owner": owner,
                            "source": f"repository/release/{name}",

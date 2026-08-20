@@ -20,11 +20,12 @@
   "reproduction": {
     "generationCount": 2,
     "byteIdentical": true,
-    "transportSha256": "c33bf96b823325998e50c411a1c60d18a1ef9c0db10a6c3c2af69fb02f6e3ace",
-    "sourceMapSha256": "4b9b031725d922e399e7d320640f2ae2c851a330b7772f0d5743bf632b004196"
+    "transportSha256": "f8ea112c2b3ff1fe18c8d48dc54f4ee8a5f41427595a163ddde2907e11c9a73b",
+    "sourceMapSha256": "cdee6830d11baf705a607d9dae2610f56bdd98d79d399781137f6ce52ab5beb2"
   },
   "offlineExercise": {
     "allEnvelopeInputsValidated": true,
+    "allSameVersionStagedArgvPathsResolved": true,
     "sameVersionDriverReadOnlyValidationPassed": true,
     "preRootEntrypointReadOnlyValidationPassed": true,
     "targetContacted": false

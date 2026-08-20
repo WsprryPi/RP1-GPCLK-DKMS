@@ -16,8 +16,9 @@ assert closure == {"envelopeInputCount": 63, "releaseInputCount": 8,
     "transportRegularFileCount": 151, "transportDirectoryCountIncludingRoot": 31}
 assert value["reproduction"]["generationCount"] == 2
 assert value["reproduction"]["byteIdentical"] is True
-assert value["reproduction"]["transportSha256"] == "c33bf96b823325998e50c411a1c60d18a1ef9c0db10a6c3c2af69fb02f6e3ace"
+assert value["reproduction"]["transportSha256"] == "f8ea112c2b3ff1fe18c8d48dc54f4ee8a5f41427595a163ddde2907e11c9a73b"
 assert value["offlineExercise"] == {"allEnvelopeInputsValidated": True,
+    "allSameVersionStagedArgvPathsResolved": True,
     "sameVersionDriverReadOnlyValidationPassed": True,
     "preRootEntrypointReadOnlyValidationPassed": True, "targetContacted": False}
 print("Phase 5.53 final staging-transport successor evidence: PASS")
