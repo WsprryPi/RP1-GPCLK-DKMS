@@ -2,59 +2,65 @@
 
 # Debian DKMS packaging
 
-Phase 5.54 uses the standard Debian DKMS lifecycle. Build the package with
-`dpkg-buildpackage`; install, upgrade, or remove it with the ordinary Debian
-package tools. `dh-dkms` generates the DKMS maintainer-script integration.
+Version 1.0.0 uses the standard Debian DKMS lifecycle. Build the package with
+`dpkg-buildpackage`; install, upgrade, or remove it with ordinary Debian package
+tools. `dh-dkms` provides the DKMS maintainer-script integration.
 
-The `1.0.0` product package owns only:
+The product package owns only:
 
-- the module build closure under
-  `/usr/src/rp1-gpclk-dkms-1.0.0`, including the canonical UAPI;
+- the module build closure under `/usr/src/rp1-gpclk-dkms-1.0.0`, including
+  the canonical UAPI;
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo`; and
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo`.
 
-The maintainer scripts copy those two canonical overlays into
-`/boot/firmware/overlays` without making `dpkg` create hard-link backups on
-the boot filesystem. Installation refuses to replace a different existing
-file, and removal deletes only a byte-identical installed copy. Both overlays
-remain inactive. The package does not edit
-`config.txt`, apply an overlay, or load the module. Qualification tools,
-controls, evidence, and ledgers are not package members. A separately
-authorized qualification run compiles its UAPI probe from the installed
-versioned DKMS source closure.
+The maintainer scripts copy the canonical overlays into
+`/boot/firmware/overlays` without creating hard-link backups on the boot
+filesystem. Installation refuses to replace a different existing file, and
+removal deletes only a byte-identical installed copy.
+
+Both overlays remain inactive. The package does not edit `config.txt`, apply an
+overlay, select a route, load the module, enable output, or reboot. Installing
+the package therefore does not authorize or initiate GPIO activity.
 
 `BUILD_EXCLUSIVE_KERNEL` limits automatic builds to stock Raspberry Pi kernel
 package identities ending in `+rpt-rpi-2712` or `+rpt-rpi-v8`. DKMS skips
-other installed header trees, including historical custom kernels, with its
-standard exit-77 exclusion. This name filter is a build-scope guard, not a
-compatibility or qualification claim for every matching kernel.
+other installed header trees using its standard exclusion behavior. This name
+filter limits build scope; it does not qualify every matching kernel.
 
-The Phase 5.53 archive administrator and product ledger are historical. A
-target that has that development installation requires one separately
-authorized, verified reset before the Debian package is installed; the Debian
-package must not guess at or silently remove those unowned files.
+## Install
 
-## Phase 5.54 validation status
+Install the downloaded package with APT so dependencies are resolved:
 
-The Phase 5.54 development revision `0.0.0~phase5.54-2`, SHA-256
-`f61286a6e63c2735413a0e86d13c5dc2d91f4581e8a20aab7291234b1991f90b`,
-has passed the following on `wspr5` running stock kernel
-`6.18.34+rpt-rpi-2712`:
+```sh
+sudo apt install ./rp1-gpclk-dkms_1.0.0-1_all.deb
+```
 
-- inactive package installation with four supported stock-kernel DKMS builds;
-- one GPIO4 output-disabled load, bind, query/acquire/release, unbind, and
-  unload lifecycle;
-- one separately controlled GPIO20 output-disabled lifecycle; and
-- one complete package removal, residue audit, and reinstall.
+After installation, inspect DKMS status and the installed files. Do not select
+an overlay or load the module until the exact kernel, firmware, device tree,
+route, signing state, and compatibility policy have been reviewed.
 
-Both overlay files are installed together and remain inactive until an
-administrator selects one route. Changing the later route selection does not
-require reinstalling the module package.
+## Remove
 
-That development-package evidence does not by itself qualify the not-yet-built
-`1.0.0-1` package. It also does not qualify `live_output=1`, clock or rate
-changes, DMA, GPIO output, timing behavior, transmission, RF, arbitrary
-matching kernels, or application integration. Version `1.0.0` and expected tag
-`v1.0.0` are selected, but final artifacts must still be reproduced from the
-committed version source, verified at their exact identities, reviewed,
-explicitly tagged and published, and checked again after fresh public download.
+Remove the package with the normal package manager:
+
+```sh
+sudo apt remove rp1-gpclk-dkms
+```
+
+Removal does not deactivate an applied overlay, edit boot configuration,
+unload an active module, delete administrator signing keys, or repair an
+unknown runtime state. Establish an inactive, attributable state before package
+removal. A foreign or modified overlay file is retained for administrator
+review rather than deleted.
+
+## Build from source
+
+From a tagged source checkout:
+
+```sh
+dpkg-buildpackage -us -uc -b
+```
+
+The resulting package is a new artifact. Building it successfully establishes
+only build compatibility and does not inherit qualification from the published
+package.

@@ -13,7 +13,6 @@ SOURCE = "\n".join(
     p.read_text(encoding="utf-8") for p in (ROOT / "src").glob("*.c")
     if p.name != "rp1_gpclk_execution.c"
 )
-PROMPT = (ROOT / "docs/contracts/phase3b-clock-disabled-route-closure-execution-prompt.md").read_text(encoding="utf-8")
 
 for asset in (
     "overlays/rp1-gpclk-gpio4.dts",
@@ -72,8 +71,6 @@ for token in ("expected_route", "expected_pin", "wsprrypi,pin", "clock[1] != 33"
               "0x40174024", "0x40158000"):
     if token not in DT_CHECK:
         raise SystemExit(f"Phase 3B DT checker missing {token}")
-if "No findings yet" in PROMPT:
-    raise SystemExit("Phase 3B findings were not reinjected")
 if "phase2e-gpio4-clock-disabled" in SOURCE:
     raise SystemExit("runtime retains GPIO4-only compatibility identity")
 

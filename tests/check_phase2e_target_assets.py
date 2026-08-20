@@ -16,7 +16,6 @@ FIXTURES = "\n".join(
     path.read_text(encoding="utf-8")
     for path in sorted((ROOT / "overlays/fixtures").glob("*.dts"))
 )
-PROMPT = (ROOT / "docs/contracts/phase2e-clock-disabled-target-execution-prompt.md").read_text(encoding="utf-8")
 RUNNER = (ROOT / "tests/phase2e-target-test.sh").read_text(encoding="utf-8")
 DT_CHECK = (ROOT / "tests/phase2e_dt_identity.py").read_text(encoding="utf-8")
 
@@ -62,9 +61,6 @@ if 'pins = "gpio20"' in OVERLAY:
 for fixture in ("conflict", "dma-conflict", "missing-active", "bad-dma"):
     if fixture not in FIXTURES:
         raise SystemExit(f"missing negative fixture {fixture}")
-if "Not applicable on this identity" not in PROMPT:
-    raise SystemExit("signing-policy non-applicability is not bounded")
-
 for token in (
     "[[ $(hostname) == wspr5 ]]",
     "assert_safe baseline",

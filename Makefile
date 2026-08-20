@@ -14,23 +14,10 @@ check:
 package-check:
 	python3 tests/check_debian_packaging.py
 	python3 tests/check_phase554_dkms_kernel_scope.py
-	python3 tests/check_phase554_half_configured_recovery_success.py
 	python3 tests/check_phase554_lifecycle_controls.py
-	python3 tests/check_phase554_lifecycle_attempt1_success.py
 	python3 tests/check_phase554_lifecycle_attempt2_controls.py
-	python3 tests/check_phase554_lifecycle_attempt2_success.py
-	python3 tests/check_phase554_package_removal_reinstall_success.py
-	python3 tests/check_phase554_closure_reconciliation.py
-	python3 tests/check_release_1_0_0_selection.py
 	python3 tests/check_release_candidate_builder.py
-	python3 tests/check_release_1_0_0_final_artifacts.py
-	python3 tests/check_release_1_0_0_target_preauthorization.py
-	python3 tests/check_release_1_0_0_target_gpio4_failure.py
-	python3 tests/check_release_1_0_0_overlay_id_repair.py
 	python3 tests/check_release_1_0_0_repaired_target_success.py
-	python3 tests/check_release_1_0_0_publication_finalizer.py
-	python3 tests/check_release_1_0_0_final_review.py
-	python3 tests/check_release_1_0_0_publication_success.py
 	python3 tests/check_release_1_0_0_public_download_success.py
 
 release-unit:

@@ -1,8 +1,0 @@
-{
-  "administratorInvoked": true,
-  "checkpoint": "install",
-  "failure": "CalledProcessError",
-  "liveOutput": false,
-  "operationId": "phase5.26-pre-root-transition",
-  "status": "recovery-required"
-}

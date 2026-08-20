@@ -106,10 +106,9 @@ for path in ROOT.rglob("*"):
     if path.is_file() and ".git" not in path.parts:
         assert path.suffix.lower() not in {".key", ".pem", ".p12", ".pfx", ".der"}, path
 
-prompt = (ROOT / "docs/contracts/phase5-7-signing-contract-execution-prompt.md").read_text()
 operator = (ROOT / "docs/operator/signing.md").read_text()
-for phrase in ("no shared private signing key", "every DKMS build", "wrong kernel", "shared with another module"):
-    assert phrase.lower() in (prompt + operator).lower()
+for phrase in ("no shared private signing key", "sign every build", "wrong kernel", "shared with another module"):
+    assert phrase.lower() in operator.lower()
 for prohibited in ("modprobe ", "dtoverlay ", "/dev/mem"):
     assert prohibited not in (ROOT / "scripts/signing_policy.py").read_text()
 

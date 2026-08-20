@@ -5,12 +5,11 @@
 ## Authority and status
 
 The byte-authoritative header is `include/uapi/linux/rp1_gpclk.h`. This
-document defines its validation and state semantics. Phase 3 freezes ABI v1 at
-the exact byte identity recorded in `uapi-identity.json`; see Decision 0006.
-Phase 4A implements every frozen ABI v1 operation. Submission remains
-administratively fail-closed unless the immutable-at-load live-output gate and
-the exact compatibility policy both permit it. Implemented-operation
-capabilities therefore remain distinct from `LIVE_ELIGIBLE`.
+document defines its validation and state semantics. ABI v1 layouts and numeric
+assignments are stable. Submission remains administratively fail-closed unless
+the immutable-at-load live-output gate and the exact compatibility policy both
+permit it. Implemented-operation capabilities therefore remain distinct from
+`LIVE_ELIGIBLE`.
 
 ## Common validation
 
@@ -45,8 +44,8 @@ or 12 mA values.
 ## Acquisition and work
 
 `ACQUIRE` verifies `expected_route` and all `required_capabilities`. It returns
-a new opaque lease ID only after exclusive ownership is established. The
-future implementation must not return partial ownership.
+a new opaque lease ID only after exclusive ownership is established and does
+not return partial ownership.
 
 Both submission commands point to a tone array. Each tone contains lower and
 upper unsigned Q16 divider values and dither counts. Both counts must be

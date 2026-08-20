@@ -2,13 +2,13 @@
 
 # Security policy
 
-RP1-GPCLK-DKMS is pre-release engineering work. No version is currently
-advertised as supported or qualified for production use.
+Version 1.0.0 is the current published release. Its qualification is limited to
+the systems and behaviors stated in the release notes; publication does not
+make every Raspberry Pi kernel or physical installation supported.
 
-Please report a suspected vulnerability privately through GitHub's security
-advisory feature for `WsprryPi/RP1-GPCLK-DKMS` once the repository is
-published. Do not include sensitive details in a public issue before a private
-reporting channel is available.
+Report a suspected vulnerability privately through GitHub's security advisory
+feature for `WsprryPi/RP1-GPCLK-DKMS`. Do not include sensitive details in a
+public issue.
 
 Security-sensitive areas include:
 

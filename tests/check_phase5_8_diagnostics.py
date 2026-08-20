@@ -77,9 +77,7 @@ for prohibited in ("modprobe","dtoverlay","dkms add","dkms build","dkms install"
     assert prohibited not in source
 for required in ("O_RDONLY","QUERY_IOCTL","permission-denied","journalctl","cleanupFaultLatch"):
     assert required in source
-prompt=(ROOT/"docs/contracts/phase5-8-diagnostics-contract-execution-prompt.md").read_text()
 operator=(ROOT/"docs/operator/diagnostics.md").read_text()
-assert "final adversarial pass found no remaining objective issue" in " ".join(prompt.split())
-assert "does not prove absence" in (prompt+operator)
+assert "does not prove absence" in operator
 assert commands and all(command[0] in {"dpkg-query","dkms","modinfo","journalctl"} for command in commands)
 print("Phase 5.8 diagnostics contracts: PASS")

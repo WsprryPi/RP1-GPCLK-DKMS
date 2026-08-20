@@ -2,216 +2,142 @@
 
 # RP1 GPCLK DKMS
 
-`RP1-GPCLK-DKMS` is the planned stock-kernel, out-of-tree Linux module for
-bounded control of Raspberry Pi RP1 GPCLK0 resources on behalf of WsprryPi.
-It is intended to be distributed as source and compiled locally for the
-operator's installed kernel through DKMS.
+`RP1-GPCLK-DKMS` provides a stock-kernel, out-of-tree Linux module for bounded
+control of the Raspberry Pi RP1 GPCLK0 peripheral. It is the kernel component
+used by WsprryPi on Raspberry Pi 5-family hardware and is distributed as source
+that DKMS builds for the operator's installed kernel.
 
-The project exists so WsprryPi can support Raspberry Pi 5-family RP1 hardware
-without distributing or maintaining a custom kernel. The stock Raspberry Pi
-`clk-rp1` driver remains installed and authoritative for ordinary CPU-side
-clock operations.
+The module supplements the stock Raspberry Pi `clk-rp1` driver. It does not
+replace the kernel clock provider, require a custom kernel, or expose arbitrary
+MMIO, DMA channels, register writes, or GPIO routes to userspace.
 
-## Current status
+## Release status
 
-Phase 2A public contracts and a kernel source skeleton are implemented. Phase
-2B adds a portable lifecycle core and deterministic host tests for
-ownership, leases, generations, bounded request validation, finite work,
-STOP/RELEASE, stable terminal outcomes, stale-event rejection, and cleanup
-faults. Phase 2C adds a platform driver, reference-counted misc endpoint, and
-fail-closed discovery of the GPCLK0 DT, clock, pinctrl, and DMAengine resources.
-It derives and DMA-maps the divider target from the provider resource.
-Phase 2D adds an explicit prerelease module version, DKMS build configuration,
-and identity-specific representative stock Raspberry Pi kernel-header build
-evidence. Phase 2E adds the GPIO4 safe/default overlay, exact resource and UAPI
-identity checks, and a bounded target lifecycle runner. The complete
-clock-disabled matrix passed on the recorded `wspr5` Pi 5 / stock
-`6.18.34+rpt-rpi-2712` identity; this closes the Phase 2 gate for that exact
-identity while retaining the `Compatible-unqualified` compatibility ceiling.
-Phase 3 now injects GPIO20 as the second independently allowlisted route,
-requires exact route/pin pairs, adds a route-specific safe/default overlay, and
-freezes UAPI ABI 1 plus the first overlay/name/manifest contracts. Phase 3B's
-complete clock-disabled target matrix passed independently for GPIO4 and
-GPIO20 on the recorded `wspr5` identity. This closes the Phase 3 target gate
-for that exact identity while retaining the `Compatible-unqualified` ceiling;
-neither route inherits evidence from the other. Phase 4A implements the bounded
-stock-kernel submission, state, STOP, DMA-pacing, exact-readback, and restoration
-path behind an immutable-at-load `live_output` gate. Its complete two-route
-clock-disabled regression passed on the same exact `wspr5` identity with the
-gate false.
+Version 1.0.0 is published. It provides:
 
-`QUERY`, `ACQUIRE`, `SUBMIT_WSPR`, `SUBMIT_EVENTS`, `STOP`, `GET_STATE`, and
-`RELEASE` now have production dispatch. With `live_output=false`, submission is
-rejected before plan allocation or any pinctrl, clock, tick, or DMA mutation;
-`LIVE_ELIGIBLE` is not reported. The implementation and build evidence do not
-qualify GPIO output, timing, a mode, or RF, and do not generalize to another
-kernel, DT, firmware, route, or host. Phase 5 includes a guarded
-output-disabled DKMS install transaction and an offline-tested Gate D
-coordinator for upgrade, downgrade, rollback, checkpoint recovery,
-exact-version removal, complete and repeated removal, reinstall,
-output-disabled UAPI query/acquire/release, and explicit unbind/rebind. Its
-concrete execution instance remains fail-closed and non-executable. Frozen
-`0.0.0-phase5.2` is retained as the genuine predecessor. Phase 5.53 is
-historical experimental-archive evidence. Phase 5.54 produced the conventional
-Debian DKMS development candidate. Its exact `-2` package has passed inactive
-installation, separate output-disabled GPIO4 and GPIO20 lifecycle attempts,
-and complete removal followed by reinstall on the representative Raspberry Pi
-5. These results qualify only the tested inactive administrative paths; no live
-GPIO output, timing, transmission, or RF claim is made.
+- a conventional Debian DKMS source package;
+- separately allowlisted GPIO4 and GPIO20 device-tree overlays;
+- a bounded, versioned userspace API;
+- fail-closed hardware, kernel, route, resource, and compatibility checks;
+- exclusive ownership, finite work, cancellation, and cleanup handling; and
+- read-only diagnostics plus package lifecycle tooling.
 
-Phase 5.2 adds a deterministic, machine-verified release unit and an explicit
-output-disabled DKMS, signing, overlay, and diagnostic tool surface. The
-release compatibility manifest is populated deny-by-default with no positive
-runtime entries; Phase 4 evidence belongs to an earlier exact module identity.
-See the [release-unit contract](docs/contracts/phase5-2-release-unit-execution-prompt.md)
-and [operator lifecycle guide](docs/operator/lifecycle.md).
+The release was validated on the recorded Raspberry Pi 5 stock-kernel
+configuration for inactive installation, output-disabled administration on
+both routes, removal, and reinstall. Qualification
+does not automatically extend to a different kernel, firmware, device tree,
+route, host, or physical installation. See the
+[1.0.0 release notes](docs/releases/1.0.0-behavior.md) for the precise claim.
 
-Phase 5.8 freezes the bounded read-only diagnostic contract and its six
-operator-visible outcome categories. Diagnostics report package, kernel,
-module, endpoint, UAPI, manifest, route, enrollment, cleanup, hardware
-identity, scoped kernel-log, and interrupted-transaction residue evidence;
-they never load, configure, repair, or operate hardware. See the
-[diagnostics guide](docs/operator/diagnostics.md).
+## Safety
 
-The comprehensive [Phase 5 exit-gate execution prompt](docs/contracts/phase5-exit-gate-execution-prompt.md)
-audits the remaining contract-to-implementation and external evidence gates.
-Its [adversarial assessment](docs/reviews/phase5-exit-gate-adversarial-assessment.md)
-records why passing offline policy tests is not yet a Phase 5 exit.
+Installing the package does not select an overlay, edit boot configuration,
+load the module, enable a clock, change GPIO state, or authorize transmission.
+Both overlays are installed inactive. Route selection and live operation are
+separate administrative decisions that must satisfy the compatibility and
+safety policy for the exact system.
 
-Nothing in this repository generally authorizes module installation, target
-binding, system configuration, GPIO operation, transmission, or RF activity;
-each target task still requires explicit bounded authority.
+Unknown or unsupported hardware, kernels, firmware, device trees, routes,
+resources, signing state, compatibility state, or cleanup state fail closed.
+There is no `/dev/mem`, raw userspace MMIO, custom-kernel, arbitrary-route, or
+alternate-transmitter fallback.
 
-Phase 5.54 replaces the experimental Phase 5.53 product installer with a
-conventional Debian `rp1-gpclk-dkms` package. The package owns the versioned
-DKMS source tree and both inactive overlays; standard `dpkg` and `dkms`
-maintainer scripts own installation, upgrade, and removal. Release-
-qualification tools remain a separate artifact and are not installed with the
-product package. See [Debian packaging](docs/operator/debian-packaging.md).
-The active machine-readable roadmap is
-[`release/release-integration-gates-v1.json`](release/release-integration-gates-v1.json).
-The initial semantic release is selected as `1.0.0` with expected tag
-`v1.0.0`. Final artifact reproduction, exact-candidate verification,
-publication, fresh-download verification, and consuming-repository integration
-remain separate gates.
+## Installation
 
-## Intended scope
+Download the Debian package from the
+[v1.0.0 release](https://github.com/WsprryPi/RP1-GPCLK-DKMS/releases/tag/v1.0.0)
+and install it with the normal Debian package tools:
 
-This project will own:
+```sh
+sudo apt install ./rp1-gpclk-dkms_1.0.0-1_all.deb
+```
 
-- the loadable RP1 GPCLK kernel-module source;
-- Kbuild and DKMS packaging;
-- route-specific device-tree overlay sources;
-- the canonical bounded and versioned UAPI;
-- compatibility and provenance metadata;
-- module signing, installation, update, rollback, removal, and diagnostics;
-- kernel-header, lifecycle, static-contract, and target safety tests; and
-- tagged source releases with checksums.
+DKMS builds the module for eligible installed Raspberry Pi kernel headers. The
+package installs the GPIO4 and GPIO20 overlays but leaves both inactive. Review
+the [package lifecycle guide](docs/operator/debian-packaging.md) before making
+any route, boot, module, or signing changes.
 
-The allowlisted routes are GPIO4 and GPIO20. They share route-neutral module
-machinery but use separate one-route overlays and compatibility evidence.
-Neither route inherits the other's qualification.
+To build the Debian package from a tagged source checkout:
 
-## Project boundary
+```sh
+dpkg-buildpackage -us -uc -b
+```
 
-- [`WsprryPi/RP1-GPCLK-DKMS`](https://github.com/WsprryPi/RP1-GPCLK-DKMS)
-  owns kernel-facing implementation and releases.
-- [`WsprryPi/WSPR-Transmitter`](https://github.com/WsprryPi/WSPR-Transmitter)
-  owns its userspace adapter and translation into the UAPI.
-- [`WsprryPi/WsprryPi`](https://github.com/WsprryPi/WsprryPi) owns backend
-  policy, configuration, scheduling, installer orchestration, operator
-  workflow, and product qualification.
+Building from source requires the Debian packaging toolchain, DKMS development
+support, and device-tree compiler. A package build is compatibility evidence
+only; it does not qualify installation or hardware behavior on a target.
 
-The projects coordinate through tagged artifacts, a canonical UAPI, explicit
-compatibility manifests, and cross-repository checks. WsprryPi must not build
-from this project's moving default branch.
+## Interface
 
-See the [module engineering contract](docs/contracts/rp1-gpclk-dkms-module-contract.md)
-and the upstream [WsprryPi product contract](https://github.com/WsprryPi/WsprryPi/blob/eb1c933ec20147aae987f06a2b8e4f1d988c00f6/docs/research/rp1-gpclk-stock-kernel-dkms-contract.md).
+The byte-authoritative userspace header is
+[`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The
+[UAPI documentation](docs/contracts/uapi-v1.md) describes request validation,
+capabilities, ownership, submission, state, cancellation, and additive
+evolution rules.
 
-Phase 2 preparation is documented in the
-[historical evidence index](docs/evidence/historical-evidence-index.md),
-[source provenance policy](docs/development/provenance.md),
-[UAPI conceptual baseline](docs/development/uapi-baseline.md),
-[compatibility identities](docs/development/compatibility-identities.md), and
-[historical artifact inventory](docs/development/historical-artifact-inventory.md).
-The first accepted architecture decision is to
-[start a clean DKMS UAPI](docs/development/decisions/0001-clean-dkms-uapi.md).
-The Phase 2A choices are frozen in
-[Decision 0002](docs/development/decisions/0002-phase2a-public-contracts.md),
-and the exact bounded slice is preserved in the
-[Phase 2A execution prompt](docs/contracts/phase2a-public-contracts-execution-prompt.md).
-The Phase 2B lifecycle choices are recorded in
-[Decision 0003](docs/development/decisions/0003-phase2b-portable-lifecycle.md),
-with its bounded work preserved in the
-[Phase 2B execution prompt](docs/contracts/phase2b-portable-lifecycle-execution-prompt.md).
-Its independent offline result is recorded in the
-[Phase 2B adversarial assessment](docs/reviews/phase2b-adversarial-assessment.md).
-The Phase 2C slice is preserved in its
-[execution prompt](docs/contracts/phase2c-kernel-resource-integration-execution-prompt.md)
-and [Decision 0004](docs/development/decisions/0004-phase2c-resource-integration.md).
-Its bounded offline result is recorded in the
-[Phase 2C adversarial assessment](docs/reviews/phase2c-adversarial-assessment.md).
-The Phase 2D build slice is preserved in its
-[execution prompt](docs/contracts/phase2d-representative-build-qualification-execution-prompt.md).
-Its exact build identities and bounded result are in the
-[representative build evidence](docs/evidence/phase2d-representative-build-qualification.md),
-with the separate
-[Phase 2D adversarial assessment](docs/reviews/phase2d-adversarial-assessment.md).
-The separately authorized target slice is preserved in the
-[Phase 2E execution prompt](docs/contracts/phase2e-clock-disabled-target-execution-prompt.md),
-with its exact [target evidence](docs/evidence/phase2e-clock-disabled-target.md),
-[Decision 0005](docs/development/decisions/0005-phase2e-gpio4-clock-disabled.md),
-and independent
-[Phase 2E adversarial assessment](docs/reviews/phase2e-adversarial-assessment.md).
-The Phase 3 implementation and interface freeze are preserved in
-the [Phase 3 execution prompt](docs/contracts/phase3-gpio20-interface-freeze-execution-prompt.md),
-[GPIO20 route evidence](docs/development/gpio20-route-evidence.md),
-[Decision 0006](docs/development/decisions/0006-phase3-interface-freeze.md),
-and [Phase 3 adversarial assessment](docs/reviews/phase3-adversarial-assessment.md).
-The separately authorized closure is recorded in the
-[Phase 3B execution prompt](docs/contracts/phase3b-clock-disabled-route-closure-execution-prompt.md),
-[target evidence](docs/evidence/phase3b-clock-disabled-route-closure.md), and
-[Phase 3B adversarial assessment](docs/reviews/phase3b-adversarial-assessment.md).
+The API supports:
 
-The canonical header is
-[`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The strict,
-deny-by-default compatibility format is
-[`schema/rp1-gpclk-compatibility-manifest-v1.schema.json`](schema/rp1-gpclk-compatibility-manifest-v1.schema.json).
-Run the offline contract suite with `make check`. Building the module source
-requires an explicitly supplied local kernel build directory, for example
-`make KERNEL_BUILD=/path/to/kernel/build`; it is never installed or loaded by
-the repository build.
+- `QUERY` for capabilities and compatibility state;
+- `ACQUIRE` and `RELEASE` for exclusive ownership;
+- bounded WSPR and event-program submission;
+- `GET_STATE` for stable runtime and terminal state; and
+- `STOP` for generation-specific bounded cancellation.
 
-## Safety model
+GPIO4 and GPIO20 are independent administrative routes. Qualification or
+selection of one route never transfers to the other.
 
-The design is fail-closed. Unknown or unsupported kernel, hardware, device-tree,
-resource, signing, route, capability, or cleanup states must leave RP1 output
-unavailable. It will not fall back to `/dev/mem`, raw userspace MMIO, a custom
-kernel, or another physical transmitter backend.
+## Diagnostics and administration
 
-The stock-kernel module cannot reproduce the stronger provider-private lease
-used by the historical custom-kernel proof of concept. Cooperative kernel
-resource ownership and explicit operator exclusions reduce risk but cannot
-prove the absence of direct-MMIO or uncoordinated interference.
+`rp1-gpclk-diagnostics` produces a bounded, read-only JSON report without
+installing, loading, binding, repairing, or operating hardware. See
+[Read-only diagnostics](docs/operator/diagnostics.md).
 
-## Licensing
-
-Original project work is MIT licensed wherever that is practical. Kernel-facing
-module source is dual-licensed under `GPL-2.0-only OR MIT`, and the module will
-declare `MODULE_LICENSE("Dual MIT/GPL")`. Userspace-visible UAPI headers are
-intended to use `(GPL-2.0-only WITH Linux-syscall-note) OR MIT`.
-
-See [LICENSE.md](LICENSE.md) for the authoritative per-file policy. Third-party
-or adapted material retains its original license and attribution.
+Module signing and trust enrollment remain administrator-owned. The package
+does not ship a private key or weaken the host's signing policy. See
+[Module signing](docs/operator/signing.md).
 
 ## Development
 
-Read [AGENTS.md](AGENTS.md) and the module contract before working in this
-project. Ordinary development and validation must remain offline,
-unprivileged, hardware-free, and safe to repeat unless an exact target action
-is separately authorized.
+Ordinary development and validation are offline, unprivileged, hardware-free,
+and safe to repeat:
 
-Compilation demonstrates build compatibility only. It does not qualify module
-loading, GPIO timing, coexistence, cleanup, transmission, RF behavior, or an
-operator installation path.
+```sh
+make check
+make package-check
+```
+
+Build the module against an explicitly selected local kernel build tree:
+
+```sh
+make KERNEL_BUILD=/path/to/kernel/build
+```
+
+Compilation proves build compatibility only. It does not qualify module
+loading, GPIO behavior, timing, coexistence, cleanup, transmission, RF, or an
+operator installation.
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md), the
+[module contract](docs/contracts/rp1-gpclk-dkms-module-contract.md), and
+[LICENSE.md](LICENSE.md) before contributing.
+
+## Project boundary
+
+- This repository owns the kernel module, canonical UAPI, overlays, DKMS
+  packaging, module lifecycle tooling, compatibility metadata, and releases.
+- [`WsprryPi/WSPR-Transmitter`](https://github.com/WsprryPi/WSPR-Transmitter)
+  owns its userspace adapter and conversion into this UAPI.
+- [`WsprryPi/WsprryPi`](https://github.com/WsprryPi/WsprryPi) owns application
+  policy, configuration, scheduling, installer orchestration, operator
+  workflow, and product qualification.
+
+The projects coordinate through tagged artifacts, the canonical UAPI,
+compatibility metadata, and explicit cross-repository validation. WsprryPi
+does not consume this repository's moving default branch.
+
+## Licensing
+
+Original project work is MIT licensed wherever practical. Kernel-facing module
+source and device-tree sources are dual-licensed under `GPL-2.0-only OR MIT`.
+The userspace-visible UAPI uses
+`(GPL-2.0-only WITH Linux-syscall-note) OR MIT`. Imported material retains its
+original license and attribution. See [LICENSE.md](LICENSE.md).
