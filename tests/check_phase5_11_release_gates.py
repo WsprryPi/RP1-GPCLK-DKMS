@@ -27,7 +27,7 @@ def validate(value: dict) -> None:
         raise ValueError("selected release identity differs")
     if value.get("expectedTag") != "v1.0.0":
         raise ValueError("selected release tag differs")
-    if value.get("currentClassification") != "reproduced-release-candidate":
+    if value.get("currentClassification") != "reproduced-release-candidate-target-control-repair-required":
         raise ValueError("release candidate classification differs")
     if value.get("modulePublicationConfirmed") is not False:
         raise ValueError("module publication is not confirmed")
@@ -61,6 +61,8 @@ def validate(value: dict) -> None:
         raise ValueError("qualification archive digest differs")
     if snapshot["consumableByDependentRelease"] is not False:
         raise ValueError("unpublished candidate cannot be consumed")
+    if "gpio4-runtime-overlay-id-capture-control-defect" not in snapshot["knownBlockers"]:
+        raise ValueError("observed final target-control defect is not blocking")
     evidence = " ".join(" ".join(g["evidence"]) for g in gates)
     for term in ("GPIO4", "GPIO20", "live_output=0", "SemVer", "fresh location", "module-before-adapter-before-application"):
         if term not in evidence:
