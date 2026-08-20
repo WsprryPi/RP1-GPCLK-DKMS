@@ -11,7 +11,8 @@ PATH = ROOT / "release/release-integration-gates-v1.json"
 document = json.loads(PATH.read_text())
 
 ORDER = [
-    "candidate-freeze", "offline-checks-twice", "representative-lifecycle-matrix",
+    "candidate-freeze", "offline-checks-twice", "qualification-tooling-installation",
+    "representative-lifecycle-matrix",
     "independent-adversarial-review", "artifact-reproduction",
     "tag-and-internal-version-match", "real-compatibility-manifest",
     "operator-instructions-verification", "limitations-and-claim-audit",
@@ -67,6 +68,14 @@ def validate(value: dict) -> None:
                ("product archive", "qualification archive", "ordinary-install",
                 "qualification-mode")):
         raise ValueError("split-artifact offline validation is incomplete")
+    qualification_install = " ".join(by_id["qualification-tooling-installation"]["evidence"])
+    if not all(term in qualification_install for term in
+               ("read-only target recapture", "literal transferred qualification archive",
+                "separate qualification ledger", "inactive product", "stops before lifecycle attempt 1")):
+        raise ValueError("qualification-only installation prerequisite is incomplete")
+    lifecycle = by_id["representative-lifecycle-matrix"]
+    if lifecycle["requires"] != ["qualification-tooling-installation"]:
+        raise ValueError("lifecycle matrix bypasses qualification-only installation")
     reproduction = " ".join(by_id["artifact-reproduction"]["evidence"])
     if not all(term in reproduction for term in
                ("post-review", "product-archive", "qualification-archive",
@@ -97,6 +106,7 @@ assert decisions["entries"]
 assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False for entry in decisions["entries"])
 assert set(document["candidateSnapshot"]["knownBlockers"]) == {
     "offline-checks-twice-not-executed-for-final-split-candidate",
+    "qualification-tooling-not-installed-for-final-split-candidate",
     "representative-lifecycle-matrix-not-executed-for-final-product",
     "public-artifact-download-verification-not-performed",
     "module-release-not-published",
@@ -113,7 +123,7 @@ offline_gate = next(gate for gate in document["gates"]
                     if gate["id"] == "offline-checks-twice")
 assert offline_gate["status"] == "blocked"
 assert offline_gate["claimCeiling"] == \
-    "frozen split candidate with one qualification-successor offline suite; offline-checks-twice remains required"
+    "exact frozen split candidate only; two artifact-bound offline passes remain required"
 phase524 = json.loads((ROOT / "release/gate-d-successor-offline-identities-phase5.24-v1.json").read_text())
 assert phase524["release"] == "0.0.0-phase5.24"
 assert phase524["sourceCommit"] == "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5"
@@ -145,15 +155,25 @@ assert phase526["builds"]["gpio4DtboSha256"] == phase525["builds"]["gpio4DtboSha
 assert phase526["builds"]["gpio20DtboSha256"] == phase525["builds"]["gpio20DtboSha256"]
 assert "no representative build" in phase526["claimCeiling"]
 
+
+def gate(value: dict, identity: str) -> dict:
+    return next(item for item in value["gates"] if item["id"] == identity)
+
 for mutation in (
     lambda value: value.update(currentClassification="published-release"),
     lambda value: value.update(modulePublicationConfirmed=True),
     lambda value: value.update(publishedReleaseRequiresPostDownloadVerification=False),
     lambda value: value["gates"].pop(),
-    lambda value: value["gates"][1].update(requires=[]),
+    lambda value: gate(value, "offline-checks-twice").update(requires=[]),
+    lambda value: gate(value, "qualification-tooling-installation").update(
+        evidence=["qualification tools appear installed"]),
+    lambda value: gate(value, "representative-lifecycle-matrix").update(
+        requires=["offline-checks-twice"]),
     lambda value: value["gates"][0].update(status="unknown"),
-    lambda value: value["gates"][10].update(evidence=["checksums passed before upload"]),
-    lambda value: value["gates"][12].update(evidence=["header looks compatible"]),
+    lambda value: gate(value, "public-download-verification").update(
+        evidence=["checksums passed before upload"]),
+    lambda value: gate(value, "cross-repository-uapi-checks").update(
+        evidence=["header looks compatible"]),
 ):
     invalid = copy.deepcopy(document)
     mutation(invalid)
