@@ -219,9 +219,13 @@ def target_plan(product_hash: str, inventory_hash: str, identity_hash: str,
         "installedIdentities": {"uapiSha256": uapi_hash, "gpio4DtboSha256": gpio4_hash,
                                 "gpio20DtboSha256": gpio20_hash},
         "authorized": False, "executed": False,
+        "physicalSafety": {
+            "si5351PathDisconnected": "fresh-operator-confirmation-required",
+            "antennaOrTransmitterDisconnected": "fresh-operator-confirmation-required"
+        },
         "steps": [
             {"id":"read-only-preflight","argv":["/usr/bin/python3","scripts/release_candidate_target.py","preflight","--expect-version","0.0.0~phase5.54-2"],"mutating":False,"requiresAuthorization":False},
-            {"id":"validated-transfer","argv":["/usr/bin/sha256sum","rp1-gpclk-dkms_1.0.0-1_all.deb"],"mutating":False,"requiresAuthorization":False},
+            {"id":"validated-transfer","argv":["/usr/bin/sha256sum","--check","SHA256SUMS"],"mutating":False,"requiresAuthorization":False},
             {"id":"inactive-upgrade","argv":["/usr/bin/sudo","/usr/bin/dpkg","--install","rp1-gpclk-dkms_1.0.0-1_all.deb"],"mutating":True,"requiresAuthorization":True},
             {"id":"verify-inactive-install","argv":["/usr/bin/python3","scripts/release_candidate_target.py","verify-inactive","--expect-version",DEBIAN_VERSION],"mutating":False,"requiresAuthorization":True},
             {"id":"gpio4-output-disabled-lifecycle","argv":["/usr/bin/python3","scripts/release_candidate_target.py","route","--route","gpio4","--execute"],"mutating":True,"requiresAuthorization":True},

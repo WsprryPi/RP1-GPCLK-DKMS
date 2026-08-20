@@ -93,10 +93,13 @@ with tempfile.TemporaryDirectory() as temporary:
     (qualification_root / "TARGET-VERIFICATION.json").write_bytes(builder.pretty(plan))
     controls.validate(qualification_root)
     assert plan["authorized"] is False and plan["executed"] is False
+    assert set(plan["physicalSafety"].values()) == {"fresh-operator-confirmation-required"}
     assert all(not step["mutating"] or step["requiresAuthorization"] for step in plan["steps"])
     invoked = {arg for step in plan["steps"] for arg in step["argv"] if arg.startswith("scripts/")}
     layout = json.loads((ROOT / "release/qualification-layout-v2.json").read_text())
     assert invoked <= set(layout["sourceMembers"])
+    transfer = next(step for step in plan["steps"] if step["id"] == "validated-transfer")
+    assert transfer["argv"] == ["/usr/bin/sha256sum", "--check", "SHA256SUMS"]
 
     bad = bytearray(product.read_bytes())
     bad[0] = 0

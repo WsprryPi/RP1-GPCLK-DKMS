@@ -29,6 +29,11 @@ def validate(root: Path) -> dict:
         raise ValueError("target plan identity differs")
     if plan.get("authorized") is not False or plan.get("executed") is not False:
         raise ValueError("offline target plan claims authorization or execution")
+    if plan.get("physicalSafety") != {
+        "si5351PathDisconnected": "fresh-operator-confirmation-required",
+        "antennaOrTransmitterDisconnected": "fresh-operator-confirmation-required",
+    }:
+        raise ValueError("fresh physical-safety confirmation is not required")
     if plan.get("productPackageSha256") != identity.get("productPackageSha256"):
         raise ValueError("target plan product identity differs")
     if plan.get("productInventorySha256") != sha256(inventory_path):
@@ -54,6 +59,9 @@ def validate(root: Path) -> dict:
         for argument in step["argv"]:
             if argument.startswith("scripts/") and not (root / argument).is_file():
                 raise ValueError(f"invoked qualification member is absent: {argument}")
+    transfer = next(step for step in steps if step["id"] == "validated-transfer")
+    if transfer["argv"] != ["/usr/bin/sha256sum", "--check", "SHA256SUMS"]:
+        raise ValueError("transfer step does not enforce the complete checksum set")
     safety = plan.get("safety", {})
     if safety != {
         "liveOutput": False, "clockOrRateChange": False, "dma": False,
