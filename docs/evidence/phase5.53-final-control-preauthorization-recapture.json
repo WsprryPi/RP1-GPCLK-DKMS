@@ -1,0 +1,39 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.53-final-control-preauthorization-recapture",
+  "authorizationCommit": "d391d43a1698c09c1f3dc70037aa39ee475d3db2",
+  "productArchiveSha256": "032a0ca214427ebb6115b933042e7135f03c2ed6ce4f5c399686b2cf61395a76",
+  "qualificationArchiveSha256": "916a5522e3998ae43f203c217fedce90ad8d4c2d52ae0bd4491407e3cf17211d",
+  "snapshotToolSha256": "79063b518ed58ea7cd3adf68bb0f4348ffaf5a4c4309cf428e6c75ee8039bc0a",
+  "canonicalSnapshotSha256": "cbaed5a7972bb317a9dc27cabead9419ffde2db474df4de493373b6aa474524f",
+  "captureCount": 2,
+  "captureBytes": 16745,
+  "capturesByteIdentical": true,
+  "capturesMatchCanonicalSnapshot": true,
+  "target": {
+    "host": "wspr5",
+    "contact": "read-only",
+    "toolTransfer": "stdin stream only",
+    "targetToolFileCreated": false,
+    "ledgerSha256": "d4fe02f8d66ac298f2076b37be297097f392095904cc3809717713cd01a14f8d",
+    "packagePathCount": 72,
+    "moduleLoaded": false,
+    "endpointPresent": false,
+    "overlayActive": false,
+    "liveOutput": false
+  },
+  "offlineRegeneration": {
+    "independentReleaseDirectories": 2,
+    "qualificationValidationsPassed": 2,
+    "deterministicControlChecksPassed": 2,
+    "sealedRootAndFakeSystemValidationPassed": true,
+    "attemptCount": 38,
+    "authorityApproved": false,
+    "targetExecutionApproved": false,
+    "executionReady": false
+  },
+  "prohibitedOperationsPerformed": [],
+  "disposition": "preauthorization recapture and offline regeneration passed; target staging remains unauthorized",
+  "nextGate": "separate exact authorization for metadata-free target staging and one authenticated pre-root transition only"
+}
