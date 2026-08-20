@@ -33,7 +33,8 @@ required_ids = {"source-archive", "qualification-archive", "module-source", "mod
                 "artifact-scoped-invalidation-policy", "qualification-successor-builder", "representative-system-matrix", "gate-d-bootstrap-schema", "gate-d-root-schema", "gate-d-target-plan-schema", "gate-d-attempt-index-schema", "gate-d-execution-schema", "gate-d-pre-root-schema", "gate-d-instance-validator", "gate-d-lifecycle-tool", "gate-d-platform-tool", "gate-d-boot-tool", "gate-d-target-plan-tool", "gate-d-attempt-generator", "gate-d-bootstrap-tool", "gate-d-root-tool", "gate-d-bootstrap-module", "gate-d-target-plan-module", "gate-d-lifecycle-module", "gate-d-outer-module", "gate-d-attempts-module", "gate-d-instance-module", "gate-d-pre-root-module", "gate-d-residue-tool", "gate-d-permanent-executor", "gate-d-busy-injector-source", "gate-d-busy-injector-header", "gate-d-busy-injector", "gate-d-uapi-probe-source", "gate-d-uapi-probe", "release-integration-gates", "calibrated-review-release-policy", "lifecycle-policy-tool", "diagnostic-tool", "operator-doc-diagnostics", "operator-doc-lifecycle", "operator-doc-signing", "gate-d-target-runbook",
                 "security-notes", "behavioral-notes"}
 qualification_ids = [item["id"] for item in qualification_layout["artifacts"]]
-required_ids.add("qualification-successor-validator")
+required_ids.update({"qualification-successor-validator", "gate-d-same-version-tool",
+                     "gate-d-same-version-contract"})
 assert len(qualification_ids) == len(set(qualification_ids))
 assert required_ids == set(artifact_ids) | set(qualification_ids)
 assert set(artifact_ids).isdisjoint(qualification_ids)

@@ -115,6 +115,7 @@ else
 fi
 python3 "$repo_dir/tests/check_gate_d_live_snapshot.py"
 python3 "$repo_dir/tests/check_gate_d_live_snapshot_owned.py"
+python3 "$repo_dir/tests/check_gate_d_same_version.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_49_snapshot.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_50_snapshot.py"
 python3 "$repo_dir/tests/check_gate_d_phase5_50_control_set.py"
