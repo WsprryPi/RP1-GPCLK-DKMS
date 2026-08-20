@@ -1,0 +1,68 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.54-lifecycle-attempt-success",
+  "attempt": 1,
+  "route": "gpio4",
+  "target": "wspr5",
+  "capturedUtc": "2026-08-20T17:45:40Z",
+  "installedEvidenceCommit": "c5f278cccb2398875198e1d7d2e7727aee757a7f",
+  "controlSourceCommit": "9151cb35ce982cc127029d4de679530fd275f2a3",
+  "productPackageSha256": "f61286a6e63c2735413a0e86d13c5dc2d91f4581e8a20aab7291234b1991f90b",
+  "controlBundleSha256": "f9e03ffa9b5b1b142dff67288ff8924f1d2a21eaf4623c2596a10919c70a74ef",
+  "preflight": {
+    "softwareStateMatched": true,
+    "conflictingServicesRunning": [],
+    "si5351DisconnectedConfirmedByOperator": true,
+    "antennaOrTransmitterConnectedConfirmedByOperator": false
+  },
+  "execution": {
+    "attemptCount": 1,
+    "kernel": "6.18.34+rpt-rpi-2712",
+    "moduleParameter": "live_output=0",
+    "observedLiveOutput": "N",
+    "runtimeOverlayId": "0",
+    "uapiRoute": "gpio4",
+    "uapiBuildId": "0.0.0-phase5.54",
+    "uapiLiveEligible": false,
+    "uapiLeaseReleased": true
+  },
+  "terminal": {
+    "packageVersion": "0.0.0~phase5.54-2",
+    "packageStatus": "install ok installed",
+    "dpkgAuditEmpty": true,
+    "stockDkmsInstallCount": 4,
+    "moduleLoaded": false,
+    "endpointPresent": false,
+    "activeOverlayCount": 0,
+    "bootSelectionCount": 0,
+    "conflictingServicesRunning": [],
+    "scopedKernelWarningsErrorsFailures": []
+  },
+  "evidence": {
+    "directory": "/home/pi/rp1-gpclk-phase5.54-lifecycle-f9e03ffa",
+    "directoryMode": "0500",
+    "attemptLogSha256": "a8d259b1c30f2b850a9d3a9420adab71ea2200577c825e0a6c15a4fcd51efa8b",
+    "memberInventorySha256": "0add9be4a03d3b83b4b8997bc0cad0ec440e84be00e31800fdb9d3cf03a84e48",
+    "renderedCommandsSha256": "41a5efe3e0ffda77eb904ecf20d67aaf120ab6666bfc3510d79047b89b8fd5ca",
+    "fileMode": "0400"
+  },
+  "cleanup": {
+    "stagedBundleRemoved": true,
+    "extractedControlsAndProbeRemoved": true,
+    "sealedEvidenceRetained": true
+  },
+  "safety": {
+    "liveOutputEnabled": false,
+    "clockEnabledOrRateChanged": false,
+    "dmaSubmitted": false,
+    "gpioOutput": false,
+    "bootChanged": false,
+    "rebooted": false,
+    "transmissionOrRf": false,
+    "gpio20Attempted": false,
+    "packageRemoved": false
+  },
+  "validationNote": "An initial shell awk member-type check had a quoting error; Python tarfile validation proved the exact three regular-file inventory before any module or overlay action.",
+  "result": "pass-inactive-baseline-restored"
+}
