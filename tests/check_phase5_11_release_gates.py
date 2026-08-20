@@ -27,7 +27,7 @@ def validate(value: dict) -> None:
         raise ValueError("selected release identity differs")
     if value.get("expectedTag") != "v1.0.0":
         raise ValueError("selected release tag differs")
-    if value.get("currentClassification") != "reproduced-release-candidate-target-control-repair-required":
+    if value.get("currentClassification") != "repaired-qualification-candidate-awaiting-target-verification":
         raise ValueError("release candidate classification differs")
     if value.get("modulePublicationConfirmed") is not False:
         raise ValueError("module publication is not confirmed")
@@ -55,14 +55,16 @@ def validate(value: dict) -> None:
         raise ValueError("validated development package digest differs")
     if snapshot["sourceCommit"] != "a20abc828ec300ad3227a34be7572f4fa28525b2":
         raise ValueError("final artifact source commit differs")
+    if snapshot["qualificationSourceCommit"] != "9e54d88e9f4c9eac79a77c72e60b39c3acb4e6fa":
+        raise ValueError("repaired qualification source commit differs")
     if snapshot["finalPackageSha256"] != "951289ee5d0e44cff41b59756f00161aba16f43f1450715ba57c4a3679a2e6b8":
         raise ValueError("final product digest differs")
-    if snapshot["qualificationArchiveSha256"] != "fa11f86c8a5f1443560d71720e44a4fa1e3d209d64542c0d416e00debc9dea5e":
+    if snapshot["qualificationArchiveSha256"] != "c05f2f2adc20b9e99bf37d775c4bddd6cafd27e5da5e9c62410784fb835727d2":
         raise ValueError("qualification archive digest differs")
     if snapshot["consumableByDependentRelease"] is not False:
         raise ValueError("unpublished candidate cannot be consumed")
-    if "gpio4-runtime-overlay-id-capture-control-defect" not in snapshot["knownBlockers"]:
-        raise ValueError("observed final target-control defect is not blocking")
+    if "gpio4-runtime-overlay-id-capture-control-defect" in snapshot["knownBlockers"]:
+        raise ValueError("repaired target-control defect remains listed as active")
     evidence = " ".join(" ".join(g["evidence"]) for g in gates)
     for term in ("GPIO4", "GPIO20", "live_output=0", "SemVer", "fresh location", "module-before-adapter-before-application"):
         if term not in evidence:

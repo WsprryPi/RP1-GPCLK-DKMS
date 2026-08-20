@@ -20,8 +20,6 @@ assert evidence["cleanup"]["inactiveBaselineRestored"] is True
 assert len(evidence["notAttempted"]) == 4
 assert not any(evidence["safety"].values())
 assert evidence["result"] == "failed-closed-inactive-final-package-restored"
-assert roadmap["currentClassification"].endswith("target-control-repair-required")
-assert "gpio4-runtime-overlay-id-capture-control-defect" in roadmap["candidateSnapshot"]["knownBlockers"]
 assert gates["final-candidate-target-verification"]["status"] == "blocked"
 assert "release-1.0.0-final-target-verification-gpio4-failure.json" in " ".join(gates["final-candidate-target-verification"]["evidence"])
 

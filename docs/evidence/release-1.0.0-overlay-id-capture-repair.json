@@ -1,0 +1,51 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "release-qualification-overlay-id-repair",
+  "productSourceCommit": "a20abc828ec300ad3227a34be7572f4fa28525b2",
+  "repairSourceCommit": "9e54d88e9f4c9eac79a77c72e60b39c3acb4e6fa",
+  "productPackageSha256": "951289ee5d0e44cff41b59756f00161aba16f43f1450715ba57c4a3679a2e6b8",
+  "productChanged": false,
+  "qualificationArchiveSha256": "c05f2f2adc20b9e99bf37d775c4bddd6cafd27e5da5e9c62410784fb835727d2",
+  "qualificationBuildCount": 2,
+  "byteIdenticalQualificationBuilds": true,
+  "qualificationRegularMemberCount": 16,
+  "qualificationMemberListingSha256": "e511b714588d4499738c54edc12134a755ae39707621d3be5c9ad802076cdd4e",
+  "sidecars": {
+    "COMPATIBILITY.json": "370a9ba42f765932783ae6016ee620c9f691d7b55dbb9ba5c2029279ee4d1acf",
+    "PRODUCT-INVENTORY.json": "794af5cd56b036ec3ad46fd9d8cc87767dc0cfcbdf1a38c6a24042719798af9a",
+    "QUALIFICATION.json": "54ab1395af6fc15f2c67d19f074da490b3b7644af15d253cb59f9f026e10e620",
+    "TARGET-VERIFICATION.json": "7c6575961632ef3e0abb1717e67e9c609194953a555826ff17bc1a49e06d973e",
+    "release-metadata.json": "222eecaafcd92080b695cfa2d8c2599adcec2afe61dc7595ec486bc8f62a664c",
+    "SHA256SUMS": "2e699e9ec90da79bf7ac10dd9638301a1658f9fb4288e6403f0ec7857b2466ec"
+  },
+  "repair": {
+    "applyStdoutUsedForIdentity": false,
+    "authoritativeBeforeAfterListings": true,
+    "emptyBaselineRequired": true,
+    "exactlyOneAddedIdentifierRequired": true,
+    "requestedOverlayNameRequired": true,
+    "scopedFailureCleanup": true
+  },
+  "fakeSystem": {
+    "emptyApplyStdoutPassed": true,
+    "nonemptyApplyStdoutPassed": true,
+    "ambiguousDeltaRejected": true
+  },
+  "successorPlan": {
+    "stepCount": 8,
+    "preflightExpectedVersion": "1.0.0-1",
+    "redundantInitialPackageInstall": false,
+    "remainingSequence": ["GPIO4", "GPIO20", "complete removal audit", "unchanged product reinstall", "final inactive verification"]
+  },
+  "buildEnvironment": {
+    "qualificationGenerator": "host clean checkout",
+    "python": "3.14.7",
+    "pinnedDebianBuilderAttempt": "not used because the Debian construction image intentionally lacks Git required for source identity; no outputs accepted"
+  },
+  "targetContacted": false,
+  "targetMutationPerformed": false,
+  "tagCreated": false,
+  "published": false,
+  "result": "repaired-reproduced-awaiting-new-authorization"
+}

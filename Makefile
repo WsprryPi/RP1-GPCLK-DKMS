@@ -26,6 +26,7 @@ package-check:
 	python3 tests/check_release_1_0_0_final_artifacts.py
 	python3 tests/check_release_1_0_0_target_preauthorization.py
 	python3 tests/check_release_1_0_0_target_gpio4_failure.py
+	python3 tests/check_release_1_0_0_overlay_id_repair.py
 
 release-unit:
 	./scripts/build_release.py "$(if $(OUTPUT_DIR),$(OUTPUT_DIR),dist)" $(if $(DEVELOPMENT),--development,)
