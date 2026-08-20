@@ -98,12 +98,6 @@ with tempfile.TemporaryDirectory() as temporary:
     layout = json.loads((ROOT / "release/qualification-layout-v2.json").read_text())
     assert invoked <= set(layout["sourceMembers"])
 
-    target_source = (ROOT / "scripts/release_candidate_target.py").read_text()
-    assert "live_output=0" in target_source
-    assert "live_output=1" not in target_source
-    assert 'choices=("gpio4", "gpio20")' in target_source
-    assert "/dev/mem" not in target_source
-
     bad = bytearray(product.read_bytes())
     bad[0] = 0
     with tempfile.NamedTemporaryFile() as corrupted:
@@ -115,6 +109,17 @@ with tempfile.TemporaryDirectory() as temporary:
             pass
         else:
             raise AssertionError("corrupted Debian archive accepted")
+
+target_source = (ROOT / "scripts/release_candidate_target.py").read_text()
+assert "live_output=0" in target_source
+assert "live_output=1" not in target_source
+assert 'choices=("gpio4", "gpio20")' in target_source
+assert "/dev/mem" not in target_source
+
+containerfile = (ROOT / "tools/release-builder.Containerfile").read_text()
+assert "FROM docker.io/library/debian@sha256:c94f5ddd41327aa2d4a7cfba7889056c02936182fd76a513fec6160c97181fc0" in containerfile
+for package in ("build-essential", "debhelper", "dh-dkms", "device-tree-compiler", "python3"):
+    assert package in containerfile
 
 assert stat.S_IMODE((ROOT / "scripts/build_release_candidate.py").stat().st_mode) in {0o644, 0o755}
 print("Release candidate builder and target-plan contract: PASS")
