@@ -32,9 +32,11 @@ rejects an unexpected directory or already-finalized input, and passed its
 offline test. The original candidate directory remains unchanged.
 
 No local or remote `v1.0.0` tag exists, and GitHub's public release endpoint
-returned 404. The configured GitHub CLI token is invalid, so publication must
-not begin until authentication is restored and verified. No tag, release,
-target, hardware, transmission, RF, or consumer action occurred during review.
+returned 404. A sandboxed authentication check could not access the macOS
+Keychain and incorrectly appeared invalid; an outside-sandbox check confirmed
+the active `lbussy` keyring credential with `repo` and `workflow` scopes. No
+tag, release, target, hardware, transmission, RF, or consumer action occurred
+during review.
 
 Claim ceiling: reviewed exact output-disabled candidate only. Publication,
 fresh public-download verification, and consumer integration remain separate

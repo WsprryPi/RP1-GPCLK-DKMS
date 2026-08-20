@@ -18,7 +18,10 @@ assert evidence["publicationFinalizer"]["preservesQualificationSha256"] is True
 assert evidence["remoteState"]["localTagAbsent"] is True
 assert evidence["remoteState"]["remoteTagAbsent"] is True
 assert evidence["remoteState"]["publicReleaseApiStatus"] == 404
-assert evidence["remoteState"]["githubCliAuthenticationValid"] is False
+assert evidence["remoteState"]["githubCliAuthenticationValid"] is True
+assert evidence["remoteState"]["githubCliAuthenticationSource"] == "macOS keyring verified outside sandbox"
+assert {"repo", "workflow"} <= set(evidence["remoteState"]["githubCliTokenScopes"])
+assert evidence["remoteState"]["publicationAuthenticationPrerequisiteSatisfied"] is True
 assert evidence["publicationAuthorized"] is False
 assert evidence["published"] is False
 assert evidence["publicDownloadVerified"] is False

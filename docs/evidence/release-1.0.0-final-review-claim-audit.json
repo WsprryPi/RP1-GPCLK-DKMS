@@ -39,13 +39,15 @@
     "localTagAbsent": true,
     "remoteTagAbsent": true,
     "publicReleaseApiStatus": 404,
-    "githubCliAuthenticationValid": false,
-    "githubCliAuthenticationRequiredBeforePublication": true
+    "githubCliAuthenticationValid": true,
+    "githubCliAuthenticationSource": "macOS keyring verified outside sandbox",
+    "githubCliTokenScopes": ["gist", "read:org", "repo", "workflow"],
+    "publicationAuthenticationPrerequisiteSatisfied": true
   },
   "publicationAuthorized": false,
   "tagCreated": false,
   "published": false,
   "publicDownloadVerified": false,
-  "nextGate": "separately authorized module publication after GitHub CLI reauthentication",
-  "result": "review-pass-awaiting-publication-authorization-and-authentication"
+  "nextGate": "separately authorized module publication",
+  "result": "review-pass-awaiting-publication-authorization"
 }
