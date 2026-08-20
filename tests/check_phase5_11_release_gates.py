@@ -105,6 +105,7 @@ decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_t
 assert decisions["entries"]
 assert all(entry["state"] == "Unavailable" and entry["liveEligible"] is False for entry in decisions["entries"])
 assert set(document["candidateSnapshot"]["knownBlockers"]) == {
+    "offline-checks-twice-not-executed-for-repaired-qualification-archive",
     "qualification-tooling-not-installed-for-final-split-candidate",
     "representative-lifecycle-matrix-not-executed-for-final-product",
     "public-artifact-download-verification-not-performed",
@@ -117,12 +118,12 @@ freeze_gate = next(gate for gate in document["gates"]
                    if gate["id"] == "candidate-freeze")
 assert freeze_gate["status"] == "passed"
 assert freeze_gate["claimCeiling"] == \
-    "frozen final product and qualification-successor artifacts only; no representative lifecycle claim"
+    "frozen final product and repaired qualification-successor artifacts only; no representative lifecycle claim"
 offline_gate = next(gate for gate in document["gates"]
                     if gate["id"] == "offline-checks-twice")
-assert offline_gate["status"] == "passed"
+assert offline_gate["status"] == "blocked"
 assert offline_gate["claimCeiling"] == \
-    "two complete offline passes on the exact frozen split candidate; no target lifecycle or output qualification"
+    "exact repaired frozen split candidate only; two artifact-bound offline passes remain required"
 phase524 = json.loads((ROOT / "release/gate-d-successor-offline-identities-phase5.24-v1.json").read_text())
 assert phase524["release"] == "0.0.0-phase5.24"
 assert phase524["sourceCommit"] == "2a6ddeb8e0f7d31a26bbe4ebdc4bc0458a41c8c5"
