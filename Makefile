@@ -14,6 +14,7 @@ check:
 package-check:
 	python3 tests/check_debian_packaging.py
 	python3 tests/check_phase554_dkms_kernel_scope.py
+	python3 tests/check_phase554_half_configured_recovery_success.py
 
 release-unit:
 	./scripts/build_release.py "$(if $(OUTPUT_DIR),$(OUTPUT_DIR),dist)" $(if $(DEVELOPMENT),--development,)
