@@ -446,9 +446,12 @@ def validate_qualification_identity(path: pathlib.Path, metadata: dict,
         required.add("toolTransitions")
     if schema == 3:
         required.add("packageTransitions")
+    if schema == 4:
+        required.update({"preRemovalLedgerSha256", "predecessorPackagePaths",
+                         "predecessorPackagePathsSha256"})
     if (not isinstance(value, dict) or set(value) != required or
             value.get("SPDX-License-Identifier") != "MIT" or
-            schema not in {1, 2, 3} or
+            schema not in {1, 2, 3, 4} or
             value.get("kind") != "rp1-gpclk-gate-d-qualification-install-identity" or
             value.get("publishable") is not False or value.get("tagPresent") is not False or
             value.get("outputDisabled") is not True or value.get("liveOutput") is not False or
@@ -499,7 +502,42 @@ def validate_qualification_identity(path: pathlib.Path, metadata: dict,
             paths.append(item["path"])
         if not paths or len(paths) != len(set(paths)):
             raise ValueError("qualification package-transition graph is empty or ambiguous")
+    if schema == 4:
+        if not re.fullmatch(r"[0-9a-f]{64}", value.get("preRemovalLedgerSha256", "")):
+            raise ValueError("fresh qualification pre-removal ledger identity differs")
+        records=value.get("predecessorPackagePaths")
+        if not isinstance(records,list) or not records: raise ValueError("fresh qualification predecessor inventory is empty")
+        paths=[]
+        for item in records:
+            common={"path","type"}
+            if (not isinstance(item,dict) or item.get("type") not in {"file","symlink"} or
+                    not pathlib.PurePosixPath(item.get("path","")).is_absolute() or
+                    ".." in pathlib.PurePosixPath(item["path"]).parts):
+                raise ValueError("fresh qualification predecessor inventory differs")
+            if item["type"]=="file" and (set(item)!=common|{"sha256"} or not re.fullmatch(r"[0-9a-f]{64}",item.get("sha256",""))):
+                raise ValueError("fresh qualification predecessor file differs")
+            if item["type"]=="symlink" and (set(item)!=common|{"target"} or not isinstance(item.get("target"),str) or not item["target"] or pathlib.PurePosixPath(item["target"]).is_absolute()):
+                raise ValueError("fresh qualification predecessor symlink differs")
+            paths.append(item["path"])
+        canonical=(json.dumps(records,sort_keys=True,separators=(",",":"))+"\n").encode()
+        if len(paths)!=len(set(paths)) or hashlib.sha256(canonical).hexdigest()!=value.get("predecessorPackagePathsSha256"):
+            raise ValueError("fresh qualification predecessor inventory digest differs")
     return value
+
+def validate_fresh_qualification_prestate(identity:dict,state:dict)->None:
+    if (identity.get("schemaVersion")!=4 or state.get("status")!="removed" or
+            state.get("checkpoint")!="inactive-clean" or state.get("recoveryRequired") is not False or
+            state.get("liveOutput") is not False or state.get("package")!=PACKAGE or
+            state.get("release")!=VERSION or state.get("predecessorRelease")!=VERSION):
+        raise ValueError("fresh qualification removed predecessor differs")
+    actual=[]
+    for item in state.get("ownedFiles",[])+state.get("replacedFiles",[]):
+        if "symlink" in item: current={"path":item.get("path"),"type":"symlink","target":item["symlink"]}
+        elif item.get("type")=="symlink": current={"path":item.get("path"),"type":"symlink","target":item.get("successorTarget")}
+        else: current={"path":item.get("path"),"type":"file","sha256":item.get("successorSha256",item.get("sha256"))}
+        actual.append(current)
+    actual.sort(key=lambda item:item["path"] or "")
+    if actual!=identity["predecessorPackagePaths"]: raise ValueError("fresh qualification predecessor inventory differs")
 
 
 def replace_qualification_tool(destination: pathlib.Path, prepared: pathlib.Path,
@@ -616,6 +654,10 @@ def execute(release: pathlib.Path, route: str, signing: bool, key: pathlib.Path 
         old = json.loads(state_path.read_text())
         if old.get("status") not in {"complete", "recovered", "removed"}:
             raise ValueError("unresolved transaction requires explicit recovery")
+        if qualification and qualification["schemaVersion"]==4:
+            validate_fresh_qualification_prestate(qualification,old)
+    elif qualification and qualification["schemaVersion"]==4:
+        raise ValueError("fresh qualification removed predecessor is absent")
     transitions = ({item["path"]: item for item in qualification["toolTransitions"]}
                    if qualification and qualification["schemaVersion"] == 2 else
                    {item["path"]: item for item in qualification["packageTransitions"]}

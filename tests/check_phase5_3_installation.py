@@ -465,6 +465,25 @@ with tempfile.TemporaryDirectory() as temporary:
     assert admin.validate_qualification_identity(
         transition_identity_path, metadata, metadata["archiveSha256"]
     )["schemaVersion"] == 2
+    snapshot=json.loads((ROOT/"docs/evidence/gate-d-live-target-snapshot-wspr5-phase5.53-final-v1.json").read_text())
+    predecessor_paths=[]
+    for item in snapshot["packagePaths"]:
+        predecessor_paths.append({"path":item["path"],"type":item["type"],
+                                  **({"sha256":item["sha256"]} if item["type"]=="file" else {"target":item["target"]})})
+    fresh_identity=dict(identity)
+    fresh_identity.update(schemaVersion=4,preRemovalLedgerSha256=snapshot["administratorLedger"]["sha256"],
+                          predecessorPackagePaths=predecessor_paths,
+                          predecessorPackagePathsSha256=hashlib.sha256((json.dumps(predecessor_paths,sort_keys=True,separators=(",",":"))+"\n").encode()).hexdigest())
+    fresh_identity_path=base/"qualification-fresh-identity.json";fresh_identity_path.write_text(json.dumps(fresh_identity)+"\n")
+    assert admin.validate_qualification_identity(fresh_identity_path,metadata,metadata["archiveSha256"])["schemaVersion"]==4
+    removed_state={"status":"removed","checkpoint":"inactive-clean","recoveryRequired":False,"liveOutput":False,
+                   "package":admin.PACKAGE,"release":admin.VERSION,"predecessorRelease":admin.VERSION,
+                   "ownedFiles":[{"path":item["path"],**({"sha256":item["sha256"]} if item["type"]=="file" else {"symlink":item["target"]})} for item in predecessor_paths],"replacedFiles":[]}
+    admin.validate_fresh_qualification_prestate(fresh_identity,removed_state)
+    changed=json.loads(json.dumps(removed_state));changed["ownedFiles"].pop()
+    try:admin.validate_fresh_qualification_prestate(fresh_identity,changed)
+    except ValueError:pass
+    else:raise AssertionError("fresh qualification accepted changed removed inventory")
     # Schema 3 derives the complete existing package closure from the sealed
     # layout. One omitted documentation path is rejected before a transaction
     # or external command can exist, and the diagnostic reports the full diff.
