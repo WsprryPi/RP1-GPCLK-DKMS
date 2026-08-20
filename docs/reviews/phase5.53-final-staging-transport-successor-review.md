@@ -22,14 +22,24 @@ The builder now materializes that exact consumer path, and the regression
 requires every staged path in the probe, qualification install/recovery, and
 product rollback argv arrays to resolve.
 
-Independent corrected builds from both reproduced release directories produced
-identical transport bytes at `f8ea112c...` and identical source maps at
-`cdee6830...`. Offline extraction verified every envelope input and successfully
-invoked both the staged same-version driver's read-only validation and the
-archived pre-root entrypoint's read-only validation.
+The first authorized target transfer then exposed a second transport defect:
+the builder mapped both its temporary tree root and staging directory to the
+same USTAR root name. Target validation rejected the duplicate before invoking
+the same-version driver, and the exact staging namespace was removed. The
+builder now emits the staging directory exactly once and the regression rejects
+every duplicate archive name.
 
-No target contact, transfer, removal, installation, pre-root transition,
-lifecycle attempt, module, overlay, boot, service, GPIO, clock, DMA,
-transmission, or RF activity occurred. The next slice is an exact authorization
-decision covering final recapture, validated transfer, and one recoverable
-same-version transition, stopping before lifecycle attempt 1.
+Two repaired builds from the independent release directories produce identical
+transport bytes at `d185b54a...` and identical source maps at `3919918c...`.
+The archive now has 181 unique members: 151 regular files and 30 directories.
+Offline extraction verifies every envelope input and successfully invokes both
+the staged same-version driver's read-only validation and the archived pre-root
+entrypoint's read-only validation.
+
+The repaired-successor construction and exercise made no further target
+contact. Across the stopped authorized slice, no product removal,
+qualification installation, pre-root transition, lifecycle attempt, module,
+overlay, boot, service, GPIO, clock, DMA, transmission, or RF activity
+occurred. The next slice is construction and review of a fresh exact
+authorization decision covering final recapture, validated transfer, and one
+recoverable same-version transition, stopping before lifecycle attempt 1.

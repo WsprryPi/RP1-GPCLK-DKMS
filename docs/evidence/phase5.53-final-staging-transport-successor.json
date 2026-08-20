@@ -15,13 +15,13 @@
     "qualificationArchiveRegularFileCount": 33,
     "separatelySealedControlCount": 2,
     "transportRegularFileCount": 151,
-    "transportDirectoryCountIncludingRoot": 31
+    "transportDirectoryCountIncludingRoot": 30
   },
   "reproduction": {
     "generationCount": 2,
     "byteIdentical": true,
-    "transportSha256": "f8ea112c2b3ff1fe18c8d48dc54f4ee8a5f41427595a163ddde2907e11c9a73b",
-    "sourceMapSha256": "cdee6830d11baf705a607d9dae2610f56bdd98d79d399781137f6ce52ab5beb2"
+    "transportSha256": "d185b54ae7027b398c45862fa36b76df7317ac1799d710e75dba670195565eba",
+    "sourceMapSha256": "3919918cc333f34d21dcb4c51f605f2057988c4ef977ab832264cfaf315d7e6e"
   },
   "offlineExercise": {
     "allEnvelopeInputsValidated": true,

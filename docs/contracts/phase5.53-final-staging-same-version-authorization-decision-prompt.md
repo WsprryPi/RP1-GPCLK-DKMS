@@ -2,6 +2,11 @@
 
 # Phase 5.53 final staging and same-version authorization decision prompt
 
+> **Superseded:** target-side validation found a duplicate staging-root entry
+> in transport `f8ea112c...`. The target transition stopped before product
+> removal and the exact staging namespace was removed. The authorization phrase
+> in this document is retired and must not be reused.
+
 ## Objective
 
 Permit the operator to authorize one bounded target slice that starts from the

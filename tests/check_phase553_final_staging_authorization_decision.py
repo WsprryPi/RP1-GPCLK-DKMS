@@ -20,4 +20,5 @@ for required in (
 assert text.count("## Exact authorization phrase") == 1
 assert "This prompt is non-authorizing" in text
 assert "I do not authorize any Gate D attempt" in text
+assert "**Superseded:**" in text and "must not be reused" in text
 print("Phase 5.53 final staging and same-version authorization decision: PASS")

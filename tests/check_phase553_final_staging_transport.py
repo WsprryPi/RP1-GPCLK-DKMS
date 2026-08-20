@@ -47,6 +47,8 @@ with tempfile.TemporaryDirectory() as temporary:
     with tarfile.open(first, "r:") as transport:
         members = transport.getmembers()
         assert sum(item.isfile() for item in members) == 151
+        names = [item.name.rstrip("/") for item in members]
+        assert len(names) == len(set(names))
         assert all(item.isfile() or item.isdir() for item in members)
         assert not any(item.pax_headers for item in members)
         transport.extractall(extracted, filter="data")

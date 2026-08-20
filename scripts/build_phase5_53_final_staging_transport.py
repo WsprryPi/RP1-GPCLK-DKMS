@@ -119,14 +119,14 @@ def build(release_dir: pathlib.Path, output: pathlib.Path,
                            "source": f"repository/release/{name}",
                            "sha256": sha(destination.read_bytes())})
         files = sorted(path for path in tree.rglob("*") if path.is_file())
-        directories = sorted([tree, *(path for path in tree.rglob("*") if path.is_dir())],
+        directories = sorted((path for path in tree.rglob("*") if path.is_dir()),
                              key=lambda path: path.relative_to(tree).as_posix())
         if len(files) != 151 or len({item["path"] for item in owners}) != 151:
             raise ValueError("complete final staging closure differs")
         with tarfile.open(output, "w", format=tarfile.USTAR_FORMAT) as archive:
             for directory in directories:
                 relative = directory.relative_to(tree)
-                name = STAGE if relative == pathlib.Path(".") else relative.as_posix()
+                name = relative.as_posix()
                 info = tarfile.TarInfo(name.rstrip("/") + "/")
                 info.type = tarfile.DIRTYPE
                 info.mode = 0o700
