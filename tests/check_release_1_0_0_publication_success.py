@@ -20,9 +20,9 @@ assert all(evidence["verification"].values())
 assert evidence["publicAssetsDownloadedFresh"] is False
 assert evidence["publicDownloadVerificationPassed"] is False
 assert roadmap["modulePublicationConfirmed"] is True
-assert roadmap["currentClassification"] == "published-release-awaiting-fresh-download-verification"
+assert roadmap["currentClassification"] == "publicly-verified-consumable-module-release"
 assert gates["module-publication"]["status"] == "passed"
-assert gates["public-download-verification"]["status"] == "blocked"
+assert gates["public-download-verification"]["status"] == "passed"
 assert evidence["nextGate"] == "fresh public-download verification"
 
 print("Release 1.0.0 module publication: PASS")

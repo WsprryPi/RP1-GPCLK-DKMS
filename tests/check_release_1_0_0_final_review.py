@@ -25,7 +25,7 @@ assert evidence["remoteState"]["publicationAuthenticationPrerequisiteSatisfied"]
 assert evidence["publicationAuthorized"] is False
 assert evidence["published"] is False
 assert evidence["publicDownloadVerified"] is False
-assert roadmap["currentClassification"] == "published-release-awaiting-fresh-download-verification"
+assert roadmap["currentClassification"] == "publicly-verified-consumable-module-release"
 assert gates["release-review-and-claim-audit"]["status"] == "passed"
 assert gates["module-publication"]["status"] == "passed"
 for identity in (evidence["productPackageSha256"], evidence["qualificationArchiveSha256"]):

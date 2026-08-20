@@ -27,7 +27,7 @@ def validate(value: dict) -> None:
         raise ValueError("selected release identity differs")
     if value.get("expectedTag") != "v1.0.0":
         raise ValueError("selected release tag differs")
-    if value.get("currentClassification") != "published-release-awaiting-fresh-download-verification":
+    if value.get("currentClassification") != "publicly-verified-consumable-module-release":
         raise ValueError("release candidate classification differs")
     if value.get("modulePublicationConfirmed") is not True:
         raise ValueError("module publication confirmation differs")
@@ -61,8 +61,8 @@ def validate(value: dict) -> None:
         raise ValueError("final product digest differs")
     if snapshot["qualificationArchiveSha256"] != "c05f2f2adc20b9e99bf37d775c4bddd6cafd27e5da5e9c62410784fb835727d2":
         raise ValueError("qualification archive digest differs")
-    if snapshot["consumableByDependentRelease"] is not False:
-        raise ValueError("unpublished candidate cannot be consumed")
+    if snapshot["consumableByDependentRelease"] is not True:
+        raise ValueError("verified public release is not consumable")
     if "gpio4-runtime-overlay-id-capture-control-defect" in snapshot["knownBlockers"]:
         raise ValueError("repaired target-control defect remains listed as active")
     evidence = " ".join(" ".join(g["evidence"]) for g in gates)
@@ -72,6 +72,10 @@ def validate(value: dict) -> None:
     by_id = {gate["id"]: gate for gate in gates}
     if by_id["semantic-version-selection"]["status"] != "passed":
         raise ValueError("explicit semantic version decision is missing")
+    if by_id["public-download-verification"]["status"] != "passed":
+        raise ValueError("fresh public-download verification is missing")
+    if by_id["consumer-integration"]["status"] != "blocked":
+        raise ValueError("consumer integration advanced without separate evidence")
     if value["modulePublicationConfirmed"] is False:
         for identity in ("module-publication", "public-download-verification", "consumer-integration"):
             if by_id[identity]["status"] != "blocked":
@@ -80,9 +84,9 @@ def validate(value: dict) -> None:
 
 validate(document)
 by_id = {gate["id"]: gate for gate in document["gates"]}
-for identity in ORDER[:12]:
+for identity in ORDER[:13]:
     assert by_id[identity]["status"] == "passed"
-for identity in ORDER[12:]:
+for identity in ORDER[13:]:
     assert by_id[identity]["status"] == "blocked"
 assert "phase5.54-lifecycle-attempt1-success.json" in " ".join(by_id["gpio4-output-disabled-lifecycle"]["evidence"])
 assert "phase5.54-lifecycle-attempt2-success.json" in " ".join(by_id["gpio20-output-disabled-lifecycle"]["evidence"])
@@ -93,7 +97,7 @@ for mutation in (
     lambda value: value.update(modulePublicationConfirmed=False),
     lambda value: value["gates"].pop(),
     lambda value: value["candidateSnapshot"].update(finalPackageSha256="0" * 64),
-    lambda value: value["gates"][13].update(status="passed"),
+    lambda value: value["gates"][12].update(status="blocked"),
     lambda value: value["gates"][1].update(requires=[]),
 ):
     invalid = copy.deepcopy(document)

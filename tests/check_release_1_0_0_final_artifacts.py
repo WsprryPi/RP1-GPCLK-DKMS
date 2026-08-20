@@ -32,6 +32,6 @@ assert evidence["targetContacted"] is False
 assert evidence["tagCreated"] is False
 assert evidence["published"] is False
 assert roadmap["modulePublicationConfirmed"] is True
-assert snapshot["consumableByDependentRelease"] is False
+assert snapshot["consumableByDependentRelease"] is True
 
 print("Release 1.0.0 final artifact reproduction: PASS")
