@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 
 CHECKPOINTS=("preflight","remove-product","verify-absent","install-qualification","verify-qualified","commit")
-ARGV_FIELDS=("removeArgv","removeRecoveryArgv","qualificationInstallArgv","qualificationRecoveryArgv","qualificationRemoveArgv","productRollbackArgv")
+ARGV_FIELDS=("probeArgv","removeArgv","removeRecoveryArgv","qualificationInstallArgv","qualificationRecoveryArgv","qualificationRemoveArgv","productRollbackArgv")
 
 def validate(plan:dict)->dict:
  required={"SPDX-License-Identifier","schemaVersion","kind","productArchiveSha256","qualificationArchiveSha256","ledgerSha256","preState","absentState","qualifiedState","authorization",*ARGV_FIELDS}

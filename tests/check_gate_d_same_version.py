@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 """Exercise every same-version orchestration interruption boundary."""
-import importlib.util,json,pathlib
+import importlib.util,json,pathlib,subprocess,tempfile
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location("same",ROOT/"scripts/gate_d_same_version.py");assert spec and spec.loader
 same=importlib.util.module_from_spec(spec);spec.loader.exec_module(same)
 product={"product":True,"qualification":False,"liveOutput":False};absent={"product":False,"qualification":False,"liveOutput":False};qualified={"product":True,"qualification":True,"liveOutput":False}
-plan={"SPDX-License-Identifier":"MIT","schemaVersion":1,"kind":"gate-d-same-version-transition","productArchiveSha256":"1"*64,"qualificationArchiveSha256":"2"*64,"ledgerSha256":"3"*64,"preState":product,"absentState":absent,"qualifiedState":qualified,"authorization":{"approved":False,"targetExecutionApproved":False,"executionReady":False},"removeArgv":["admin","remove"],"removeRecoveryArgv":["admin","recover-remove"],"qualificationInstallArgv":["admin","install-qualification"],"qualificationRecoveryArgv":["admin","recover-qualification"],"qualificationRemoveArgv":["admin","remove-qualification"],"productRollbackArgv":["admin","install-product"]}
+plan={"SPDX-License-Identifier":"MIT","schemaVersion":1,"kind":"gate-d-same-version-transition","productArchiveSha256":"1"*64,"qualificationArchiveSha256":"2"*64,"ledgerSha256":"3"*64,"preState":product,"absentState":absent,"qualifiedState":qualified,"authorization":{"approved":False,"targetExecutionApproved":False,"executionReady":False},"probeArgv":["probe","state"],"removeArgv":["admin","remove"],"removeRecoveryArgv":["admin","recover-remove"],"qualificationInstallArgv":["admin","install-qualification"],"qualificationRecoveryArgv":["admin","recover-qualification"],"qualificationRemoveArgv":["admin","remove-qualification"],"productRollbackArgv":["admin","install-product"]}
 def harness(stop=None,fail=None):
  state=product.copy(); journal=[]
  def run(argv):
@@ -43,4 +43,10 @@ for mutation in ({"checkpoint":"unknown"},{"productRemoved":"yes"},{"qualificati
  try:same.recover(plan,state,run=lambda argv:None,probe=lambda:product,record=lambda value:None)
  except ValueError:pass
  else:raise AssertionError(f"unsafe journal accepted: {mutation}")
+with tempfile.TemporaryDirectory() as temporary:
+ path=pathlib.Path(temporary)/"plan.json";journal=pathlib.Path(temporary)/"journal.json"
+ path.write_text(json.dumps(plan)+"\n")
+ output=subprocess.check_output(["python3",str(ROOT/"scripts/gate_d_same_version_driver.py"),"validate",str(path),str(journal)],text=True)
+ assert json.loads(output)=={"outputDisabled":True,"readOnly":True,"valid":True}
+ assert not journal.exists()
 print("Gate D same-version orchestration: PASS")

@@ -21,6 +21,8 @@ installed DKMS state, and no module, endpoint, overlay, or live output.
 
 1. Model ledger-bound product removal, verified absence, qualification
    installation, verified output-disabled qualification state, and commit.
+   Include a sealed-plan executable consumer; a library without a path-bearing
+   entrypoint does not satisfy this requirement.
 2. Distinguish command failure before a transition commits from interruption
    after it commits. Never invoke recovery against a terminal removed or
    installed ledger.
