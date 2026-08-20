@@ -40,8 +40,38 @@ def package_identity() -> tuple[str, str]:
 
 
 def active_overlays() -> int:
+    return len(overlay_inventory())
+
+
+def overlay_inventory() -> dict[str, str]:
     result = command(["/usr/bin/sudo", "-n", "/usr/bin/dtoverlay", "-l"])
-    return sum(1 for line in result.stdout.splitlines() if line.split(":", 1)[0].isdigit())
+    overlays: dict[str, str] = {}
+    for line in result.stdout.splitlines():
+        identifier, separator, name = line.strip().partition(":")
+        if not separator or not identifier.isdigit():
+            continue
+        name = name.strip()
+        if not name or identifier in overlays:
+            raise RuntimeError("runtime overlay listing is malformed or duplicated")
+        overlays[identifier] = name.split()[0]
+    return overlays
+
+
+def apply_overlay(route: str) -> str:
+    before = overlay_inventory()
+    if before:
+        raise RuntimeError("runtime overlay baseline is not empty")
+    # dtoverlay apply stdout is not an identifier contract. Raspberry Pi tool
+    # versions may emit an identifier or no output at all.
+    command(["/usr/bin/sudo", "-n", "/usr/bin/dtoverlay", f"rp1-gpclk-{route}"])
+    after = overlay_inventory()
+    additions = set(after) - set(before)
+    if len(additions) != 1:
+        raise RuntimeError("runtime overlay before/after delta is not exactly one")
+    identifier = additions.pop()
+    if after[identifier] != f"rp1-gpclk-{route}":
+        raise RuntimeError("runtime overlay before/after identity differs")
+    return identifier
 
 
 def inactive(expect_version: str) -> None:
@@ -85,10 +115,7 @@ def route_attempt(route: str) -> None:
         loaded = True
         if LIVE.read_text().strip() not in {"N", "0"}:
             raise RuntimeError("live output gate is not disabled")
-        applied = command(["/usr/bin/sudo", "-n", "/usr/bin/dtoverlay", f"rp1-gpclk-{route}"])
-        overlay_id = applied.stdout.strip().splitlines()[-1].strip()
-        if not overlay_id.isdigit():
-            raise RuntimeError("runtime overlay identifier is invalid")
+        overlay_id = apply_overlay(route)
         command(["/usr/bin/sudo", "-n", "/usr/bin/udevadm", "settle"])
         if not ENDPOINT.exists() or LIVE.read_text().strip() not in {"N", "0"}:
             raise RuntimeError("disabled endpoint did not appear")
@@ -101,6 +128,15 @@ def route_attempt(route: str) -> None:
         loaded = False
         inactive(PACKAGE_VERSION)
     finally:
+        if overlay_id is None:
+            try:
+                residual = overlay_inventory()
+            except (OSError, RuntimeError, subprocess.CalledProcessError):
+                residual = {}
+            matches = [identifier for identifier, name in residual.items()
+                       if name == f"rp1-gpclk-{route}"]
+            if len(residual) == 1 and len(matches) == 1:
+                overlay_id = matches[0]
         if overlay_id is not None:
             command(["/usr/bin/sudo", "-n", "/usr/bin/dtoverlay", "-r", overlay_id], check=False)
         if loaded:

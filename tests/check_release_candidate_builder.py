@@ -8,12 +8,14 @@ import stat
 import sys
 import tarfile
 import tempfile
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from scripts import build_release_candidate as builder
 from scripts import release_candidate_controls as controls
+from scripts import release_candidate_target as target
 
 
 def tar_xz(files: dict[str, bytes]) -> bytes:
@@ -118,6 +120,42 @@ assert "live_output=0" in target_source
 assert "live_output=1" not in target_source
 assert 'choices=("gpio4", "gpio20")' in target_source
 assert "/dev/mem" not in target_source
+assert "applied.stdout" not in target_source
+assert "if len(residual) == 1 and len(matches) == 1" in target_source
+
+
+def exercise_overlay_capture(apply_stdout: str) -> None:
+    outputs = iter(("No overlays loaded\n", apply_stdout, "Overlays (in load order):\n7:  rp1-gpclk-gpio4\n"))
+    calls = []
+    original = target.command
+
+    def fake_command(argv, check=True):
+        calls.append(argv)
+        return SimpleNamespace(stdout=next(outputs), returncode=0)
+
+    target.command = fake_command
+    try:
+        assert target.apply_overlay("gpio4") == "7"
+    finally:
+        target.command = original
+    assert calls[0][-1] == "-l"
+    assert calls[1][-1] == "rp1-gpclk-gpio4"
+    assert calls[2][-1] == "-l"
+
+
+exercise_overlay_capture("")
+exercise_overlay_capture("7\n")
+original = target.command
+ambiguous = iter(("No overlays loaded\n", "", "0: rp1-gpclk-gpio4\n1: rp1-gpclk-gpio20\n"))
+target.command = lambda argv, check=True: SimpleNamespace(stdout=next(ambiguous), returncode=0)
+try:
+    target.apply_overlay("gpio4")
+except RuntimeError:
+    pass
+else:
+    raise AssertionError("ambiguous overlay delta accepted")
+finally:
+    target.command = original
 
 containerfile = (ROOT / "tools/release-builder.Containerfile").read_text()
 assert "FROM docker.io/library/debian@sha256:c94f5ddd41327aa2d4a7cfba7889056c02936182fd76a513fec6160c97181fc0" in containerfile

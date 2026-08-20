@@ -42,8 +42,8 @@ def validate(root: Path) -> dict:
         raise ValueError("target plan qualification identity differs")
     steps = plan.get("steps")
     expected = [
-        "read-only-preflight", "validated-transfer", "inactive-upgrade",
-        "verify-inactive-install", "gpio4-output-disabled-lifecycle",
+        "read-only-preflight", "validated-transfer", "verify-inactive-current",
+        "gpio4-output-disabled-lifecycle",
         "gpio20-output-disabled-lifecycle", "complete-removal-residue-audit",
         "reinstall-final-package", "verify-final-inactive-baseline",
     ]

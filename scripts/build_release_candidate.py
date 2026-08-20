@@ -224,10 +224,9 @@ def target_plan(product_hash: str, inventory_hash: str, identity_hash: str,
             "antennaOrTransmitterDisconnected": "fresh-operator-confirmation-required"
         },
         "steps": [
-            {"id":"read-only-preflight","argv":["/usr/bin/python3","scripts/release_candidate_target.py","preflight","--expect-version","0.0.0~phase5.54-2"],"mutating":False,"requiresAuthorization":False},
+            {"id":"read-only-preflight","argv":["/usr/bin/python3","scripts/release_candidate_target.py","preflight","--expect-version",DEBIAN_VERSION],"mutating":False,"requiresAuthorization":False},
             {"id":"validated-transfer","argv":["/usr/bin/sha256sum","--check","SHA256SUMS"],"mutating":False,"requiresAuthorization":False},
-            {"id":"inactive-upgrade","argv":["/usr/bin/sudo","/usr/bin/dpkg","--install","rp1-gpclk-dkms_1.0.0-1_all.deb"],"mutating":True,"requiresAuthorization":True},
-            {"id":"verify-inactive-install","argv":["/usr/bin/python3","scripts/release_candidate_target.py","verify-inactive","--expect-version",DEBIAN_VERSION],"mutating":False,"requiresAuthorization":True},
+            {"id":"verify-inactive-current","argv":["/usr/bin/python3","scripts/release_candidate_target.py","verify-inactive","--expect-version",DEBIAN_VERSION],"mutating":False,"requiresAuthorization":True},
             {"id":"gpio4-output-disabled-lifecycle","argv":["/usr/bin/python3","scripts/release_candidate_target.py","route","--route","gpio4","--execute"],"mutating":True,"requiresAuthorization":True},
             {"id":"gpio20-output-disabled-lifecycle","argv":["/usr/bin/python3","scripts/release_candidate_target.py","route","--route","gpio20","--execute"],"mutating":True,"requiresAuthorization":True},
             {"id":"complete-removal-residue-audit","argv":["/usr/bin/python3","scripts/release_candidate_target.py","remove-audit","--execute"],"mutating":True,"requiresAuthorization":True},
