@@ -4,7 +4,7 @@
   "release": "1.0.0",
   "debianVersion": "1.0.0-1",
   "expectedTag": "v1.0.0",
-  "currentClassification": "repaired-qualification-candidate-awaiting-target-verification",
+  "currentClassification": "target-verified-release-candidate-awaiting-review",
   "modulePublicationConfirmed": false,
   "publishedReleaseRequiresPostDownloadVerification": true,
   "candidateSnapshot": {
@@ -15,7 +15,6 @@
     "validatedDevelopmentPackageSha256": "f61286a6e63c2735413a0e86d13c5dc2d91f4581e8a20aab7291234b1991f90b",
     "consumableByDependentRelease": false,
     "knownBlockers": [
-      "exact-final-candidate-target-verification-not-performed",
       "release-review-and-claim-audit-not-closed",
       "module-release-not-published",
       "public-artifact-download-verification-not-performed"
@@ -47,7 +46,7 @@
     {"id":"offline-checks-twice","owner":"RP1-GPCLK-DKMS","requires":["closure-reconciliation"],"status":"passed","evidence":["docs/evidence/phase5.54-closure-reconciliation.json","two clean exact-commit offline and package-suite passes with byte-identical transcript SHA-256 c5b8565ec4dc9ed3e82bc5fdae4f63f815ae725e4e28b236a8db96a2f9691061"],"claimCeiling":"offline source and package contract validation only"},
     {"id":"semantic-version-selection","owner":"RP1-GPCLK-DKMS","requires":["offline-checks-twice"],"status":"passed","evidence":["docs/evidence/release-1.0.0-semantic-version-selection.json","operator selected SemVer 1.0.0 and expected tag v1.0.0"],"claimCeiling":"approved release identity only; no artifact tag or publication"},
     {"id":"final-artifact-reproduction","owner":"RP1-GPCLK-DKMS","requires":["semantic-version-selection"],"status":"passed","evidence":["docs/evidence/release-1.0.0-final-artifact-reproduction.json","docs/evidence/release-1.0.0-overlay-id-capture-repair.json","unchanged product SHA-256 951289ee5d0e44cff41b59756f00161aba16f43f1450715ba57c4a3679a2e6b8 and repaired qualification SHA-256 c05f2f2adc20b9e99bf37d775c4bddd6cafd27e5da5e9c62410784fb835727d2 independently reproduced twice","literal product and qualification inventories plus UAPI GPIO4 and GPIO20 identities verified"],"claimCeiling":"reproduced repaired qualification and unchanged product artifacts only; no target verification tag or publication"},
-    {"id":"final-candidate-target-verification","owner":"RP1-GPCLK-DKMS","requires":["final-artifact-reproduction"],"status":"blocked","evidence":["docs/evidence/release-1.0.0-final-target-verification-gpio4-failure.json","exact 1.0.0-1 package installed inactive on wspr5 with four stock-kernel DKMS installations and exact installed identities","GPIO4 attempt stopped because dtoverlay returned no stdout identifier; sole attempt overlay 0 was identified by read-only listing and removed; inactive 1.0.0-1 baseline restored","GPIO4 and GPIO20 lifecycle plus package removal reinstall remain unverified for the final qualification controls"],"claimCeiling":"exact final package inactive installation only; final lifecycle and removal verification not passed"},
+    {"id":"final-candidate-target-verification","owner":"RP1-GPCLK-DKMS","requires":["final-artifact-reproduction"],"status":"passed","evidence":["docs/evidence/release-1.0.0-final-target-verification-gpio4-failure.json","docs/evidence/release-1.0.0-repaired-target-verification-success.json","exact 1.0.0-1 package and repaired qualification c05f2f2adc20b9e99bf37d775c4bddd6cafd27e5da5e9c62410784fb835727d2 passed separate GPIO4 and GPIO20 live_output=0 lifecycles plus complete removal audit and unchanged-product reinstall on wspr5","final inactive baseline restored with four stock-kernel DKMS installations exact installed identities empty audit inactive services and no scoped kernel warnings errors or failures"],"claimCeiling":"exact final-candidate output-disabled target administration on wspr5 only; no live output transmission RF publication or broader compatibility claim"},
     {"id":"release-review-and-claim-audit","owner":"RP1-GPCLK-DKMS","requires":["final-candidate-target-verification"],"status":"blocked","evidence":["independent adversarial review closed","operator instructions limitations compatibility manifest and evidence ceilings verified"],"claimCeiling":"reviewed candidate with no claim beyond exact evidence"},
     {"id":"module-publication","owner":"RP1-GPCLK-DKMS","requires":["release-review-and-claim-audit"],"status":"blocked","evidence":["separate publication authorization","reviewed matching tag pushed and immutable artifacts checksums provenance and manifest published"],"claimCeiling":"published but not yet independently downloaded and verified"},
     {"id":"public-download-verification","owner":"RP1-GPCLK-DKMS","requires":["module-publication"],"status":"blocked","evidence":["every public artifact downloaded to a fresh location","outer and inner hashes inventories and provenance verified","ordinary product installation remains independent of qualification tooling"],"claimCeiling":"confirmed consumable module release at exact public identities"},

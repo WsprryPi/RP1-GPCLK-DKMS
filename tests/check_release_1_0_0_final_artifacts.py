@@ -26,7 +26,7 @@ assert evidence["product"]["controlMemberCount"] == 5
 assert evidence["qualification"]["regularMemberCount"] == 16
 assert all(evidence["validation"].values())
 assert gates["final-artifact-reproduction"]["status"] == "passed"
-assert gates["final-candidate-target-verification"]["status"] == "blocked"
+assert gates["final-candidate-target-verification"]["status"] == "passed"
 assert evidence["nextGate"] == "final-candidate-target-verification"
 assert evidence["targetContacted"] is False
 assert evidence["tagCreated"] is False

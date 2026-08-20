@@ -23,7 +23,7 @@ assert roadmap["expectedTag"] == decision["expectedTag"] == "v1.0.0"
 gates = {gate["id"]: gate for gate in roadmap["gates"]}
 assert gates["semantic-version-selection"]["status"] == "passed"
 assert gates["final-artifact-reproduction"]["status"] == "passed"
-assert gates["final-candidate-target-verification"]["status"] == "blocked"
+assert gates["final-candidate-target-verification"]["status"] == "passed"
 assert roadmap["modulePublicationConfirmed"] is False
 assert decision["tagCreated"] is False
 assert decision["artifactConstructed"] is False
