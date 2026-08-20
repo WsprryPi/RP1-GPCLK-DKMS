@@ -1,0 +1,52 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "phase5.54-output-disabled-lifecycle-attempt",
+  "attempt": 2,
+  "target": "wspr5",
+  "kernel": "6.18.34+rpt-rpi-2712",
+  "route": "gpio20",
+  "sourceCommit": "5587d438f1d75aa938e1f44444dec5e29ad32174",
+  "installedEvidenceCommit": "c5f278cccb2398875198e1d7d2e7727aee757a7f",
+  "predecessorAttemptEvidenceCommit": "4018b0ef2334fac759be49a5af1f6d3bd67676d6",
+  "packageVersion": "0.0.0~phase5.54-2",
+  "moduleVersion": "0.0.0-phase5.54",
+  "packageSha256": "f61286a6e63c2735413a0e86d13c5dc2d91f4581e8a20aab7291234b1991f90b",
+  "paths": {
+    "uapi": {"path": "/usr/src/rp1-gpclk-dkms-0.0.0-phase5.54/include/uapi/linux/rp1_gpclk.h", "sha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb"},
+    "canonicalOverlay": {"path": "/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo", "sha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"},
+    "bootOverlay": {"path": "/boot/firmware/overlays/rp1-gpclk-gpio20.dtbo", "sha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"},
+    "endpoint": {"path": "/dev/rp1-gpclk"},
+    "liveOutputParameter": {"path": "/sys/module/rp1_gpclk_dkms/parameters/live_output"}
+  },
+  "preconditions": {
+    "packageStatus": "install ok installed",
+    "dpkgAuditEmpty": true,
+    "moduleLoaded": false,
+    "endpointPresent": false,
+    "activeOverlayCount": 0,
+    "bootSelectionCount": 0,
+    "gpio4AttemptPassed": true,
+    "si5351Disconnected": true,
+    "transmitterInactive": true,
+    "antennaConnected": false
+  },
+  "steps": [
+    {"id": "compile-probe", "argv": ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-I/usr/src/rp1-gpclk-dkms-0.0.0-phase5.54/include/uapi", "gate_d_uapi_probe.c", "-o", "gate_d_uapi_probe"]},
+    {"id": "load-disabled", "argv": ["sudo", "modprobe", "rp1_gpclk_dkms", "live_output=0"]},
+    {"id": "verify-disabled", "argv": ["cat", "/sys/module/rp1_gpclk_dkms/parameters/live_output"]},
+    {"id": "apply-gpio20-runtime", "argv": ["sudo", "dtoverlay", "rp1-gpclk-gpio20"]},
+    {"id": "settle-gpio20-runtime", "argv": ["sudo", "udevadm", "settle", "--timeout=10"]},
+    {"id": "verify-endpoint", "argv": ["test", "-c", "/dev/rp1-gpclk"]},
+    {"id": "reverify-disabled", "argv": ["cat", "/sys/module/rp1_gpclk_dkms/parameters/live_output"]},
+    {"id": "query-acquire-release", "argv": ["sudo", "./gate_d_uapi_probe", "gpio20", "0.0.0-phase5.54"]},
+    {"id": "remove-runtime-overlay", "argv": ["sudo", "dtoverlay", "-r", "ATTEMPT_OVERLAY_ID"]},
+    {"id": "verify-endpoint-absent", "argv": ["test", "!", "-e", "/dev/rp1-gpclk"]},
+    {"id": "unload", "argv": ["sudo", "modprobe", "-r", "rp1_gpclk_dkms"]},
+    {"id": "verify-module-absent", "argv": ["test", "!", "-d", "/sys/module/rp1_gpclk_dkms"]}
+  ],
+  "recoveryOrder": ["close-probe", "remove-attempt-overlay-if-present", "unload-module-if-present", "verify-inactive-baseline"],
+  "terminalRequirements": {"moduleLoaded": false, "endpointPresent": false, "activeOverlayCount": 0, "bootSelectionCount": 0, "packageUnchanged": true},
+  "prohibited": ["live_output=1", "/dev/mem", "reboot", "boot-config-write", "clock-enable", "dma-submit", "gpio-output", "transmission", "rf"],
+  "authorization": "not-authorized-for-target-execution"
+}

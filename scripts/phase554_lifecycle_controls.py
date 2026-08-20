@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Validate and render the bounded Phase 5.54 attempt-1 control package."""
+"""Validate and render a bounded Phase 5.54 route lifecycle control package."""
 
 from __future__ import annotations
 
@@ -29,7 +29,9 @@ def load(path: pathlib.Path) -> dict:
 def validate(plan: dict) -> None:
     assert plan["schemaVersion"] == 1
     assert plan["kind"] == "phase5.54-output-disabled-lifecycle-attempt"
-    assert plan["attempt"] == 1 and plan["route"] == "gpio4"
+    attempt = plan["attempt"]
+    route = plan["route"]
+    assert (attempt, route) in {(1, "gpio4"), (2, "gpio20")}
     assert plan["packageVersion"] == "0.0.0~phase5.54-2"
     assert plan["moduleVersion"] == "0.0.0-phase5.54"
     assert plan["authorization"] == "not-authorized-for-target-execution"
@@ -39,12 +41,16 @@ def validate(plan: dict) -> None:
     assert plan["preconditions"]["bootSelectionCount"] == 0
     assert plan["preconditions"]["antennaConnected"] is False
     assert plan["terminalRequirements"]["packageUnchanged"] is True
+    if attempt == 2:
+        assert plan["predecessorAttemptEvidenceCommit"] == \
+            "4018b0ef2334fac759be49a5af1f6d3bd67676d6"
+        assert plan["preconditions"]["gpio4AttemptPassed"] is True
 
     paths = plan["paths"]
     expected = {
         "uapi": "/usr/src/rp1-gpclk-dkms-0.0.0-phase5.54/include/uapi/linux/rp1_gpclk.h",
-        "canonicalOverlay": "/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo",
-        "bootOverlay": "/boot/firmware/overlays/rp1-gpclk-gpio4.dtbo",
+        "canonicalOverlay": f"/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-{route}.dtbo",
+        "bootOverlay": f"/boot/firmware/overlays/rp1-gpclk-{route}.dtbo",
         "endpoint": "/dev/rp1-gpclk",
         "liveOutputParameter": "/sys/module/rp1_gpclk_dkms/parameters/live_output",
     }
@@ -55,10 +61,15 @@ def validate(plan: dict) -> None:
             value = paths[key]["sha256"]
             assert len(value) == 64 and all(char in SHA256 for char in value)
     assert paths["canonicalOverlay"]["sha256"] == paths["bootOverlay"]["sha256"]
+    overlay_hash = {
+        "gpio4": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+        "gpio20": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    }
+    assert paths["canonicalOverlay"]["sha256"] == overlay_hash[route]
 
     ids = [step["id"] for step in plan["steps"]]
     assert ids == ["compile-probe", "load-disabled", "verify-disabled",
-                   "apply-gpio4-runtime", "settle-gpio4-runtime",
+                   f"apply-{route}-runtime", f"settle-{route}-runtime",
                    "verify-endpoint", "reverify-disabled",
                    "query-acquire-release", "remove-runtime-overlay",
                    "verify-endpoint-absent", "unload", "verify-module-absent"]
@@ -66,7 +77,9 @@ def validate(plan: dict) -> None:
     for prohibited in plan["prohibited"]:
         assert prohibited not in flat
     assert "live_output=0" in flat
-    assert "rp1-gpclk-gpio4" in flat and "gpio20" not in flat
+    assert f"rp1-gpclk-{route}" in flat
+    other = "gpio20" if route == "gpio4" else "gpio4"
+    assert other not in flat
     assert "ATTEMPT_OVERLAY_ID" in flat
 
 
@@ -81,7 +94,7 @@ def main() -> None:
         for step in plan["steps"]:
             print(f'{step["id"]}: {shlex.join(step["argv"])}')
     else:
-        print("Phase 5.54 lifecycle attempt-1 controls: PASS")
+        print(f"Phase 5.54 lifecycle attempt-{plan['attempt']} controls: PASS")
 
 
 if __name__ == "__main__":

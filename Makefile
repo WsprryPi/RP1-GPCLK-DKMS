@@ -17,6 +17,7 @@ package-check:
 	python3 tests/check_phase554_half_configured_recovery_success.py
 	python3 tests/check_phase554_lifecycle_controls.py
 	python3 tests/check_phase554_lifecycle_attempt1_success.py
+	python3 tests/check_phase554_lifecycle_attempt2_controls.py
 
 release-unit:
 	./scripts/build_release.py "$(if $(OUTPUT_DIR),$(OUTPUT_DIR),dist)" $(if $(DEVELOPMENT),--development,)
