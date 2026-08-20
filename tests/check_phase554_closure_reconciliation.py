@@ -24,8 +24,6 @@ assert evidence["result"] == "pass-next-gate-semantic-version-selection"
 gates = {gate["id"]: gate for gate in roadmap["gates"]}
 assert gates["closure-reconciliation"]["status"] == "passed"
 assert gates["offline-checks-twice"]["status"] == "passed"
-assert gates["semantic-version-selection"]["status"] == "blocked"
-assert roadmap["expectedTag"] is None
 assert roadmap["modulePublicationConfirmed"] is False
 assert roadmap["candidateSnapshot"]["consumableByDependentRelease"] is False
 

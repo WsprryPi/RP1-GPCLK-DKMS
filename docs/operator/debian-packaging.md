@@ -6,10 +6,10 @@ Phase 5.54 uses the standard Debian DKMS lifecycle. Build the package with
 `dpkg-buildpackage`; install, upgrade, or remove it with the ordinary Debian
 package tools. `dh-dkms` generates the DKMS maintainer-script integration.
 
-The product package owns only:
+The `1.0.0` product package owns only:
 
 - the module build closure under
-  `/usr/src/rp1-gpclk-dkms-0.0.0-phase5.54`, including the canonical UAPI;
+  `/usr/src/rp1-gpclk-dkms-1.0.0`, including the canonical UAPI;
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo`; and
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo`.
 
@@ -36,7 +36,7 @@ package must not guess at or silently remove those unowned files.
 
 ## Phase 5.54 validation status
 
-The exact Debian revision `0.0.0~phase5.54-2`, SHA-256
+The Phase 5.54 development revision `0.0.0~phase5.54-2`, SHA-256
 `f61286a6e63c2735413a0e86d13c5dc2d91f4581e8a20aab7291234b1991f90b`,
 has passed the following on `wspr5` running stock kernel
 `6.18.34+rpt-rpi-2712`:
@@ -51,9 +51,10 @@ Both overlay files are installed together and remain inactive until an
 administrator selects one route. Changing the later route selection does not
 require reinstalling the module package.
 
-This evidence does not qualify `live_output=1`, clock or rate changes, DMA,
-GPIO output, timing behavior, transmission, RF, arbitrary matching kernels, or
-application integration. Phase 5.54 remains a development identity until a
-semantic release version is selected, final artifacts are reproduced and
-reviewed, the matching Git tag and release are explicitly authorized and
-published, and fresh public downloads pass identity verification.
+That development-package evidence does not by itself qualify the not-yet-built
+`1.0.0-1` package. It also does not qualify `live_output=1`, clock or rate
+changes, DMA, GPIO output, timing behavior, transmission, RF, arbitrary
+matching kernels, or application integration. Version `1.0.0` and expected tag
+`v1.0.0` are selected, but final artifacts must still be reproduced from the
+committed version source, verified at their exact identities, reviewed,
+explicitly tagged and published, and checked again after fresh public download.

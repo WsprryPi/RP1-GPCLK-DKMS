@@ -52,7 +52,7 @@ exact-version removal, complete and repeated removal, reinstall,
 output-disabled UAPI query/acquire/release, and explicit unbind/rebind. Its
 concrete execution instance remains fail-closed and non-executable. Frozen
 `0.0.0-phase5.2` is retained as the genuine predecessor. Phase 5.53 is
-historical experimental-archive evidence. Phase 5.54 is the active conventional
+historical experimental-archive evidence. Phase 5.54 produced the conventional
 Debian DKMS development candidate. Its exact `-2` package has passed inactive
 installation, separate output-disabled GPIO4 and GPIO20 lifecycle attempts,
 and complete removal followed by reinstall on the representative Raspberry Pi
@@ -90,9 +90,10 @@ qualification tools remain a separate artifact and are not installed with the
 product package. See [Debian packaging](docs/operator/debian-packaging.md).
 The active machine-readable roadmap is
 [`release/release-integration-gates-v1.json`](release/release-integration-gates-v1.json).
-Semantic release-version selection, final artifact reproduction, publication,
-fresh-download verification, and consuming-repository integration remain
-separate gates.
+The initial semantic release is selected as `1.0.0` with expected tag
+`v1.0.0`. Final artifact reproduction, exact-candidate verification,
+publication, fresh-download verification, and consuming-repository integration
+remain separate gates.
 
 ## Intended scope
 
