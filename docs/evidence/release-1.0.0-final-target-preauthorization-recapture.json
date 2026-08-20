@@ -1,0 +1,55 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "kind": "release-final-target-preauthorization-recapture",
+  "target": "wspr5",
+  "release": "1.0.0",
+  "debianVersion": "1.0.0-1",
+  "candidateSourceCommit": "a20abc828ec300ad3227a34be7572f4fa28525b2",
+  "controlCommit": "913adad58ca3790ac682be7b7d9de2bde6f8ec69",
+  "productPackageSha256": "951289ee5d0e44cff41b59756f00161aba16f43f1450715ba57c4a3679a2e6b8",
+  "qualificationArchiveSha256": "fa11f86c8a5f1443560d71720e44a4fa1e3d209d64542c0d416e00debc9dea5e",
+  "recaptureSha256": "41f45616f3521b74c61e443aeed552a6c173a5b4dc2367b3d42b8c3ba8f04089",
+  "recaptureLineCount": 18,
+  "observed": {
+    "hostname": "wspr5",
+    "kernel": "6.18.34+rpt-rpi-2712",
+    "packageStatus": "installed",
+    "packageVersion": "0.0.0~phase5.54-2",
+    "dpkgAuditEmpty": true,
+    "stockDkmsInstallCount": 4,
+    "moduleLoaded": false,
+    "endpointPresent": false,
+    "runtimeOverlayCount": 0,
+    "bootOverlaySelected": false,
+    "conflictingServicesActive": false,
+    "allRequiredCommandPathsExecutable": true
+  },
+  "installedIdentities": {
+    "uapiSha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb",
+    "canonicalGpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "canonicalGpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "bootGpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "bootGpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"
+  },
+  "qualificationClosure": {
+    "extractedValidationPassed": true,
+    "renderedStepCount": 9,
+    "memberListingSha256": "e511b714588d4499738c54edc12134a755ae39707621d3be5c9ad802076cdd4e",
+    "everyInvokedQualificationPathPresent": true,
+    "completeChecksumEnforcementPresent": true
+  },
+  "executionNotes": [
+    "An initial read-only dpkg-query used incorrect shell quoting and stopped before completing the query; it made no target change.",
+    "A later local validator invocation against the outer release directory failed because qualification scripts intentionally reside in the separate archive; validation passed from the extracted qualification root."
+  ],
+  "physicalSafetyConfirmationFresh": false,
+  "targetMutationAuthorized": false,
+  "targetMutationPerformed": false,
+  "moduleOrOverlayActivity": false,
+  "bootChanged": false,
+  "rebooted": false,
+  "gpioClockDmaTransmissionRf": false,
+  "nextGate": "operator authorization for the exact final-candidate target-verification sequence",
+  "result": "ready-for-explicit-authorization"
+}
