@@ -244,4 +244,11 @@ with tempfile.TemporaryDirectory() as temporary:
             for item in bad: tool.verify_package_path(typed_prefix,item)
         except (ValueError,KeyError): pass
         else: raise AssertionError("unsafe typed pre-root package inventory accepted")
+schema7=json.loads((ROOT/"release/gate-d-pre-root-bootstrap-envelope-phase5.53-v1.json").read_text())
+schema7["schemaVersion"]=7;schema7["priorTerminalState"]["status"]="removed"
+assert tool.validate(schema7)["outputDisabled"] is True
+bad=copy.deepcopy(schema7);bad["priorTerminalState"]["status"]="complete"
+try:tool.validate(bad)
+except ValueError:pass
+else:raise AssertionError("schema 7 accepted non-removed predecessor ledger")
 print("Gate D pre-root trust transition: PASS")
