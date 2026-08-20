@@ -7,6 +7,7 @@ import importlib.util
 import json
 import pathlib
 import shutil
+import subprocess
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -49,6 +50,44 @@ with tempfile.TemporaryDirectory() as temporary:
     assert removed["status"] == "removed"
     assert sentinel.read_bytes() == before
     assert not (root / "usr/libexec/rp1-gpclk-dkms/gate-d-executor").exists()
+
+with tempfile.TemporaryDirectory() as temporary:
+    root = pathlib.Path(temporary)
+    source = root / "qualification-source"
+    shutil.copytree(ROOT, source, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+    include = root / "usr/include/linux"
+    include.mkdir(parents=True)
+    shutil.copyfile(ROOT / "include/uapi/linux/rp1_gpclk.h", include / "rp1_gpclk.h")
+
+    def interrupted_cc(argv, **kwargs):
+        pathlib.Path(argv[argv.index("-o") + 1]).write_bytes(b"partial-output")
+        raise subprocess.CalledProcessError(1, argv)
+
+    try:
+        installer.install(source, root, runner=interrupted_cc)
+        raise AssertionError("interrupted qualification build unexpectedly passed")
+    except subprocess.CalledProcessError:
+        pass
+    ledger = root / "var/lib/rp1-gpclk-dkms/qualification.json"
+    interrupted = json.loads(ledger.read_text())
+    assert interrupted["status"] == "recovery-required"
+    assert interrupted["pendingBuild"]["temporary"].endswith(".installing")
+    installer.remove(root)
+    assert not pathlib.Path(interrupted["pendingBuild"]["temporary"]).exists()
+    assert not pathlib.Path(interrupted["pendingBuild"]["destination"]).exists()
+
+with tempfile.TemporaryDirectory() as temporary:
+    root = pathlib.Path(temporary)
+    ledger = root / "var/lib/rp1-gpclk-dkms/qualification.json"
+    ledger.parent.mkdir(parents=True)
+    ledger.write_text(json.dumps({"status": "recovery-required", "pendingBuild": {
+        "temporary": "/tmp/outside-root", "destination": "/tmp/outside-final"},
+        "ownedFiles": [], "ownedDirectories": []}))
+    try:
+        installer.remove(root)
+        raise AssertionError("escaping qualification ledger unexpectedly removed")
+    except ValueError as error:
+        assert "escapes root" in str(error)
 
 source = (ROOT / "scripts/install_qualification.py").read_text()
 for prohibited in ('["dkms"', '["modprobe"', '["dtoverlay"', '["reboot"'):

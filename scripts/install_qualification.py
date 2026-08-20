@@ -33,6 +33,23 @@ def rooted(root: pathlib.Path, raw: str) -> pathlib.Path:
     return path
 
 
+def confined(root: pathlib.Path, raw: str) -> pathlib.Path:
+    """Recover an absolute ledger path only when it remains below root."""
+    path = pathlib.Path(raw)
+    if not path.is_absolute():
+        raise ValueError("qualification ledger path is not absolute")
+    try:
+        path.relative_to(root)
+    except ValueError as error:
+        raise ValueError("qualification ledger path escapes root") from error
+    current = root
+    for part in path.relative_to(root).parts:
+        current /= part
+        if current.is_symlink():
+            raise ValueError(f"symlink in qualification ledger path: {path}")
+    return path
+
+
 def atomic_json(path: pathlib.Path, value: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
@@ -124,17 +141,26 @@ def install(source: pathlib.Path, root: pathlib.Path, *, runner=subprocess.run) 
             if destination.exists() or destination.is_symlink():
                 raise ValueError(f"qualification build destination exists: {item['destination']}")
             destination.parent.mkdir(parents=True, exist_ok=True)
-            argv = [*command, "-o", str(destination)]
+            temporary = destination.with_name(f".{destination.name}.{os.getpid()}.installing")
+            if temporary.exists() or temporary.is_symlink():
+                raise ValueError(f"qualification temporary build destination exists: {temporary}")
+            state["pendingBuild"] = {"temporary": str(temporary),
+                                     "destination": str(destination)}
+            argv = [*command, "-o", str(temporary)]
             state["commands"].append(argv)
             atomic_json(ledger, state)
             runner(argv, check=True, stdin=subprocess.DEVNULL,
                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                    env={"PATH": "/usr/bin:/bin"})
-            if destination.is_symlink() or not destination.is_file():
+            if temporary.is_symlink() or not temporary.is_file():
                 raise ValueError("qualification build produced no real output")
-            destination.chmod(0o755)
+            temporary.chmod(0o755)
+            state["pendingBuild"]["sha256"] = digest(temporary)
+            atomic_json(ledger, state)
+            os.replace(temporary, destination)
             state["ownedFiles"].append({"path": str(destination),
                                          "sha256": digest(destination)})
+            del state["pendingBuild"]
             atomic_json(ledger, state)
         state.update({"status": "complete", "recoveryRequired": False})
         atomic_json(ledger, state)
@@ -152,13 +178,31 @@ def remove(root: pathlib.Path) -> dict:
     state = json.loads(ledger.read_text())
     if state.get("status") not in {"complete", "recovery-required"}:
         raise ValueError("qualification state is not removable")
+    pending = state.get("pendingBuild")
+    if pending is not None:
+        if not isinstance(pending, dict) or set(pending) not in ({"temporary", "destination"},
+                                                                 {"temporary", "destination", "sha256"}):
+            raise ValueError("qualification pending build state is unsafe")
+        temporary = confined(root, pending["temporary"])
+        destination = confined(root, pending["destination"])
+        if destination.exists() or destination.is_symlink():
+            if (destination.is_symlink() or not destination.is_file() or
+                    "sha256" not in pending or digest(destination) != pending["sha256"]):
+                raise ValueError(f"qualification pending destination differs: {destination}")
+            destination.unlink()
+        if temporary.exists() or temporary.is_symlink():
+            if temporary.is_symlink() or not temporary.is_file():
+                raise ValueError(f"qualification pending output is unsafe: {temporary}")
+            if "sha256" in pending and digest(temporary) != pending["sha256"]:
+                raise ValueError(f"qualification pending output differs: {temporary}")
+            temporary.unlink()
     for item in reversed(state.get("ownedFiles", [])):
-        path = pathlib.Path(item["path"])
+        path = confined(root, item["path"])
         if path.is_symlink() or not path.is_file() or digest(path) != item["sha256"]:
             raise ValueError(f"qualification-owned file differs: {path}")
         path.unlink()
     for raw in reversed(state.get("ownedDirectories", [])):
-        path = pathlib.Path(raw)
+        path = confined(root, raw)
         try:
             path.rmdir()
         except OSError:
