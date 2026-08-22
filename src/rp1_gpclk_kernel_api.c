@@ -60,7 +60,8 @@ int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 				     RP1_GPCLK_DMA_PROVIDER_COMPATIBLE) ||
 	    dma_spec.args_count != 1 ||
 	    dma_spec.args[0] != RP1_GPCLK_DMA_REQUEST ||
-	    dma_spec.np->parent != clock_spec.np->parent) {
+	    dma_spec.np->parent != clock_spec.np->parent ||
+	    device->dev->of_node->parent != clock_spec.np->parent) {
 		ret = -EINVAL;
 		goto put_dma_node;
 	}

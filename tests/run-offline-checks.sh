@@ -11,6 +11,7 @@ python3 "$repo_dir/tests/check_spdx.py"
 python3 "$repo_dir/tests/check_uapi_identity.py"
 python3 "$repo_dir/tests/check_manifest.py"
 python3 "$repo_dir/tests/check_phase2c_integration.py"
+python3 "$repo_dir/tests/check_endpoint_bootstrap.py"
 python3 "$repo_dir/tests/check_phase2d_build.py"
 python3 "$repo_dir/tests/check_phase2e_target_assets.py"
 python3 "$repo_dir/tests/check_phase3_interface_freeze.py"
@@ -92,6 +93,14 @@ ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
     "$repo_dir/src/rp1_gpclk_execution_machine.c" "$repo_dir/tests/execution_machine.c" \
     -o "$tmp_dir/execution_machine"
 "$tmp_dir/execution_machine"
+
+${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
+    -DRP1_GPCLK_HOST_TEST \
+    -I"$repo_dir/include" \
+    "$repo_dir/src/rp1_gpclk_bootstrap_policy.c" \
+    "$repo_dir/tests/bootstrap_policy.c" \
+    -o "$tmp_dir/bootstrap_policy"
+"$tmp_dir/bootstrap_policy"
 
 git -C "$repo_dir" diff --check
 echo "whitespace: PASS"

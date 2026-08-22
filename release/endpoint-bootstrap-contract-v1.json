@@ -1,0 +1,35 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "releaseCandidate": "1.0.1",
+  "compatible": "wsprrypi,rp1-gpclk-dkms-v1",
+  "ancestry": "endpoint-clock-provider-and-dma-provider-share-rp1-parent",
+  "canonicalEndpoint": "/dev/rp1-gpclk",
+  "selection": {
+    "matchingNodes": 1,
+    "enabledNodes": 1,
+    "duplicateDisposition": "reject",
+    "disabledDisposition": "reject"
+  },
+  "existingDevice": {
+    "preference": "reuse",
+    "requiredBinding": "rp1-gpclk-dkms",
+    "moduleMayUnregister": false
+  },
+  "missingDevice": {
+    "creationApi": "of_platform_device_create",
+    "scope": "exact-selected-node-only",
+    "linuxDeviceParent": "existing-rp1-platform-device",
+    "synchronousBindingRequired": true,
+    "moduleOwnsCreatedDevice": true
+  },
+  "prohibited": [
+    "of_platform_populate-rp1",
+    "of_platform_default_populate-rp1",
+    "unrelated-child-creation",
+    "kernel-created-device-removal",
+    "manual-resource-manufacture",
+    "translated-address-hard-coding"
+  ],
+  "evidenceState": "hardware-free-unqualified"
+}

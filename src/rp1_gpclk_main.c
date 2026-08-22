@@ -4,10 +4,12 @@
 #include <linux/limits.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/utsname.h>
 
+#include "rp1_gpclk/bootstrap_policy.h"
 #include "rp1_gpclk/device.h"
 #include "rp1_gpclk/execution.h"
 #include "rp1_gpclk/kernel_api.h"
@@ -200,6 +202,7 @@ static int rp1_gpclk_probe(struct platform_device *pdev)
 	}
 	device->misc_registered = true;
 	platform_set_drvdata(pdev, device);
+	dev_info(&pdev->dev, "probe complete; /dev/rp1-gpclk registered\n");
 	return 0;
 
 release_resources:
@@ -244,6 +247,35 @@ static const struct of_device_id rp1_gpclk_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, rp1_gpclk_of_match);
 
+static DEFINE_MUTEX(rp1_gpclk_bootstrap_lock);
+static struct platform_device *rp1_gpclk_created_pdev;
+static struct device_node *rp1_gpclk_creating_node;
+static bool rp1_gpclk_creation_removed;
+
+static int rp1_gpclk_platform_bus_event(struct notifier_block *notifier,
+					unsigned long event, void *data)
+{
+	struct device *dev = data;
+
+	(void)notifier;
+	if (event != BUS_NOTIFY_DEL_DEVICE)
+		return NOTIFY_DONE;
+
+	mutex_lock(&rp1_gpclk_bootstrap_lock);
+	if (rp1_gpclk_created_pdev &&
+	    &rp1_gpclk_created_pdev->dev == dev)
+		rp1_gpclk_created_pdev = NULL;
+	if (rp1_gpclk_creating_node &&
+	    dev->of_node == rp1_gpclk_creating_node)
+		rp1_gpclk_creation_removed = true;
+	mutex_unlock(&rp1_gpclk_bootstrap_lock);
+	return NOTIFY_OK;
+}
+
+static struct notifier_block rp1_gpclk_platform_bus_notifier = {
+	.notifier_call = rp1_gpclk_platform_bus_event,
+};
+
 static struct platform_driver rp1_gpclk_driver = {
 	.probe = rp1_gpclk_probe,
 	.remove = rp1_gpclk_remove,
@@ -253,7 +285,187 @@ static struct platform_driver rp1_gpclk_driver = {
 	},
 };
 
-module_platform_driver(rp1_gpclk_driver);
+static void rp1_gpclk_find_endpoint(struct device_node **selected,
+				   unsigned int *matching_nodes)
+{
+	struct device_node *node;
+
+	*selected = NULL;
+	*matching_nodes = 0;
+	for_each_matching_node(node, rp1_gpclk_of_match) {
+		(*matching_nodes)++;
+		if (*matching_nodes == 1U)
+			*selected = of_node_get(node);
+	}
+}
+
+static bool rp1_gpclk_bound_to_this_driver(struct platform_device *pdev)
+{
+	bool bound;
+
+	device_lock(&pdev->dev);
+	bound = pdev->dev.driver == &rp1_gpclk_driver.driver;
+	device_unlock(&pdev->dev);
+	return bound;
+}
+
+static bool rp1_gpclk_detach_created_device(struct platform_device *pdev)
+{
+	bool owned;
+
+	mutex_lock(&rp1_gpclk_bootstrap_lock);
+	owned = rp1_gpclk_created_pdev == pdev;
+	if (owned)
+		rp1_gpclk_created_pdev = NULL;
+	mutex_unlock(&rp1_gpclk_bootstrap_lock);
+	return owned;
+}
+
+static int rp1_gpclk_bootstrap_endpoint(void)
+{
+	struct platform_device *existing;
+	struct platform_device *parent;
+	struct platform_device *created;
+	struct device_node *node;
+	enum rp1_gpclk_bootstrap_action action;
+	unsigned int matching_nodes;
+	bool removed_during_creation;
+	bool bound;
+	int ret;
+
+	rp1_gpclk_find_endpoint(&node, &matching_nodes);
+	if (!node) {
+		action = rp1_gpclk_bootstrap_decide(matching_nodes, false,
+						     false, false);
+		ret = action == RP1_GPCLK_BOOTSTRAP_REJECT_AMBIGUOUS ?
+			-EEXIST : -ENODEV;
+		pr_err("rp1-gpclk-dkms: endpoint discovery rejected %u matching nodes\n",
+		       matching_nodes);
+		return ret;
+	}
+
+	existing = of_find_device_by_node(node);
+	action = rp1_gpclk_bootstrap_decide(
+		matching_nodes, of_device_is_available(node), existing != NULL,
+		existing && rp1_gpclk_bound_to_this_driver(existing));
+
+	if (action == RP1_GPCLK_BOOTSTRAP_USE_EXISTING) {
+		dev_info(&existing->dev,
+			 "using kernel-created RP1 GPCLK platform device\n");
+		platform_device_put(existing);
+		of_node_put(node);
+		return 0;
+	}
+	if (existing) {
+		dev_err(&existing->dev,
+			"RP1 GPCLK endpoint exists but is not bound to this driver\n");
+		platform_device_put(existing);
+	}
+	if (action != RP1_GPCLK_BOOTSTRAP_CREATE) {
+		ret = action == RP1_GPCLK_BOOTSTRAP_REJECT_AMBIGUOUS ?
+			-EEXIST : action == RP1_GPCLK_BOOTSTRAP_REJECT_UNBOUND ?
+			-EBUSY : -ENODEV;
+		pr_err("rp1-gpclk-dkms: endpoint bootstrap rejected action %d\n",
+		       action);
+		of_node_put(node);
+		return ret;
+	}
+
+	parent = of_find_device_by_node(node->parent);
+	if (!parent) {
+		pr_err("rp1-gpclk-dkms: RP1 parent platform device is absent\n");
+		of_node_put(node);
+		return -ENODEV;
+	}
+	mutex_lock(&rp1_gpclk_bootstrap_lock);
+	rp1_gpclk_creating_node = node;
+	rp1_gpclk_creation_removed = false;
+	mutex_unlock(&rp1_gpclk_bootstrap_lock);
+	created = of_platform_device_create(node, NULL, &parent->dev);
+	platform_device_put(parent);
+	mutex_lock(&rp1_gpclk_bootstrap_lock);
+	removed_during_creation = rp1_gpclk_creation_removed;
+	rp1_gpclk_creating_node = NULL;
+	if (created && !removed_during_creation) {
+		get_device(&created->dev);
+		rp1_gpclk_created_pdev = created;
+	}
+	mutex_unlock(&rp1_gpclk_bootstrap_lock);
+	of_node_put(node);
+	if (!created) {
+		pr_err("rp1-gpclk-dkms: failed to create endpoint platform device\n");
+		return -ENODEV;
+	}
+	if (removed_during_creation) {
+		pr_err("rp1-gpclk-dkms: endpoint was removed during creation\n");
+		return -ENODEV;
+	}
+	bound = rp1_gpclk_bound_to_this_driver(created);
+	if (!bound) {
+		dev_err(&created->dev,
+			"created endpoint did not bind synchronously\n");
+		if (rp1_gpclk_detach_created_device(created))
+			platform_device_unregister(created);
+		put_device(&created->dev);
+		return -ENODEV;
+	}
+
+	mutex_lock(&rp1_gpclk_bootstrap_lock);
+	bound = rp1_gpclk_created_pdev == created;
+	mutex_unlock(&rp1_gpclk_bootstrap_lock);
+	if (!bound) {
+		put_device(&created->dev);
+		pr_err("rp1-gpclk-dkms: endpoint was removed before bootstrap completed\n");
+		return -ENODEV;
+	}
+	dev_info(&created->dev,
+		 "created and bound boot-time RP1 GPCLK platform device\n");
+	put_device(&created->dev);
+	return 0;
+}
+
+static int __init rp1_gpclk_init(void)
+{
+	int ret;
+
+	ret = bus_register_notifier(&platform_bus_type,
+				    &rp1_gpclk_platform_bus_notifier);
+	if (ret)
+		return ret;
+	ret = platform_driver_register(&rp1_gpclk_driver);
+	if (ret)
+		goto unregister_notifier;
+	ret = rp1_gpclk_bootstrap_endpoint();
+	if (ret)
+		goto unregister_driver;
+	return 0;
+
+unregister_driver:
+	platform_driver_unregister(&rp1_gpclk_driver);
+unregister_notifier:
+	bus_unregister_notifier(&platform_bus_type,
+				&rp1_gpclk_platform_bus_notifier);
+	return ret;
+}
+
+static void __exit rp1_gpclk_exit(void)
+{
+	struct platform_device *created;
+
+	mutex_lock(&rp1_gpclk_bootstrap_lock);
+	created = rp1_gpclk_created_pdev;
+	if (created)
+		rp1_gpclk_created_pdev = NULL;
+	mutex_unlock(&rp1_gpclk_bootstrap_lock);
+	if (created)
+		platform_device_unregister(created);
+	platform_driver_unregister(&rp1_gpclk_driver);
+	bus_unregister_notifier(&platform_bus_type,
+				&rp1_gpclk_platform_bus_notifier);
+}
+
+module_init(rp1_gpclk_init);
+module_exit(rp1_gpclk_exit);
 
 MODULE_AUTHOR("Lee Bussy");
 MODULE_DESCRIPTION("Experimental RP1 GPCLK controlled-output provider");
