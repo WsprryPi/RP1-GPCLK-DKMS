@@ -46,6 +46,7 @@ assert "release_candidate_transaction.py" not in rules
 assert "rp1-gpclk-route-manager.socket" in rules
 assert "rp1-gpclk-route-manager@.service" in rules
 assert "dh_installsystemd --no-enable --no-start" in rules
+assert "dh_compress -Xroute-manager-v1.md" in rules
 assert "addgroup --system rp1-gpclk-route" in postinst
 
 socket = (ROOT / "systemd/rp1-gpclk-route-manager.socket").read_text()

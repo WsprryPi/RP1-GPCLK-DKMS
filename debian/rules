@@ -39,6 +39,9 @@ override_dh_auto_install:
 override_dh_installsystemd:
 	dh_installsystemd --no-enable --no-start rp1-gpclk-route-manager.socket
 
+override_dh_compress:
+	dh_compress -Xroute-manager-v1.md
+
 override_dh_dkms:
 	dh_dkms -V $(MODULE_VERSION)
 
