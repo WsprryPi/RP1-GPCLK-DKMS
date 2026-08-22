@@ -47,6 +47,8 @@ assert gpio4["runtime"]["piModel"].startswith("Raspberry Pi 5 Model B")
 assert gpio4["build"]["kernelRelease"] == "6.18.34+rpt-rpi-2712"
 assert gpio4["build"]["architecture"] == "arm64"
 assert gpio4["build"]["runtimeArchitecture"] == "aarch64"
+assert gpio4["runtime"]["baseDtSha256"] == \
+    "e67017e5d45b97af478ebc93d651a086f2adcb6a650fe453eb9f1cf47e66473f"
 assert gpio4["build"]["moduleUnsignedSha256"] == \
     "8673a62be85289dc5faec68976be0b02bc16478a2d7f107e96177618d31b4160"
 assert gpio4["build"]["moduleInstalledSha256"] == \

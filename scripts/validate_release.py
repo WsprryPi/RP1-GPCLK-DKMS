@@ -106,6 +106,9 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
     if any(gpio4[0]["build"].get(field) != value
            for field, value in expected_module_identity.items()):
         fail("GPIO4 candidate module installation identity differs")
+    if gpio4[0]["runtime"].get("baseDtSha256") != \
+            "e67017e5d45b97af478ebc93d651a086f2adcb6a650fe453eb9f1cf47e66473f":
+        fail("GPIO4 candidate base device-tree identity differs")
     if (len(gpio20) != 1 or gpio20[0]["state"] != "Unavailable" or
             gpio20[0]["liveEligible"]):
         fail("GPIO20 must remain unavailable and non-live")
