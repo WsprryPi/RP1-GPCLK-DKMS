@@ -321,6 +321,39 @@ static bool rp1_gpclk_detach_created_device(struct platform_device *pdev)
 	return owned;
 }
 
+static void
+rp1_gpclk_unregister_created_device(struct platform_device *pdev)
+{
+	struct device_node *node = of_node_get(pdev->dev.of_node);
+
+	platform_device_unregister(pdev);
+	if (node) {
+		of_node_clear_flag(node, OF_POPULATED);
+		of_node_put(node);
+	}
+}
+
+static struct platform_device *
+rp1_gpclk_find_instantiated_ancestor(struct device_node *node)
+{
+	struct platform_device *pdev;
+	struct device_node *ancestor;
+	struct device_node *parent;
+
+	ancestor = of_get_parent(node);
+	while (ancestor) {
+		pdev = of_find_device_by_node(ancestor);
+		if (pdev) {
+			of_node_put(ancestor);
+			return pdev;
+		}
+		parent = of_get_parent(ancestor);
+		of_node_put(ancestor);
+		ancestor = parent;
+	}
+	return NULL;
+}
+
 static int rp1_gpclk_bootstrap_endpoint(void)
 {
 	struct platform_device *existing;
@@ -371,9 +404,9 @@ static int rp1_gpclk_bootstrap_endpoint(void)
 		return ret;
 	}
 
-	parent = of_find_device_by_node(node->parent);
+	parent = rp1_gpclk_find_instantiated_ancestor(node);
 	if (!parent) {
-		pr_err("rp1-gpclk-dkms: RP1 parent platform device is absent\n");
+		pr_err("rp1-gpclk-dkms: instantiated platform ancestor is absent\n");
 		of_node_put(node);
 		return -ENODEV;
 	}
@@ -405,7 +438,7 @@ static int rp1_gpclk_bootstrap_endpoint(void)
 		dev_err(&created->dev,
 			"created endpoint did not bind synchronously\n");
 		if (rp1_gpclk_detach_created_device(created))
-			platform_device_unregister(created);
+			rp1_gpclk_unregister_created_device(created);
 		put_device(&created->dev);
 		return -ENODEV;
 	}
@@ -458,7 +491,7 @@ static void __exit rp1_gpclk_exit(void)
 		rp1_gpclk_created_pdev = NULL;
 	mutex_unlock(&rp1_gpclk_bootstrap_lock);
 	if (created)
-		platform_device_unregister(created);
+		rp1_gpclk_unregister_created_device(created);
 	platform_driver_unregister(&rp1_gpclk_driver);
 	bus_unregister_notifier(&platform_bus_type,
 				&rp1_gpclk_platform_bus_notifier);

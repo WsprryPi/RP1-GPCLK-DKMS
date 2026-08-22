@@ -19,7 +19,7 @@
   "missingDevice": {
     "creationApi": "of_platform_device_create",
     "scope": "exact-selected-node-only",
-    "linuxDeviceParent": "existing-rp1-platform-device",
+    "linuxDeviceParent": "nearest-instantiated-platform-ancestor",
     "synchronousBindingRequired": true,
     "moduleOwnsCreatedDevice": true
   },

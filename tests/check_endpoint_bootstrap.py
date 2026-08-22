@@ -28,7 +28,9 @@ required_source = (
     "for_each_matching_node(node, rp1_gpclk_of_match)",
     "of_device_is_available(node)",
     "of_find_device_by_node(node)",
-    "of_find_device_by_node(node->parent)",
+    "rp1_gpclk_find_instantiated_ancestor(node)",
+    "ancestor = of_get_parent(node)",
+    "parent = of_get_parent(ancestor)",
     "of_platform_device_create(node, NULL, &parent->dev)",
     "rp1_gpclk_bound_to_this_driver",
     "bus_register_notifier(&platform_bus_type",
@@ -39,7 +41,8 @@ required_source = (
     "get_device(&created->dev)",
     "put_device(&created->dev)",
     "rp1_gpclk_detach_created_device",
-    "platform_device_unregister(created)",
+    "rp1_gpclk_unregister_created_device(created)",
+    "of_node_clear_flag(node, OF_POPULATED)",
     "module_init(rp1_gpclk_init)",
     "module_exit(rp1_gpclk_exit)",
 )
@@ -70,7 +73,7 @@ assert init.index("platform_driver_unregister", init.index("unregister_driver:")
 
 exit_source = MAIN[MAIN.index("static void __exit rp1_gpclk_exit") :]
 exit_order = [
-    exit_source.index("platform_device_unregister(created)"),
+    exit_source.index("rp1_gpclk_unregister_created_device(created)"),
     exit_source.index("platform_driver_unregister"),
     exit_source.index("bus_unregister_notifier"),
 ]
@@ -85,7 +88,7 @@ assert DATA["ancestry"] == "endpoint-clock-provider-and-dma-provider-share-rp1-p
 assert DATA["selection"]["matchingNodes"] == 1
 assert DATA["existingDevice"]["moduleMayUnregister"] is False
 assert DATA["missingDevice"]["scope"] == "exact-selected-node-only"
-assert DATA["missingDevice"]["linuxDeviceParent"] == "existing-rp1-platform-device"
+assert DATA["missingDevice"]["linuxDeviceParent"] == "nearest-instantiated-platform-ancestor"
 assert DATA["missingDevice"]["synchronousBindingRequired"] is True
 assert "device->dev->of_node->parent != clock_spec.np->parent" in KERNEL_API
 

@@ -119,12 +119,19 @@ kernel-created platform device.
 Some stock Raspberry Pi boot paths do not instantiate a newly overlaid child
 of the RP1 node. When the single valid endpoint has no platform device, the
 module may create only that exact device with exported OF platform APIs. The
-existing RP1 parent platform device is mandatory and becomes the Linux device
-parent, preserving both firmware and device-model ancestry. The module records
-this ownership and may unregister only the device it created and still owns.
+module walks upward from the endpoint and uses the nearest instantiated
+platform ancestor as the Linux device parent. On stock Raspberry Pi 5 kernels
+the intermediate `rp1` firmware node need not have its own platform device, so
+the nearest instantiated ancestor can be the PCIe platform device while the
+endpoint's firmware ancestry still passes through `rp1`. Absence of any
+instantiated platform ancestor rejects creation. The module records this
+ownership and may unregister only the device it created and still owns.
 Synchronous creation must also produce a successful bind;
 deferred or failed binding rejects module initialization and removes the
-module-created device.
+module-created device. Owned-device teardown holds the endpoint OF-node
+reference across unregister and clears only that node's populated flag after
+unregister completes, permitting a later bounded fallback creation without
+exposing a duplicate-device window.
 
 The module must not populate or depopulate the RP1 bus generally, create
 unrelated children, move the endpoint to an unrelated bus, manufacture
