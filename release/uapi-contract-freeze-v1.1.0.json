@@ -1,5 +1,29 @@
 {
   "SPDX-License-Identifier": "MIT",
+  "artifactSet": {
+    "debianPackage": {
+      "name": "rp1-gpclk-dkms_1.1.0-1_all.deb",
+      "sha256": "830a63493dc98c0777d4fa653bca5d25789bddc062c4b5fe95e2e937cdd4d9d7",
+      "size": 24228
+    },
+    "locationOnBuildHost": "/home/pi/rp1-gpclk-v1.1.0.aGnNAW",
+    "module": {
+      "name": "rp1_gpclk_dkms.ko",
+      "sha256": "52222ef79b18baa8e4e8ee8f98481858d0dacc32644f7af00f2d49a9a6c168c8",
+      "signed": false,
+      "size": 70608
+    },
+    "qualificationArchive": {
+      "name": "rp1-gpclk-dkms-qualification-1.1.0.tar.gz",
+      "sha256": "c7fc6ef0fe5fc1d85ad1390bdefcb66d5f7a888af0b45c7a325cb8b94a6a54e3",
+      "size": 23058
+    },
+    "sourceArchive": {
+      "name": "rp1-gpclk-dkms-1.1.0-source.tar.gz",
+      "sha256": "2b56aefe3c1bec7eb92189235bf4fe8e3bfc369d5637794e1c43efa7acdab7f9",
+      "size": 1114714
+    }
+  },
   "compatibility": {
     "default": "Unavailable",
     "gpio20": "Unavailable",
@@ -69,6 +93,7 @@
   ],
   "schemaVersion": 1,
   "sourceBaseCommit": "864e29f432c6349fc6a159e896bfe9fe11bedfe7",
+  "sourceCommit": "69cae98c9e2a1f4428000801534dc2c705c22cc5",
   "status": "normative-frozen-target-evidence-pending",
   "uapi": {
     "abi": 2,
