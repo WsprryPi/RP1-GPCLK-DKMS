@@ -43,6 +43,14 @@ Journals are created only by an explicitly executed root mutation.
 Qualification plans, archives, and
 `release_candidate_transaction.py` are not installed runtime dependencies.
 
+An upgrade preserves completed historical qualification journals in place.
+The route manager reports their exact hashes after strict terminal-schema
+validation and rejects altered, unknown, incomplete, or pending records. It
+also recognizes the exact earlier 1.1.1 package-owned route block as historical
+ownership; conversion to the current marker metadata occurs only as part of a
+subsequent attributable route mutation. No maintainer script migrates or
+normalizes retained evidence.
+
 The supported interactive transport is the fixed group-restricted Unix socket
 at `/run/rp1-gpclk-dkms/route-manager.sock`. WsprryPi installation policy may
 explicitly enroll its fixed service account in `rp1-gpclk-route` and enable the

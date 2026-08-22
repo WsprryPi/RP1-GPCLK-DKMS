@@ -127,6 +127,26 @@ for payload in (
      f"dtoverlay=rp1-gpclk-gpio4\n{manager.END}\n{manager.BEGIN}\n# duplicate\n{manager.END}\n").encode(),
 ): rejected(lambda payload=payload:manager.parse_config(payload))
 
+legacy=(f"{manager.BEGIN}\n# version=1.1.1 route=gpio4\n"
+        f"dtoverlay=rp1-gpclk-gpio4\n{manager.END}\n").encode()
+assert manager.parse_config(legacy)=="gpio4" and manager.config_ownership(legacy)=="historical-package-owned"
+
+with tempfile.TemporaryDirectory() as temporary:
+    fixture=Fixture(pathlib.Path(temporary)); env=fixture.env(); env.path(manager.CONFIG).write_bytes(b"# base\n\n"+legacy)
+    journal_dir=env.path(manager.JOURNAL_DIR); journal_dir.mkdir(parents=True)
+    before="# historical before\n"
+    historical={"schemaVersion":1,"operationId":"wspr5-1-1-1-old-select-gpio4","planSha256":"1"*64,
+                "qualificationArchiveSha256":"2"*64,"sourceCommit":"3"*40,"action":"apply-and-reboot",
+                "status":"complete","checkpoint":"reconciled","rebootRequired":False,"reconciled":True,
+                "route":"gpio4","configBefore":before,"configBeforeSha256":manager.sha256_bytes(before.encode()),
+                "configAfterSha256":"4"*64}
+    historical_path=journal_dir/f"{historical['operationId']}.json"; historical_path.write_text(json.dumps(historical,sort_keys=True)+"\n")
+    original=historical_path.read_bytes(); state=manager.dispatch(request("preflight","gpio20"),env)["state"]
+    assert state["bootOwnership"]=="historical-package-owned" and len(state["historicalJournals"])==1
+    assert state["pendingTransaction"] is None and historical_path.read_bytes()==original
+    historical["status"]="awaiting-reboot"; historical_path.write_text(json.dumps(historical))
+    rejected(lambda:manager.dispatch(request("query"),env),"incomplete")
+
 with tempfile.TemporaryDirectory() as temporary:
     fixture=Fixture(pathlib.Path(temporary)); env=fixture.env(); journal_dir=env.path(manager.JOURNAL_DIR); journal_dir.mkdir(parents=True)
     (journal_dir/"stale.json").write_text(json.dumps({"schemaVersion":0}))

@@ -16,4 +16,16 @@ The package ships disabled-by-default `rp1-gpclk-route-manager.socket` and `rp1-
 
 Package installation installs the executor, schema, document, disabled units, restricted group, and empty state parent but creates no route block or journal, starts no socket, selects no route, loads no module, and performs no reboot or output activity. WsprryPi retains application policy, scheduling, operator confirmation, topology ownership, enrollment, and qualification. Qualification-only `release_candidate_transaction.py`, plans, and evidence archives are not installed runtime dependencies.
 
+Completed schema-1 qualification journals created by the historical 1.1.1
+package executor remain in place byte-for-byte. The manager recognizes them
+only when their closed field set, attribution, hashes, terminal `complete`
+status, `reconciled: true`, and `rebootRequired: false` validate; it reports
+their names and SHA-256 identities as historical and never treats them as a
+current pending transaction. Unknown, altered, incomplete, or nonterminal
+historical journals still block all operation. The exact earlier package-owned
+`# version=1.1.1 route=gpio4|gpio20` block is accepted as
+`historical-package-owned` and is replaced in place by the current contract
+format only inside a journaled, quiesced route mutation. No evidence is moved,
+renamed, deleted, or rewritten merely to permit operation.
+
 The executor-bearing package is a new artifact. Prior output-inhibited evidence bound to package SHA-256 `48d55aa9a906e83b36ed46560c81cd894024bc2d6bf375514b5e1618a43493af` does not validate it. Until separately authorized exact-package GPIO4, GPIO20, and restored-GPIO4 validation completes, its output-inhibited classification is `Unavailable` and its application-executor lifecycle is unvalidated. No live eligibility transfers.

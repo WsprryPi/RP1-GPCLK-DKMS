@@ -80,8 +80,15 @@ def parse_config(payload:bytes)->str|None:
     start,finish=text.index(BEGIN),text.index(END)+len(END)
     if finish<start: raise ContractError("owned route marker order is malformed")
     block=text[start:finish]; block_routes=re.findall(r"^dtoverlay=rp1-gpclk-(gpio4|gpio20)$",block,re.M); lines=block.splitlines()
-    if (len(block_routes)!=1 or all_routes!=block_routes or len(lines)!=4 or lines[0]!=BEGIN or lines[3]!=END or lines[1]!=f"# contract={CONTRACT} package={DEBIAN_VERSION} route={block_routes[0]}" or lines[2]!=f"dtoverlay=rp1-gpclk-{block_routes[0]}"): raise ContractError("owned route block is malformed or ambiguous")
+    current_line=f"# contract={CONTRACT} package={DEBIAN_VERSION} route={block_routes[0]}" if block_routes else ""
+    historical_line=f"# version={VERSION} route={block_routes[0]}" if block_routes else ""
+    if (len(block_routes)!=1 or all_routes!=block_routes or len(lines)!=4 or lines[0]!=BEGIN or lines[3]!=END or lines[1] not in {current_line,historical_line} or lines[2]!=f"dtoverlay=rp1-gpclk-{block_routes[0]}"): raise ContractError("owned route block is malformed or ambiguous")
     return block_routes[0]
+
+def config_ownership(payload:bytes)->str:
+    route=parse_config(payload)
+    if route is None: return "absent"
+    return "current" if f"# contract={CONTRACT} package={DEBIAN_VERSION} route={route}" in payload.decode() else "historical-package-owned"
 
 def config_for_route(payload:bytes,route:str)->bytes:
     current=parse_config(payload); text=payload.decode()
@@ -147,6 +154,23 @@ def active_route(env:Environment)->str|None:
     return matches[0] if matches else None
 
 JOURNAL_FIELDS={"schemaVersion","contract","transactionId","initialRequestId","initialActor","lastRequestId","lastActor","operation","route","status","bootIdBefore","configBefore","configBeforeSha256","configAfterSha256","createdBootId","serviceBefore","servicesOwned"}
+HISTORICAL_REQUIRED={"schemaVersion","operationId","planSha256","qualificationArchiveSha256","sourceCommit","action","status","checkpoint","rebootRequired","reconciled"}
+HISTORICAL_ALLOWED=HISTORICAL_REQUIRED|{"route","bootIdBefore","bootIdAfter","configBefore","configBeforeSha256","configIntendedSha256","configAfterSha256","serviceBefore","serviceAfter","serviceAfterRestore","serviceRestorePolicy"}
+
+def historical_journal(path:Path,value:dict,payload:bytes)->dict|None:
+    if "contract" in value or "transactionId" in value: return None
+    if not HISTORICAL_REQUIRED<=set(value) or not set(value)<=HISTORICAL_ALLOWED: raise ContractError("historical journal schema is stale, foreign, or malformed")
+    if (value["schemaVersion"]!=1 or path.name!=f"{value['operationId']}.json" or
+            not re.fullmatch(r"[a-z0-9][a-z0-9-]{7,127}",str(value["operationId"])) or
+            not re.fullmatch(r"[0-9a-f]{40}",str(value["sourceCommit"])) or
+            not all(re.fullmatch(r"[0-9a-f]{64}",str(value[key])) for key in ("planSha256","qualificationArchiveSha256")) or
+            value["action"] not in {"quiesce-services","deactivate-and-reboot","install-inactive","apply-and-reboot"} or
+            value["status"]!="complete" or value["rebootRequired"] is not False or value["reconciled"] is not True): raise ContractError("historical journal is incomplete, foreign, or unsafe")
+    if "configBefore" in value:
+        if not re.fullmatch(r"[0-9a-f]{64}",str(value.get("configBeforeSha256",""))) or sha256_bytes(value["configBefore"].encode())!=value["configBeforeSha256"]: raise ContractError("historical journal boot payload differs")
+    if value.get("route") not in {None,"gpio4","gpio20"}: raise ContractError("historical journal route is invalid")
+    return {"name":path.name,"sha256":sha256_bytes(payload),"schemaVersion":1,"operationId":value["operationId"],"sourceCommit":value["sourceCommit"],"qualificationArchiveSha256":value["qualificationArchiveSha256"],"status":"complete","preservation":"in-place-byte-exact"}
+
 def load_journals(env:Environment)->list[tuple[Path,dict]]:
     directory=env.path(JOURNAL_DIR)
     if not directory.exists(): return []
@@ -157,11 +181,16 @@ def load_journals(env:Environment)->list[tuple[Path,dict]]:
     result=[]
     for path in sorted(directory.iterdir()):
         if path.is_symlink() or not path.is_file() or path.suffix!=".json": raise ContractError("foreign journal entry exists")
-        try: value=json.loads(path.read_text())
+        try:
+            payload=path.read_bytes(); value=json.loads(payload)
         except (OSError,json.JSONDecodeError) as error: raise ContractError("journal is malformed") from error
-        if not isinstance(value,dict) or set(value)!=JOURNAL_FIELDS: raise ContractError("journal schema is stale, foreign, or malformed")
+        if not isinstance(value,dict): raise ContractError("journal schema is stale, foreign, or malformed")
         metadata=path.stat()
         if env.root==Path("/") and (metadata.st_uid!=0 or stat.S_IMODE(metadata.st_mode)!=0o600): raise ContractError("journal is not root-owned mode 0600")
+        historical=historical_journal(path,value,payload)
+        if historical is not None:
+            value={"status":"complete","historical":historical}; result.append((path,value)); continue
+        if set(value)!=JOURNAL_FIELDS: raise ContractError("journal schema is stale, foreign, or malformed")
         try: canonical_id=str(uuid.UUID(str(value["transactionId"])))
         except ValueError as error: raise ContractError("journal transaction ID is invalid") from error
         if value["schemaVersion"]!=1 or value["contract"]!=CONTRACT or value["transactionId"]!=canonical_id or path.name!=f"{canonical_id}.json" or not REQUEST_ID.fullmatch(str(value["initialRequestId"])) or not ACTOR.fullmatch(str(value["initialActor"])) or not REQUEST_ID.fullmatch(str(value["lastRequestId"])) or not ACTOR.fullmatch(str(value["lastActor"])): raise ContractError("journal attribution is invalid")
@@ -181,7 +210,8 @@ def inspect(env:Environment,observe_safety:bool=False,require_quiesced:bool=Fals
     config=env.path(CONFIG)
     if config.is_symlink() or not config.is_file() or not stat.S_ISREG(config.stat().st_mode): raise ContractError("boot configuration is absent or unsafe")
     payload=config.read_bytes(); journals=load_journals(env); pending=next((v for _,v in journals if v["status"] not in {"complete","rolled-back"}),None)
-    result={"identity":fixed_identity(env),"configuredRoute":parse_config(payload),"activeRoute":active_route(env),"bootId":boot_id(env),"configSha256":sha256_bytes(payload),"pendingTransaction":pending,"journalCount":len(journals)}
+    historical=[value["historical"] for _,value in journals if "historical" in value]
+    result={"identity":fixed_identity(env),"configuredRoute":parse_config(payload),"bootOwnership":config_ownership(payload),"activeRoute":active_route(env),"bootId":boot_id(env),"configSha256":sha256_bytes(payload),"pendingTransaction":pending,"journalCount":len(journals),"historicalJournals":historical}
     if observe_safety: result["safety"]=service_safety(env,require_quiesced)
     return result
 def response(operation:str,status:str,state:dict)->dict: return {"schemaVersion":1,"contract":CONTRACT,"operation":operation,"status":status,"state":state}
