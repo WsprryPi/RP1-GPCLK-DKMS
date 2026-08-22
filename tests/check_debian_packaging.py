@@ -56,6 +56,8 @@ assert "Accept=yes" in socket and "WantedBy=sockets.target" in socket
 assert "ExecStart=/usr/sbin/rp1-gpclk-route-manager" in service
 assert "StandardInput=socket" in service and "StandardOutput=socket" in service
 assert "User=root" in service and "/bin/sh" not in service
+assert "ReadWritePaths=/boot/firmware /var/lib/rp1-gpclk-dkms" in service
+assert "ReadWritePaths=/boot/firmware/config.txt" not in service
 assert "Both overlays remain inactive" in guide
 assert "standard exclusion behavior" in guide
 

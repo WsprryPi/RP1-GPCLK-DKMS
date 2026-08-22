@@ -12,6 +12,8 @@ rp1-gpclk-dkms (1.1.1-1) UNRELEASED; urgency=medium
     exact output-inhibited validation identity.
   * Preserve and report strictly validated completed historical journals and
     migrate the earlier package-owned route block only during a transaction.
+  * Permit the fixed executor to create its same-directory atomic boot-file
+    temporary while retaining a read-only system sandbox elsewhere.
 
  -- Lee Bussy <lee@bussy.org>  Sat, 22 Aug 2026 00:00:00 -0500
 

@@ -16,4 +16,4 @@ NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectHome=yes
 ProtectSystem=strict
-ReadWritePaths=/boot/firmware/config.txt /var/lib/rp1-gpclk-dkms
+ReadWritePaths=/boot/firmware /var/lib/rp1-gpclk-dkms
