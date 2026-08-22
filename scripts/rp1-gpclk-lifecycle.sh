@@ -28,9 +28,14 @@ run()
 
 action=${1:-}
 source_dir=${2:-}
-[ -n "$action" ] && [ -n "$source_dir" ] || usage
+if [ -z "$action" ] || [ -z "$source_dir" ]; then
+	usage
+fi
 source_dir=$(realpath "$source_dir")
-[ -d "$source_dir" ] && [ ! -L "$source_dir" ] || { echo "source must be a real directory" >&2; exit 2; }
+if [ ! -d "$source_dir" ] || [ -L "$source_dir" ]; then
+	echo "source must be a real directory" >&2
+	exit 2
+fi
 version=$(sed -n 's/^PACKAGE_VERSION="\([0-9A-Za-z][0-9A-Za-z._+-]*\)"$/\1/p' "$source_dir/dkms.conf")
 [ -n "$version" ] || { echo "invalid DKMS version" >&2; exit 2; }
 kernel_release=$(uname -r)
@@ -94,9 +99,14 @@ sign)
 	preflight
 	[ "$(id -u)" -eq 0 ] || { echo "root required" >&2; exit 1; }
 	key=${3:-}; certificate=${4:-}
-	[ -f "$key" ] && [ ! -L "$key" ] && [ -f "$certificate" ] && [ ! -L "$certificate" ] || usage
+	if [ ! -f "$key" ] || [ -L "$key" ] || [ ! -f "$certificate" ] || [ -L "$certificate" ]; then
+		usage
+	fi
 	module_path=$(modinfo -n "$module")
-	[ -f "$module_path" ] && [ ! -L "$module_path" ] || { echo "installed module unavailable" >&2; exit 1; }
+	if [ ! -f "$module_path" ] || [ -L "$module_path" ]; then
+		echo "installed module unavailable" >&2
+		exit 1
+	fi
 	run "$kernel_build/scripts/sign-file" sha256 "$key" "$certificate" "$module_path"
 	modinfo "$module_path" | grep -E '^(signer|sig_key|sig_hashalgo):'
 	;;
@@ -119,9 +129,15 @@ overlay-install)
 	[ "$(id -u)" -eq 0 ] || { echo "root required" >&2; exit 1; }
 	route=${3:-}; overlay_dir=${4:-/boot/firmware/overlays}
 	case "$route" in gpio4|gpio20) ;; *) echo "route must be gpio4 or gpio20" >&2; exit 2 ;; esac
-	[ -d "$overlay_dir" ] && [ ! -L "$overlay_dir" ] || { echo "unsafe overlay directory" >&2; exit 1; }
+	if [ ! -d "$overlay_dir" ] || [ -L "$overlay_dir" ]; then
+		echo "unsafe overlay directory" >&2
+		exit 1
+	fi
 	artifact="$source_dir/rp1-gpclk-$route.dtbo"
-	[ -f "$artifact" ] && [ ! -L "$artifact" ] || { echo "built overlay unavailable" >&2; exit 1; }
+	if [ ! -f "$artifact" ] || [ -L "$artifact" ]; then
+		echo "built overlay unavailable" >&2
+		exit 1
+	fi
 	destination="$overlay_dir/rp1-gpclk-$route.dtbo"
 	[ ! -e "$destination" ] || cmp -s "$artifact" "$destination" || { echo "refusing to replace nonidentical overlay" >&2; exit 1; }
 	[ -e "$destination" ] || run install -m 0644 "$artifact" "$destination"

@@ -62,8 +62,18 @@ with tempfile.TemporaryDirectory() as temporary:
             assert token in decompiled
         numeric = {"gpio4": ("0x01", "0x04"), "gpio20": ("0x02", "0x14")}[route]
         for token in (f"wsprrypi,route = <{numeric[0]}>", f"wsprrypi,pin = <{numeric[1]}>",
-                      "reg = <0xc0 0x40174024 0x00 0x08 0xc0 0x40158000 0x00 0x08>",
-                      "dmas = <&rp1_dma>, <0x30>", "clocks = <&rp1_clocks>, <0x21>"):
+                      "reg = <0xc0 0x40174024 0x00 0x08 0xc0 0x40158000 0x00 0x08>"):
+            assert token in decompiled
+        # dtc 1.8 may retain symbolic external phandles while dtc 1.7 emits
+        # the canonical unresolved value and records the provider in
+        # __fixups__. Accept both renderings, but always require the exact
+        # provider/property fixup so a numeric placeholder cannot pass alone.
+        assert ("dmas = <&rp1_dma>, <0x30>" in decompiled or
+                "dmas = <0xffffffff 0x30>" in decompiled)
+        assert ("clocks = <&rp1_clocks>, <0x21>" in decompiled or
+                "clocks = <0xffffffff 0x21>" in decompiled)
+        for token in ("rp1_dma =", "rp1-gpclk-dkms:dmas:0",
+                      "rp1_clocks =", "rp1-gpclk-dkms:clocks:0"):
             assert token in decompiled
         compiled[route] = (hashlib.sha256(source.read_bytes()).hexdigest(),
                            hashlib.sha256(first.read_bytes()).hexdigest())
