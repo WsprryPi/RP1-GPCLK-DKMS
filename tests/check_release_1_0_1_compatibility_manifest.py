@@ -47,8 +47,14 @@ assert gpio4["runtime"]["piModel"].startswith("Raspberry Pi 5 Model B")
 assert gpio4["build"]["kernelRelease"] == "6.18.34+rpt-rpi-2712"
 assert gpio4["build"]["architecture"] == "arm64"
 assert gpio4["build"]["runtimeArchitecture"] == "aarch64"
+assert gpio4["build"]["moduleUnsignedSha256"] == \
+    "8673a62be85289dc5faec68976be0b02bc16478a2d7f107e96177618d31b4160"
 assert gpio4["build"]["moduleInstalledSha256"] == \
+    "1979d2dfdbe6a38d03be2c4b2a9acc29109a89ed56f4d860a0e65435af81133f"
+assert gpio4["build"]["moduleInstalledSha256"] != \
     gpio4["build"]["moduleUnsignedSha256"]
+assert gpio4["build"]["moduleInstalledTransform"] == \
+    "strip --strip-debug; hash uncompressed ELF before filesystem compression"
 assert gpio4["evidence"] == [{
     "id": "release-1.0.0-repaired-inactive-gpio4",
     "sha256": sha256(evidence),

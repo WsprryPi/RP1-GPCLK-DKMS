@@ -57,6 +57,14 @@ After installation, inspect DKMS status and the installed files. Do not select
 an overlay or load the module until the exact kernel, firmware, device tree,
 route, signing state, and compatibility policy have been reviewed.
 
+DKMS strips debug symbols by default before installing this module. Validate
+`moduleUnsignedSha256` against the unstripped exact-kernel build artifact and
+validate `moduleInstalledSha256` against the uncompressed ELF after applying
+the manifest's `moduleInstalledTransform`. Also record the hash of the actual
+installed `.ko`, `.ko.xz`, `.ko.gz`, or `.ko.zst` file separately; filesystem
+compression is packaging evidence and is not the normalized installed ELF
+identity.
+
 ## Remove
 
 Remove the package with the normal package manager:

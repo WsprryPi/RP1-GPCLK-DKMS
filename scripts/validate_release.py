@@ -95,6 +95,17 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
     if (len(gpio4) != 1 or gpio4[0]["id"] != "v1.0.1-wspr5-gpio4-6.18.34" or
             gpio4[0]["state"] != "Experimental" or not gpio4[0]["liveEligible"]):
         fail("release lacks the exact experimental GPIO4 candidate entry")
+    expected_module_identity = {
+        "moduleUnsignedSha256":
+            "8673a62be85289dc5faec68976be0b02bc16478a2d7f107e96177618d31b4160",
+        "moduleInstalledSha256":
+            "1979d2dfdbe6a38d03be2c4b2a9acc29109a89ed56f4d860a0e65435af81133f",
+        "moduleInstalledTransform":
+            "strip --strip-debug; hash uncompressed ELF before filesystem compression",
+    }
+    if any(gpio4[0]["build"].get(field) != value
+           for field, value in expected_module_identity.items()):
+        fail("GPIO4 candidate module installation identity differs")
     if (len(gpio20) != 1 or gpio20[0]["state"] != "Unavailable" or
             gpio20[0]["liveEligible"]):
         fail("GPIO20 must remain unavailable and non-live")
