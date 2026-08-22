@@ -636,7 +636,8 @@ def main() -> None:
                        "install-inactive", "apply-and-reboot", "rollback"} and not args.confirm_physical_topology:
         raise ValueError("mutation requires fresh physical-topology confirmation")
     if args.action in {"preflight", "preflight-route"}:
-        result = preflight(plan, args.root)
+        mode = "pre-quiesce" if args.action == "preflight" else "quiesced"
+        result = preflight(plan, args.root, service_mode=mode)
         if args.action == "preflight-route" and not args.route:
             raise ValueError("--route is required")
         if args.action == "preflight-route" and result["route"] == args.route:

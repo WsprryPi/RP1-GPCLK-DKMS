@@ -109,6 +109,8 @@ with tempfile.TemporaryDirectory() as temporary:
     plan_path.write_text(json.dumps(value))
     loaded = tx.load_plan(plan_path)
     assert tx.preflight(loaded, root, run)["route"] == "legacy-gpio4"
+    main_source = (ROOT / "scripts/release_candidate_transaction.py").read_text()
+    assert 'mode = "pre-quiesce" if args.action == "preflight" else "quiesced"' in main_source
 
     original_geteuid = tx.os.geteuid
     tx.os.geteuid = lambda: 0
