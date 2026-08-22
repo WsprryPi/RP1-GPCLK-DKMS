@@ -90,7 +90,9 @@ for required in (
     "device->rate_exclusive",
 ):
     assert required in main
+historical = source[source.index("bool rp1_gpclk_gpio4_candidate_allowed"):]
+historical = historical[:historical.index("\n}")]
 for prohibited in ("strstr(", "strncmp(", "RP1_GPCLK_ROUTE_GPIO20"):
-    assert prohibited not in source
+    assert prohibited not in historical
 
 print("1.0.1 compatibility manifest/runtime cross-contract: PASS")

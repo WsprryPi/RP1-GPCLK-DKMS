@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include <stdio.h>
+#include <string.h>
 
 #include "rp1_gpclk/compatibility.h"
 #include "rp1_gpclk/core.h"
@@ -36,6 +37,20 @@ int main(void)
 		kernel, NULL, version, true, true));
 	CHECK(!rp1_gpclk_gpio4_candidate_allowed(RP1_GPCLK_ROUTE_GPIO4,
 		kernel, arch, NULL, true, true));
-	puts("compatibility identity: PASS (GPIO4 exact; GPIO20 denied)");
+
+	version = RP1_GPCLK_ROUTE_CANDIDATE_VERSION;
+	CHECK(!rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO4,
+		RP1_GPCLK_ROUTE_CANDIDATE_KERNEL,
+		RP1_GPCLK_ROUTE_CANDIDATE_ARCH, version, true, true));
+	CHECK(!rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO20,
+		RP1_GPCLK_ROUTE_CANDIDATE_KERNEL,
+		RP1_GPCLK_ROUTE_CANDIDATE_ARCH, version, true, true));
+	CHECK(!strcmp(rp1_gpclk_route_candidate_id(RP1_GPCLK_ROUTE_GPIO4),
+		RP1_GPCLK_GPIO4_UNAVAILABLE_ID));
+	CHECK(!strcmp(rp1_gpclk_route_candidate_id(RP1_GPCLK_ROUTE_GPIO20),
+		RP1_GPCLK_GPIO20_UNAVAILABLE_ID));
+	CHECK(strcmp(rp1_gpclk_route_candidate_id(RP1_GPCLK_ROUTE_GPIO4),
+		rp1_gpclk_route_candidate_id(RP1_GPCLK_ROUTE_GPIO20)));
+	puts("compatibility identity: PASS (GPIO4/GPIO20 independent and denied)");
 	return 0;
 }

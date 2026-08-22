@@ -38,7 +38,7 @@ static bool rp1_gpclk_release_identity_allowed(
 	const struct rp1_gpclk_device *device)
 {
 	return device &&
-		rp1_gpclk_gpio4_candidate_allowed(device->route,
+		rp1_gpclk_route_candidate_allowed(device->route,
 			utsname()->release, utsname()->machine,
 			RP1_GPCLK_MODULE_VERSION,
 			of_machine_is_compatible("raspberrypi,5-model-b"),
@@ -193,7 +193,7 @@ static int rp1_gpclk_probe(struct platform_device *pdev)
 	if (live_output && !device->live_eligible) {
 		ret = -EOPNOTSUPP;
 		dev_err_probe(&pdev->dev, ret,
-			      "live output rejected by exact 1.0.1 GPIO4 compatibility entry\n");
+			      "live output rejected by exact route compatibility policy\n");
 		goto release_resources;
 	}
 

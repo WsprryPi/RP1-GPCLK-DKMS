@@ -2,15 +2,15 @@
 
 # Debian DKMS packaging
 
-Version 1.1.0 uses the standard Debian DKMS lifecycle. Build the package with
+Version 1.1.1 uses the standard Debian DKMS lifecycle. Build the package with
 `dpkg-buildpackage`; install, upgrade, or remove it with ordinary Debian package
 tools. `dh-dkms` provides the DKMS maintainer-script integration.
 
 The product package owns only:
 
-- the module build closure under `/usr/src/rp1-gpclk-dkms-1.1.0`, including
+- the module build closure under `/usr/src/rp1-gpclk-dkms-1.1.1`, including
   the canonical UAPI at
-  `/usr/src/rp1-gpclk-dkms-1.1.0/include/uapi/linux/rp1_gpclk.h`;
+  `/usr/src/rp1-gpclk-dkms-1.1.1/include/uapi/linux/rp1_gpclk.h`;
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo`; and
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo`.
 
@@ -50,7 +50,7 @@ are not WsprryPi runtime dependencies.
 Install the downloaded package with APT so dependencies are resolved:
 
 ```sh
-sudo apt install ./rp1-gpclk-dkms_1.1.0-1_all.deb
+sudo apt install ./rp1-gpclk-dkms_1.1.1-1_all.deb
 ```
 
 After installation, inspect DKMS status and the installed files. Do not select
@@ -87,9 +87,9 @@ From a tagged source checkout:
 dpkg-buildpackage -us -uc -b
 ```
 
-For source version `1.1.0`, the binary package version is `1.1.0-1` and the
-expected artifact name is `rp1-gpclk-dkms_1.1.0-1_all.deb`. The eventual
-release tag is `v1.1.0`; do not build a release artifact from a moving branch.
+For source version `1.1.1`, the binary package version is `1.1.1-1` and the
+expected artifact name is `rp1-gpclk-dkms_1.1.1-1_all.deb`. The eventual
+release tag is `v1.1.1`; do not build a release artifact from a moving branch.
 
 The resulting package is a new artifact. Building it successfully establishes
 only build compatibility and does not inherit qualification from the published

@@ -30,11 +30,11 @@ route, host, or physical installation. See the
 [1.0.0 release notes](docs/releases/1.0.0-behavior.md) for the precise claim.
 
 Version 1.0.1 remains an unreleased historical corrective candidate. Version
-1.1.0 is the current hardware-free candidate and adds ABI v2 explicit
+1.1.1 is the current hardware-free candidate and adds ABI v2 explicit
 continuous and kernel-bounded finite TONE operations while preserving every
-ABI v1 ioctl. Source/DKMS/module version `1.1.0`, Debian version `1.1.0-1`, and
-eventual tag `v1.1.0` are one release identity. See the
-[planned 1.1.0 behavior](docs/releases/1.1.0-behavior.md). Prior GPIO4 evidence
+ABI v1 ioctl. Source/DKMS/module version `1.1.1`, Debian version `1.1.1-1`, and
+eventual tag `v1.1.1` are one release identity. See the
+[planned 1.1.1 behavior](docs/releases/1.1.1-behavior.md). Prior GPIO4 evidence
 does not transfer to the changed bytes; GPIO4 and GPIO20 are not live-eligible.
 
 ## Safety

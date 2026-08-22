@@ -21,9 +21,9 @@ def validate(root: Path) -> dict:
     identity = json.loads(identity_path.read_text())
     inventory = json.loads(inventory_path.read_text())
     plan = json.loads(plan_path.read_text())
-    if identity.get("release") != "1.1.0" or identity.get("expectedTag") != "v1.1.0":
+    if identity.get("release") != "1.1.1" or identity.get("expectedTag") != "v1.1.1":
         raise ValueError("qualification release identity differs")
-    if inventory.get("debianVersion") != "1.1.0-1":
+    if inventory.get("debianVersion") != "1.1.1-1":
         raise ValueError("product inventory version differs")
     if plan.get("kind") != "release-candidate-target-verification" or plan.get("schemaVersion") != 1:
         raise ValueError("target plan identity differs")
@@ -42,21 +42,26 @@ def validate(root: Path) -> dict:
         raise ValueError("target plan qualification identity differs")
     steps = plan.get("steps")
     expected = [
-        "read-only-preflight", "validated-transfer", "verify-inactive-current",
-        "gpio4-output-disabled-lifecycle",
-        "gpio20-output-disabled-lifecycle", "complete-removal-residue-audit",
-        "reinstall-final-package", "verify-final-inactive-baseline",
+        "read-only-preflight", "validated-transfer", "install-inactive-package",
+        "select-gpio4-and-reboot", "inspect-gpio4-output-disabled",
+        "select-gpio20-and-reboot", "inspect-gpio20-output-disabled",
+        "restore-gpio4-and-reboot", "inspect-restored-gpio4-output-disabled",
+        "residue-and-service-audit",
     ]
     if not isinstance(steps, list) or [step.get("id") for step in steps] != expected:
         raise ValueError("target plan steps differ")
     for step in steps:
-        if set(step) != {"id", "argv", "mutating", "requiresAuthorization"}:
+        allowed = {"id", "argv", "action", "mutating", "requiresAuthorization",
+                   "rebootRequired"}
+        if not set(step) <= allowed or not {"id", "mutating", "requiresAuthorization"} <= set(step):
             raise ValueError(f"invalid target step fields: {step.get('id')}")
-        if not isinstance(step["argv"], list) or not step["argv"]:
+        if ("argv" in step) == ("action" in step):
+            raise ValueError(f"target step must have exactly one execution form: {step['id']}")
+        if "argv" in step and (not isinstance(step["argv"], list) or not step["argv"]):
             raise ValueError(f"invalid target step argv: {step['id']}")
         if step["mutating"] and not step["requiresAuthorization"]:
             raise ValueError(f"mutating step lacks authorization gate: {step['id']}")
-        for argument in step["argv"]:
+        for argument in step.get("argv", []):
             if argument.startswith("scripts/") and not (root / argument).is_file():
                 raise ValueError(f"invoked qualification member is absent: {argument}")
     transfer = next(step for step in steps if step["id"] == "validated-transfer")
@@ -64,9 +69,10 @@ def validate(root: Path) -> dict:
         raise ValueError("transfer step does not enforce the complete checksum set")
     safety = plan.get("safety", {})
     if safety != {
-        "liveOutput": False, "clockOrRateChange": False, "dma": False,
-        "gpioOutput": False, "bootChange": False, "reboot": False,
-        "transmissionOrRf": False,
+        "liveOutput": False, "endpointAcquire": False,
+        "clockOrRateChange": False, "dma": False, "gpioOutput": False,
+        "carrier": False, "sdrCapture": False, "transmissionOrRf": False,
+        "bootChange": True, "reboot": True,
     }:
         raise ValueError("target plan safety boundary differs")
     return plan
@@ -80,9 +86,9 @@ def main() -> None:
     plan = validate(args.root.resolve())
     if args.render:
         for step in plan["steps"]:
-            print(json.dumps({"id": step["id"], "argv": step["argv"]}, separators=(",", ":")))
+            print(json.dumps(step, separators=(",", ":")))
     else:
-        print("Release 1.1.0 target controls: PASS (offline, unauthorized)")
+        print("Release 1.1.1 target controls: PASS (offline, unauthorized)")
 
 
 if __name__ == "__main__":

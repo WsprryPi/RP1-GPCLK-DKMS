@@ -11,18 +11,17 @@ EXECUTION = (ROOT / "src/rp1_gpclk_execution.c").read_text(encoding="utf-8")
 
 for token in (
     'static bool rp1_gpclk_release_identity_allowed',
-    'rp1_gpclk_gpio4_candidate_allowed',
+    'rp1_gpclk_route_candidate_allowed',
     'of_machine_is_compatible("raspberrypi,5-model-b")',
     'live_output && device && device->live_eligible',
-    'live output rejected by exact 1.0.1 GPIO4 compatibility entry',
+    'live output rejected by exact route compatibility policy',
 ):
     if token not in MAIN:
         raise SystemExit(f"exact GPIO4 candidate gate missing {token}")
 
 for token in (
     "rp1_gpclk_live_output_eligible(context->device)",
-    "RP1_GPCLK_GPIO4_CANDIDATE_ID",
-    '"v1.0.1-no-matching-positive-entry"',
+    "rp1_gpclk_route_candidate_id(route)",
 ):
     if token not in DISPATCH:
         raise SystemExit(f"truthful candidate query/submit gate missing {token}")

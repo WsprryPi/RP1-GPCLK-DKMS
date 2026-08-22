@@ -79,7 +79,7 @@ exit_order = [
 ]
 assert exit_order == sorted(exit_order)
 
-assert '#define RP1_GPCLK_MODULE_VERSION "1.1.0"' in VERSION
+assert '#define RP1_GPCLK_MODULE_VERSION "1.1.1"' in VERSION
 assert DATA["canonicalEndpoint"] == "/dev/rp1-gpclk"
 assert DATA["ancestry"] == "endpoint-clock-provider-and-dma-provider-share-rp1-parent"
 assert DATA["selection"]["matchingNodes"] == 1

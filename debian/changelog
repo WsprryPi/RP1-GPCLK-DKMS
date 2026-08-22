@@ -1,3 +1,12 @@
+rp1-gpclk-dkms (1.1.1-1) UNRELEASED; urgency=medium
+
+  * Recycle the ABI v2 candidate with route-specific, reboot-based,
+    output-inhibited target-validation controls for GPIO4 and GPIO20.
+  * Preserve the ABI v2 UAPI byte-for-byte and keep both routes unavailable
+    until exact-build evidence is returned.
+
+ -- Lee Bussy <lee@bussy.org>  Sat, 22 Aug 2026 00:00:00 -0500
+
 rp1-gpclk-dkms (1.1.0-1) UNRELEASED; urgency=medium
 
   * Add ABI v2 negotiation and explicit continuous and kernel-bounded finite

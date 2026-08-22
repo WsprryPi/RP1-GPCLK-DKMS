@@ -19,3 +19,41 @@ bool rp1_gpclk_gpio4_candidate_allowed(__u32 route,
 		!strcmp(module_version, RP1_GPCLK_GPIO4_CANDIDATE_VERSION) &&
 		pi5_model_b && resources_validated;
 }
+
+bool rp1_gpclk_route_candidate_allowed(__u32 route,
+				       const char *kernel_release,
+				       const char *architecture,
+				       const char *module_version,
+				       bool pi5_model_b,
+				       bool resources_validated)
+{
+	if (!kernel_release || !architecture || !module_version ||
+	    !pi5_model_b || !resources_validated)
+		return false;
+	if (strcmp(kernel_release, RP1_GPCLK_ROUTE_CANDIDATE_KERNEL) ||
+	    strcmp(architecture, RP1_GPCLK_ROUTE_CANDIDATE_ARCH) ||
+	    strcmp(module_version, RP1_GPCLK_ROUTE_CANDIDATE_VERSION))
+		return false;
+
+	/* Independent placeholders: neither route has exact-build evidence yet. */
+	switch (route) {
+	case RP1_GPCLK_ROUTE_GPIO4:
+		return false;
+	case RP1_GPCLK_ROUTE_GPIO20:
+		return false;
+	default:
+		return false;
+	}
+}
+
+const char *rp1_gpclk_route_candidate_id(__u32 route)
+{
+	switch (route) {
+	case RP1_GPCLK_ROUTE_GPIO4:
+		return RP1_GPCLK_GPIO4_UNAVAILABLE_ID;
+	case RP1_GPCLK_ROUTE_GPIO20:
+		return RP1_GPCLK_GPIO20_UNAVAILABLE_ID;
+	default:
+		return "v1.1.1-invalid-route";
+	}
+}

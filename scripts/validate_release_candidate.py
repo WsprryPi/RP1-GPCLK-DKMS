@@ -14,9 +14,9 @@ import stat
 import subprocess
 import tarfile
 
-VERSION = "1.1.0"
-DEBIAN_VERSION = "1.1.0-1"
-TAG = "v1.1.0"
+VERSION = "1.1.1"
+DEBIAN_VERSION = "1.1.1-1"
+TAG = "v1.1.1"
 PACKAGE = "rp1-gpclk-dkms"
 QUALIFICATION = "rp1-gpclk-dkms-qualification"
 FILES = {
@@ -243,8 +243,13 @@ def validate(root: Path, expected_source_commit: str | None) -> dict:
         fail("target plan claims authorization or execution")
     if plan.get("productPackageSha256") != metadata.get("productPackageSha256") or plan.get("productInventorySha256") != metadata.get("productInventorySha256") or plan.get("qualificationIdentitySha256") != metadata.get("qualificationIdentitySha256"):
         fail("target plan artifact identity differs")
-    if any(plan.get("safety", {}).get(field) is not False for field in ("liveOutput", "clockOrRateChange", "dma", "gpioOutput", "bootChange", "reboot", "transmissionOrRf")):
+    if any(plan.get("safety", {}).get(field) is not False for field in
+           ("liveOutput", "endpointAcquire", "clockOrRateChange", "dma",
+            "gpioOutput", "carrier", "sdrCapture", "transmissionOrRf")):
         fail("target plan exceeds hardware-free scope")
+    if any(plan.get("safety", {}).get(field) is not True for field in
+           ("bootChange", "reboot")):
+        fail("route-validation plan omits boot transaction or reboot")
     if any(step.get("mutating") and not step.get("requiresAuthorization") for step in plan.get("steps", [])):
         fail("mutating target step lacks authorization gate")
     if sha256(root / "TARGET-VERIFICATION.json") != metadata.get("targetVerificationSha256"):
