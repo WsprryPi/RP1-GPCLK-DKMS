@@ -38,7 +38,8 @@ dispatch = (ROOT / "src/rp1_gpclk_uapi_dispatch.c").read_text()
 contract = (ROOT / "docs/contracts/rp1-gpclk-dkms-module-contract.md").read_text()
 assert 'device->miscdev.name = "rp1-gpclk";' in main
 assert "/dev/rp1-gpclk0" not in main
-assert "return false;" in main
+assert "rp1_gpclk_gpio4_candidate_allowed" in main
+assert 'of_machine_is_compatible("raspberrypi,5-model-b")' in main
 assert dispatch.count("return -EACCES;") >= 2
 assert "normative UAPI and endpoint freeze" in contract
 assert "Changing the endpoint or canonical UAPI reopens the freeze" in contract

@@ -4,12 +4,14 @@
 #include <linux/limits.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_fdt.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/utsname.h>
 
 #include "rp1_gpclk/bootstrap_policy.h"
+#include "rp1_gpclk/compatibility.h"
 #include "rp1_gpclk/device.h"
 #include "rp1_gpclk/execution.h"
 #include "rp1_gpclk/kernel_api.h"
@@ -35,9 +37,15 @@ bool rp1_gpclk_live_output_eligible(const struct rp1_gpclk_device *device)
 static bool rp1_gpclk_release_identity_allowed(
 	const struct rp1_gpclk_device *device)
 {
-	/* Phase 5.2 has no exact positive release-manifest entry. */
-	(void)device;
-	return false;
+	return device &&
+		rp1_gpclk_gpio4_candidate_allowed(device->route,
+			utsname()->release, utsname()->machine,
+			RP1_GPCLK_MODULE_VERSION,
+			of_machine_is_compatible("raspberrypi,5-model-b"),
+			device->clock && device->dma_chan &&
+			device->pinctrl &&
+			device->tick_dma0 && device->dma_tick0 &&
+			device->rate_exclusive);
 }
 
 static atomic64_t rp1_gpclk_next_owner = ATOMIC64_INIT(0);
@@ -185,7 +193,7 @@ static int rp1_gpclk_probe(struct platform_device *pdev)
 	if (live_output && !device->live_eligible) {
 		ret = -EOPNOTSUPP;
 		dev_err_probe(&pdev->dev, ret,
-			      "live output rejected: release has no positive compatibility entry\n");
+			      "live output rejected by exact 1.0.1 GPIO4 compatibility entry\n");
 		goto release_resources;
 	}
 

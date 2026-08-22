@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Preserve Phase 4 execution integrity while Phase 5.2 fails closed."""
+"""Preserve Phase 4 integrity around the exact 1.0.1 GPIO4 candidate gate."""
 
 from pathlib import Path
 
@@ -11,19 +11,21 @@ EXECUTION = (ROOT / "src/rp1_gpclk_execution.c").read_text(encoding="utf-8")
 
 for token in (
     'static bool rp1_gpclk_release_identity_allowed',
-    'return false;',
+    'rp1_gpclk_gpio4_candidate_allowed',
+    'of_machine_is_compatible("raspberrypi,5-model-b")',
     'live_output && device && device->live_eligible',
-    'live output rejected: release has no positive compatibility entry',
+    'live output rejected by exact 1.0.1 GPIO4 compatibility entry',
 ):
     if token not in MAIN:
-        raise SystemExit(f"Phase 5.2 fail-closed release gate missing {token}")
+        raise SystemExit(f"exact GPIO4 candidate gate missing {token}")
 
 for token in (
     "rp1_gpclk_live_output_eligible(context->device)",
-    '"phase5.2-no-positive-release-entry"',
+    "RP1_GPCLK_GPIO4_CANDIDATE_ID",
+    '"v1.0.1-no-matching-positive-entry"',
 ):
     if token not in DISPATCH:
-        raise SystemExit(f"truthful Phase 5.2 query/submit gate missing {token}")
+        raise SystemExit(f"truthful candidate query/submit gate missing {token}")
 
 for token in (
     "initial_tick_dma0_ctrl", "initial_tick_dma0_cycles",
@@ -33,4 +35,4 @@ for token in (
     if token not in EXECUTION:
         raise SystemExit(f"Phase 4D audit/restoration evidence missing {token}")
 
-print("Phase 4 execution and Phase 5.2 release-demotion boundary: PASS")
+print("Phase 4 execution and exact 1.0.1 GPIO4 candidate boundary: PASS")

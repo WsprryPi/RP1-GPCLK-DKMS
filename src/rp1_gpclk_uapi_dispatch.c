@@ -5,6 +5,7 @@
 #include <linux/string.h>
 #include <linux/uaccess.h>
 
+#include "rp1_gpclk/compatibility.h"
 #include "rp1_gpclk/device.h"
 #include "rp1_gpclk/execution.h"
 #include "rp1_gpclk/kernel_api.h"
@@ -105,8 +106,14 @@ static long rp1_gpclk_query(struct rp1_gpclk_file *context, void __user *user)
 	strscpy(request.module_id, "rp1-gpclk-dkms", sizeof(request.module_id));
 	strscpy(request.build_id, RP1_GPCLK_MODULE_VERSION,
 		sizeof(request.build_id));
-	strscpy(request.compatibility_id, "phase5.2-no-positive-release-entry",
-		sizeof(request.compatibility_id));
+	if (context->device->live_eligible)
+		strscpy(request.compatibility_id,
+			RP1_GPCLK_GPIO4_CANDIDATE_ID,
+			sizeof(request.compatibility_id));
+	else
+		strscpy(request.compatibility_id,
+			"v1.0.1-no-matching-positive-entry",
+			sizeof(request.compatibility_id));
 	if (copy_to_user(user, &request, sizeof(request)))
 		return -EFAULT;
 	return 0;

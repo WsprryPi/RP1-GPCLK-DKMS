@@ -82,6 +82,13 @@ ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
 "$tmp_dir/resource_policy"
 
 ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
+    -I"$repo_dir/tests/fixtures/linux" -I"$repo_dir/include" \
+    "$repo_dir/src/rp1_gpclk_compatibility.c" \
+    "$repo_dir/tests/compatibility_identity.c" \
+    -o "$tmp_dir/compatibility_identity"
+"$tmp_dir/compatibility_identity"
+
+${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
     -DRP1_GPCLK_HOST_TEST \
     -I"$repo_dir/tests/fixtures/linux" \
     -I"$repo_dir/include" -I"$repo_dir/include/uapi" \
