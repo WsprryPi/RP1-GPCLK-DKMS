@@ -6,6 +6,10 @@ set -e
 #DEBHELPER#
 
 if [ "$1" = configure ]; then
+    if ! getent group rp1-gpclk-route >/dev/null; then
+        addgroup --system rp1-gpclk-route
+    fi
+    install -d -o root -g root -m 0755 /var/lib/rp1-gpclk-dkms
     source_dir=/usr/lib/rp1-gpclk-dkms/overlays
     target_dir=/boot/firmware/overlays
     mkdir -p "$target_dir"

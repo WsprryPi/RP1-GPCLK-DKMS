@@ -6,7 +6,7 @@ Version 1.1.1 uses the standard Debian DKMS lifecycle. Build the package with
 `dpkg-buildpackage`; install, upgrade, or remove it with ordinary Debian package
 tools. `dh-dkms` provides the DKMS maintainer-script integration.
 
-The product package owns only:
+The product package owns:
 
 - the module build closure under `/usr/src/rp1-gpclk-dkms-1.1.1`, including
   the canonical UAPI at
@@ -34,10 +34,21 @@ at `/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager`), its closed JSON schem
 at `/usr/share/rp1-gpclk-dkms/1.1.1/rp1-gpclk-route-manager-v1.schema.json`,
 and its consumer contract at
 `/usr/share/doc/rp1-gpclk-dkms/route-manager-v1.md`. These are the only route
-manager inventory additions. Installation creates neither the owned boot block
-nor `/var/lib/rp1-gpclk-dkms/route-transactions`; journals are created only by
-an explicitly executed root mutation. Qualification plans, archives, and
+manager executable/data additions. The package also installs disabled
+`rp1-gpclk-route-manager.socket` and `rp1-gpclk-route-manager@.service` units,
+creates the restricted `rp1-gpclk-route` group, and creates only the empty
+`/var/lib/rp1-gpclk-dkms` state parent. It does not enroll WsprryPi, enable or
+start the socket, create the owned boot block, or create a transaction journal.
+Journals are created only by an explicitly executed root mutation.
+Qualification plans, archives, and
 `release_candidate_transaction.py` are not installed runtime dependencies.
+
+The supported interactive transport is the fixed group-restricted Unix socket
+at `/run/rp1-gpclk-dkms/route-manager.sock`. WsprryPi installation policy may
+explicitly enroll its fixed service account in `rp1-gpclk-route` and enable the
+socket. Each connection starts the root executor in a separate systemd service
+cgroup with JSON on the socket as standard input/output. No arbitrary sudo,
+command argument, path, wrapper, or shell is accepted.
 
 `BUILD_EXCLUSIVE_KERNEL` limits automatic builds to stock Raspberry Pi kernel
 package identities ending in `+rpt-rpi-2712` or `+rpt-rpi-v8`. DKMS skips

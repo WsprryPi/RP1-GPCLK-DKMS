@@ -16,7 +16,7 @@ BEGIN="# BEGIN RP1-GPCLK-DKMS OWNED ROUTE"; END="# END RP1-GPCLK-DKMS OWNED ROUT
 UAPI_SHA256="998ab96d7dbcc0d935c05758c46acba56bbcf92aa1b674b899bdab6932dc8384"
 OVERLAY_SHA256={"gpio4":"c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6","gpio20":"8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"}
 ROUTE_ID={"gpio4":1,"gpio20":2}; OPERATIONS={"query","preflight","apply-and-reboot","rollback","reconcile"}
-MUTATIONS={"apply-and-reboot","rollback"}; SERVICES=("wsprrypi.service","soapyremote-server.service")
+MUTATIONS={"apply-and-reboot","rollback","reconcile"}; SERVICES=("wsprrypi.service","soapyremote-server.service")
 REQUEST_ID=re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{7,63}"); ACTOR=re.compile(r"[A-Za-z0-9][A-Za-z0-9._:@/-]{1,127}")
 BOOT_ID_RE=re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 Runner=Callable[[list[str]],str]
@@ -109,22 +109,24 @@ def fixed_identity(env:Environment)->dict:
         overlays[route]=expected
     return {"package":PACKAGE,"debianVersion":DEBIAN_VERSION,"module":MODULE,"moduleVersion":VERSION,"uapiSha256":UAPI_SHA256,"overlaySha256":overlays}
 
-def service_idle(env:Environment)->dict:
+def service_safety(env:Environment,require_quiesced:bool=False)->dict:
     observed={}
     for service in SERVICES:
         active=env.runner(["/usr/bin/systemctl","show","--property=ActiveState","--value",service]).strip()
-        if active not in {"inactive","failed"}: raise ContractError(f"service is not idle: {service}")
+        if active not in {"active","inactive","failed"}: raise ContractError(f"service state is unknown: {service}")
+        if require_quiesced and active not in {"inactive","failed"}: raise ContractError(f"service is not quiesced: {service}")
         observed[service]=active
     endpoint=env.path("/dev/rp1-gpclk")
     if endpoint.exists():
         endpoint_stat=endpoint.stat()
+        if not stat.S_ISCHR(endpoint_stat.st_mode) or endpoint_stat.st_uid!=0 or endpoint_stat.st_gid!=0 or stat.S_IMODE(endpoint_stat.st_mode)!=0o600: raise ContractError("endpoint ownership or mode differs")
         for fd in env.path("/proc").glob("[0-9]*/fd/*"):
             try: opened=fd.stat()
             except OSError: continue
             if (opened.st_dev,opened.st_ino)==(endpoint_stat.st_dev,endpoint_stat.st_ino): raise ContractError("RP1 GPCLK endpoint is open")
     live=env.path(f"/sys/module/{MODULE}/parameters/live_output")
     if live.exists() and live.read_text().strip() not in {"N","0"}: raise ContractError("live_output is enabled or unknown")
-    return {"services":observed,"endpointOpen":False,"liveOutput":False}
+    return {"services":observed,"servicesQuiesced":all(value in {"inactive","failed"} for value in observed.values()),"endpointOwned":True,"endpointOpen":False,"liveOutput":False}
 
 def active_route(env:Environment)->str|None:
     matches=[]; of_root=env.path("/sys/firmware/devicetree/base")
@@ -144,7 +146,7 @@ def active_route(env:Environment)->str|None:
     if matches and not env.path(f"/sys/module/{MODULE}").is_dir(): raise ContractError("active route exists without exact module")
     return matches[0] if matches else None
 
-JOURNAL_FIELDS={"schemaVersion","contract","transactionId","initialRequestId","initialActor","lastRequestId","lastActor","operation","route","status","bootIdBefore","configBefore","configBeforeSha256","configAfterSha256","createdBootId"}
+JOURNAL_FIELDS={"schemaVersion","contract","transactionId","initialRequestId","initialActor","lastRequestId","lastActor","operation","route","status","bootIdBefore","configBefore","configBeforeSha256","configAfterSha256","createdBootId","serviceBefore","servicesOwned"}
 def load_journals(env:Environment)->list[tuple[Path,dict]]:
     directory=env.path(JOURNAL_DIR)
     if not directory.exists(): return []
@@ -163,60 +165,106 @@ def load_journals(env:Environment)->list[tuple[Path,dict]]:
         try: canonical_id=str(uuid.UUID(str(value["transactionId"])))
         except ValueError as error: raise ContractError("journal transaction ID is invalid") from error
         if value["schemaVersion"]!=1 or value["contract"]!=CONTRACT or value["transactionId"]!=canonical_id or path.name!=f"{canonical_id}.json" or not REQUEST_ID.fullmatch(str(value["initialRequestId"])) or not ACTOR.fullmatch(str(value["initialActor"])) or not REQUEST_ID.fullmatch(str(value["lastRequestId"])) or not ACTOR.fullmatch(str(value["lastActor"])): raise ContractError("journal attribution is invalid")
+        if (value["route"] not in ROUTE_ID or value["operation"] not in MUTATIONS or
+                set(value["serviceBefore"])!=set(SERVICES) or
+                any(state not in {"active","inactive","failed"} for state in value["serviceBefore"].values()) or
+                not isinstance(value["servicesOwned"],bool) or
+                value["status"] not in {"prepared","quiescing-services","services-quiesced","awaiting-reboot","rollback-prepared","rollback-awaiting-reboot","recovery-required","service-restore-failed","complete","rolled-back"} or
+                not all(re.fullmatch(r"[0-9a-f]{64}",str(value[key])) for key in ("configBeforeSha256","configAfterSha256")) or
+                sha256_bytes(str(value["configBefore"]).encode())!=value["configBeforeSha256"]): raise ContractError("journal state is stale, foreign, or malformed")
         result.append((path,value))
     pending=[item for item in result if item[1]["status"] not in {"complete","rolled-back"}]
     if len(pending)>1: raise ContractError("multiple pending route transactions exist")
     return result
 
-def inspect(env:Environment,require_idle:bool=False)->dict:
+def inspect(env:Environment,observe_safety:bool=False,require_quiesced:bool=False)->dict:
     config=env.path(CONFIG)
     if config.is_symlink() or not config.is_file() or not stat.S_ISREG(config.stat().st_mode): raise ContractError("boot configuration is absent or unsafe")
     payload=config.read_bytes(); journals=load_journals(env); pending=next((v for _,v in journals if v["status"] not in {"complete","rolled-back"}),None)
     result={"identity":fixed_identity(env),"configuredRoute":parse_config(payload),"activeRoute":active_route(env),"bootId":boot_id(env),"configSha256":sha256_bytes(payload),"pendingTransaction":pending,"journalCount":len(journals)}
-    if require_idle: result["idle"]=service_idle(env)
+    if observe_safety: result["safety"]=service_safety(env,require_quiesced)
     return result
 def response(operation:str,status:str,state:dict)->dict: return {"schemaVersion":1,"contract":CONTRACT,"operation":operation,"status":status,"state":state}
 def journal_write(path:Path,value:dict)->None: atomic_write(path,json.dumps(value,indent=2,sort_keys=True).encode()+b"\n",0o600)
 
+def set_service_activity(env:Environment,service_before:dict,stop:bool)->None:
+    if stop:
+        for service in SERVICES: env.runner(["/usr/bin/systemctl","stop",service])
+    else:
+        for service in SERVICES:
+            if service_before[service]=="active": env.runner(["/usr/bin/systemctl","start",service])
+
+def quiesce_services(env:Environment,path:Path,journal:dict)->dict:
+    journal["status"]="quiescing-services"; journal["servicesOwned"]=True; journal_write(path,journal)
+    try:
+        set_service_activity(env,journal["serviceBefore"],True)
+        observed=service_safety(env,True)
+        journal["status"]="services-quiesced"; journal_write(path,journal)
+        return observed
+    except BaseException:
+        try:
+            set_service_activity(env,journal["serviceBefore"],False)
+            journal["servicesOwned"]=False; journal["status"]="recovery-required"; journal_write(path,journal)
+        except BaseException:
+            journal["status"]="service-restore-failed"; journal_write(path,journal)
+        raise
+
+def restore_services_after_failure(env:Environment,path:Path,journal:dict)->None:
+    try:
+        set_service_activity(env,journal["serviceBefore"],False)
+        journal["servicesOwned"]=False; journal["status"]="recovery-required"; journal_write(path,journal)
+    except BaseException as error:
+        journal["status"]="service-restore-failed"; journal_write(path,journal)
+        raise ContractError("boot mutation failed and service restoration failed") from error
+
 def apply(request:dict,env:Environment,*,reboot:bool=True)->dict:
     if env.euid()!=0: raise ContractError("mutation requires root")
-    before_state=inspect(env,True)
+    before_state=inspect(env,True,False)
     if before_state["pendingTransaction"] is not None: raise ContractError("a route transaction is already pending")
     config=env.path(CONFIG); before=config.read_bytes(); after=config_for_route(before,request["route"]); transaction_id=str(uuid.uuid4()); path=env.path(f"{JOURNAL_DIR}/{transaction_id}.json")
-    journal={"schemaVersion":1,"contract":CONTRACT,"transactionId":transaction_id,"initialRequestId":request["requestId"],"initialActor":request["actor"],"lastRequestId":request["requestId"],"lastActor":request["actor"],"operation":"apply-and-reboot","route":request["route"],"status":"prepared","bootIdBefore":before_state["bootId"],"configBefore":before.decode(),"configBeforeSha256":sha256_bytes(before),"configAfterSha256":sha256_bytes(after),"createdBootId":before_state["bootId"]}
+    journal={"schemaVersion":1,"contract":CONTRACT,"transactionId":transaction_id,"initialRequestId":request["requestId"],"initialActor":request["actor"],"lastRequestId":request["requestId"],"lastActor":request["actor"],"operation":"apply-and-reboot","route":request["route"],"status":"prepared","bootIdBefore":before_state["bootId"],"configBefore":before.decode(),"configBeforeSha256":sha256_bytes(before),"configAfterSha256":sha256_bytes(after),"createdBootId":before_state["bootId"],"serviceBefore":before_state["safety"]["services"],"servicesOwned":False}
     journal_write(path,journal)
+    quiesce_services(env,path,journal)
     try:
         atomic_write(config,after,config.stat().st_mode&0o777)
         if config.read_bytes()!=after or parse_config(after)!=request["route"]: raise ContractError("atomic boot update readback differs")
         journal["status"]="awaiting-reboot"; journal_write(path,journal)
     except BaseException:
-        journal["status"]="recovery-required"; journal_write(path,journal); raise
-    if reboot: env.runner(["/usr/bin/systemctl","reboot"])
+        restore_services_after_failure(env,path,journal); raise
+    if reboot:
+        try: env.runner(["/usr/bin/systemctl","reboot"])
+        except BaseException:
+            restore_services_after_failure(env,path,journal); raise
     return response(request["operation"],"reboot-requested",{**before_state,"configuredRoute":request["route"],"transaction":journal})
 
 def rollback(request:dict,env:Environment,*,reboot:bool=True)->dict:
     if env.euid()!=0: raise ContractError("mutation requires root")
-    current=inspect(env,True); pending=current["pendingTransaction"]
+    current=inspect(env,True,False); pending=current["pendingTransaction"]
     if pending is None: raise ContractError("no pending transaction can be rolled back")
     path=env.path(f"{JOURNAL_DIR}/{pending['transactionId']}.json"); config=env.path(CONFIG); payload=config.read_bytes()
     before=pending["configBefore"].encode()
     if sha256_bytes(before)!=pending["configBeforeSha256"]: raise ContractError("journaled rollback payload differs")
     current_sha=sha256_bytes(payload)
     if current_sha not in {pending["configAfterSha256"],pending["configBeforeSha256"]}: raise ContractError("rollback refuses changed boot configuration")
-    pending.update(operation="rollback",status="rollback-prepared",lastRequestId=request["requestId"],lastActor=request["actor"]); journal_write(path,pending)
+    pending.update(operation="rollback",status="rollback-prepared",lastRequestId=request["requestId"],lastActor=request["actor"],serviceBefore=current["safety"]["services"],servicesOwned=False); journal_write(path,pending)
+    quiesce_services(env,path,pending)
     if current_sha==pending["configBeforeSha256"]:
-        pending["status"]="rolled-back"; journal_write(path,pending)
+        set_service_activity(env,pending["serviceBefore"],False); pending["servicesOwned"]=False; pending["status"]="rolled-back"; journal_write(path,pending)
         return response(request["operation"],"rolled-back",{**current,"pendingTransaction":None,"configuredRoute":parse_config(before),"transaction":pending})
     try:
         atomic_write(config,before,config.stat().st_mode&0o777)
         if config.read_bytes()!=before: raise ContractError("rollback readback differs")
         parse_config(before); pending["status"]="rollback-awaiting-reboot"; journal_write(path,pending)
     except BaseException:
-        pending["status"]="recovery-required"; journal_write(path,pending); raise
-    if reboot: env.runner(["/usr/bin/systemctl","reboot"])
+        restore_services_after_failure(env,path,pending); raise
+    if reboot:
+        try: env.runner(["/usr/bin/systemctl","reboot"])
+        except BaseException:
+            restore_services_after_failure(env,path,pending); raise
     return response(request["operation"],"reboot-requested",{**current,"configuredRoute":parse_config(before),"transaction":pending})
 
 def reconcile(request:dict,env:Environment)->dict:
+    if env.euid()!=0: raise ContractError("reconciliation requires root")
     current=inspect(env); pending=current["pendingTransaction"]
     if pending is None: return response(request["operation"],"ok",current)
     if current["bootId"]==pending["bootIdBefore"]: return response(request["operation"],"awaiting-reboot",current)
@@ -228,13 +276,14 @@ def reconcile(request:dict,env:Environment)->dict:
         if configured!=active: return response(request["operation"],"mismatch",current)
         pending["status"]="rolled-back"
     else: return response(request["operation"],"recovery-required",current)
+    pending["lastRequestId"]=request["requestId"]; pending["lastActor"]=request["actor"]; pending["servicesOwned"]=False
     journal_write(env.path(f"{JOURNAL_DIR}/{pending['transactionId']}.json"),pending); current["pendingTransaction"]=None; current["reconciledTransaction"]=pending
     return response(request["operation"],pending["status"],current)
 
 def dispatch(value:object,env:Environment=Environment(),*,reboot:bool=True)->dict:
     request=parse_request(value); operation=request["operation"]
     if operation in {"query","preflight"}:
-        result=response(operation,"ok",inspect(env,operation=="preflight"))
+        result=response(operation,"ok",inspect(env,operation=="preflight",False))
         if operation=="preflight": result["state"]["requestedRoute"]=request["route"]
         return result
     if operation=="apply-and-reboot": return apply(request,env,reboot=reboot)

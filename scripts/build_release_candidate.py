@@ -23,6 +23,7 @@ DEBIAN_VERSION = "1.1.1-1"
 TAG = "v1.1.1"
 PACKAGE = "rp1-gpclk-dkms"
 QUALIFICATION = "rp1-gpclk-dkms-qualification"
+LAST_OUTPUT_INHIBITED_PACKAGE_SHA256 = "48d55aa9a906e83b36ed46560c81cd894024bc2d6bf375514b5e1618a43493af"
 
 TRANSACTION_OPERATIONS = (
     "service-policy", "deactivate-predecessor", "install-inactive", "select-gpio4",
@@ -163,12 +164,14 @@ def validate_product(path: Path) -> tuple[dict, dict[str, bytes]]:
         "usr/sbin/rp1-gpclk-route-manager",
         "usr/share/rp1-gpclk-dkms/1.1.1/rp1-gpclk-route-manager-v1.schema.json",
         "usr/share/doc/rp1-gpclk-dkms/route-manager-v1.md",
+        "usr/lib/systemd/system/rp1-gpclk-route-manager.socket",
+        "usr/lib/systemd/system/rp1-gpclk-route-manager@.service",
     }
     missing = required - set(data_files)
     if missing:
         raise ValueError(f"required product members absent: {sorted(missing)}")
     allowed_roots = ("usr/src/rp1-gpclk-dkms-1.1.1/", "usr/lib/rp1-gpclk-dkms/",
-                     "usr/libexec/rp1-gpclk-dkms/", "usr/sbin/",
+                     "usr/libexec/rp1-gpclk-dkms/", "usr/lib/systemd/system/", "usr/sbin/",
                      "usr/share/rp1-gpclk-dkms/1.1.1/", "usr/share/doc/rp1-gpclk-dkms/")
     for name in data_files:
         if not name.startswith(allowed_roots):
@@ -390,6 +393,11 @@ def main() -> None:
         output.mkdir(parents=True, mode=0o755)
     inventory, product_files = validate_product(product)
     product_hash = inventory["packageSha256"]
+    if product_hash != LAST_OUTPUT_INHIBITED_PACKAGE_SHA256:
+        raise SystemExit(
+            "qualification archive generation is blocked: the exact product package "
+            "has no bound output-inhibited executor/evidence identity"
+        )
     inventory_bytes = pretty(inventory)
     layout = json.loads(LAYOUT.read_text())
     if layout["release"] != VERSION or layout["expectedTag"] != TAG:

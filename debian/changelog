@@ -6,6 +6,10 @@ rp1-gpclk-dkms (1.1.1-1) UNRELEASED; urgency=medium
     until exact-build evidence is returned.
   * Install the versioned, route-neutral application route manager, JSON
     schema, and consumer contract without installing qualification controls.
+  * Add disabled, group-restricted systemd socket activation so a running
+    application can request a separately owned service-quiesce transaction.
+  * Reject qualification archive generation for package bytes without an
+    exact output-inhibited validation identity.
 
  -- Lee Bussy <lee@bussy.org>  Sat, 22 Aug 2026 00:00:00 -0500
 

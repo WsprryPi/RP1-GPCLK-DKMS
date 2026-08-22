@@ -21,7 +21,7 @@ def request(operation,route=None,number=1):
 
 class Fixture:
     def __init__(self,root):
-        self.root=root; self.calls=[]
+        self.root=root; self.calls=[]; self.services={name:"inactive" for name in manager.SERVICES}; self.fail_stop=None; self.fail_reboot=False
         self.uapi=b"fixture uapi\n"; self.overlays={"gpio4":b"fixture gpio4\n","gpio20":b"fixture gpio20\n"}
         self.place("/boot/firmware/config.txt",b"# base configuration\n")
         self.place(manager.BOOT_ID,b"11111111-2222-3333-4444-555555555555\n")
@@ -36,8 +36,14 @@ class Fixture:
         self.calls.append(argv)
         if argv[:3]==["/usr/bin/dpkg-query","-W","-f=${Status}|${Version}"]: return "install ok installed|1.1.1-1\n"
         if argv[:4]==["/usr/sbin/modinfo","-F","version",manager.MODULE]: return "1.1.1\n"
-        if argv[:3]==["/usr/bin/systemctl","show","--property=ActiveState"]: return "inactive\n"
-        if argv==["/usr/bin/systemctl","reboot"]: return ""
+        if argv[:3]==["/usr/bin/systemctl","show","--property=ActiveState"]: return self.services[argv[-1]]+"\n"
+        if argv[:2]==["/usr/bin/systemctl","stop"]:
+            if argv[-1]==self.fail_stop: raise OSError("injected stop failure")
+            self.services[argv[-1]]="inactive"; return ""
+        if argv[:2]==["/usr/bin/systemctl","start"]: self.services[argv[-1]]="active"; return ""
+        if argv==["/usr/bin/systemctl","reboot"]:
+            if self.fail_reboot: raise OSError("injected reboot failure")
+            return ""
         raise AssertionError(argv)
     def env(self,root=True): return manager.Environment(self.root,self.runner,(lambda:0 if root else 1000))
     def activate(self,route):
@@ -49,10 +55,15 @@ class Fixture:
 with tempfile.TemporaryDirectory() as temporary:
     fixture=Fixture(pathlib.Path(temporary)); env=fixture.env()
     assert manager.dispatch(request("query"),env)["state"]["configuredRoute"] is None
+    fixture.services["wsprrypi.service"]="active"
+    running=manager.dispatch(request("preflight","gpio4"),env)
+    assert running["status"]=="ok" and running["state"]["safety"]["services"]["wsprrypi.service"]=="active"
+    assert running["state"]["safety"]["servicesQuiesced"] is False
     for route in manager.ROUTE_ID:
         assert manager.dispatch(request("preflight",route),env)["state"]["requestedRoute"]==route
         result=manager.dispatch(request("apply-and-reboot",route,10+manager.ROUTE_ID[route]),env,reboot=False)
         assert result["status"]=="reboot-requested" and manager.parse_config(env.path(manager.CONFIG).read_bytes())==route
+        assert fixture.services["wsprrypi.service"]=="inactive"
         fixture.activate(route); fixture.reboot()
         assert manager.dispatch(request("reconcile"),env)["status"]=="complete"
         # Reset active fixture and boot identity for the independent second route.
@@ -60,6 +71,7 @@ with tempfile.TemporaryDirectory() as temporary:
         for child in active.iterdir(): child.unlink()
         active.rmdir(); (fixture.root/f"sys/module/{manager.MODULE}").rmdir()
         fixture.place(manager.BOOT_ID,b"11111111-2222-3333-4444-555555555555\n")
+        fixture.services["wsprrypi.service"]="active"
 
 with tempfile.TemporaryDirectory() as temporary:
     fixture=Fixture(pathlib.Path(temporary)); env=fixture.env()
@@ -83,6 +95,24 @@ with tempfile.TemporaryDirectory() as temporary:
     journal=manager.load_journals(env)[0][1]
     assert journal["status"]=="recovery-required" and config.read_bytes()==b"# base configuration\n"
     assert manager.dispatch(request("rollback",number=31),env,reboot=False)["status"]=="rolled-back"
+
+with tempfile.TemporaryDirectory() as temporary:
+    fixture=Fixture(pathlib.Path(temporary)); env=fixture.env()
+    fixture.services={name:"active" for name in manager.SERVICES}; fixture.fail_stop="soapyremote-server.service"
+    try: manager.dispatch(request("apply-and-reboot","gpio4",35),env,reboot=False)
+    except OSError: pass
+    else: raise AssertionError("partial service quiescence succeeded")
+    assert fixture.services=={name:"active" for name in manager.SERVICES}
+    assert manager.load_journals(env)[0][1]["status"]=="recovery-required"
+
+with tempfile.TemporaryDirectory() as temporary:
+    fixture=Fixture(pathlib.Path(temporary)); env=fixture.env(); fixture.services["wsprrypi.service"]="active"; fixture.fail_reboot=True
+    try: manager.dispatch(request("apply-and-reboot","gpio20",36),env,reboot=True)
+    except OSError: pass
+    else: raise AssertionError("failed reboot request succeeded")
+    journal=manager.load_journals(env)[0][1]
+    assert journal["status"]=="recovery-required" and journal["servicesOwned"] is False
+    assert fixture.services["wsprrypi.service"]=="active"
 
 with tempfile.TemporaryDirectory() as temporary:
     fixture=Fixture(pathlib.Path(temporary)); env=fixture.env(); config=env.path(manager.CONFIG)

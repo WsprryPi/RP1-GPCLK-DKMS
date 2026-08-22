@@ -29,8 +29,8 @@
       "required": ["schemaVersion", "operation", "execute", "requestId", "actor"], "additionalProperties": false
     },
     "reconcileRequest": {
-      "type": "object", "properties": {"schemaVersion": {"const": 1}, "operation": {"const": "reconcile"}},
-      "required": ["schemaVersion", "operation"], "additionalProperties": false
+      "type": "object", "properties": {"schemaVersion": {"const": 1}, "operation": {"const": "reconcile"}, "execute": {"const": true}, "requestId": {"$ref": "#/$defs/requestId"}, "actor": {"$ref": "#/$defs/actor"}},
+      "required": ["schemaVersion", "operation", "execute", "requestId", "actor"], "additionalProperties": false
     },
     "response": {
       "type": "object", "properties": {"schemaVersion": {"const": 1}, "contract": {"const": "rp1-gpclk-route-manager-v1"}, "operation": {"type": ["string", "null"]}, "status": {"type": "string"}, "state": {"type": "object"}, "error": {"type": "object"}},

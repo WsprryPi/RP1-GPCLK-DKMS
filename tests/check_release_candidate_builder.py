@@ -67,6 +67,8 @@ with tempfile.TemporaryDirectory() as temporary:
         "usr/sbin/rp1-gpclk-route-manager": b"#!/usr/bin/python3\n",
         "usr/share/rp1-gpclk-dkms/1.1.1/rp1-gpclk-route-manager-v1.schema.json": b"{}\n",
         "usr/share/doc/rp1-gpclk-dkms/route-manager-v1.md": b"contract\n",
+        "usr/lib/systemd/system/rp1-gpclk-route-manager.socket": b"[Socket]\n",
+        "usr/lib/systemd/system/rp1-gpclk-route-manager@.service": b"[Service]\n",
         "usr/share/doc/rp1-gpclk-dkms/copyright": b"MIT\n",
     }
     product.write_bytes(
@@ -207,4 +209,7 @@ assert git_mode("scripts/build_release_candidate.py") == "100755"
 assert git_mode("scripts/validate_release_candidate.py") == "100755"
 assert git_mode("scripts/inspect_rebooted_route.py") == "100755"
 assert git_mode("scripts/release_candidate_transaction.py") == "100755"
+builder_source = (ROOT / "scripts/build_release_candidate.py").read_text()
+assert "qualification archive generation is blocked" in builder_source
+assert builder.LAST_OUTPUT_INHIBITED_PACKAGE_SHA256 == "48d55aa9a906e83b36ed46560c81cd894024bc2d6bf375514b5e1618a43493af"
 print("Release candidate builder and target-plan contract: PASS")

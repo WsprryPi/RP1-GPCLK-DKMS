@@ -43,6 +43,18 @@ assert "usr/sbin/rp1-gpclk-route-manager" in rules
 assert "rp1-gpclk-route-manager-v1.schema.json" in rules
 assert "route-manager-v1.md" in rules
 assert "release_candidate_transaction.py" not in rules
+assert "rp1-gpclk-route-manager.socket" in rules
+assert "rp1-gpclk-route-manager@.service" in rules
+assert "dh_installsystemd --no-enable --no-start" in rules
+assert "addgroup --system rp1-gpclk-route" in postinst
+
+socket = (ROOT / "systemd/rp1-gpclk-route-manager.socket").read_text()
+service = (ROOT / "systemd/rp1-gpclk-route-manager@.service").read_text()
+assert "SocketGroup=rp1-gpclk-route" in socket and "SocketMode=0660" in socket
+assert "Accept=yes" in socket and "WantedBy=sockets.target" in socket
+assert "ExecStart=/usr/sbin/rp1-gpclk-route-manager" in service
+assert "StandardInput=socket" in service and "StandardOutput=socket" in service
+assert "User=root" in service and "/bin/sh" not in service
 assert "Both overlays remain inactive" in guide
 assert "standard exclusion behavior" in guide
 
