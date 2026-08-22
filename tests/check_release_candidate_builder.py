@@ -163,4 +163,5 @@ for package in ("build-essential", "debhelper", "dh-dkms", "device-tree-compiler
     assert package in containerfile
 
 assert stat.S_IMODE((ROOT / "scripts/build_release_candidate.py").stat().st_mode) in {0o644, 0o755}
+assert stat.S_IMODE((ROOT / "scripts/validate_release_candidate.py").stat().st_mode) == 0o755
 print("Release candidate builder and target-plan contract: PASS")

@@ -24,6 +24,7 @@
     "schema/rp1-gpclk-uapi-contract-freeze-v1.schema.json",
     "scripts/release_candidate_controls.py",
     "scripts/release_candidate_target.py",
+    "scripts/validate_release_candidate.py",
     "tools/gate_d_uapi_probe.c"
   ]
 }

@@ -94,3 +94,21 @@ release tag is `v1.1.0`; do not build a release artifact from a moving branch.
 The resulting package is a new artifact. Building it successfully establishes
 only build compatibility and does not inherit qualification from the published
 package.
+
+
+## Preliminary candidate validation
+
+`build_release_candidate.py` and `validate_release_candidate.py` are a strict
+pair for the preliminary Debian/DKMS candidate set. Validate a generated set
+with:
+
+```sh
+make validate-release-candidate OUTPUT_DIR=/path/to/release-set \
+    SOURCE_COMMIT=EXACT_40_HEX_COMMIT
+```
+
+The validator independently parses the Debian archive, recomputes its member
+inventory and all sidecar/archive hashes, verifies source/version/UAPI/overlay
+identity, and requires GPIO4 and GPIO20 to remain unavailable and non-live.
+`validate_release.py` remains intentionally scoped to the separately generated
+published-release archive layout; the two validators are not interchangeable.
