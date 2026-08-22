@@ -112,3 +112,15 @@ inventory and all sidecar/archive hashes, verifies source/version/UAPI/overlay
 identity, and requires GPIO4 and GPIO20 to remain unavailable and non-live.
 `validate_release.py` remains intentionally scoped to the separately generated
 published-release archive layout; the two validators are not interchangeable.
+
+The 1.1.1 package remains byte-identical when only qualification-side executor
+and plan files change. Those external files are not installed by the Debian
+package. Any change to package members, module source, overlays, UAPI, or
+embedded identity instead requires a new package version.
+
+For output-inhibited route validation, extract the exact qualification archive
+and invoke its archived `release_candidate_controls.py` renderer. Every plan
+step must resolve to an archived executable plus a checksum-covered transaction
+plan sidecar; prose-only mutation steps are invalid. The executor's package,
+boot, reboot, reconciliation, rollback, and residue commands remain separately
+authorized operations and are never run by candidate generation or validation.

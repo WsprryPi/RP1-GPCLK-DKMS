@@ -24,6 +24,11 @@ TAG = "v1.1.1"
 PACKAGE = "rp1-gpclk-dkms"
 QUALIFICATION = "rp1-gpclk-dkms-qualification"
 
+TRANSACTION_OPERATIONS = (
+    "deactivate-predecessor", "install-inactive", "select-gpio4",
+    "select-gpio20", "restore-gpio4",
+)
+
 
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -247,21 +252,56 @@ def target_plan(product_hash: str, inventory_hash: str, identity_hash: str,
             "antennaOrTransmitterDisconnected": "fresh-operator-confirmation-required"
         },
         "steps": [
-            {"id":"read-only-preflight","action":"verify host, services, boot ownership, package absence or exact predecessor, and physical output inhibition","mutating":False,"requiresAuthorization":False},
+            {"id":"read-only-preflight","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","preflight","--plan","TRANSACTION-PLAN-deactivate-predecessor.json"],"mutating":False,"requiresAuthorization":False},
             {"id":"validated-transfer","argv":["/usr/bin/sha256sum","--check","SHA256SUMS"],"mutating":False,"requiresAuthorization":False},
-            {"id":"install-inactive-package","action":"install the exact package without selecting either overlay","mutating":True,"requiresAuthorization":True,"rebootRequired":False},
-            {"id":"select-gpio4-and-reboot","action":"idle-gated boot transaction selecting only rp1-gpclk-gpio4, then reboot","mutating":True,"requiresAuthorization":True,"rebootRequired":True},
+            {"id":"deactivate-predecessor-and-reboot","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","deactivate-and-reboot","--plan","TRANSACTION-PLAN-deactivate-predecessor.json","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":True},
+            {"id":"reconcile-inactive-predecessor","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","reconcile","--plan","TRANSACTION-PLAN-deactivate-predecessor.json","--journal","/var/lib/rp1-gpclk-dkms/route-transactions/wspr5-1-1-1-deactivate-predecessor.json"],"mutating":False,"requiresAuthorization":True},
+            {"id":"install-inactive-package","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","install-inactive","--plan","TRANSACTION-PLAN-install-inactive.json","--package","rp1-gpclk-dkms_1.1.1-1_all.deb","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":False},
+            {"id":"select-gpio4-and-reboot","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","apply-and-reboot","--plan","TRANSACTION-PLAN-select-gpio4.json","--route","gpio4","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":True},
+            {"id":"reconcile-gpio4","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","reconcile","--plan","TRANSACTION-PLAN-select-gpio4.json","--route","gpio4","--journal","/var/lib/rp1-gpclk-dkms/route-transactions/wspr5-1-1-1-select-gpio4.json"],"mutating":False,"requiresAuthorization":True},
             {"id":"inspect-gpio4-output-disabled","argv":["/usr/bin/python3","scripts/inspect_rebooted_route.py","--route","gpio4"],"mutating":False,"requiresAuthorization":True},
-            {"id":"select-gpio20-and-reboot","action":"idle-gated boot transaction replacing GPIO4 with only rp1-gpclk-gpio20, then reboot","mutating":True,"requiresAuthorization":True,"rebootRequired":True},
+            {"id":"select-gpio20-and-reboot","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","apply-and-reboot","--plan","TRANSACTION-PLAN-select-gpio20.json","--route","gpio20","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":True},
+            {"id":"reconcile-gpio20","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","reconcile","--plan","TRANSACTION-PLAN-select-gpio20.json","--route","gpio20","--journal","/var/lib/rp1-gpclk-dkms/route-transactions/wspr5-1-1-1-select-gpio20.json"],"mutating":False,"requiresAuthorization":True},
             {"id":"inspect-gpio20-output-disabled","argv":["/usr/bin/python3","scripts/inspect_rebooted_route.py","--route","gpio20"],"mutating":False,"requiresAuthorization":True},
-            {"id":"restore-gpio4-and-reboot","action":"idle-gated boot transaction replacing GPIO20 with only rp1-gpclk-gpio4, then reboot","mutating":True,"requiresAuthorization":True,"rebootRequired":True},
+            {"id":"restore-gpio4-and-reboot","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","apply-and-reboot","--plan","TRANSACTION-PLAN-restore-gpio4.json","--route","gpio4","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":True},
+            {"id":"reconcile-restored-gpio4","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","reconcile","--plan","TRANSACTION-PLAN-restore-gpio4.json","--route","gpio4","--journal","/var/lib/rp1-gpclk-dkms/route-transactions/wspr5-1-1-1-restore-gpio4.json"],"mutating":False,"requiresAuthorization":True},
             {"id":"inspect-restored-gpio4-output-disabled","argv":["/usr/bin/python3","scripts/inspect_rebooted_route.py","--route","gpio4"],"mutating":False,"requiresAuthorization":True},
-            {"id":"residue-and-service-audit","action":"verify journal closure, exact active GPIO4 route, output inhibition, and original service policy","mutating":False,"requiresAuthorization":True},
+            {"id":"residue-and-service-audit","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","residue-audit","--plan","TRANSACTION-PLAN-restore-gpio4.json"],"mutating":False,"requiresAuthorization":True},
         ],
         "safety": {"liveOutput":False,"endpointAcquire":False,"clockOrRateChange":False,
                    "dma":False,"gpioOutput":False,"carrier":False,"sdrCapture":False,
                    "transmissionOrRf":False,"bootChange":True,"reboot":True},
     }
+
+
+def transaction_plan(operation: str, commit: str, qualification_hash: str,
+                     compatibility_hash: str, inventory_hash: str) -> dict:
+    value = {
+        "schemaVersion": 1,
+        "kind": "rp1-gpclk-1.1.1-route-transaction",
+        "operationId": f"wspr5-1-1-1-{operation}",
+        "host": "wspr5", "architecture": "aarch64",
+        "kernel": "6.18.34+rpt-rpi-2712", "firmware": "69471177",
+        "baseDtbSha256": "e67017e5d45b97af478ebc93d651a086f2adcb6a650fe453eb9f1cf47e66473f",
+        "kernelConfigSha256": "2a83d4324e9b47d418b4efac18d3af43d15cc956b71c5a8eb074060bf8383801",
+        "sourceCommit": commit,
+        "package": "rp1-gpclk-dkms_1.1.1-1_all.deb",
+        "packageSha256": "48d55aa9a906e83b36ed46560c81cd894024bc2d6bf375514b5e1618a43493af",
+        "qualificationArchiveSha256": qualification_hash,
+        "uapiSha256": "998ab96d7dbcc0d935c05758c46acba56bbcf92aa1b674b899bdab6932dc8384",
+        "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+        "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+        "compatibilitySha256": compatibility_hash,
+        "productInventorySha256": inventory_hash,
+        "predecessorVersion": "1.0.1-1",
+        "predecessorConfigSha256": "8135eb26a52046d042c5f84583cad20d3f519c3753010a5afff063077dcf48f4",
+        "signingPolicy": "CONFIG_MODULE_SIG=n; unsigned candidate",
+        "physicalTopology": "fresh-operator-confirmation-required",
+        "servicePolicy": {"wsprrypi.service": "inactive",
+                          "soapyremote-server.service": "inactive"},
+    }
+    value["planSha256"] = sha256_bytes(canonical(value))
+    return value
 
 
 def add_bytes(archive: tarfile.TarFile, name: str, data: bytes, epoch: int, mode: int) -> None:
@@ -354,6 +394,14 @@ def main() -> None:
         (output / name).write_bytes(content)
     qualification_path = output / f"{QUALIFICATION}-{VERSION}.tar.gz"
     qualification_inventory = build_qualification(qualification_path, generated, layout, epoch)
+    transaction_names = []
+    for operation in TRANSACTION_OPERATIONS:
+        name = f"TRANSACTION-PLAN-{operation}.json"
+        value = transaction_plan(
+            operation, commit, sha256(qualification_path),
+            sha256(output / "COMPATIBILITY.json"), sha256(output / "PRODUCT-INVENTORY.json"))
+        (output / name).write_bytes(pretty(value))
+        transaction_names.append(name)
     metadata = {
         "SPDX-License-Identifier":"MIT", "schemaVersion":1,
         "kind":"release-artifact-set", "release":VERSION, "debianVersion":DEBIAN_VERSION,
@@ -368,6 +416,7 @@ def main() -> None:
         "compatibilitySha256":sha256(output / "COMPATIBILITY.json"),
         "qualificationIdentitySha256":sha256(output / "QUALIFICATION.json"),
         "targetVerificationSha256":sha256(output / "TARGET-VERIFICATION.json"),
+        "transactionPlans": {name: sha256(output / name) for name in transaction_names},
         "uapiSha256":uapi_hash, "gpio4DtboSha256":gpio4_hash, "gpio20DtboSha256":gpio20_hash,
         "sourceDateEpoch":epoch,
     }

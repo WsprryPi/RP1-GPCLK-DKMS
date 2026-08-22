@@ -17,6 +17,7 @@ package-check:
 	python3 tests/check_phase554_lifecycle_controls.py
 	python3 tests/check_phase554_lifecycle_attempt2_controls.py
 	python3 tests/check_release_candidate_builder.py
+	python3 tests/check_release_candidate_transaction.py
 	python3 tests/check_release_1_0_0_repaired_target_success.py
 	python3 tests/check_release_1_0_0_public_download_success.py
 

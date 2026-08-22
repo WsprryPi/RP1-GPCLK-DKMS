@@ -42,10 +42,12 @@ def validate(root: Path) -> dict:
         raise ValueError("target plan qualification identity differs")
     steps = plan.get("steps")
     expected = [
-        "read-only-preflight", "validated-transfer", "install-inactive-package",
-        "select-gpio4-and-reboot", "inspect-gpio4-output-disabled",
-        "select-gpio20-and-reboot", "inspect-gpio20-output-disabled",
-        "restore-gpio4-and-reboot", "inspect-restored-gpio4-output-disabled",
+        "read-only-preflight", "validated-transfer", "deactivate-predecessor-and-reboot",
+        "reconcile-inactive-predecessor", "install-inactive-package",
+        "select-gpio4-and-reboot", "reconcile-gpio4", "inspect-gpio4-output-disabled",
+        "select-gpio20-and-reboot", "reconcile-gpio20", "inspect-gpio20-output-disabled",
+        "restore-gpio4-and-reboot", "reconcile-restored-gpio4",
+        "inspect-restored-gpio4-output-disabled",
         "residue-and-service-audit",
     ]
     if not isinstance(steps, list) or [step.get("id") for step in steps] != expected:
@@ -55,9 +57,9 @@ def validate(root: Path) -> dict:
                    "rebootRequired"}
         if not set(step) <= allowed or not {"id", "mutating", "requiresAuthorization"} <= set(step):
             raise ValueError(f"invalid target step fields: {step.get('id')}")
-        if ("argv" in step) == ("action" in step):
-            raise ValueError(f"target step must have exactly one execution form: {step['id']}")
-        if "argv" in step and (not isinstance(step["argv"], list) or not step["argv"]):
+        if "action" in step or "argv" not in step:
+            raise ValueError(f"target step is not executable: {step['id']}")
+        if not isinstance(step["argv"], list) or not step["argv"]:
             raise ValueError(f"invalid target step argv: {step['id']}")
         if step["mutating"] and not step["requiresAuthorization"]:
             raise ValueError(f"mutating step lacks authorization gate: {step['id']}")

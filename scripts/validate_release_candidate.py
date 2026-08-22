@@ -24,6 +24,11 @@ FILES = {
     "TARGET-VERIFICATION.json", "release-metadata.json",
     f"{PACKAGE}_{DEBIAN_VERSION}_all.deb",
     f"{QUALIFICATION}-{VERSION}.tar.gz", "SHA256SUMS",
+    "TRANSACTION-PLAN-deactivate-predecessor.json",
+    "TRANSACTION-PLAN-install-inactive.json",
+    "TRANSACTION-PLAN-select-gpio4.json",
+    "TRANSACTION-PLAN-select-gpio20.json",
+    "TRANSACTION-PLAN-restore-gpio4.json",
 }
 
 
@@ -254,6 +259,21 @@ def validate(root: Path, expected_source_commit: str | None) -> dict:
         fail("mutating target step lacks authorization gate")
     if sha256(root / "TARGET-VERIFICATION.json") != metadata.get("targetVerificationSha256"):
         fail("target plan sidecar hash differs")
+    transaction_names = sorted(name for name in FILES if name.startswith("TRANSACTION-PLAN-"))
+    if set(metadata.get("transactionPlans", {})) != set(transaction_names):
+        fail("transaction plan inventory differs")
+    for name in transaction_names:
+        transaction = load_json(root / name)
+        claimed = transaction.pop("planSha256", None)
+        if claimed != sha256_bytes(canonical(transaction)):
+            fail(f"transaction plan digest differs: {name}")
+        if (transaction.get("kind"), transaction.get("sourceCommit"),
+            transaction.get("qualificationArchiveSha256")) != (
+                "rp1-gpclk-1.1.1-route-transaction", source_commit,
+                sha256(root / metadata["qualificationArchive"])):
+            fail(f"transaction plan identity differs: {name}")
+        if metadata["transactionPlans"].get(name) != sha256(root / name):
+            fail(f"transaction plan sidecar hash differs: {name}")
     qualification = root / metadata.get("qualificationArchive", "")
     if qualification.name != f"{QUALIFICATION}-{VERSION}.tar.gz" or sha256(qualification) != metadata.get("qualificationArchiveSha256"):
         fail("qualification archive identity differs")

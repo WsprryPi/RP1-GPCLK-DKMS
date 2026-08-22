@@ -102,6 +102,7 @@ with tempfile.TemporaryDirectory() as temporary:
     (qualification_root / "scripts").mkdir()
     (qualification_root / "scripts/release_candidate_target.py").write_text("# fixture\n")
     (qualification_root / "scripts/inspect_rebooted_route.py").write_text("# fixture\n")
+    (qualification_root / "scripts/release_candidate_transaction.py").write_text("# fixture\n")
     (qualification_root / "PRODUCT-INVENTORY.json").write_bytes(inventory_bytes)
     (qualification_root / "QUALIFICATION.json").write_bytes(identity_bytes)
     (qualification_root / "TARGET-VERIFICATION.json").write_bytes(builder.pretty(plan))
@@ -195,4 +196,5 @@ def git_mode(path: str) -> str:
 assert git_mode("scripts/build_release_candidate.py") == "100755"
 assert git_mode("scripts/validate_release_candidate.py") == "100755"
 assert git_mode("scripts/inspect_rebooted_route.py") == "100755"
+assert git_mode("scripts/release_candidate_transaction.py") == "100755"
 print("Release candidate builder and target-plan contract: PASS")
