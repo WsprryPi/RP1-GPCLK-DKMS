@@ -17,7 +17,7 @@ all_source = "\n".join(
 )
 
 required = {
-    "platform driver": "module_platform_driver(rp1_gpclk_driver)",
+    "platform driver": "platform_driver_register(&rp1_gpclk_driver)",
     "misc registration": "misc_register(&device->miscdev)",
     "restrictive mode": "device->miscdev.mode = 0600",
     "clock phandle validation": "of_parse_phandle_with_args",

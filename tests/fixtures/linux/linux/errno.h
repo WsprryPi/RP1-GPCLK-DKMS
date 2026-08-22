@@ -4,6 +4,7 @@
 
 /* Avoid glibc's errno.h -> linux/errno.h recursion when this fixture shadows
  * the kernel header during portable host compilation. */
+#define EPERM 1
 #define EIO 5
 #define EINVAL 22
 #define ERANGE 34

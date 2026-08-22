@@ -29,6 +29,10 @@ does not automatically extend to a different kernel, firmware, device tree,
 route, host, or physical installation. See the
 [1.0.0 release notes](docs/releases/1.0.0-behavior.md) for the precise claim.
 
+Version 1.0.1 is an unreleased corrective candidate for boot-time RP1 endpoint
+binding. See the [planned 1.0.1 behavior](docs/releases/1.0.1-behavior.md); it
+has hardware-free evidence only and is not a qualified or consumable release.
+
 ## Safety
 
 Installing the package does not select an overlay, edit boot configuration,

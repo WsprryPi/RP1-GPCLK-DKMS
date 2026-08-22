@@ -2,6 +2,7 @@
 
 obj-m += rp1_gpclk_dkms.o
 rp1_gpclk_dkms-y := src/rp1_gpclk_main.o \
+	src/rp1_gpclk_bootstrap_policy.o \
 	src/rp1_gpclk_core.o \
 	src/rp1_gpclk_execution.o \
 	src/rp1_gpclk_execution_machine.o \

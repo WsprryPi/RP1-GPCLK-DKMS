@@ -99,6 +99,47 @@ Only GPIO4 and GPIO20 are supported. They are separate administrative routes
 with distinct overlays and qualification. The module accepts no arbitrary GPIO
 parameter, combined overlay, or automatic route substitution.
 
+## Endpoint discovery and platform-device ownership
+
+Each route overlay owns one enabled endpoint node beneath the existing `rp1`
+bus. The node carries the canonical compatible, route, pin, clock, DMA,
+register, and pinctrl identities. Keeping that ancestry is mandatory: resource
+translation continues through the stock RP1 device-tree ranges and providers.
+
+The module owns bounded discovery of that endpoint. Initialization requires
+exactly one matching node and rejects zero, duplicate, disabled, malformed,
+ambiguous, conflicting, or inconsistently populated nodes. A platform device
+already created by the kernel is preferred and must be bound to this driver.
+Probe validation requires the endpoint, clock provider, and DMA provider to be
+children of the same RP1 node; supplier phandles alone do not establish valid
+ancestry.
+The module never replaces, unregisters, or otherwise assumes ownership of a
+kernel-created platform device.
+
+Some stock Raspberry Pi boot paths do not instantiate a newly overlaid child
+of the RP1 node. When the single valid endpoint has no platform device, the
+module may create only that exact device with exported OF platform APIs. The
+module walks upward from the endpoint and uses the nearest instantiated
+platform ancestor as the Linux device parent. On stock Raspberry Pi 5 kernels
+the intermediate `rp1` firmware node need not have its own platform device, so
+the nearest instantiated ancestor can be the PCIe platform device while the
+endpoint's firmware ancestry still passes through `rp1`. Absence of any
+instantiated platform ancestor rejects creation. The module records this
+ownership and may unregister only the device it created and still owns.
+Synchronous creation must also produce a successful bind;
+deferred or failed binding rejects module initialization and removes the
+module-created device. Owned-device teardown holds the endpoint OF-node
+reference across unregister and clears only that node's populated flag after
+unregister completes, permitting a later bounded fallback creation without
+exposing a duplicate-device window.
+
+The module must not populate or depopulate the RP1 bus generally, create
+unrelated children, move the endpoint to an unrelated bus, manufacture
+resources, hard-code translated CPU physical addresses, or bypass normal
+device-tree address, clock, DMA, or pinctrl translation. Boot-time firmware
+overlays and dynamic overlay notification are distinct validation cases and
+neither result transfers qualification to the other.
+
 ## UAPI
 
 The canonical header is `include/uapi/linux/rp1_gpclk.h`. The UAPI is bounded,
@@ -121,6 +162,18 @@ lease.
 Open-file, platform-device, DMA callback, unbind, overlay, and module lifetimes
 are explicit. Managed allocation does not replace reference counting or a
 dead-state transition.
+
+Module initialization registers platform-device removal observation before
+the platform driver, discovers or creates the endpoint, and publishes success
+only after the device is bound. Failure unwinds in strict reverse order.
+Module exit detaches its ownership record, unregisters any still-owned created
+device so `remove()` can quiesce it, unregisters the driver, and finally
+unregisters removal observation. External removal of a created device clears
+the ownership record before its storage can be released. Creation holds a
+temporary device reference and observes removal across the interval between
+device registration and ownership publication. These rules prevent duplicate
+creation, stale ownership, double removal, and destruction of a kernel-created
+device.
 
 Removal or unbind first prevents new work, rejects stale callbacks, drains or
 cancels bounded work, restores only state owned by this module, and proves
@@ -163,6 +216,10 @@ Ordinary checks are offline, unprivileged, network-free, hardware-free, and
 safe to repeat. Implementation changes receive deterministic tests. Kernel
 build results record the kernel, configuration, compiler, architecture, module
 version, UAPI version, and outcome.
+
+Binding validation records the firmware-applied device-tree node, platform
+device, driver link, probe result, and canonical character device as separate
+facts. A loaded module or matching OF modalias alone is not binding evidence.
 
 Target tests require inspection of the exact test implementation and explicit
 authorization for their system effects. Output-disabled administration, live

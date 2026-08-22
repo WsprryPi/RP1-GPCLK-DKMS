@@ -1,3 +1,12 @@
+rp1-gpclk-dkms (1.0.1-1) UNRELEASED; urgency=medium
+
+  * Create and own the exact RP1 endpoint platform device when the stock
+    boot-time population path leaves the validated overlay node uninstantiated.
+  * Fail closed for missing, duplicate, disabled, unbound, or ambiguous
+    endpoint nodes and preserve kernel-created device ownership.
+
+ -- Lee Bussy <lee@bussy.org>  Thu, 21 Aug 2026 20:00:00 -0500
+
 rp1-gpclk-dkms (1.0.0-1) unstable; urgency=medium
 
   * Initial semantic release candidate.

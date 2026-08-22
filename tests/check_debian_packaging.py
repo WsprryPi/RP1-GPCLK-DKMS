@@ -5,7 +5,7 @@ import pathlib
 import re
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 rules = (ROOT / "debian/rules").read_text()
 control = (ROOT / "debian/control").read_text()

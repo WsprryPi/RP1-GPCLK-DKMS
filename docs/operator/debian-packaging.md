@@ -2,13 +2,13 @@
 
 # Debian DKMS packaging
 
-Version 1.0.0 uses the standard Debian DKMS lifecycle. Build the package with
+Version 1.0.1 uses the standard Debian DKMS lifecycle. Build the package with
 `dpkg-buildpackage`; install, upgrade, or remove it with ordinary Debian package
 tools. `dh-dkms` provides the DKMS maintainer-script integration.
 
 The product package owns only:
 
-- the module build closure under `/usr/src/rp1-gpclk-dkms-1.0.0`, including
+- the module build closure under `/usr/src/rp1-gpclk-dkms-1.0.1`, including
   the canonical UAPI;
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo`; and
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo`.
@@ -32,7 +32,7 @@ filter limits build scope; it does not qualify every matching kernel.
 Install the downloaded package with APT so dependencies are resolved:
 
 ```sh
-sudo apt install ./rp1-gpclk-dkms_1.0.0-1_all.deb
+sudo apt install ./rp1-gpclk-dkms_1.0.1-1_all.deb
 ```
 
 After installation, inspect DKMS status and the installed files. Do not select
