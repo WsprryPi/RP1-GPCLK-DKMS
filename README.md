@@ -30,7 +30,10 @@ route, host, or physical installation. See the
 [1.0.0 release notes](docs/releases/1.0.0-behavior.md) for the precise claim.
 
 Version 1.0.1 is an unreleased corrective candidate for boot-time RP1 endpoint
-binding. See the [planned 1.0.1 behavior](docs/releases/1.0.1-behavior.md); it
+binding. Its `/dev/rp1-gpclk` endpoint and ABI v1 contract are normatively
+frozen for consumer development. Source/DKMS/module version `1.0.1`, Debian
+version `1.0.1-1`, and eventual tag `v1.0.1` are one release identity. See the
+[planned 1.0.1 behavior](docs/releases/1.0.1-behavior.md); it
 has hardware-free evidence only and is not a qualified or consumable release.
 
 ## Safety
@@ -108,6 +111,13 @@ and safe to repeat:
 ```sh
 make check
 make package-check
+```
+
+Build and validate an unreleased development candidate without publishing it:
+
+```sh
+make release-unit DEVELOPMENT=1 OUTPUT_DIR=/absolute/output/directory
+make validate-release DEVELOPMENT=1 OUTPUT_DIR=/absolute/output/directory
 ```
 
 Build the module against an explicitly selected local kernel build tree:

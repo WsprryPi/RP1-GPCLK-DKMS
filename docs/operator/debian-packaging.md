@@ -9,9 +9,15 @@ tools. `dh-dkms` provides the DKMS maintainer-script integration.
 The product package owns only:
 
 - the module build closure under `/usr/src/rp1-gpclk-dkms-1.0.1`, including
-  the canonical UAPI;
+  the canonical UAPI at
+  `/usr/src/rp1-gpclk-dkms-1.0.1/include/uapi/linux/rp1_gpclk.h`;
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo`; and
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo`.
+
+The Debian package does not install a system header under `/usr/include`, the
+qualification harness, or the optional administration and diagnostic tooling
+described by the separate source-release installation model. Those artifacts
+have distinct ownership and are not part of the binary package file list.
 
 The maintainer scripts copy the canonical overlays into
 `/boot/firmware/overlays` without creating hard-link backups on the boot
@@ -60,6 +66,10 @@ From a tagged source checkout:
 ```sh
 dpkg-buildpackage -us -uc -b
 ```
+
+For source version `1.0.1`, the binary package version is `1.0.1-1` and the
+expected artifact name is `rp1-gpclk-dkms_1.0.1-1_all.deb`. The eventual
+release tag is `v1.0.1`; do not build a release artifact from a moving branch.
 
 The resulting package is a new artifact. Building it successfully establishes
 only build compatibility and does not inherit qualification from the published

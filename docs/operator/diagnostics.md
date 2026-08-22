@@ -7,6 +7,11 @@ Run `rp1-gpclk-diagnostics` to print a bounded JSON report. Optionally pass
 does not install, load, bind, apply an overlay, enroll, change GPIO, repair, or
 remove anything.
 
+Endpoint discovery checks `/dev/rp1-gpclk`, the only canonical ABI v1 path.
+The historical `/dev/rp1-gpclk0` spelling is not a supported fallback. A
+missing endpoint is reported as unavailable; diagnostics do not create a
+platform device or attempt binding.
+
 The summary distinguishes healthy qualified, healthy Experimental,
 build-compatible but live-disabled, unavailable, rejected, and indeterminate
 because required inspection lacked privileges. Run as an administrator only

@@ -48,14 +48,14 @@ def ar_member(name: str, content: bytes) -> bytes:
 
 with tempfile.TemporaryDirectory() as temporary:
     root = Path(temporary)
-    product = root / "rp1-gpclk-dkms_1.0.0-1_all.deb"
+    product = root / "rp1-gpclk-dkms_1.0.1-1_all.deb"
     control = tar_xz({
-        "control": b"Package: rp1-gpclk-dkms\nVersion: 1.0.0-1\nArchitecture: all\n",
+        "control": b"Package: rp1-gpclk-dkms\nVersion: 1.0.1-1\nArchitecture: all\n",
         "md5sums": b"",
     })
-    base = "usr/src/rp1-gpclk-dkms-1.0.0"
+    base = "usr/src/rp1-gpclk-dkms-1.0.1"
     data_files = {
-        f"{base}/dkms.conf": b'PACKAGE_NAME="rp1-gpclk-dkms"\nPACKAGE_VERSION="1.0.0"\n',
+        f"{base}/dkms.conf": b'PACKAGE_NAME="rp1-gpclk-dkms"\nPACKAGE_VERSION="1.0.1"\n',
         f"{base}/Kbuild": b"obj-m += rp1_gpclk_dkms.o\n",
         f"{base}/Makefile": b"all:\n\t@true\n",
         f"{base}/include/uapi/linux/rp1_gpclk.h": b"uapi\n",
@@ -72,12 +72,12 @@ with tempfile.TemporaryDirectory() as temporary:
         + ar_member("data.tar.xz", tar_xz(data_files))
     )
     inventory, extracted = builder.validate_product(product)
-    assert inventory["debianVersion"] == "1.0.0-1"
+    assert inventory["debianVersion"] == "1.0.1-1"
     assert inventory["packageSha256"] == builder.sha256(product)
     assert set(data_files) <= set(extracted)
     inventory_bytes = builder.pretty(inventory)
     identity = {
-        "release": "1.0.0", "expectedTag": "v1.0.0",
+        "release": "1.0.1", "expectedTag": "v1.0.1",
         "productPackageSha256": inventory["packageSha256"],
     }
     identity_bytes = builder.pretty(identity)

@@ -35,6 +35,10 @@ enrollment are administrator-owned and are not package content. See
 
 ## Loading and operation
 
+The sole canonical ABI v1 endpoint is `/dev/rp1-gpclk`. A historical
+`/dev/rp1-gpclk0` node is not a supported discovery fallback. A missing
+endpoint does not authorize userspace to create or substitute one.
+
 Loading with live output disabled is distinct from live eligibility. A module
 that builds or loads successfully may still reject all submissions. Live use
 requires the immutable load-time output gate, exact compatibility approval,

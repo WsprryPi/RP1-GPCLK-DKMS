@@ -157,6 +157,19 @@ bounded drain. Stale callbacks are rejected. Terminal outcomes are stable and
 specific. A cleanup fault remains latched and cannot be cleared by releasing a
 lease.
 
+### Version 1.0.1 normative UAPI and endpoint freeze
+
+The canonical endpoint is `/dev/rp1-gpclk`. ABI v1 is byte-identified by the
+SHA-256 recorded in `release/uapi-contract-freeze-v1.0.1.json`; that manifest
+also freezes ioctl identities and sizes, GPIO4/GPIO20 route identities, lease,
+submission, terminal-state, cleanup, packaging, and version relationships.
+Submission remains unavailable unless both the immutable load-time output gate
+and an exact positive compatibility entry for the selected route permit it.
+
+Changing the endpoint or canonical UAPI reopens the freeze and invalidates
+dependent consumer work. Final documentation freeze remains pending until
+target evidence and release claims are complete.
+
 ## Lifetime and cleanup
 
 Open-file, platform-device, DMA callback, unbind, overlay, and module lifetimes

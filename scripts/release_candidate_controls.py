@@ -21,9 +21,9 @@ def validate(root: Path) -> dict:
     identity = json.loads(identity_path.read_text())
     inventory = json.loads(inventory_path.read_text())
     plan = json.loads(plan_path.read_text())
-    if identity.get("release") != "1.0.0" or identity.get("expectedTag") != "v1.0.0":
+    if identity.get("release") != "1.0.1" or identity.get("expectedTag") != "v1.0.1":
         raise ValueError("qualification release identity differs")
-    if inventory.get("debianVersion") != "1.0.0-1":
+    if inventory.get("debianVersion") != "1.0.1-1":
         raise ValueError("product inventory version differs")
     if plan.get("kind") != "release-candidate-target-verification" or plan.get("schemaVersion") != 1:
         raise ValueError("target plan identity differs")
@@ -82,7 +82,7 @@ def main() -> None:
         for step in plan["steps"]:
             print(json.dumps({"id": step["id"], "argv": step["argv"]}, separators=(",", ":")))
     else:
-        print("Release 1.0.0 target controls: PASS (offline, unauthorized)")
+        print("Release 1.0.1 target controls: PASS (offline, unauthorized)")
 
 
 if __name__ == "__main__":
