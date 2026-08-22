@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 PACKAGE := rp1-gpclk-dkms
-MODULE_VERSION := 1.0.1
+MODULE_VERSION := 1.1.0
 SOURCE_DEST := debian/$(PACKAGE)/usr/src/$(PACKAGE)-$(MODULE_VERSION)
 OVERLAY_DEST := debian/$(PACKAGE)/usr/lib/$(PACKAGE)/overlays
 

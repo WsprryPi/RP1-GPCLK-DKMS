@@ -1,0 +1,13 @@
+Package: rp1-gpclk-dkms
+Version: 1.1.0-1
+Architecture: all
+Maintainer: Lee Bussy <lee@bussy.org>
+Installed-Size: 159
+Depends: dkms (>= 2.1.0.0)
+Section: kernel
+Priority: optional
+Homepage: https://github.com/WsprryPi/RP1-GPCLK-DKMS
+Description: DKMS source for the Raspberry Pi RP1 GPCLK module
+ Stock-kernel out-of-tree module providing bounded RP1 GPCLK0 control for
+ WsprryPi. The package installs DKMS source and inactive GPIO4 and GPIO20
+ device-tree overlays. It does not enable an overlay or load the module.

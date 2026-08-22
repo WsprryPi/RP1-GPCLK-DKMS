@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 freeze = json.loads((ROOT / "release/uapi-contract-freeze-v1.0.1.json").read_text())
 schema = json.loads((ROOT / "schema/rp1-gpclk-uapi-contract-freeze-v1.schema.json").read_text())
-header = ROOT / freeze["uapi"]["path"]
+header = ROOT / "release/uapi/rp1_gpclk-v1.0.1.h"
 
 assert schema["$id"].endswith("rp1-gpclk-uapi-contract-freeze-v1.schema.json")
 assert freeze["release"] == freeze["dkmsVersion"] == freeze["moduleVersion"] == "1.0.1"
@@ -62,12 +62,7 @@ assert canonical["destination"] == (
 )
 assert not any(item["destination"].startswith("/usr/include/") for item in layout["artifacts"])
 
-assert '#define RP1_GPCLK_MODULE_VERSION "1.0.1"' in (
-    ROOT / "include/rp1_gpclk/version.h"
-).read_text()
-assert "MODULE_VERSION := 1.0.1" in (ROOT / "debian/rules").read_text()
-changelog = (ROOT / "debian/changelog").read_text().splitlines()[0]
-assert changelog.startswith("rp1-gpclk-dkms (1.0.1-1) ")
+assert "rp1-gpclk-dkms (1.0.1-1) UNRELEASED" in (ROOT / "debian/changelog").read_text()
 rules = (ROOT / "debian/rules").read_text()
 assert "include/uapi/linux/rp1_gpclk.h" in rules
 assert "SOURCE_DEST := debian/$(PACKAGE)/usr/src/$(PACKAGE)-$(MODULE_VERSION)" in rules

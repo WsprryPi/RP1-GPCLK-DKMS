@@ -35,7 +35,7 @@ enrollment are administrator-owned and are not package content. See
 
 ## Loading and operation
 
-The sole canonical ABI v1 endpoint is `/dev/rp1-gpclk`. A historical
+The sole canonical ABI v1/v2 endpoint is `/dev/rp1-gpclk`. A historical
 `/dev/rp1-gpclk0` node is not a supported discovery fallback. A missing
 endpoint does not authorize userspace to create or substitute one.
 
@@ -44,10 +44,11 @@ that builds or loads successfully may still reject all submissions. Live use
 requires the immutable load-time output gate, exact compatibility approval,
 the selected allowlisted route, and application-level authorization.
 
-One open file may hold one lease. Work is finite and generation-specific.
-`STOP`, owner close, process death, unbind, and unload use the bounded cleanup
-path. A cleanup fault is a stop condition and prevents further use until it is
-investigated.
+One open file may hold one lease. WSPR, keyed events, and finite TONE are
+bounded; explicit continuous TONE has no hidden duration and persists only
+while its lease remains owned. `STOP`, `RELEASE_V2`, owner close, process death,
+unbind, and unload use the bounded cleanup path. A cleanup fault is a stop
+condition and prevents further use until it is investigated.
 
 ## Update and rollback
 

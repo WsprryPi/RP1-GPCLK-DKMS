@@ -151,11 +151,13 @@ durations, zero reserved fields, and explicit capability checks. Userspace
 pointers are copied once into bounded kernel-owned storage. Unknown commands,
 flags, values, routes, capabilities, or structure variants fail closed.
 
-One open file may own one opaque lease. Work is finite and identified by a
-strictly increasing generation. Cancellation prevents a successor and uses a
-bounded drain. Stale callbacks are rejected. Terminal outcomes are stable and
-specific. A cleanup fault remains latched and cannot be cleared by releasing a
-lease.
+One open file may own one opaque lease. WSPR, keyed events, and finite TONE
+work are bounded; continuous TONE is an explicit ABI v2 operation with no
+hidden duration and remains owned by its lease until cancellation. Every
+submission has a strictly increasing generation. Cancellation prevents a
+successor and uses a bounded drain. Stale callbacks are rejected. Terminal
+outcomes are stable and specific. A cleanup fault remains latched and cannot be
+cleared by releasing a lease.
 
 ### Version 1.0.1 normative UAPI and endpoint freeze
 
@@ -250,3 +252,14 @@ WsprryPi consumes only an explicitly compatible tagged release. Module and
 application commits, reviews, releases, and qualification claims remain
 separate. A clean test run or published artifact never broadens the stated
 qualification scope.
+
+
+### Version 1.1.0 ABI v2 TONE freeze
+
+Release 1.1.0 supersedes ABI v1 for new consumers while preserving all v1
+ioctls unchanged. ABI v2 adds explicit continuous and kernel-bounded finite
+TONE operations and v2 negotiation as specified in `docs/contracts/uapi-v2.md`.
+The canonical endpoint and route identities are unchanged. The 1.0.1 freeze is
+historical; its GPIO4 positive evidence does not transfer to changed module or
+UAPI bytes. Both routes therefore fail closed until new exact-build evidence is
+issued, and GPIO20 remains unavailable.

@@ -29,12 +29,13 @@ does not automatically extend to a different kernel, firmware, device tree,
 route, host, or physical installation. See the
 [1.0.0 release notes](docs/releases/1.0.0-behavior.md) for the precise claim.
 
-Version 1.0.1 is an unreleased corrective candidate for boot-time RP1 endpoint
-binding. Its `/dev/rp1-gpclk` endpoint and ABI v1 contract are normatively
-frozen for consumer development. Source/DKMS/module version `1.0.1`, Debian
-version `1.0.1-1`, and eventual tag `v1.0.1` are one release identity. See the
-[planned 1.0.1 behavior](docs/releases/1.0.1-behavior.md); it
-has hardware-free evidence only and is not a qualified or consumable release.
+Version 1.0.1 remains an unreleased historical corrective candidate. Version
+1.1.0 is the current hardware-free candidate and adds ABI v2 explicit
+continuous and kernel-bounded finite TONE operations while preserving every
+ABI v1 ioctl. Source/DKMS/module version `1.1.0`, Debian version `1.1.0-1`, and
+eventual tag `v1.1.0` are one release identity. See the
+[planned 1.1.0 behavior](docs/releases/1.1.0-behavior.md). Prior GPIO4 evidence
+does not transfer to the changed bytes; GPIO4 and GPIO20 are not live-eligible.
 
 ## Safety
 
@@ -78,15 +79,16 @@ only; it does not qualify installation or hardware behavior on a target.
 
 The byte-authoritative userspace header is
 [`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The
-[UAPI documentation](docs/contracts/uapi-v1.md) describes request validation,
-capabilities, ownership, submission, state, cancellation, and additive
-evolution rules.
+[ABI v2 UAPI documentation](docs/contracts/uapi-v2.md) describes negotiation,
+explicit continuous and finite TONE requests, ownership, state, cancellation,
+and preserved ABI v1 behavior.
 
 The API supports:
 
 - `QUERY` for capabilities and compatibility state;
 - `ACQUIRE` and `RELEASE` for exclusive ownership;
-- bounded WSPR and event-program submission;
+- bounded WSPR and keyed-event submission;
+- explicit continuous and kernel-bounded finite TONE submission;
 - `GET_STATE` for stable runtime and terminal state; and
 - `STOP` for generation-specific bounded cancellation.
 

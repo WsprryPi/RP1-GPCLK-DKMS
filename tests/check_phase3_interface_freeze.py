@@ -81,10 +81,11 @@ require(fixtures["rp1-gpclk-gpio20-route-mismatch.dts"],
         ('wsprrypi,route = <1>', 'wsprrypi,pin = <20>'), "mismatch fixture")
 
 digest = hashlib.sha256(HEADER_PATH.read_bytes()).hexdigest()
-if IDENTITY != {"SPDX-License-Identifier": "MIT", "abi": 1,
+if IDENTITY != {"SPDX-License-Identifier": "MIT", "abi": 2,
                 "path": "include/uapi/linux/rp1_gpclk.h", "sha256": digest}:
-    raise SystemExit("frozen UAPI identity does not match canonical header")
-require(HEADER, ("RP1_GPCLK_UAPI_ABI_V1 1U", "RP1_GPCLK_IOC_MAGIC 0xb8",
+    raise SystemExit("current UAPI identity does not match canonical header")
+require(HEADER, ("RP1_GPCLK_UAPI_ABI_V1 1U", "RP1_GPCLK_UAPI_ABI_V2 2U",
+                 "RP1_GPCLK_IOC_MAGIC 0xb8",
                  "RP1_GPCLK_ROUTE_GPIO4 = 1", "RP1_GPCLK_ROUTE_GPIO20 = 2"),
         "frozen UAPI")
 

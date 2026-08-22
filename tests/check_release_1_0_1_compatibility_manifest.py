@@ -14,7 +14,7 @@ decisions = json.loads(
 header = (ROOT / "include/rp1_gpclk/compatibility.h").read_text()
 source = (ROOT / "src/rp1_gpclk_compatibility.c").read_text()
 main = (ROOT / "src/rp1_gpclk_main.c").read_text()
-uapi = ROOT / "include/uapi/linux/rp1_gpclk.h"
+uapi = ROOT / "release/uapi/rp1_gpclk-v1.0.1.h"
 gpio4_dts = ROOT / "overlays/rp1-gpclk-gpio4.dts"
 evidence = ROOT / "docs/evidence/release-1.0.0-repaired-target-verification-success.json"
 

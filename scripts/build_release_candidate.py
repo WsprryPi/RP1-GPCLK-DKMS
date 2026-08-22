@@ -17,10 +17,10 @@ import subprocess
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
-LAYOUT = ROOT / "release/qualification-layout-v2.json"
-VERSION = "1.0.1"
-DEBIAN_VERSION = "1.0.1-1"
-TAG = "v1.0.1"
+LAYOUT = ROOT / "release/qualification-layout-v3.json"
+VERSION = "1.1.0"
+DEBIAN_VERSION = "1.1.0-1"
+TAG = "v1.1.0"
 PACKAGE = "rp1-gpclk-dkms"
 QUALIFICATION = "rp1-gpclk-dkms-qualification"
 
@@ -146,26 +146,26 @@ def validate_product(path: Path) -> tuple[dict, dict[str, bytes]]:
     ):
         raise ValueError("Debian control identity differs")
     required = {
-        "usr/src/rp1-gpclk-dkms-1.0.1/dkms.conf",
-        "usr/src/rp1-gpclk-dkms-1.0.1/Kbuild",
-        "usr/src/rp1-gpclk-dkms-1.0.1/Makefile",
-        "usr/src/rp1-gpclk-dkms-1.0.1/include/uapi/linux/rp1_gpclk.h",
-        "usr/src/rp1-gpclk-dkms-1.0.1/overlays/rp1-gpclk-gpio4.dts",
-        "usr/src/rp1-gpclk-dkms-1.0.1/overlays/rp1-gpclk-gpio20.dts",
+        "usr/src/rp1-gpclk-dkms-1.1.0/dkms.conf",
+        "usr/src/rp1-gpclk-dkms-1.1.0/Kbuild",
+        "usr/src/rp1-gpclk-dkms-1.1.0/Makefile",
+        "usr/src/rp1-gpclk-dkms-1.1.0/include/uapi/linux/rp1_gpclk.h",
+        "usr/src/rp1-gpclk-dkms-1.1.0/overlays/rp1-gpclk-gpio4.dts",
+        "usr/src/rp1-gpclk-dkms-1.1.0/overlays/rp1-gpclk-gpio20.dts",
         "usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo",
         "usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo",
     }
     missing = required - set(data_files)
     if missing:
         raise ValueError(f"required product members absent: {sorted(missing)}")
-    allowed_roots = ("usr/src/rp1-gpclk-dkms-1.0.1/", "usr/lib/rp1-gpclk-dkms/", "usr/share/doc/rp1-gpclk-dkms/")
+    allowed_roots = ("usr/src/rp1-gpclk-dkms-1.1.0/", "usr/lib/rp1-gpclk-dkms/", "usr/share/doc/rp1-gpclk-dkms/")
     for name in data_files:
         if not name.startswith(allowed_roots):
             raise ValueError(f"unexpected product file root: {name}")
         if any(term in name.lower() for term in ("qualification", "evidence", "gate_d", "target-verification")):
             raise ValueError(f"qualification content in product: {name}")
-    dkms = data_files["usr/src/rp1-gpclk-dkms-1.0.1/dkms.conf"].decode()
-    if 'PACKAGE_VERSION="1.0.1"' not in dkms:
+    dkms = data_files["usr/src/rp1-gpclk-dkms-1.1.0/dkms.conf"].decode()
+    if 'PACKAGE_VERSION="1.1.0"' not in dkms:
         raise ValueError("installed DKMS version differs")
     inventory = {
         "SPDX-License-Identifier": "MIT",
@@ -192,16 +192,16 @@ def compatibility(commit: str, epoch_iso: str, product_hash: str, data: dict[str
         entry["state"] = "Unavailable"
         entry["liveEligible"] = False
         entry["reason"] = (
-            "Historical development evidence does not bind the exact 1.0.1-1 package; "
+            "Historical development evidence does not bind the exact 1.1.0-1 package; "
             "final-candidate target verification and live-output qualification are absent."
         )
     return {
         "SPDX-License-Identifier": "MIT", "schemaVersion": 1,
-        "manifestId": f"rp1-gpclk-dkms-1.0.1-{commit}", "generatedAt": epoch_iso,
+        "manifestId": f"rp1-gpclk-dkms-1.1.0-{commit}", "generatedAt": epoch_iso,
         "module": {
             "name": "rp1_gpclk_dkms", "release": VERSION, "sourceCommit": commit,
-            "sourceArchiveSha256": product_hash, "uapiAbi": 1,
-            "uapiHeaderSha256": sha256_bytes(data["usr/src/rp1-gpclk-dkms-1.0.1/include/uapi/linux/rp1_gpclk.h"]),
+            "sourceArchiveSha256": product_hash, "uapiAbi": 2,
+            "uapiHeaderSha256": sha256_bytes(data["usr/src/rp1-gpclk-dkms-1.1.0/include/uapi/linux/rp1_gpclk.h"]),
         },
         "defaultState": "Unavailable", "entries": entries,
     }
@@ -230,7 +230,7 @@ def target_plan(product_hash: str, inventory_hash: str, identity_hash: str,
             {"id":"gpio4-output-disabled-lifecycle","argv":["/usr/bin/python3","scripts/release_candidate_target.py","route","--route","gpio4","--execute"],"mutating":True,"requiresAuthorization":True},
             {"id":"gpio20-output-disabled-lifecycle","argv":["/usr/bin/python3","scripts/release_candidate_target.py","route","--route","gpio20","--execute"],"mutating":True,"requiresAuthorization":True},
             {"id":"complete-removal-residue-audit","argv":["/usr/bin/python3","scripts/release_candidate_target.py","remove-audit","--execute"],"mutating":True,"requiresAuthorization":True},
-            {"id":"reinstall-final-package","argv":["/usr/bin/sudo","/usr/bin/dpkg","--install","rp1-gpclk-dkms_1.0.1-1_all.deb"],"mutating":True,"requiresAuthorization":True},
+            {"id":"reinstall-final-package","argv":["/usr/bin/sudo","/usr/bin/dpkg","--install","rp1-gpclk-dkms_1.1.0-1_all.deb"],"mutating":True,"requiresAuthorization":True},
             {"id":"verify-final-inactive-baseline","argv":["/usr/bin/python3","scripts/release_candidate_target.py","verify-inactive","--expect-version",DEBIAN_VERSION],"mutating":False,"requiresAuthorization":True},
         ],
         "safety": {"liveOutput":False,"clockOrRateChange":False,"dma":False,"gpioOutput":False,
@@ -298,7 +298,7 @@ def main() -> None:
     layout = json.loads(LAYOUT.read_text())
     if layout["release"] != VERSION or layout["expectedTag"] != TAG:
         raise SystemExit("qualification layout release differs")
-    uapi_hash = sha256_bytes(product_files["usr/src/rp1-gpclk-dkms-1.0.1/include/uapi/linux/rp1_gpclk.h"])
+    uapi_hash = sha256_bytes(product_files["usr/src/rp1-gpclk-dkms-1.1.0/include/uapi/linux/rp1_gpclk.h"])
     gpio4_hash = sha256_bytes(product_files["usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo"])
     gpio20_hash = sha256_bytes(product_files["usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo"])
     identity = {

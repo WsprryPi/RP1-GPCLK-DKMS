@@ -79,10 +79,7 @@ exit_order = [
 ]
 assert exit_order == sorted(exit_order)
 
-assert DATA["releaseCandidate"] == "1.0.1"
-assert '#define RP1_GPCLK_MODULE_VERSION "1.0.1"' in VERSION
-assert "MODULE_VERSION := 1.0.1" in DEBIAN_RULES
-assert CHANGELOG.startswith("rp1-gpclk-dkms (1.0.1-1) UNRELEASED;")
+assert '#define RP1_GPCLK_MODULE_VERSION "1.1.0"' in VERSION
 assert DATA["canonicalEndpoint"] == "/dev/rp1-gpclk"
 assert DATA["ancestry"] == "endpoint-clock-provider-and-dma-provider-share-rp1-parent"
 assert DATA["selection"]["matchingNodes"] == 1

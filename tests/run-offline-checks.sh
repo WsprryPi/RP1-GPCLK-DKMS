@@ -10,6 +10,8 @@ trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
 python3 "$repo_dir/tests/check_spdx.py"
 python3 "$repo_dir/tests/check_uapi_identity.py"
 python3 "$repo_dir/tests/check_release_1_0_1_contract_freeze.py"
+python3 "$repo_dir/tests/check_release_1_1_0_contract_freeze.py"
+python3 "$repo_dir/tests/check_tone_v2_static.py"
 python3 "$repo_dir/tests/check_release_1_0_1_compatibility_manifest.py"
 python3 "$repo_dir/tests/check_module_identity_verifier.py"
 python3 "$repo_dir/tests/check_manifest.py"
