@@ -235,8 +235,17 @@ def compatibility(commit: str, epoch_iso: str, product_hash: str, data: dict[str
     }
 
 
-def target_plan(product_hash: str, inventory_hash: str, identity_hash: str,
+def target_plan(commit: str, product_hash: str, inventory_hash: str, identity_hash: str,
                 uapi_hash: str, gpio4_hash: str, gpio20_hash: str) -> dict:
+    release_set = "/home/pi/rp1-gpclk-v1.1.1-owned-executor-20260822/release-set"
+    staging = "/var/lib/rp1-gpclk-dkms/validation-1.1.1"
+    qualification_root = f"{staging}/rp1-gpclk-dkms-qualification-1.1.1"
+    executor = f"{qualification_root}/scripts/release_candidate_transaction.py"
+    inspector = f"{qualification_root}/scripts/inspect_rebooted_route.py"
+    validator = f"{qualification_root}/scripts/validate_release_candidate.py"
+    evidence = f"{staging}/evidence"
+    def transaction(name: str) -> str:
+        return f"{release_set}/TRANSACTION-PLAN-{name}.json"
     return {
         "SPDX-License-Identifier": "MIT", "schemaVersion": 1,
         "kind": "release-candidate-target-verification", "release": VERSION,
@@ -252,21 +261,26 @@ def target_plan(product_hash: str, inventory_hash: str, identity_hash: str,
             "antennaOrTransmitterDisconnected": "fresh-operator-confirmation-required"
         },
         "steps": [
-            {"id":"read-only-preflight","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","preflight","--plan","TRANSACTION-PLAN-deactivate-predecessor.json"],"mutating":False,"requiresAuthorization":False},
-            {"id":"validated-transfer","argv":["/usr/bin/sha256sum","--check","SHA256SUMS"],"mutating":False,"requiresAuthorization":False},
-            {"id":"deactivate-predecessor-and-reboot","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","deactivate-and-reboot","--plan","TRANSACTION-PLAN-deactivate-predecessor.json","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":True},
-            {"id":"reconcile-inactive-predecessor","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","reconcile","--plan","TRANSACTION-PLAN-deactivate-predecessor.json","--journal","/var/lib/rp1-gpclk-dkms/route-transactions/wspr5-1-1-1-deactivate-predecessor.json"],"mutating":False,"requiresAuthorization":True},
-            {"id":"install-inactive-package","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","install-inactive","--plan","TRANSACTION-PLAN-install-inactive.json","--package","rp1-gpclk-dkms_1.1.1-1_all.deb","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":False},
-            {"id":"select-gpio4-and-reboot","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","apply-and-reboot","--plan","TRANSACTION-PLAN-select-gpio4.json","--route","gpio4","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":True},
-            {"id":"reconcile-gpio4","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","reconcile","--plan","TRANSACTION-PLAN-select-gpio4.json","--route","gpio4","--journal","/var/lib/rp1-gpclk-dkms/route-transactions/wspr5-1-1-1-select-gpio4.json"],"mutating":False,"requiresAuthorization":True},
-            {"id":"inspect-gpio4-output-disabled","argv":["/usr/bin/python3","scripts/inspect_rebooted_route.py","--route","gpio4"],"mutating":False,"requiresAuthorization":True},
-            {"id":"select-gpio20-and-reboot","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","apply-and-reboot","--plan","TRANSACTION-PLAN-select-gpio20.json","--route","gpio20","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":True},
-            {"id":"reconcile-gpio20","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","reconcile","--plan","TRANSACTION-PLAN-select-gpio20.json","--route","gpio20","--journal","/var/lib/rp1-gpclk-dkms/route-transactions/wspr5-1-1-1-select-gpio20.json"],"mutating":False,"requiresAuthorization":True},
-            {"id":"inspect-gpio20-output-disabled","argv":["/usr/bin/python3","scripts/inspect_rebooted_route.py","--route","gpio20"],"mutating":False,"requiresAuthorization":True},
-            {"id":"restore-gpio4-and-reboot","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","apply-and-reboot","--plan","TRANSACTION-PLAN-restore-gpio4.json","--route","gpio4","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":True},
-            {"id":"reconcile-restored-gpio4","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","reconcile","--plan","TRANSACTION-PLAN-restore-gpio4.json","--route","gpio4","--journal","/var/lib/rp1-gpclk-dkms/route-transactions/wspr5-1-1-1-restore-gpio4.json"],"mutating":False,"requiresAuthorization":True},
-            {"id":"inspect-restored-gpio4-output-disabled","argv":["/usr/bin/python3","scripts/inspect_rebooted_route.py","--route","gpio4"],"mutating":False,"requiresAuthorization":True},
-            {"id":"residue-and-service-audit","argv":["/usr/bin/python3","scripts/release_candidate_transaction.py","residue-audit","--plan","TRANSACTION-PLAN-restore-gpio4.json"],"mutating":False,"requiresAuthorization":True},
+            {"id":"validated-transfer","argv":["/usr/bin/env",f"--chdir={release_set}","/usr/bin/sha256sum","--check","SHA256SUMS"],"mutating":False,"requiresAuthorization":False},
+            {"id":"bootstrap-create","argv":["/usr/bin/sudo","-n","/usr/bin/mkdir","--mode=0700",staging],"mutating":True,"requiresAuthorization":True},
+            {"id":"bootstrap-extract-archive","argv":["/usr/bin/sudo","-n","/usr/bin/tar","--extract","--gzip","--file",f"{release_set}/rp1-gpclk-dkms-qualification-1.1.1.tar.gz","--directory",staging,"--no-same-owner","--no-same-permissions"],"mutating":True,"requiresAuthorization":True},
+            {"id":"bootstrap-authenticate","argv":["/usr/bin/sudo","-n","/usr/bin/python3",validator,release_set,"--expect-source-commit",commit],"mutating":False,"requiresAuthorization":True},
+            {"id":"bootstrap-controls","argv":["/usr/bin/sudo","-n","/usr/bin/python3",f"{qualification_root}/scripts/release_candidate_controls.py",qualification_root],"mutating":False,"requiresAuthorization":True},
+            {"id":"read-only-preflight","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"preflight","--plan",transaction("deactivate-predecessor")],"mutating":False,"requiresAuthorization":False},
+            {"id":"deactivate-predecessor-and-reboot","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"deactivate-and-reboot","--plan",transaction("deactivate-predecessor"),"--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":True},
+            {"id":"reconcile-inactive-predecessor","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"reconcile","--plan",transaction("deactivate-predecessor"),"--journal","/var/lib/rp1-gpclk-dkms/route-transactions/wspr5-1-1-1-deactivate-predecessor.json"],"mutating":False,"requiresAuthorization":True},
+            {"id":"install-inactive-package","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"install-inactive","--plan",transaction("install-inactive"),"--package",f"{release_set}/rp1-gpclk-dkms_1.1.1-1_all.deb","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":False},
+            {"id":"select-gpio4-and-reboot","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"apply-and-reboot","--plan",transaction("select-gpio4"),"--route","gpio4","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":True},
+            {"id":"reconcile-gpio4","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"reconcile","--plan",transaction("select-gpio4"),"--route","gpio4","--journal","/var/lib/rp1-gpclk-dkms/route-transactions/wspr5-1-1-1-select-gpio4.json"],"mutating":False,"requiresAuthorization":True},
+            {"id":"inspect-gpio4-output-disabled","argv":["/usr/bin/sudo","-n","/usr/bin/python3",inspector,"--route","gpio4","--evidence",f"{evidence}/gpio4-first.json"],"mutating":False,"requiresAuthorization":True},
+            {"id":"select-gpio20-and-reboot","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"apply-and-reboot","--plan",transaction("select-gpio20"),"--route","gpio20","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":True},
+            {"id":"reconcile-gpio20","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"reconcile","--plan",transaction("select-gpio20"),"--route","gpio20","--journal","/var/lib/rp1-gpclk-dkms/route-transactions/wspr5-1-1-1-select-gpio20.json"],"mutating":False,"requiresAuthorization":True},
+            {"id":"inspect-gpio20-output-disabled","argv":["/usr/bin/sudo","-n","/usr/bin/python3",inspector,"--route","gpio20","--evidence",f"{evidence}/gpio20.json"],"mutating":False,"requiresAuthorization":True},
+            {"id":"restore-gpio4-and-reboot","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"apply-and-reboot","--plan",transaction("restore-gpio4"),"--route","gpio4","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":True},
+            {"id":"reconcile-restored-gpio4","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"reconcile","--plan",transaction("restore-gpio4"),"--route","gpio4","--journal","/var/lib/rp1-gpclk-dkms/route-transactions/wspr5-1-1-1-restore-gpio4.json"],"mutating":False,"requiresAuthorization":True},
+            {"id":"inspect-restored-gpio4-output-disabled","argv":["/usr/bin/sudo","-n","/usr/bin/python3",inspector,"--route","gpio4","--evidence",f"{evidence}/gpio4-restored.json"],"mutating":False,"requiresAuthorization":True},
+            {"id":"residue-and-service-audit","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"residue-audit","--plan",transaction("restore-gpio4")],"mutating":False,"requiresAuthorization":True},
+            {"id":"checksum-evidence","argv":["/usr/bin/sudo","-n","/usr/bin/sha256sum",f"{evidence}/gpio4-first.json",f"{evidence}/gpio20.json",f"{evidence}/gpio4-restored.json"],"mutating":False,"requiresAuthorization":True},
         ],
         "safety": {"liveOutput":False,"endpointAcquire":False,"clockOrRateChange":False,
                    "dma":False,"gpioOutput":False,"carrier":False,"sdrCapture":False,
@@ -294,6 +308,8 @@ def transaction_plan(operation: str, commit: str, qualification_hash: str,
         "compatibilitySha256": compatibility_hash,
         "productInventorySha256": inventory_hash,
         "predecessorVersion": "1.0.1-1",
+        "predecessorPackage": "/home/pi/src/rp1-gpclk-dkms_1.0.1-1_all.deb",
+        "predecessorPackageSha256": "e713b7730805185ebdfd1b719b2b967eaaac8c9932e414498bd1d16b6b07408e",
         "predecessorConfigSha256": "8135eb26a52046d042c5f84583cad20d3f519c3753010a5afff063077dcf48f4",
         "signingPolicy": "CONFIG_MODULE_SIG=n; unsigned candidate",
         "physicalTopology": "fresh-operator-confirmation-required",
@@ -385,7 +401,7 @@ def main() -> None:
         "QUALIFICATION.json": identity_bytes,
         "COMPATIBILITY.json": pretty(compatibility_value),
     }
-    plan = target_plan(product_hash, sha256_bytes(inventory_bytes), sha256_bytes(identity_bytes),
+    plan = target_plan(commit, product_hash, sha256_bytes(inventory_bytes), sha256_bytes(identity_bytes),
                        uapi_hash, gpio4_hash, gpio20_hash)
     generated["TARGET-VERIFICATION.json"] = pretty(plan)
     product_destination = output / f"rp1-gpclk-dkms_{DEBIAN_VERSION}_all.deb"

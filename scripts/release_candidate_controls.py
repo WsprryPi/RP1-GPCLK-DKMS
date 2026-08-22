@@ -42,13 +42,16 @@ def validate(root: Path) -> dict:
         raise ValueError("target plan qualification identity differs")
     steps = plan.get("steps")
     expected = [
-        "read-only-preflight", "validated-transfer", "deactivate-predecessor-and-reboot",
+        "validated-transfer", "bootstrap-create", "bootstrap-extract-archive",
+        "bootstrap-authenticate", "bootstrap-controls", "read-only-preflight",
+        "deactivate-predecessor-and-reboot",
         "reconcile-inactive-predecessor", "install-inactive-package",
         "select-gpio4-and-reboot", "reconcile-gpio4", "inspect-gpio4-output-disabled",
         "select-gpio20-and-reboot", "reconcile-gpio20", "inspect-gpio20-output-disabled",
         "restore-gpio4-and-reboot", "reconcile-restored-gpio4",
         "inspect-restored-gpio4-output-disabled",
         "residue-and-service-audit",
+        "checksum-evidence",
     ]
     if not isinstance(steps, list) or [step.get("id") for step in steps] != expected:
         raise ValueError("target plan steps differ")
@@ -64,10 +67,18 @@ def validate(root: Path) -> dict:
         if step["mutating"] and not step["requiresAuthorization"]:
             raise ValueError(f"mutating step lacks authorization gate: {step['id']}")
         for argument in step.get("argv", []):
-            if argument.startswith("scripts/") and not (root / argument).is_file():
-                raise ValueError(f"invoked qualification member is absent: {argument}")
+            if not isinstance(argument, str) or not argument.endswith(".py"):
+                continue
+            marker = "/rp1-gpclk-dkms-qualification-1.1.1/scripts/"
+            relative = (argument if argument.startswith("scripts/") else
+                        f"scripts/{argument.rsplit(marker, 1)[1]}" if marker in argument else None)
+            if relative is not None and not (root / relative).is_file():
+                raise ValueError(f"invoked qualification member is absent: {relative}")
     transfer = next(step for step in steps if step["id"] == "validated-transfer")
-    if transfer["argv"] != ["/usr/bin/sha256sum", "--check", "SHA256SUMS"]:
+    if transfer["argv"] != [
+            "/usr/bin/env",
+            "--chdir=/home/pi/rp1-gpclk-v1.1.1-owned-executor-20260822/release-set",
+            "/usr/bin/sha256sum", "--check", "SHA256SUMS"]:
         raise ValueError("transfer step does not enforce the complete checksum set")
     safety = plan.get("safety", {})
     if safety != {

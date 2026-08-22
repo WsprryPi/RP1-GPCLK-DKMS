@@ -30,6 +30,8 @@ UAPI_SHA256 = "998ab96d7dbcc0d935c05758c46acba56bbcf92aa1b674b899bdab6932dc8384"
 GPIO4_DTBO_SHA256 = "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6"
 GPIO20_DTBO_SHA256 = "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"
 PREDECESSOR_VERSION = "1.0.1-1"
+PREDECESSOR_PACKAGE = "/home/pi/src/rp1-gpclk-dkms_1.0.1-1_all.deb"
+PREDECESSOR_PACKAGE_SHA256 = "e713b7730805185ebdfd1b719b2b967eaaac8c9932e414498bd1d16b6b07408e"
 PREDECESSOR_CONFIG_SHA256 = "8135eb26a52046d042c5f84583cad20d3f519c3753010a5afff063077dcf48f4"
 CONFIG = "/boot/firmware/config.txt"
 BOOT_ID = "/proc/sys/kernel/random/boot_id"
@@ -105,6 +107,7 @@ def load_plan(path: Path) -> dict:
         "sourceCommit", "package", "packageSha256", "qualificationArchiveSha256",
         "uapiSha256", "gpio4DtboSha256", "gpio20DtboSha256",
         "compatibilitySha256", "productInventorySha256", "predecessorVersion",
+        "predecessorPackage", "predecessorPackageSha256",
         "predecessorConfigSha256", "signingPolicy", "physicalTopology",
         "servicePolicy", "planSha256",
     }
@@ -124,6 +127,8 @@ def load_plan(path: Path) -> dict:
         "gpio4DtboSha256": GPIO4_DTBO_SHA256,
         "gpio20DtboSha256": GPIO20_DTBO_SHA256,
         "predecessorVersion": PREDECESSOR_VERSION,
+        "predecessorPackage": PREDECESSOR_PACKAGE,
+        "predecessorPackageSha256": PREDECESSOR_PACKAGE_SHA256,
         "predecessorConfigSha256": PREDECESSOR_CONFIG_SHA256,
         "signingPolicy": "CONFIG_MODULE_SIG=n; unsigned candidate",
         "physicalTopology": "fresh-operator-confirmation-required",
@@ -138,9 +143,23 @@ def load_plan(path: Path) -> dict:
     if not HEX40.fullmatch(str(value["sourceCommit"])):
         raise ValueError("invalid source commit")
     for key in ("qualificationArchiveSha256", "compatibilitySha256",
-                "productInventorySha256"):
+                "productInventorySha256", "predecessorPackageSha256"):
         if not HEX64.fullmatch(str(value[key])):
             raise ValueError(f"invalid hash: {key}")
+    qualification = Path(__file__).resolve().parents[1] / "QUALIFICATION.json"
+    if qualification.is_file():
+        identity = json.loads(qualification.read_text())
+        archived = {
+            "sourceCommit": value["sourceCommit"],
+            "productPackageSha256": value["packageSha256"],
+            "productInventorySha256": value["productInventorySha256"],
+            "uapiSha256": value["uapiSha256"],
+            "gpio4DtboSha256": value["gpio4DtboSha256"],
+            "gpio20DtboSha256": value["gpio20DtboSha256"],
+        }
+        for key, expected_value in archived.items():
+            if identity.get(key) != expected_value:
+                raise ValueError(f"archived qualification identity differs: {key}")
     return value
 
 
@@ -184,7 +203,7 @@ def parse_config(payload: bytes) -> str | None:
     return None
 
 
-def system_safety(plan: dict, root: Path, runner: Runner) -> dict:
+def system_safety(plan: dict, root: Path, route: str | None, runner: Runner) -> dict:
     dtb = rooted(root, "/boot/firmware/bcm2712-rpi-5-b.dtb")
     kernel_config = rooted(root, f"/usr/src/linux-headers-{KERNEL}/.config")
     if root == Path("/"):
@@ -223,6 +242,13 @@ def system_safety(plan: dict, root: Path, runner: Runner) -> dict:
             line = runner(["/usr/bin/pinctrl", "get", str(pin)]).strip()
             if not re.search(rf"^{pin}:\s+(ip|no)\b", line):
                 raise ValueError(f"GPIO{pin} is not in a safe non-output state")
+        installed = runner(
+            ["/usr/bin/dpkg-query", "-W", "-f=${Status}|${Version}", PACKAGE]).strip()
+        expected_versions = ({PREDECESSOR_VERSION, DEBIAN_VERSION} if route is None else
+                             {PREDECESSOR_VERSION} if route == "legacy-gpio4" else
+                             {DEBIAN_VERSION})
+        if installed not in {f"install ok installed|{version}" for version in expected_versions}:
+            raise ValueError("installed package state differs")
     return {"liveOutput": False, "endpointOpen": False,
             "clockPrepared": False, "clockEnabled": False,
             "gpio4Safe": True, "gpio20Safe": True}
@@ -262,7 +288,7 @@ def preflight(plan: dict, root: Path, runner: Runner = run_command) -> dict:
     if config.is_symlink() or not config.is_file():
         raise ValueError("boot configuration is absent or unsafe")
     route = parse_config(config.read_bytes())
-    safety = system_safety(plan, root, runner)
+    safety = system_safety(plan, root, route, runner)
     return {"status": "ready", "route": route, "bootId": read_boot_id(root),
             "configSha256": digest(config), "planSha256": plan["planSha256"],
             "safety": safety}
@@ -297,9 +323,17 @@ def mutate_config(plan: dict, root: Path, action: str, route: str | None,
     if after == before:
         raise ValueError("transaction would not change boot configuration")
     config = rooted(root, CONFIG)
-    atomic_write(config, after, config.stat().st_mode & 0o777)
-    if config.read_bytes() != after:
-        raise RuntimeError("boot configuration readback differs")
+    state["configIntendedSha256"] = digest_bytes(after)
+    journal_write(path, state)
+    try:
+        atomic_write(config, after, config.stat().st_mode & 0o777)
+        if config.read_bytes() != after:
+            raise RuntimeError("boot configuration readback differs")
+    except BaseException:
+        state.update({"status": "recovery-required", "checkpoint": "config-write-failed",
+                      "configAfterSha256": digest(config)})
+        journal_write(path, state)
+        raise
     state.update({"status": "awaiting-reboot", "checkpoint": "config-committed",
                   "configAfterSha256": digest_bytes(after), "rebootRequired": True})
     journal_write(path, state)
@@ -308,26 +342,51 @@ def mutate_config(plan: dict, root: Path, action: str, route: str | None,
 
 
 def install_inactive(plan: dict, root: Path, package: Path, execute: bool,
-                     runner: Runner = run_command) -> dict:
-    if not execute or os.geteuid() != 0 or root != Path("/"):
+                     runner: Runner = run_command, *, allow_test_root: bool = False) -> dict:
+    if not execute or os.geteuid() != 0 or (root != Path("/") and not allow_test_root):
         raise ValueError("installation requires real root and --execute")
     if package.is_symlink() or not package.is_file() or digest(package) != PACKAGE_SHA256:
         raise ValueError("package identity differs")
     observed = preflight(plan, root, runner)
     if observed["route"] is not None:
         raise ValueError("installation requires an inactive boot route")
-    modules = Path("/proc/modules").read_text().splitlines()
-    if any(line.startswith(f"{MODULE} ") for line in modules) or Path("/dev/rp1-gpclk").exists():
+    modules_path = rooted(root, "/proc/modules")
+    modules = modules_path.read_text().splitlines() if modules_path.exists() else []
+    if (any(line.startswith(f"{MODULE} ") for line in modules) or
+            rooted(root, "/dev/rp1-gpclk").exists()):
         raise ValueError("installation requires module and endpoint absence")
     path, state, _ = begin(plan, root, "install-inactive", None, runner)
     state["checkpoint"] = "install-started"
     journal_write(path, state)
-    runner(["/usr/bin/dpkg", "--install", str(package)])
-    status = runner(["/usr/bin/dpkg-query", "-W", "-f=${Status}|${Version}", PACKAGE]).strip()
-    if status != f"install ok installed|{DEBIAN_VERSION}":
-        raise RuntimeError("installed package identity differs")
-    if parse_config(rooted(root, CONFIG).read_bytes()) is not None:
-        raise RuntimeError("package installation activated a route")
+    predecessor = Path(plan["predecessorPackage"])
+    if (predecessor.is_symlink() or not predecessor.is_file() or
+            digest(predecessor) != plan["predecessorPackageSha256"]):
+        raise ValueError("predecessor rollback package identity differs")
+    try:
+        runner(["/usr/bin/dpkg", "--install", str(package)])
+        status = runner(["/usr/bin/dpkg-query", "-W", "-f=${Status}|${Version}", PACKAGE]).strip()
+        if status != f"install ok installed|{DEBIAN_VERSION}":
+            raise RuntimeError("installed package identity differs")
+        if parse_config(rooted(root, CONFIG).read_bytes()) is not None:
+            raise RuntimeError("package installation activated a route")
+    except BaseException as install_error:
+        state.update({"status": "rollback-in-progress", "checkpoint": "install-failed",
+                      "failure": type(install_error).__name__})
+        journal_write(path, state)
+        try:
+            runner(["/usr/bin/dpkg", "--install", str(predecessor)])
+            restored = runner(["/usr/bin/dpkg-query", "-W", "-f=${Status}|${Version}", PACKAGE]).strip()
+            if restored != f"install ok installed|{PREDECESSOR_VERSION}":
+                raise RuntimeError("predecessor package rollback identity differs")
+        except BaseException as rollback_error:
+            state.update({"status": "rollback-failed", "checkpoint": "predecessor-restore-failed",
+                          "rollbackFailure": type(rollback_error).__name__})
+            journal_write(path, state)
+            raise RuntimeError("candidate install and predecessor rollback failed") from rollback_error
+        state.update({"status": "rolled-back", "checkpoint": "predecessor-restored",
+                      "rebootRequired": False, "reconciled": True})
+        journal_write(path, state)
+        raise RuntimeError("candidate installation failed; predecessor restored") from install_error
     state.update({"status": "complete", "checkpoint": "installed-inactive",
                   "rebootRequired": False, "reconciled": True})
     journal_write(path, state)
@@ -337,18 +396,23 @@ def install_inactive(plan: dict, root: Path, package: Path, execute: bool,
 def reconcile(plan: dict, root: Path, journal: Path, expected_route: str | None,
               runner: Runner = run_command) -> dict:
     state = json.loads(journal.read_text())
-    if state.get("planSha256") != plan["planSha256"] or state.get("status") != "awaiting-reboot":
+    prior_status = state.get("status")
+    if state.get("planSha256") != plan["planSha256"] or prior_status not in {
+            "awaiting-reboot", "rollback-awaiting-reboot"}:
         raise ValueError("journal is stale, foreign, or not awaiting reboot")
     boot_id = read_boot_id(root)
     if boot_id == state["bootIdBefore"]:
         raise ValueError("expected reboot did not occur")
     config = rooted(root, CONFIG)
-    if digest(config) != state["configAfterSha256"]:
+    expected_hash = (state.get("rollbackConfigSha256") if prior_status == "rollback-awaiting-reboot"
+                     else state["configAfterSha256"])
+    if digest(config) != expected_hash:
         raise ValueError("post-boot configuration differs")
     active = parse_config(config.read_bytes())
     if active != expected_route:
         raise ValueError("configured route differs after reboot")
-    state.update({"status": "complete", "checkpoint": "reconciled",
+    checkpoint = "rollback-reconciled" if prior_status == "rollback-awaiting-reboot" else "reconciled"
+    state.update({"status": "complete", "checkpoint": checkpoint,
                   "bootIdAfter": boot_id, "rebootRequired": False, "reconciled": True})
     journal_write(journal, state)
     return state
@@ -363,7 +427,13 @@ def rollback(plan: dict, root: Path, journal: Path, execute: bool,
             "awaiting-reboot", "recovery-required"}:
         raise ValueError("journal is not an owned recoverable transaction")
     config = rooted(root, CONFIG)
-    if digest(config) != state.get("configAfterSha256"):
+    current_hash = digest(config)
+    if current_hash == state.get("configBeforeSha256"):
+        state.update({"status": "complete", "checkpoint": "rollback-no-change",
+                      "rebootRequired": False, "reconciled": True})
+        journal_write(journal, state)
+        return state
+    if current_hash != state.get("configAfterSha256"):
         raise ValueError("rollback refuses changed or foreign boot configuration")
     before = state["configBefore"].encode()
     if digest_bytes(before) != state["configBeforeSha256"]:
@@ -412,6 +482,8 @@ def main() -> None:
         result = preflight(plan, args.root)
         if args.action == "preflight-route" and not args.route:
             raise ValueError("--route is required")
+        if args.action == "preflight-route" and result["route"] == args.route:
+            raise ValueError("requested route is already selected")
     elif args.action == "deactivate-and-reboot":
         result = mutate_config(plan, args.root, args.action, None, args.execute)
     elif args.action == "apply-and-reboot":

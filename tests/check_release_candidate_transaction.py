@@ -67,6 +67,8 @@ def plan(operation: str) -> dict:
         "compatibilitySha256": "3" * 64,
         "productInventorySha256": "4" * 64,
         "predecessorVersion": tx.PREDECESSOR_VERSION,
+        "predecessorPackage": tx.PREDECESSOR_PACKAGE,
+        "predecessorPackageSha256": tx.PREDECESSOR_PACKAGE_SHA256,
         "predecessorConfigSha256": tx.PREDECESSOR_CONFIG_SHA256,
         "signingPolicy": "CONFIG_MODULE_SIG=n; unsigned candidate",
         "physicalTopology": "fresh-operator-confirmation-required",
@@ -110,6 +112,31 @@ with tempfile.TemporaryDirectory() as temporary:
         rejected(lambda: tx.rollback(gpio4, root, gpio4_journal, True, run))
         tx.rooted(root, tx.CONFIG).write_bytes(before_rollback)
         assert tx.rollback(gpio4, root, gpio4_journal, True, run)["status"] == "rollback-awaiting-reboot"
+        tx.rooted(root, tx.BOOT_ID).write_text("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee\n")
+        assert tx.reconcile(gpio4, root, gpio4_journal, None, run)["checkpoint"] == "rollback-reconciled"
+    finally:
+        tx.os.geteuid = original_geteuid
+
+    failure_root = root / "failure-root"
+    place(failure_root)
+    failure = plan("write-failure")
+    failure["planSha256"] = tx.digest_bytes(tx.canonical(failure))
+    original_atomic = tx.atomic_write
+    original_geteuid = tx.os.geteuid
+    tx.os.geteuid = lambda: 0
+    tx.atomic_write = lambda path, payload, mode: (
+        (_ for _ in ()).throw(OSError("injected config write failure"))
+        if path == tx.rooted(failure_root, tx.CONFIG)
+        else original_atomic(path, payload, mode))
+    try:
+        rejected(lambda: tx.mutate_config(
+            failure, failure_root, "deactivate-and-reboot", None, True, run))
+    finally:
+        tx.atomic_write = original_atomic
+    failure_journal = tx.journal_path(failure_root, failure["operationId"])
+    assert json.loads(failure_journal.read_text())["status"] == "recovery-required"
+    try:
+        assert tx.rollback(failure, failure_root, failure_journal, True, run)["checkpoint"] == "rollback-no-change"
     finally:
         tx.os.geteuid = original_geteuid
 

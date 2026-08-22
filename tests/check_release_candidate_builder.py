@@ -82,7 +82,7 @@ with tempfile.TemporaryDirectory() as temporary:
     }
     identity_bytes = builder.pretty(identity)
     plan = builder.target_plan(
-        inventory["packageSha256"], builder.sha256_bytes(inventory_bytes),
+        "1" * 40, inventory["packageSha256"], builder.sha256_bytes(inventory_bytes),
         builder.sha256_bytes(identity_bytes), builder.sha256_bytes(b"uapi\n"),
         builder.sha256_bytes(b"dtbo4\n"), builder.sha256_bytes(b"dtbo20\n"),
     )
@@ -103,6 +103,8 @@ with tempfile.TemporaryDirectory() as temporary:
     (qualification_root / "scripts/release_candidate_target.py").write_text("# fixture\n")
     (qualification_root / "scripts/inspect_rebooted_route.py").write_text("# fixture\n")
     (qualification_root / "scripts/release_candidate_transaction.py").write_text("# fixture\n")
+    (qualification_root / "scripts/release_candidate_controls.py").write_text("# fixture\n")
+    (qualification_root / "scripts/validate_release_candidate.py").write_text("# fixture\n")
     (qualification_root / "PRODUCT-INVENTORY.json").write_bytes(inventory_bytes)
     (qualification_root / "QUALIFICATION.json").write_bytes(identity_bytes)
     (qualification_root / "TARGET-VERIFICATION.json").write_bytes(builder.pretty(plan))
@@ -119,7 +121,11 @@ with tempfile.TemporaryDirectory() as temporary:
     layout = json.loads((ROOT / "release/qualification-layout-v3.json").read_text())
     assert invoked <= set(layout["sourceMembers"])
     transfer = next(step for step in plan["steps"] if step["id"] == "validated-transfer")
-    assert transfer["argv"] == ["/usr/bin/sha256sum", "--check", "SHA256SUMS"]
+    assert transfer["argv"] == [
+        "/usr/bin/env",
+        "--chdir=/home/pi/rp1-gpclk-v1.1.1-owned-executor-20260822/release-set",
+        "/usr/bin/sha256sum", "--check", "SHA256SUMS",
+    ]
 
     bad = bytearray(product.read_bytes())
     bad[0] = 0

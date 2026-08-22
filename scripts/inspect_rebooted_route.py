@@ -7,9 +7,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
+import re
 import subprocess
 import sys
+import tempfile
 
 MODULE = "rp1_gpclk_dkms"
 PACKAGE = "rp1-gpclk-dkms"
@@ -20,6 +23,7 @@ LIVE = Path("/sys/module/rp1_gpclk_dkms/parameters/live_output")
 DT_ROOT = Path("/proc/device-tree")
 COMPATIBLE = b"wsprrypi,rp1-gpclk-dkms-v1\x00"
 ROUTES = {"gpio4": (1, 4), "gpio20": (2, 20)}
+EVIDENCE_ROOT = Path("/var/lib/rp1-gpclk-dkms/validation-1.1.1/evidence")
 
 
 def command(argv: list[str]) -> str:
@@ -49,7 +53,37 @@ def be32(path: Path) -> int:
     return int.from_bytes(raw, "big")
 
 
-def verify(route: str) -> None:
+def atomic_evidence(path: Path, value: dict) -> str:
+    if not path.is_absolute() or path.parent != EVIDENCE_ROOT:
+        raise RuntimeError("evidence path is outside the owned directory")
+    if path.parent.exists() and path.parent.is_symlink():
+        raise RuntimeError("evidence directory is unsafe")
+    if path.exists() or path.is_symlink():
+        raise RuntimeError(f"refusing existing evidence path: {path}")
+    path.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
+    payload = json.dumps(value, indent=2, sort_keys=True).encode() + b"\n"
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, path)
+        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+    return hashlib.sha256(payload).hexdigest()
+
+
+def verify(route: str) -> dict:
     root = Path(__file__).resolve().parents[1]
     identity = json.loads((root / "QUALIFICATION.json").read_text())
     if (identity.get("release"), identity.get("debianVersion")) != (
@@ -91,14 +125,59 @@ def verify(route: str) -> None:
     driver = matches[0] / "driver"
     if not driver.is_symlink() or driver.resolve().name != "rp1-gpclk-dkms":
         raise RuntimeError("endpoint is not bound to the candidate driver")
+    module_path = Path(command(["/usr/sbin/modinfo", "-n", MODULE]).strip())
+    if not module_path.is_file():
+        raise RuntimeError("installed module file is absent")
+    signer = command(["/usr/sbin/modinfo", "-F", "signer", MODULE]).strip()
+    sig_id = command(["/usr/sbin/modinfo", "-F", "sig_id", MODULE]).strip()
+    endpoint_stat = ENDPOINT.stat()
+    open_fds = 0
+    for fd in Path("/proc").glob("[0-9]*/fd/*"):
+        try:
+            observed = fd.stat()
+        except OSError:
+            continue
+        open_fds += ((observed.st_dev, observed.st_ino) ==
+                     (endpoint_stat.st_dev, endpoint_stat.st_ino))
+    if open_fds:
+        raise RuntimeError("canonical endpoint is open")
+    pins = {str(pin): command(["/usr/bin/pinctrl", "get", str(pin)]).strip()
+            for pin in (4, 20)}
+    if any(not re.search(rf"^{pin}:\s+(ip|no)\b", line)
+           for pin, line in pins.items()):
+        raise RuntimeError("GPIO cleanup state is not input-disabled")
+    clocks = []
+    summary = Path("/sys/kernel/debug/clk/clk_summary")
+    if summary.is_file():
+        clocks = [line.strip() for line in summary.read_text().splitlines()
+                  if line.split() and line.split()[0] == "clk_gp0"]
+        if len(clocks) != 1 or clocks[0].split()[1:3] != ["0", "0"]:
+            raise RuntimeError("GPCLK0 cleanup state is not disabled")
+    return {
+        "schemaVersion": 1, "kind": "rp1-gpclk-output-disabled-route-inspection",
+        "route": route, "release": MODULE_VERSION, "packageVersion": PACKAGE_VERSION,
+        "sourceCommit": identity["sourceCommit"], "qualificationIdentity": identity,
+        "deviceTreeNode": str(node), "deviceTreeRoute": expected_route,
+        "deviceTreePin": expected_pin, "platformDevice": str(matches[0]),
+        "driver": driver.resolve().name, "endpoint": str(ENDPOINT),
+        "endpointOpenFileDescriptors": open_fds, "module": MODULE,
+        "modulePath": str(module_path), "moduleFileSha256": digest(module_path),
+        "moduleSigner": signer or "none", "moduleSignatureId": sig_id or "none",
+        "liveOutput": False, "clockSummary": clocks, "pinctrl": pins,
+        "cleanup": {"endpointClosed": True, "clockDisabled": True,
+                    "gpioNonOutput": True},
+    }
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--route", required=True, choices=tuple(ROUTES))
+    parser.add_argument("--evidence", required=True, type=Path)
     args = parser.parse_args()
-    verify(args.route)
-    print(f"output-disabled rebooted route {args.route}: PASS")
+    result = verify(args.route)
+    evidence_hash = atomic_evidence(args.evidence, result)
+    print(json.dumps({"status": "PASS", "route": args.route,
+                      "evidence": str(args.evidence), "sha256": evidence_hash}, sort_keys=True))
 
 
 if __name__ == "__main__":
