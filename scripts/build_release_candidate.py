@@ -186,22 +186,45 @@ def validate_product(path: Path) -> tuple[dict, dict[str, bytes]]:
 
 
 def compatibility(commit: str, epoch_iso: str, product_hash: str, data: dict[str, bytes]) -> dict:
-    value = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_text())
-    entries = value["entries"]
-    for entry in entries:
-        entry["state"] = "Unavailable"
-        entry["liveEligible"] = False
-        entry["reason"] = (
-            "Historical development evidence does not bind the exact 1.1.1-1 package; "
-            "final-candidate target verification and live-output qualification are absent."
-        )
+    uapi_hash = sha256_bytes(
+        data["usr/src/rp1-gpclk-dkms-1.1.1/include/uapi/linux/rp1_gpclk.h"])
+    entries = []
+    for route, pin in (("GPIO4", 4), ("GPIO20", 20)):
+        route_key = route.lower()
+        entries.append({
+            "id": f"v1.1.1-{route_key}-evidence-required",
+            "route": route,
+            "pin": pin,
+            "state": "Unavailable",
+            "liveEligible": False,
+            "reason": (
+                "The exact 1.1.1-1 package has hardware-free build evidence only; "
+                f"{route} output-disabled lifecycle and route-specific live qualification are absent."
+            ),
+            "release": VERSION,
+            "sourceCommit": commit,
+            "packageSha256": product_hash,
+            "uapiAbi": 2,
+            "uapiHeaderSha256": uapi_hash,
+            "overlayDtboSha256": sha256_bytes(
+                data[f"usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-{route_key}.dtbo"]),
+            "supportedDriveMa": [2],
+            "supportedModes": ["WSPR", "QRSS", "FSKCW", "DFCW", "TONE_CONTINUOUS", "TONE_FINITE"],
+            "missingEvidence": [
+                "installed-module-normalization-and-signing-identity",
+                "firmware-and-base-dtb-identity",
+                "live-device-tree-route-and-platform-binding",
+                "output-disabled-lifecycle-and-cleanup",
+                "route-specific-live-output-and-timing-qualification",
+            ],
+        })
     return {
         "SPDX-License-Identifier": "MIT", "schemaVersion": 1,
         "manifestId": f"rp1-gpclk-dkms-1.1.1-{commit}", "generatedAt": epoch_iso,
         "module": {
             "name": "rp1_gpclk_dkms", "release": VERSION, "sourceCommit": commit,
             "sourceArchiveSha256": product_hash, "uapiAbi": 2,
-            "uapiHeaderSha256": sha256_bytes(data["usr/src/rp1-gpclk-dkms-1.1.1/include/uapi/linux/rp1_gpclk.h"]),
+            "uapiHeaderSha256": uapi_hash,
         },
         "defaultState": "Unavailable", "entries": entries,
     }

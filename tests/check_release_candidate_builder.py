@@ -86,6 +86,17 @@ with tempfile.TemporaryDirectory() as temporary:
         builder.sha256_bytes(identity_bytes), builder.sha256_bytes(b"uapi\n"),
         builder.sha256_bytes(b"dtbo4\n"), builder.sha256_bytes(b"dtbo20\n"),
     )
+    compatibility = builder.compatibility("1" * 40, "2026-08-22T00:00:00-05:00",
+                                          inventory["packageSha256"], extracted)
+    assert {entry["route"] for entry in compatibility["entries"]} == {"GPIO4", "GPIO20"}
+    assert all(entry["uapiAbi"] == 2 and entry["release"] == "1.1.1"
+               and entry["state"] == "Unavailable" and entry["liveEligible"] is False
+               for entry in compatibility["entries"])
+    assert compatibility["entries"][0]["id"] != compatibility["entries"][1]["id"]
+    assert compatibility["entries"][0]["overlayDtboSha256"] != compatibility["entries"][1]["overlayDtboSha256"]
+    serialized = json.dumps(compatibility)
+    for stale in ("1.0.1", "phase4d", "uapiAbi\": 1"):
+        assert stale not in serialized
     qualification_root = root / "qualification"
     qualification_root.mkdir()
     (qualification_root / "scripts").mkdir()
