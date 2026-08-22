@@ -123,7 +123,7 @@ with tempfile.TemporaryDirectory() as temporary:
     transfer = next(step for step in plan["steps"] if step["id"] == "validated-transfer")
     assert transfer["argv"] == [
         "/usr/bin/env",
-        "--chdir=/home/pi/rp1-gpclk-v1.1.1-owned-executor-20260822/release-set",
+        "--chdir=/home/pi/rp1-gpclk-v1.1.1-owned-service-executor-20260822/release-set",
         "/usr/bin/sha256sum", "--check", "SHA256SUMS",
     ]
 

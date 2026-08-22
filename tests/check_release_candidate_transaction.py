@@ -50,10 +50,29 @@ def runner(calls: list[list[str]]):
     return run
 
 
+def service_runner(calls: list[list[str]], states: dict, fail_on: list[str] | None = None):
+    def run(argv: list[str]) -> str:
+        calls.append(argv)
+        if argv[:4] == ["/usr/bin/systemctl", "show", "--property=ActiveState", "--value"]:
+            return states[argv[4]]["active"] + "\n"
+        if argv[:4] == ["/usr/bin/systemctl", "show", "--property=UnitFileState", "--value"]:
+            return states[argv[4]]["enabled"] + "\n"
+        if argv[0] == "/usr/bin/systemctl" and argv[1] in {"enable", "disable"}:
+            if fail_on and argv[1:] == fail_on:
+                raise RuntimeError("injected service failure")
+            states[argv[2]]["enabled"] = "enabled" if argv[1] == "enable" else "disabled"
+            return ""
+        if argv[0] == "/usr/bin/systemctl" and argv[1] in {"start", "stop"}:
+            states[argv[2]]["active"] = "active" if argv[1] == "start" else "inactive"
+            return ""
+        return runner(calls)(argv)
+    return run
+
+
 def plan(operation: str) -> dict:
     return {
         "schemaVersion": 1, "kind": "rp1-gpclk-1.1.1-route-transaction",
-        "operationId": f"wspr5-1-1-1-{operation}", "host": tx.HOST,
+        "operationId": f"wspr5-1-1-1-1111111-{operation}", "host": tx.HOST,
         "architecture": tx.ARCH, "kernel": tx.KERNEL, "firmware": tx.FIRMWARE,
         "baseDtbSha256": tx.BASE_DTB_SHA256,
         "kernelConfigSha256": tx.KERNEL_CONFIG_SHA256,
@@ -72,8 +91,10 @@ def plan(operation: str) -> dict:
         "predecessorConfigSha256": tx.PREDECESSOR_CONFIG_SHA256,
         "signingPolicy": "CONFIG_MODULE_SIG=n; unsigned candidate",
         "physicalTopology": "fresh-operator-confirmation-required",
-        "servicePolicy": {"wsprrypi.service": "inactive",
-                          "soapyremote-server.service": "inactive"},
+        "servicePolicy": {
+            "wsprrypi.service": {"active": "inactive", "enabled": "enabled"},
+            "soapyremote-server.service": {"active": "inactive", "enabled": "disabled"},
+        },
     }
 
 
@@ -88,7 +109,6 @@ with tempfile.TemporaryDirectory() as temporary:
     plan_path.write_text(json.dumps(value))
     loaded = tx.load_plan(plan_path)
     assert tx.preflight(loaded, root, run)["route"] == "legacy-gpio4"
-    assert tx.residue_audit(loaded, root, run)["safety"]["liveOutput"] is False
 
     original_geteuid = tx.os.geteuid
     tx.os.geteuid = lambda: 0
@@ -102,6 +122,14 @@ with tempfile.TemporaryDirectory() as temporary:
         rejected(lambda: tx.reconcile(loaded, root, journal, None, run))
         tx.rooted(root, tx.BOOT_ID).write_text("11111111-2222-3333-4444-555555555555\n")
         assert tx.reconcile(loaded, root, journal, None, run)["status"] == "complete"
+
+        inactive_plan = plan("deactivate-predecessor-inactive")
+        inactive_plan["planSha256"] = tx.digest_bytes(tx.canonical(inactive_plan))
+        already = tx.mutate_config(
+            inactive_plan, root, "deactivate-and-reboot", None, True, run)
+        assert already["checkpoint"] == "already-inactive"
+        inactive_journal = tx.journal_path(root, inactive_plan["operationId"])
+        assert tx.reconcile(inactive_plan, root, inactive_journal, None, run) == already
 
         gpio4 = plan("select-gpio4")
         gpio4["planSha256"] = tx.digest_bytes(tx.canonical(gpio4))
@@ -138,6 +166,57 @@ with tempfile.TemporaryDirectory() as temporary:
     assert json.loads(failure_journal.read_text())["status"] == "recovery-required"
     try:
         assert tx.rollback(failure, failure_root, failure_journal, True, run)["checkpoint"] == "rollback-no-change"
+    finally:
+        tx.os.geteuid = original_geteuid
+
+    service_root = root / "service-root"
+    place(service_root)
+    service_plan = plan("service-policy")
+    service_plan["planSha256"] = tx.digest_bytes(tx.canonical(service_plan))
+    states = {
+        "wsprrypi.service": {"active": "active", "enabled": "enabled"},
+        "soapyremote-server.service": {"active": "inactive", "enabled": "disabled"},
+    }
+    service_calls: list[list[str]] = []
+    tx.os.geteuid = lambda: 0
+    try:
+        quiesced = tx.quiesce_services(
+            service_plan, service_root, True, service_runner(service_calls, states),
+            allow_test_root=True)
+        assert quiesced["status"] == "quiesced"
+        assert all(value == {"active": "inactive", "enabled": "disabled"}
+                   for value in states.values())
+        service_journal = tx.journal_path(service_root, service_plan["operationId"])
+        restored = tx.restore_services(
+            service_plan, service_root, service_journal, True,
+            service_runner(service_calls, states), allow_test_root=True)
+        assert restored["status"] == "complete"
+        assert states == quiesced["serviceBefore"]
+        for operation in ("deactivate-predecessor", "install-inactive", "select-gpio4",
+                          "select-gpio20", "restore-gpio4"):
+            operation_id = f"wspr5-1-1-1-1111111-{operation}"
+            tx.journal_write(tx.journal_path(service_root, operation_id), {
+                "operationId": operation_id, "sourceCommit": service_plan["sourceCommit"],
+                "qualificationArchiveSha256": service_plan["qualificationArchiveSha256"],
+                "status": "complete",
+            })
+        audit = tx.residue_audit(
+            service_plan, service_root, service_journal,
+            service_runner(service_calls, states))
+        assert audit["servicePolicy"] == quiesced["serviceBefore"]
+
+        failed_root = root / "service-failure-root"
+        place(failed_root)
+        failed_plan = plan("service-policy-failure")
+        failed_plan["planSha256"] = tx.digest_bytes(tx.canonical(failed_plan))
+        failed_states = copy.deepcopy(service_plan["servicePolicy"])
+        rejected(lambda: tx.quiesce_services(
+            failed_plan, failed_root, True,
+            service_runner([], failed_states, ["disable", "wsprrypi.service"]),
+            allow_test_root=True))
+        failed_journal = tx.journal_path(failed_root, failed_plan["operationId"])
+        assert json.loads(failed_journal.read_text())["status"] == "restored-after-failure"
+        assert failed_states == json.loads(failed_journal.read_text())["serviceBefore"]
     finally:
         tx.os.geteuid = original_geteuid
 

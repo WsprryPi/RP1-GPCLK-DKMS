@@ -44,12 +44,14 @@ def validate(root: Path) -> dict:
     expected = [
         "validated-transfer", "bootstrap-create", "bootstrap-extract-archive",
         "bootstrap-authenticate", "bootstrap-controls", "read-only-preflight",
+        "quiesce-services",
         "deactivate-predecessor-and-reboot",
         "reconcile-inactive-predecessor", "install-inactive-package",
         "select-gpio4-and-reboot", "reconcile-gpio4", "inspect-gpio4-output-disabled",
         "select-gpio20-and-reboot", "reconcile-gpio20", "inspect-gpio20-output-disabled",
         "restore-gpio4-and-reboot", "reconcile-restored-gpio4",
         "inspect-restored-gpio4-output-disabled",
+        "restore-services",
         "residue-and-service-audit",
         "checksum-evidence",
     ]
@@ -77,7 +79,7 @@ def validate(root: Path) -> dict:
     transfer = next(step for step in steps if step["id"] == "validated-transfer")
     if transfer["argv"] != [
             "/usr/bin/env",
-            "--chdir=/home/pi/rp1-gpclk-v1.1.1-owned-executor-20260822/release-set",
+            "--chdir=/home/pi/rp1-gpclk-v1.1.1-owned-service-executor-20260822/release-set",
             "/usr/bin/sha256sum", "--check", "SHA256SUMS"]:
         raise ValueError("transfer step does not enforce the complete checksum set")
     safety = plan.get("safety", {})

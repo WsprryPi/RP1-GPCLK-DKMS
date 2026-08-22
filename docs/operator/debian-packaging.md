@@ -122,5 +122,23 @@ For output-inhibited route validation, extract the exact qualification archive
 and invoke its archived `release_candidate_controls.py` renderer. Every plan
 step must resolve to an archived executable plus a checksum-covered transaction
 plan sidecar; prose-only mutation steps are invalid. The executor's package,
-boot, reboot, reconciliation, rollback, and residue commands remain separately
-authorized operations and are never run by candidate generation or validation.
+service quiescence/restoration, boot, reboot, reconciliation, rollback, and
+residue commands remain separately authorized operations and are never run by
+candidate generation or validation.
+
+Before the first boot transaction, the executor journals each allowlisted
+service's exact activity and enablement state, disables and stops the services,
+and verifies that they remain inactive and disabled across every reboot. After
+the final route inspection it restores the journaled states exactly, and the
+closing residue audit independently compares the live states with that journal.
+Partial quiescence attempts restore the captured state; partial restoration is
+retained as an explicit recovery-required journal and is never treated as a
+successful closeout.
+
+Operation IDs include the exact source-commit prefix. Completed journals from
+an earlier candidate are retained as historical evidence and cannot satisfy a
+successor's closeout. A successor must present its own complete journal set.
+If a previously authorized run already completed predecessor deactivation, the
+successor may journal and accept that exact inactive, module-absent,
+endpoint-absent state without forcing a redundant reboot; route selections are
+never made idempotent this way.

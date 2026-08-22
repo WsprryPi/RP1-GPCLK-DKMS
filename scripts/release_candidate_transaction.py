@@ -132,8 +132,10 @@ def load_plan(path: Path) -> dict:
         "predecessorConfigSha256": PREDECESSOR_CONFIG_SHA256,
         "signingPolicy": "CONFIG_MODULE_SIG=n; unsigned candidate",
         "physicalTopology": "fresh-operator-confirmation-required",
-        "servicePolicy": {"wsprrypi.service": "inactive",
-                          "soapyremote-server.service": "inactive"},
+        "servicePolicy": {
+            "wsprrypi.service": {"active": "inactive", "enabled": "enabled"},
+            "soapyremote-server.service": {"active": "inactive", "enabled": "disabled"},
+        },
     }
     for key, expected_value in fixed.items():
         if value.get(key) != expected_value:
@@ -203,7 +205,49 @@ def parse_config(payload: bytes) -> str | None:
     return None
 
 
-def system_safety(plan: dict, root: Path, route: str | None, runner: Runner) -> dict:
+def service_snapshot(plan: dict, runner: Runner) -> dict:
+    return {name: {
+        "active": runner(["/usr/bin/systemctl", "show", "--property=ActiveState",
+                          "--value", name]).strip(),
+        "enabled": runner(["/usr/bin/systemctl", "show", "--property=UnitFileState",
+                           "--value", name]).strip(),
+    } for name in plan["servicePolicy"]}
+
+
+def require_service_state(plan: dict, runner: Runner, mode: str) -> dict:
+    observed = service_snapshot(plan, runner)
+    if mode == "quiesced":
+        expected = {name: {"active": "inactive", "enabled": "disabled"}
+                    for name in plan["servicePolicy"]}
+        if observed != expected:
+            raise ValueError("services are not transaction-quiesced")
+    elif mode == "restored":
+        if observed != plan["servicePolicy"]:
+            raise ValueError("restored service policy differs")
+    elif mode == "pre-quiesce":
+        for name, expected in plan["servicePolicy"].items():
+            actual = observed[name]
+            if actual["enabled"] != expected["enabled"]:
+                raise ValueError("service enablement policy differs")
+            allowed_active = {expected["active"]}
+            if name == "wsprrypi.service" and expected["active"] == "inactive":
+                allowed_active.add("active")
+            if actual["active"] not in allowed_active:
+                raise ValueError("service activity is unsafe or unknown")
+    else:
+        raise ValueError("unknown service validation mode")
+    return observed
+
+
+def require_exact_service_state(plan: dict, runner: Runner, expected: dict) -> dict:
+    observed = service_snapshot(plan, runner)
+    if observed != expected:
+        raise ValueError("journaled service state was not restored")
+    return observed
+
+
+def system_safety(plan: dict, root: Path, route: str | None, runner: Runner,
+                  service_mode: str) -> dict:
     dtb = rooted(root, "/boot/firmware/bcm2712-rpi-5-b.dtb")
     kernel_config = rooted(root, f"/usr/src/linux-headers-{KERNEL}/.config")
     if root == Path("/"):
@@ -214,11 +258,7 @@ def system_safety(plan: dict, root: Path, route: str | None, runner: Runner) -> 
         firmware = runner(["/usr/bin/vcgencmd", "version"])
         if plan["firmware"] not in firmware:
             raise ValueError("firmware identity differs")
-        states = [line for line in runner(
-            ["/usr/bin/systemctl", "show", "--property=ActiveState", "--value",
-             *plan["servicePolicy"]]).splitlines() if line]
-        if states != [plan["servicePolicy"][name] for name in plan["servicePolicy"]]:
-            raise ValueError("service policy differs")
+        services = require_service_state(plan, runner, service_mode)
         live = Path("/sys/module/rp1_gpclk_dkms/parameters/live_output")
         if live.exists() and live.read_text().strip() not in {"N", "0"}:
             raise ValueError("live output is enabled or unknown")
@@ -251,7 +291,8 @@ def system_safety(plan: dict, root: Path, route: str | None, runner: Runner) -> 
             raise ValueError("installed package state differs")
     return {"liveOutput": False, "endpointOpen": False,
             "clockPrepared": False, "clockEnabled": False,
-            "gpio4Safe": True, "gpio20Safe": True}
+            "gpio4Safe": True, "gpio20Safe": True,
+            "services": services if root == Path("/") else service_mode}
 
 
 def config_for_route(payload: bytes, route: str) -> bytes:
@@ -277,7 +318,8 @@ def config_inactive(payload: bytes) -> bytes:
     return payload
 
 
-def preflight(plan: dict, root: Path, runner: Runner = run_command) -> dict:
+def preflight(plan: dict, root: Path, runner: Runner = run_command,
+              service_mode: str = "restored") -> dict:
     if runner(["/bin/hostname"]).strip() != plan["host"]:
         raise ValueError("host identity differs")
     if runner(["/usr/bin/uname", "-m"]).strip() != plan["architecture"]:
@@ -288,7 +330,7 @@ def preflight(plan: dict, root: Path, runner: Runner = run_command) -> dict:
     if config.is_symlink() or not config.is_file():
         raise ValueError("boot configuration is absent or unsafe")
     route = parse_config(config.read_bytes())
-    safety = system_safety(plan, root, route, runner)
+    safety = system_safety(plan, root, route, runner, service_mode)
     return {"status": "ready", "route": route, "bootId": read_boot_id(root),
             "configSha256": digest(config), "planSha256": plan["planSha256"],
             "safety": safety}
@@ -299,7 +341,7 @@ def begin(plan: dict, root: Path, action: str, route: str | None,
     path = journal_path(root, plan["operationId"])
     if path.exists() or path.is_symlink():
         raise ValueError("operation journal already exists")
-    observed = preflight(plan, root, runner)
+    observed = preflight(plan, root, runner, "quiesced")
     config = rooted(root, CONFIG)
     before = config.read_bytes()
     state = {"schemaVersion": 1, "operationId": plan["operationId"],
@@ -314,6 +356,86 @@ def begin(plan: dict, root: Path, action: str, route: str | None,
     return path, state, before
 
 
+def apply_service_policy(plan: dict, policy: dict, runner: Runner) -> None:
+    for name, expected in policy.items():
+        verb = "enable" if expected["enabled"] == "enabled" else "disable"
+        runner(["/usr/bin/systemctl", verb, name])
+        activity = "start" if expected["active"] == "active" else "stop"
+        runner(["/usr/bin/systemctl", activity, name])
+
+
+def quiesce_services(plan: dict, root: Path, execute: bool,
+                     runner: Runner = run_command, *, allow_test_root: bool = False) -> dict:
+    if not execute or os.geteuid() != 0 or (root != Path("/") and not allow_test_root):
+        raise ValueError("service quiescence requires real root and --execute")
+    path = journal_path(root, plan["operationId"])
+    if path.exists() or path.is_symlink():
+        raise ValueError("operation journal already exists")
+    preflight(plan, root, runner, "pre-quiesce")
+    observed = service_snapshot(plan, runner)
+    state = {
+        "schemaVersion": 1, "operationId": plan["operationId"],
+        "planSha256": plan["planSha256"], "action": "quiesce-services",
+        "sourceCommit": plan["sourceCommit"],
+        "qualificationArchiveSha256": plan["qualificationArchiveSha256"],
+        "status": "prepared", "checkpoint": "service-journal-created",
+        "serviceBefore": observed, "serviceRestorePolicy": observed,
+        "rebootRequired": False, "reconciled": False,
+    }
+    journal_write(path, state)
+    quiesced = {name: {"active": "inactive", "enabled": "disabled"}
+                for name in plan["servicePolicy"]}
+    try:
+        apply_service_policy(plan, quiesced, runner)
+        after = require_service_state(plan, runner, "quiesced")
+    except BaseException as quiesce_error:
+        state.update({"status": "restore-in-progress", "checkpoint": "quiesce-failed",
+                      "failure": type(quiesce_error).__name__})
+        journal_write(path, state)
+        try:
+            apply_service_policy(plan, observed, runner)
+            require_exact_service_state(plan, runner, observed)
+        except BaseException as restore_error:
+            state.update({"status": "restore-failed", "checkpoint": "service-restore-failed",
+                          "restoreFailure": type(restore_error).__name__})
+            journal_write(path, state)
+            raise RuntimeError("service quiescence and restoration failed") from restore_error
+        state.update({"status": "restored-after-failure", "checkpoint": "services-restored",
+                      "reconciled": True})
+        journal_write(path, state)
+        raise RuntimeError("service quiescence failed; policy restored") from quiesce_error
+    state.update({"status": "quiesced", "checkpoint": "services-quiesced",
+                  "serviceAfter": after})
+    journal_write(path, state)
+    return state
+
+
+def restore_services(plan: dict, root: Path, journal: Path, execute: bool,
+                     runner: Runner = run_command, *, allow_test_root: bool = False) -> dict:
+    if not execute or os.geteuid() != 0 or (root != Path("/") and not allow_test_root):
+        raise ValueError("service restoration requires real root and --execute")
+    state = json.loads(journal.read_text())
+    if (state.get("planSha256") != plan["planSha256"] or
+            state.get("status") not in {"quiesced", "restore-failed"} or
+            state.get("serviceRestorePolicy") != state.get("serviceBefore")):
+        raise ValueError("service journal is stale, foreign, or not quiesced")
+    preflight(plan, root, runner, "quiesced")
+    state.update({"status": "restore-in-progress", "checkpoint": "service-restore-started"})
+    journal_write(journal, state)
+    try:
+        apply_service_policy(plan, state["serviceBefore"], runner)
+        restored = require_exact_service_state(plan, runner, state["serviceBefore"])
+    except BaseException as restore_error:
+        state.update({"status": "restore-failed", "checkpoint": "service-restore-failed",
+                      "restoreFailure": type(restore_error).__name__})
+        journal_write(journal, state)
+        raise
+    state.update({"status": "complete", "checkpoint": "services-restored",
+                  "serviceAfterRestore": restored, "reconciled": True})
+    journal_write(journal, state)
+    return state
+
+
 def mutate_config(plan: dict, root: Path, action: str, route: str | None,
                   execute: bool, runner: Runner = run_command) -> dict:
     if not execute or os.geteuid() != 0:
@@ -321,7 +443,18 @@ def mutate_config(plan: dict, root: Path, action: str, route: str | None,
     path, state, before = begin(plan, root, action, route, runner)
     after = config_inactive(before) if route is None else config_for_route(before, route)
     if after == before:
-        raise ValueError("transaction would not change boot configuration")
+        if route is not None or parse_config(before) is not None:
+            raise ValueError("transaction would not change boot configuration")
+        modules_path = rooted(root, "/proc/modules")
+        modules = modules_path.read_text().splitlines() if modules_path.exists() else []
+        if (any(line.startswith(f"{MODULE} ") for line in modules) or
+                rooted(root, "/dev/rp1-gpclk").exists()):
+            raise ValueError("inactive predecessor still has live module or endpoint state")
+        state.update({"status": "complete", "checkpoint": "already-inactive",
+                      "configAfterSha256": digest_bytes(after),
+                      "rebootRequired": False, "reconciled": True})
+        journal_write(path, state)
+        return state
     config = rooted(root, CONFIG)
     state["configIntendedSha256"] = digest_bytes(after)
     journal_write(path, state)
@@ -347,7 +480,7 @@ def install_inactive(plan: dict, root: Path, package: Path, execute: bool,
         raise ValueError("installation requires real root and --execute")
     if package.is_symlink() or not package.is_file() or digest(package) != PACKAGE_SHA256:
         raise ValueError("package identity differs")
-    observed = preflight(plan, root, runner)
+    observed = preflight(plan, root, runner, "quiesced")
     if observed["route"] is not None:
         raise ValueError("installation requires an inactive boot route")
     modules_path = rooted(root, "/proc/modules")
@@ -397,6 +530,9 @@ def reconcile(plan: dict, root: Path, journal: Path, expected_route: str | None,
               runner: Runner = run_command) -> dict:
     state = json.loads(journal.read_text())
     prior_status = state.get("status")
+    if (prior_status == "complete" and state.get("checkpoint") == "already-inactive" and
+            expected_route is None and parse_config(rooted(root, CONFIG).read_bytes()) is None):
+        return state
     if state.get("planSha256") != plan["planSha256"] or prior_status not in {
             "awaiting-reboot", "rollback-awaiting-reboot"}:
         raise ValueError("journal is stale, foreign, or not awaiting reboot")
@@ -446,26 +582,43 @@ def rollback(plan: dict, root: Path, journal: Path, execute: bool,
     return state
 
 
-def residue_audit(plan: dict, root: Path, runner: Runner = run_command) -> dict:
+def residue_audit(plan: dict, root: Path, service_journal: Path,
+                  runner: Runner = run_command) -> dict:
     directory = rooted(root, JOURNAL_DIR)
+    expected_ids = {f"wspr5-1-1-1-{plan['sourceCommit'][:7]}-{operation}" for operation in (
+        "service-policy", "deactivate-predecessor", "install-inactive",
+        "select-gpio4", "select-gpio20", "restore-gpio4")}
+    observed_ids = set()
     if directory.exists():
         for path in directory.iterdir():
             if path.is_symlink() or not path.is_file():
                 raise ValueError("journal residue is unsafe")
             state = json.loads(path.read_text())
-            if (state.get("sourceCommit") != plan["sourceCommit"] or
-                    state.get("qualificationArchiveSha256") != plan["qualificationArchiveSha256"] or
-                    state.get("status") != "complete"):
+            if state.get("status") != "complete":
                 raise ValueError(f"incomplete or foreign journal: {path.name}")
-    observed = preflight(plan, root, runner)
+            if state.get("sourceCommit") == plan["sourceCommit"]:
+                if state.get("qualificationArchiveSha256") != plan["qualificationArchiveSha256"]:
+                    raise ValueError(f"current journal archive differs: {path.name}")
+                observed_ids.add(state.get("operationId"))
+    if observed_ids != expected_ids:
+        raise ValueError("current transaction journal set is incomplete or excessive")
+    service_state = json.loads(service_journal.read_text())
+    if (service_state.get("sourceCommit") != plan["sourceCommit"] or
+            service_state.get("qualificationArchiveSha256") !=
+            plan["qualificationArchiveSha256"] or
+            service_state.get("status") != "complete"):
+        raise ValueError("service journal is incomplete or foreign")
+    observed = preflight(plan, root, runner, "pre-quiesce")
+    restored = require_exact_service_state(plan, runner, service_state["serviceBefore"])
     return {"status": "clean", "configuredRoute": observed["route"],
             "bootId": observed["bootId"], "configSha256": observed["configSha256"],
-            "servicePolicy": plan["servicePolicy"], "safety": observed["safety"]}
+            "servicePolicy": restored, "safety": observed["safety"]}
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=("preflight", "deactivate-and-reboot",
+    parser.add_argument("action", choices=("preflight", "quiesce-services",
+                                           "restore-services", "deactivate-and-reboot",
                                            "install-inactive", "preflight-route",
                                            "apply-and-reboot", "reconcile", "rollback",
                                            "residue-audit"))
@@ -473,13 +626,14 @@ def main() -> None:
     parser.add_argument("--root", type=Path, default=Path("/"))
     parser.add_argument("--route", choices=tuple(ROUTES))
     parser.add_argument("--journal", type=Path)
+    parser.add_argument("--service-journal", type=Path)
     parser.add_argument("--package", type=Path)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--confirm-physical-topology", action="store_true")
     args = parser.parse_args()
     plan = load_plan(args.plan)
-    if args.action in {"deactivate-and-reboot", "install-inactive", "apply-and-reboot",
-                       "rollback"} and not args.confirm_physical_topology:
+    if args.action in {"quiesce-services", "restore-services", "deactivate-and-reboot",
+                       "install-inactive", "apply-and-reboot", "rollback"} and not args.confirm_physical_topology:
         raise ValueError("mutation requires fresh physical-topology confirmation")
     if args.action in {"preflight", "preflight-route"}:
         result = preflight(plan, args.root)
@@ -487,6 +641,12 @@ def main() -> None:
             raise ValueError("--route is required")
         if args.action == "preflight-route" and result["route"] == args.route:
             raise ValueError("requested route is already selected")
+    elif args.action == "quiesce-services":
+        result = quiesce_services(plan, args.root, args.execute)
+    elif args.action == "restore-services":
+        if not args.journal:
+            raise ValueError("--journal is required")
+        result = restore_services(plan, args.root, args.journal, args.execute)
     elif args.action == "deactivate-and-reboot":
         result = mutate_config(plan, args.root, args.action, None, args.execute)
     elif args.action == "apply-and-reboot":
@@ -506,7 +666,9 @@ def main() -> None:
             raise ValueError("--journal is required")
         result = rollback(plan, args.root, args.journal, args.execute)
     else:
-        result = residue_audit(plan, args.root)
+        if not args.service_journal:
+            raise ValueError("--service-journal is required")
+        result = residue_audit(plan, args.root, args.service_journal)
     print(json.dumps(result, sort_keys=True))
 
 

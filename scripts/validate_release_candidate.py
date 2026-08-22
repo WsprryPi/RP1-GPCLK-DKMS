@@ -24,6 +24,7 @@ FILES = {
     "TARGET-VERIFICATION.json", "release-metadata.json",
     f"{PACKAGE}_{DEBIAN_VERSION}_all.deb",
     f"{QUALIFICATION}-{VERSION}.tar.gz", "SHA256SUMS",
+    "TRANSACTION-PLAN-service-policy.json",
     "TRANSACTION-PLAN-deactivate-predecessor.json",
     "TRANSACTION-PLAN-install-inactive.json",
     "TRANSACTION-PLAN-select-gpio4.json",
