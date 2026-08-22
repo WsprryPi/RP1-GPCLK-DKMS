@@ -88,6 +88,7 @@ with tempfile.TemporaryDirectory() as temporary:
     plan_path.write_text(json.dumps(value))
     loaded = tx.load_plan(plan_path)
     assert tx.preflight(loaded, root, run)["route"] == "legacy-gpio4"
+    assert tx.residue_audit(loaded, root, run)["safety"]["liveOutput"] is False
 
     original_geteuid = tx.os.geteuid
     tx.os.geteuid = lambda: 0

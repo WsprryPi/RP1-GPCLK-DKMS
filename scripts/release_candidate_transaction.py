@@ -446,7 +446,7 @@ def rollback(plan: dict, root: Path, journal: Path, execute: bool,
     return state
 
 
-def residue_audit(plan: dict, root: Path) -> dict:
+def residue_audit(plan: dict, root: Path, runner: Runner = run_command) -> dict:
     directory = rooted(root, JOURNAL_DIR)
     if directory.exists():
         for path in directory.iterdir():
@@ -457,7 +457,10 @@ def residue_audit(plan: dict, root: Path) -> dict:
                     state.get("qualificationArchiveSha256") != plan["qualificationArchiveSha256"] or
                     state.get("status") != "complete"):
                 raise ValueError(f"incomplete or foreign journal: {path.name}")
-    return {"status": "clean", "configuredRoute": parse_config(rooted(root, CONFIG).read_bytes())}
+    observed = preflight(plan, root, runner)
+    return {"status": "clean", "configuredRoute": observed["route"],
+            "bootId": observed["bootId"], "configSha256": observed["configSha256"],
+            "servicePolicy": plan["servicePolicy"], "safety": observed["safety"]}
 
 
 def main() -> None:
