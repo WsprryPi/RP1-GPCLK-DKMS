@@ -16,6 +16,8 @@ schema = json.loads((ROOT / "schema/rp1-gpclk-compatibility-manifest-v1.schema.j
 entries = decisions["entries"]
 assert len(entries) == 2 and len({entry["id"] for entry in entries}) == 2
 assert {entry["route"] for entry in entries} == {"GPIO4", "GPIO20"}
+gpio4 = next(entry for entry in entries if entry["route"] == "GPIO4")
+gpio20 = next(entry for entry in entries if entry["route"] == "GPIO20")
 required_modes = {"QRSS", "FSKCW", "DFCW", "WSPR"}
 for entry in entries:
     assert set(entry) == set(schema["$defs"]["entry"]["required"])
@@ -24,10 +26,7 @@ for entry in entries:
     assert set(entry["build"]["signature"]) == set(schema["$defs"]["signature"]["required"])
     assert set(entry["runtime"]) == set(schema["$defs"]["runtimeIdentity"]["required"])
     assert set(entry["overlay"]) == set(schema["$defs"]["overlay"]["required"])
-    assert entry["state"] == "Unavailable" and not entry["liveEligible"]
     assert entry["supportedDriveMa"] == 2 and set(entry["supportedModes"]) == required_modes
-    assert entry["build"]["moduleVersion"] == "0.0.0-phase4d-combined"
-    assert entry["runtime"]["firmwareIdentity"] == "not-recorded"
     for digest in (entry["uapiHeaderSha256"], entry["build"]["kernelConfig"]["sha256"],
                    entry["build"]["moduleUnsignedSha256"], entry["build"]["moduleInstalledSha256"],
                    entry["runtime"]["baseDtSha256"], entry["overlay"]["sourceSha256"],
@@ -39,6 +38,17 @@ for entry in entries:
         assert len(item["sha256"]) == 64 and set(item["sha256"]) <= set("0123456789abcdef")
     assert all(entry["route"] in item["routes"] and required_modes <= set(item["modes"])
                for item in entry["evidence"])
+
+assert gpio4["id"] == "v1.0.1-wspr5-gpio4-6.18.34"
+assert gpio4["state"] == "Experimental" and gpio4["liveEligible"]
+assert gpio4["build"]["moduleVersion"] == "1.0.1"
+assert gpio4["build"]["kernelRelease"] == "6.18.34+rpt-rpi-2712"
+assert gpio4["build"]["architecture"] == "arm64"
+assert gpio4["build"]["runtimeArchitecture"] == "aarch64"
+assert gpio4["runtime"]["piModel"] == "Raspberry Pi 5 Model B Rev 1.0"
+assert gpio20["state"] == "Unavailable" and not gpio20["liveEligible"]
+assert gpio20["build"]["moduleVersion"] == "0.0.0-phase4d-combined"
+assert sum(entry["liveEligible"] for entry in entries) == 1
 
 qualified = {"state": "Qualified", "liveEligible": True, "reason": "exact evidence"}
 experimental = {"state": "Experimental", "liveEligible": True, "reason": "enrolled"}

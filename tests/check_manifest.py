@@ -45,7 +45,12 @@ assert entry["allOf"][1]["then"]["properties"]["liveEligible"]["const"] is False
 assert example["schemaVersion"] == 1
 assert len(example["entries"]) == 2
 assert {item["route"] for item in example["entries"]} == {"GPIO4", "GPIO20"}
-assert all(item["state"] == "Unavailable" and not item["liveEligible"] for item in example["entries"])
+gpio4 = next(item for item in example["entries"] if item["route"] == "GPIO4")
+gpio20 = next(item for item in example["entries"] if item["route"] == "GPIO20")
+assert gpio4["id"] == "v1.0.1-wspr5-gpio4-6.18.34"
+assert gpio4["state"] == "Experimental" and gpio4["liveEligible"]
+assert gpio20["state"] == "Unavailable" and not gpio20["liveEligible"]
+assert sum(item["liveEligible"] for item in example["entries"]) == 1
 validate_route_evidence(example)
 try:
     validate_route_evidence({"entries": [{"id": "gpio20", "route": "GPIO20",

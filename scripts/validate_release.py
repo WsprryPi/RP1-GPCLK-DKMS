@@ -90,9 +90,14 @@ def validate(output: pathlib.Path, allow_development: bool) -> None:
     decisions = json.loads((ROOT / "release/compatibility-decisions-v1.json").read_text())
     if compatibility["defaultState"] != "Unavailable" or compatibility["entries"] != decisions["entries"]:
         fail("compatibility manifest does not contain the reviewed populated decisions")
-    if not compatibility["entries"] or any(entry["liveEligible"] or entry["state"] != "Unavailable"
-                                           for entry in compatibility["entries"]):
-        fail("Phase 5.6 historical entries must remain unavailable and non-live")
+    gpio4 = [entry for entry in compatibility["entries"] if entry["route"] == "GPIO4"]
+    gpio20 = [entry for entry in compatibility["entries"] if entry["route"] == "GPIO20"]
+    if (len(gpio4) != 1 or gpio4[0]["id"] != "v1.0.1-wspr5-gpio4-6.18.34" or
+            gpio4[0]["state"] != "Experimental" or not gpio4[0]["liveEligible"]):
+        fail("release lacks the exact experimental GPIO4 candidate entry")
+    if (len(gpio20) != 1 or gpio20[0]["state"] != "Unavailable" or
+            gpio20[0]["liveEligible"]):
+        fail("GPIO20 must remain unavailable and non-live")
     ids = [entry["id"] for entry in compatibility["entries"]]
     if len(ids) != len(set(ids)):
         fail("compatibility entry IDs are not unique")
