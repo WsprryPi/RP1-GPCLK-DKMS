@@ -17,7 +17,12 @@ prerm = (ROOT / "debian/rp1-gpclk-dkms.prerm").read_text()
 
 assert "Package: rp1-gpclk-dkms" in control
 assert "Architecture: all" in control
-assert "dh-dkms" in control and "device-tree-compiler" in control
+for build_dependency in (
+    "debhelper-compat (= 13)", "dh-dkms", "device-tree-compiler", "python3"
+):
+    assert build_dependency in control
+assert re.search(r"Depends:\s+dkms,", control)
+assert "linux-headers-arm64" not in control
 assert "dh $@ --with dkms" in rules
 assert f"MODULE_VERSION := {VERSION}" in rules
 assert 'PACKAGE_VERSION="#MODULE_VERSION#"' in dkms

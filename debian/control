@@ -16,8 +16,6 @@ Architecture: all
 Depends:
  dkms,
  ${misc:Depends},
-Recommends:
- linux-headers-arm64,
 Description: DKMS source for the Raspberry Pi RP1 GPCLK module
  Stock-kernel out-of-tree module providing bounded RP1 GPCLK0 control for
  WsprryPi. The package installs DKMS source and inactive GPIO4 and GPIO20

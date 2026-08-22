@@ -33,6 +33,18 @@ package identities ending in `+rpt-rpi-2712` or `+rpt-rpi-v8`. DKMS skips
 other installed header trees using its standard exclusion behavior. This name
 filter limits build scope; it does not qualify every matching kernel.
 
+The package depends on DKMS, but it intentionally does not recommend the broad
+Debian linux-headers-arm64 metapackage. Before installation, the consuming
+installer must resolve and install the exact running-kernel package named
+linux-headers-$(uname -r), verify the matching
+/usr/src/linux-headers-$(uname -r) tree, and fail closed if either is
+unavailable. A generic architecture header package is not evidence for a
+Raspberry Pi kernel identity.
+
+The source-package build dependencies are debhelper-compat (= 13), dh-dkms,
+device-tree-compiler, and python3. They belong on the package build host and
+are not WsprryPi runtime dependencies.
+
 ## Install
 
 Install the downloaded package with APT so dependencies are resolved:
