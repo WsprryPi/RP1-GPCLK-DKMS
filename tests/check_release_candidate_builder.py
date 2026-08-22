@@ -4,7 +4,7 @@
 import io
 import json
 from pathlib import Path
-import stat
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -175,6 +175,13 @@ assert "FROM docker.io/library/debian@sha256:c94f5ddd41327aa2d4a7cfba7889056c029
 for package in ("build-essential", "debhelper", "dh-dkms", "device-tree-compiler", "python3"):
     assert package in containerfile
 
-assert stat.S_IMODE((ROOT / "scripts/build_release_candidate.py").stat().st_mode) in {0o644, 0o755}
-assert stat.S_IMODE((ROOT / "scripts/validate_release_candidate.py").stat().st_mode) == 0o755
+def git_mode(path: str) -> str:
+    return subprocess.check_output(
+        ["git", "ls-files", "--stage", "--", path], cwd=ROOT, text=True
+    ).split()[0]
+
+
+assert git_mode("scripts/build_release_candidate.py") == "100755"
+assert git_mode("scripts/validate_release_candidate.py") == "100755"
+assert git_mode("scripts/inspect_rebooted_route.py") == "100755"
 print("Release candidate builder and target-plan contract: PASS")
