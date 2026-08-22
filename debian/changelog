@@ -4,6 +4,8 @@ rp1-gpclk-dkms (1.1.1-1) UNRELEASED; urgency=medium
     output-inhibited target-validation controls for GPIO4 and GPIO20.
   * Preserve the ABI v2 UAPI byte-for-byte and keep both routes unavailable
     until exact-build evidence is returned.
+  * Install the versioned, route-neutral application route manager, JSON
+    schema, and consumer contract without installing qualification controls.
 
  -- Lee Bussy <lee@bussy.org>  Sat, 22 Aug 2026 00:00:00 -0500
 

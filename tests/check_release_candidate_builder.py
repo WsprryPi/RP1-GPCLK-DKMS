@@ -63,6 +63,10 @@ with tempfile.TemporaryDirectory() as temporary:
         f"{base}/overlays/rp1-gpclk-gpio20.dts": b"gpio20\n",
         "usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo": b"dtbo4\n",
         "usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo": b"dtbo20\n",
+        "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager": b"#!/usr/bin/python3\n",
+        "usr/sbin/rp1-gpclk-route-manager": b"#!/usr/bin/python3\n",
+        "usr/share/rp1-gpclk-dkms/1.1.1/rp1-gpclk-route-manager-v1.schema.json": b"{}\n",
+        "usr/share/doc/rp1-gpclk-dkms/route-manager-v1.md": b"contract\n",
         "usr/share/doc/rp1-gpclk-dkms/copyright": b"MIT\n",
     }
     product.write_bytes(

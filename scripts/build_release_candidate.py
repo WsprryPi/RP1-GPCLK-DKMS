@@ -159,11 +159,17 @@ def validate_product(path: Path) -> tuple[dict, dict[str, bytes]]:
         "usr/src/rp1-gpclk-dkms-1.1.1/overlays/rp1-gpclk-gpio20.dts",
         "usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo",
         "usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo",
+        "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager",
+        "usr/sbin/rp1-gpclk-route-manager",
+        "usr/share/rp1-gpclk-dkms/1.1.1/rp1-gpclk-route-manager-v1.schema.json",
+        "usr/share/doc/rp1-gpclk-dkms/route-manager-v1.md",
     }
     missing = required - set(data_files)
     if missing:
         raise ValueError(f"required product members absent: {sorted(missing)}")
-    allowed_roots = ("usr/src/rp1-gpclk-dkms-1.1.1/", "usr/lib/rp1-gpclk-dkms/", "usr/share/doc/rp1-gpclk-dkms/")
+    allowed_roots = ("usr/src/rp1-gpclk-dkms-1.1.1/", "usr/lib/rp1-gpclk-dkms/",
+                     "usr/libexec/rp1-gpclk-dkms/", "usr/sbin/",
+                     "usr/share/rp1-gpclk-dkms/1.1.1/", "usr/share/doc/rp1-gpclk-dkms/")
     for name in data_files:
         if not name.startswith(allowed_roots):
             raise ValueError(f"unexpected product file root: {name}")
@@ -172,6 +178,8 @@ def validate_product(path: Path) -> tuple[dict, dict[str, bytes]]:
     dkms = data_files["usr/src/rp1-gpclk-dkms-1.1.1/dkms.conf"].decode()
     if 'PACKAGE_VERSION="1.1.1"' not in dkms:
         raise ValueError("installed DKMS version differs")
+    if data_files["usr/sbin/rp1-gpclk-route-manager"] != data_files["usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager"]:
+        raise ValueError("stable and libexec route-manager bytes differ")
     inventory = {
         "SPDX-License-Identifier": "MIT",
         "schemaVersion": 1,

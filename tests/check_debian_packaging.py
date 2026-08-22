@@ -38,6 +38,11 @@ assert "refusing to replace unrecognized" in postinst
 assert "cmp -s" in prerm and "rm -f" in prerm
 assert "config.txt" not in rules and "dtoverlay" not in rules and "modprobe" not in rules
 assert "qualification" not in rules.lower()
+assert "scripts/rp1-gpclk-route-manager.py" in rules
+assert "usr/sbin/rp1-gpclk-route-manager" in rules
+assert "rp1-gpclk-route-manager-v1.schema.json" in rules
+assert "route-manager-v1.md" in rules
+assert "release_candidate_transaction.py" not in rules
 assert "Both overlays remain inactive" in guide
 assert "standard exclusion behavior" in guide
 

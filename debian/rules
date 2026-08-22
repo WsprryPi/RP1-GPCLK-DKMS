@@ -5,6 +5,9 @@ PACKAGE := rp1-gpclk-dkms
 MODULE_VERSION := 1.1.1
 SOURCE_DEST := debian/$(PACKAGE)/usr/src/$(PACKAGE)-$(MODULE_VERSION)
 OVERLAY_DEST := debian/$(PACKAGE)/usr/lib/$(PACKAGE)/overlays
+EXEC_DEST := debian/$(PACKAGE)/usr/libexec/$(PACKAGE)
+SCHEMA_DEST := debian/$(PACKAGE)/usr/share/$(PACKAGE)/$(MODULE_VERSION)
+DOC_DEST := debian/$(PACKAGE)/usr/share/doc/$(PACKAGE)
 
 %:
 	dh $@ --with dkms
@@ -25,6 +28,11 @@ override_dh_auto_install:
 	cp overlays/rp1-gpclk-gpio4.dts overlays/rp1-gpclk-gpio20.dts $(SOURCE_DEST)/overlays/
 	mkdir -p $(OVERLAY_DEST)
 	cp debian/build/rp1-gpclk-gpio4.dtbo debian/build/rp1-gpclk-gpio20.dtbo $(OVERLAY_DEST)/
+	mkdir -p $(EXEC_DEST) debian/$(PACKAGE)/usr/sbin $(SCHEMA_DEST) $(DOC_DEST)
+	install -m 0755 scripts/rp1-gpclk-route-manager.py $(EXEC_DEST)/rp1-gpclk-route-manager
+	install -m 0755 scripts/rp1-gpclk-route-manager.py debian/$(PACKAGE)/usr/sbin/rp1-gpclk-route-manager
+	install -m 0644 schema/rp1-gpclk-route-manager-v1.schema.json $(SCHEMA_DEST)/
+	install -m 0644 docs/contracts/route-manager-v1.md $(DOC_DEST)/route-manager-v1.md
 
 override_dh_dkms:
 	dh_dkms -V $(MODULE_VERSION)

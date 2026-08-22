@@ -218,6 +218,14 @@ files. Standard `dpkg`, `dh-dkms`, and DKMS mechanisms own package lifecycle.
 Installation refuses to overwrite foreign files. Removal deletes only files
 whose identity and ownership remain attributable to the package.
 
+Beginning with 1.1.1, the package also owns a versioned application-facing
+route executor, its JSON schema, and consumer documentation. The executor owns
+only the delimited RP1-GPCLK-DKMS route block and attributable journals below
+`/var/lib/rp1-gpclk-dkms/route-transactions`. It keeps saved/configured and
+post-boot active routes separate, rejects ambiguous ownership, and exposes no
+qualification-plan interface. Package installation remains route-neutral and
+does not create runtime state.
+
 Signing keys and trust enrollment are administrator-owned. No private key is
 distributed or created as a silent installation side effect. Signing proves
 provenance and possible load eligibility; it does not qualify behavior.

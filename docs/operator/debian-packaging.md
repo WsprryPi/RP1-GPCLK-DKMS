@@ -28,6 +28,17 @@ Both overlays remain inactive. The package does not edit `config.txt`, apply an
 overlay, select a route, load the module, enable output, or reboot. Installing
 the package therefore does not authorize or initiate GPIO activity.
 
+Version 1.1.1 additionally installs the stable application executor at
+`/usr/sbin/rp1-gpclk-route-manager` (with a byte-identical package-owned copy
+at `/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager`), its closed JSON schema
+at `/usr/share/rp1-gpclk-dkms/1.1.1/rp1-gpclk-route-manager-v1.schema.json`,
+and its consumer contract at
+`/usr/share/doc/rp1-gpclk-dkms/route-manager-v1.md`. These are the only route
+manager inventory additions. Installation creates neither the owned boot block
+nor `/var/lib/rp1-gpclk-dkms/route-transactions`; journals are created only by
+an explicitly executed root mutation. Qualification plans, archives, and
+`release_candidate_transaction.py` are not installed runtime dependencies.
+
 `BUILD_EXCLUSIVE_KERNEL` limits automatic builds to stock Raspberry Pi kernel
 package identities ending in `+rpt-rpi-2712` or `+rpt-rpi-v8`. DKMS skips
 other installed header trees using its standard exclusion behavior. This name
