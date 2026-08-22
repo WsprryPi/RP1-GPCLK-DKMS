@@ -195,8 +195,9 @@ def system_safety(plan: dict, root: Path, runner: Runner) -> dict:
         firmware = runner(["/usr/bin/vcgencmd", "version"])
         if plan["firmware"] not in firmware:
             raise ValueError("firmware identity differs")
-        states = runner(["/usr/bin/systemctl", "show", "--property=ActiveState",
-                         "--value", *plan["servicePolicy"]]).splitlines()
+        states = [line for line in runner(
+            ["/usr/bin/systemctl", "show", "--property=ActiveState", "--value",
+             *plan["servicePolicy"]]).splitlines() if line]
         if states != [plan["servicePolicy"][name] for name in plan["servicePolicy"]]:
             raise ValueError("service policy differs")
         live = Path("/sys/module/rp1_gpclk_dkms/parameters/live_output")
