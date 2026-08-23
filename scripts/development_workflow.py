@@ -237,7 +237,8 @@ def decompressed(path: pathlib.Path) -> bytes:
 
 def module_candidates(kernel: str) -> list[pathlib.Path]:
     base = root_path(f"/lib/modules/{kernel}")
-    return sorted(path for path in base.rglob("*.ko*") if path.is_file() and any(path.name.endswith(s) for s in MODULE_SUFFIXES)) if base.is_dir() else []
+    return sorted(path for path in base.rglob(f"{CANONICAL_MODULE}.ko*")
+                  if path.is_file() and any(path.name.endswith(s) for s in MODULE_SUFFIXES)) if base.is_dir() else []
 
 
 def modinfo(path: pathlib.Path, field: str) -> str:
