@@ -35,12 +35,12 @@ bool rp1_gpclk_route_candidate_allowed(__u32 route,
 	    strcmp(module_version, RP1_GPCLK_ROUTE_CANDIDATE_VERSION))
 		return false;
 
-	/* GPIO4 is eligible only to enter a separately authorized qualification. */
+	/* The unique active DT route selects one development candidate. */
 	switch (route) {
 	case RP1_GPCLK_ROUTE_GPIO4:
 		return true;
 	case RP1_GPCLK_ROUTE_GPIO20:
-		return false;
+		return true;
 	default:
 		return false;
 	}
@@ -50,9 +50,9 @@ const char *rp1_gpclk_route_candidate_id(__u32 route)
 {
 	switch (route) {
 	case RP1_GPCLK_ROUTE_GPIO4:
-		return RP1_GPCLK_GPIO4_QUALIFICATION_CANDIDATE_ID;
+		return RP1_GPCLK_GPIO4_DEVELOPMENT_CANDIDATE_ID;
 	case RP1_GPCLK_ROUTE_GPIO20:
-		return RP1_GPCLK_GPIO20_UNAVAILABLE_ID;
+		return RP1_GPCLK_GPIO20_DEVELOPMENT_CANDIDATE_ID;
 	default:
 		return "v1.1.2-invalid-route";
 	}

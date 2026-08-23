@@ -307,6 +307,23 @@ static void rp1_gpclk_find_endpoint(struct device_node **selected,
 	}
 }
 
+static int rp1_gpclk_validate_endpoint_topology(void)
+{
+	struct device_node *node;
+	unsigned int matching_nodes;
+	int ret;
+
+	rp1_gpclk_find_endpoint(&node, &matching_nodes);
+	if (matching_nodes != 1U) {
+		pr_err("rp1-gpclk-dkms: pre-registration topology rejected %u matching nodes\n",
+		       matching_nodes);
+		return matching_nodes ? -EEXIST : -ENODEV;
+	}
+	ret = of_device_is_available(node) ? 0 : -ENODEV;
+	of_node_put(node);
+	return ret;
+}
+
 static bool rp1_gpclk_bound_to_this_driver(struct platform_device *pdev)
 {
 	bool bound;
@@ -469,6 +486,9 @@ static int __init rp1_gpclk_init(void)
 {
 	int ret;
 
+	ret = rp1_gpclk_validate_endpoint_topology();
+	if (ret)
+		return ret;
 	ret = bus_register_notifier(&platform_bus_type,
 				    &rp1_gpclk_platform_bus_notifier);
 	if (ret)

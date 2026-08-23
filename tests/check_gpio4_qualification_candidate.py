@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Enforce the narrow 1.1.2 GPIO4 qualification-candidate boundary."""
+"""Enforce the independent 1.1.2 GPIO4/GPIO20 development boundary."""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,15 +17,15 @@ for token in (
     '#define RP1_GPCLK_ROUTE_CANDIDATE_KERNEL "6.18.34+rpt-rpi-2712"',
     '#define RP1_GPCLK_ROUTE_CANDIDATE_ARCH "aarch64"',
     '#define RP1_GPCLK_ROUTE_CANDIDATE_VERSION "1.1.2"',
-    "v1.1.2-pi5-gpio4-6.18.34-qualification-candidate",
-    "v1.1.2-gpio20-evidence-required",
+    "v1.1.2-pi5-gpio4-6.18.34-development-candidate",
+    "v1.1.2-pi5-gpio20-6.18.34-development-candidate",
 ):
     assert token in version + compat
 
 gpio4_case = implementation[implementation.index("case RP1_GPCLK_ROUTE_GPIO4:"):]
 assert gpio4_case.index("return true;") < gpio4_case.index("case RP1_GPCLK_ROUTE_GPIO20:")
 gpio20_case = gpio4_case[gpio4_case.index("case RP1_GPCLK_ROUTE_GPIO20:"):]
-assert gpio20_case.index("return false;") < gpio20_case.index("default:")
+assert gpio20_case.index("return true;") < gpio20_case.index("default:")
 assert 'strcmp(module_version, RP1_GPCLK_ROUTE_CANDIDATE_VERSION)' in implementation
 assert "pi5_model_b || !resources_validated" in implementation
 
@@ -51,4 +51,4 @@ for operation in ('"query"', '"preflight"', '"apply-and-reboot"', '"rollback"', 
     assert operation in route_manager
 assert "submit" not in route_manager.lower()
 
-print("GPIO4 qualification-candidate boundary: PASS (GPIO20 unavailable)")
+print("Independent GPIO4/GPIO20 development boundary: PASS")

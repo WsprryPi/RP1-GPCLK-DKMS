@@ -26,6 +26,8 @@ required_source = (
     "platform_driver_register(&rp1_gpclk_driver)",
     "platform_driver_unregister(&rp1_gpclk_driver)",
     "for_each_matching_node(node, rp1_gpclk_of_match)",
+    "rp1_gpclk_validate_endpoint_topology",
+    "pre-registration topology rejected",
     "of_device_is_available(node)",
     "of_find_device_by_node(node)",
     "rp1_gpclk_find_instantiated_ancestor(node)",
@@ -62,6 +64,7 @@ for prohibited in (
 init = MAIN[MAIN.index("static int __init rp1_gpclk_init") :]
 init = init[: init.index("static void __exit rp1_gpclk_exit")]
 init_order = [
+    init.index("rp1_gpclk_validate_endpoint_topology"),
     init.index("bus_register_notifier"),
     init.index("platform_driver_register"),
     init.index("rp1_gpclk_bootstrap_endpoint"),
@@ -96,6 +99,11 @@ for overlay, route, pin in zip(OVERLAYS, (1, 2), (4, 20), strict=True):
     assert f"wsprrypi,pin = <{pin}>" in overlay
     assert 'clock-names = "gpclk"' in overlay
     assert 'dma-names = "tx"' in overlay
+
+assert "rp1-gpclk-dkms-gpio4" in OVERLAYS[0]
+assert "rp1-gpclk-dkms-gpio20" not in OVERLAYS[0]
+assert "rp1-gpclk-dkms-gpio20" in OVERLAYS[1]
+assert "rp1-gpclk-dkms-gpio4" not in OVERLAYS[1]
 
 for phrase in (
     "exactly one matching node",

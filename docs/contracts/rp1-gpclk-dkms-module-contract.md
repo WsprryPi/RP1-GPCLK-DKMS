@@ -101,10 +101,15 @@ parameter, combined overlay, or automatic route substitution.
 
 ## Endpoint discovery and platform-device ownership
 
-Each route overlay owns one enabled endpoint node beneath the existing `rp1`
+Each route overlay owns one route-specific enabled endpoint node beneath the existing `rp1`
 bus. The node carries the canonical compatible, route, pin, clock, DMA,
 register, and pinctrl identities. Keeping that ancestry is mandatory: resource
 translation continues through the stock RP1 device-tree ranges and providers.
+GPIO4 and GPIO20 use distinct node names. Consequently, applying both overlays
+produces two matching nodes and module initialization rejects the ambiguous
+topology before publishing an endpoint. With neither overlay there are zero
+matching nodes and no endpoint; with exactly one overlay there is exactly one
+candidate node. Overlay order can never silently select a last-applied route.
 
 The module owns bounded discovery of that endpoint. Initialization requires
 exactly one matching node and rejects zero, duplicate, disabled, malformed,
@@ -211,12 +216,13 @@ A successful module build establishes build compatibility only. It does not
 qualify loading, binding, GPIO output, timing, cleanup, coexistence,
 transmission, RF behavior, or a different system.
 
-Version 1.1.2 contains one exact GPIO4 qualification-candidate entry for the
-Raspberry Pi 5 Model B / BCM2712 / aarch64 / 6.18.34+rpt-rpi-2712 target class.
-That entry permits only entry into a separately authorized bounded attempt and
-is reported as `Experimental`; it is not completed qualification or product
-live eligibility. GPIO20 remains unavailable. Hostname is retained in target
-evidence and is not a kernel compatibility input.
+The dual-route functional-development branch contains independent GPIO4 and
+GPIO20 development-candidate entries for the Raspberry Pi 5 Model B / BCM2712
+/ aarch64 / 6.18.34+rpt-rpi-2712 target class. The unique active device-tree
+route selects which entry can pass; the other route is absent. These entries
+permit development testing only and are reported as `Experimental`; they are
+not completed qualification or product live eligibility. Hostname is retained
+in target evidence and is not a kernel compatibility input.
 
 ## Packaging and administration
 

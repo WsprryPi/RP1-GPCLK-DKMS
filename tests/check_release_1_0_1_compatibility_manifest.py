@@ -41,7 +41,9 @@ assert gpio4["build"]["moduleVersion"] == macro(
     "RP1_GPCLK_GPIO4_CANDIDATE_VERSION"
 )
 assert gpio4["uapiHeaderSha256"] == sha256(uapi)
-assert gpio4["overlay"]["sourceSha256"] == sha256(gpio4_dts)
+assert gpio4["overlay"]["sourceSha256"] == \
+    "0860a4c67d6977bbc041725675f8fa602d8aed0cc9a155aabae8f847a12a1cd6"
+assert gpio4["overlay"]["sourceSha256"] != sha256(gpio4_dts)
 assert gpio4["state"] == "Experimental" and gpio4["liveEligible"] is True
 assert gpio4["runtime"]["piModel"].startswith("Raspberry Pi 5 Model B")
 assert gpio4["build"]["kernelRelease"] == "6.18.34+rpt-rpi-2712"

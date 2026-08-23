@@ -30,13 +30,13 @@ route, host, or physical installation. See the
 [1.0.0 release notes](docs/releases/1.0.0-behavior.md) for the precise claim.
 
 Version 1.0.1 remains an unreleased historical corrective candidate. Version
-1.1.2 is the current hardware-free qualification-enablement candidate. It
-preserves ABI v2 and makes only the exact GPIO4 target class eligible to enter
-a separately authorized bounded live attempt; GPIO20 remains unavailable.
+1.1.2 is the current interim development identity. The dual-route development
+branch preserves ABI v2 and permits the exact, uniquely selected GPIO4 or
+GPIO20 target class to enter separately authorized functional testing.
 Source/DKMS/module version `1.1.2`, Debian version `1.1.2-1`, and eventual tag
 `v1.1.2` are one release identity. See the
-[planned 1.1.2 behavior](docs/releases/1.1.2-behavior.md). Candidate eligibility
-is `Experimental`, not completed live or RF qualification.
+[planned 1.1.2 behavior](docs/releases/1.1.2-behavior.md). Development
+eligibility is `Experimental`, not completed live or RF qualification.
 
 ## Safety
 

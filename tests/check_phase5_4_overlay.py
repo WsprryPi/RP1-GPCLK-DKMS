@@ -32,13 +32,15 @@ if not dtc:
     raise SystemExit("dtc is required for Phase 5.4 deterministic overlay validation")
 shared = contract["sharedIdentity"]
 compiled = {}
+endpoint_names = set()
 with tempfile.TemporaryDirectory() as temporary:
     out = pathlib.Path(temporary)
     for route, identity in contract["routes"].items():
         source = ROOT / identity["source"]
         text = source.read_text()
+        endpoint_names.add(identity["endpointName"])
         other = "gpio20" if route == "gpio4" else "gpio4"
-        required = (f'{shared["endpointLabel"]}: {shared["endpointName"]}',
+        required = (f'{identity["endpointLabel"]}: {identity["endpointName"]}',
                     f'compatible = "{shared["compatible"]}"',
                     f'wsprrypi,route = <{identity["routeId"]}>',
                     f'wsprrypi,pin = <{identity["pin"]}>',
@@ -57,7 +59,7 @@ with tempfile.TemporaryDirectory() as temporary:
         assert first.read_bytes() == second.read_bytes()
         decompiled = subprocess.check_output([dtc, "-I", "dtb", "-O", "dts", str(first)],
                                              text=True, stderr=subprocess.DEVNULL)
-        for token in (shared["compatible"], shared["endpointName"], "tick-dma0",
+        for token in (shared["compatible"], identity["endpointName"], "tick-dma0",
                       "dma-tick0", "gpclk", "default", "active", "safe", route):
             assert token in decompiled
         numeric = {"gpio4": ("0x01", "0x04"), "gpio20": ("0x02", "0x14")}[route]
@@ -72,12 +74,16 @@ with tempfile.TemporaryDirectory() as temporary:
                 "dmas = <0xffffffff 0x30>" in decompiled)
         assert ("clocks = <&rp1_clocks>, <0x21>" in decompiled or
                 "clocks = <0xffffffff 0x21>" in decompiled)
-        for token in ("rp1_dma =", "rp1-gpclk-dkms:dmas:0",
-                      "rp1_clocks =", "rp1-gpclk-dkms:clocks:0"):
+        for token in ("rp1_dma =", f'{identity["endpointName"]}:dmas:0',
+                      "rp1_clocks =", f'{identity["endpointName"]}:clocks:0'):
             assert token in decompiled
         compiled[route] = (hashlib.sha256(source.read_bytes()).hexdigest(),
                            hashlib.sha256(first.read_bytes()).hexdigest())
 assert compiled["gpio4"] != compiled["gpio20"]
+assert endpoint_names == {"rp1-gpclk-dkms-gpio4", "rp1-gpclk-dkms-gpio20"}
+combined = "\n".join((ROOT / contract["routes"][route]["source"]).read_text()
+                     for route in ("gpio4", "gpio20"))
+assert combined.count('compatible = "wsprrypi,rp1-gpclk-dkms-v1"') == 2
 
 snapshot = {field: False for field in ("moduleLoaded", "endpointBound", "endpointOpen",
             "ownerPresent", "generationActive", "callbackPending", "dmaActive",
