@@ -13,6 +13,9 @@ assert 'request.capabilities = RP1_GPCLK_V2_CAPABILITIES' in d
 assert e.count('complete_all(&device->dma_done);') >= 2
 assert 'if (atomic_read(&device->stop_requested)) {' in e
 assert 'dmaengine_terminate_sync(device->dma_chan);' in e
+cancel = e[e.index("if (atomic_read(&device->stop_requested)) {"):]
+cancel = cancel[:cancel.index("return -ECANCELED;")]
+assert cancel.index("dmaengine_terminate_sync") < cancel.index("rp1_gpclk_tick_stop")
 finish=e.index('cleanup_ret = rp1_gpclk_execution_machine_finish')
 assert finish < e.index('rp1_gpclk_core_progress', finish)
 assert 'request->duration_ns != 0' in c

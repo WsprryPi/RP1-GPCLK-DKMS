@@ -140,6 +140,12 @@ static int rp1_gpclk_wait_dma(struct rp1_gpclk_device *device,
 	rp1_gpclk_tick_start(device);
 	completed = wait_for_completion_timeout(&device->dma_done,
 		rp1_gpclk_timeout_jiffies(duration_ns));
+	if (atomic_read(&device->stop_requested)) {
+		dmaengine_terminate_sync(device->dma_chan);
+		device->dma_submitted = false;
+		rp1_gpclk_tick_stop(device);
+		return -ECANCELED;
+	}
 	rp1_gpclk_tick_stop(device);
 	if (!completed) {
 		dmaengine_terminate_sync(device->dma_chan);
