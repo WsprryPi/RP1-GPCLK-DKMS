@@ -468,7 +468,7 @@ def enroll(manifest_path: pathlib.Path, route: str, kernel: str, remove: bool = 
               "installedModule": module, "kernel": kernel, "route": route,
               "uapiIdentity": manifest.get("uapiIdentity"), "overlayIdentity": manifest.get("overlayIdentity"),
               "compatibilityIdentity": manifest.get("compatibilityIdentity"), "removalCommand": f"sudo ./scripts/development-enroll --remove --manifest {manifest_path} --route {route} --kernel {kernel}"}
-    atomic_write(path, canonical(record), 0o600)
+    atomic_write(path, canonical(record), 0o644)
     return {"status": "enrolled", "path": str(path), "record": record}
 
 
