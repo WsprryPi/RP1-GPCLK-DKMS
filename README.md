@@ -117,6 +117,11 @@ make check
 make package-check
 ```
 
+For a maintainer-facing build/install/load workflow from an exact unreleased
+Git commit, see [Exact-source development lifecycle](docs/operator/source-development.md).
+That path is package-independent and remains explicitly Experimental; it does
+not create release or qualification identity.
+
 The maintained test inventory and the distinction between automatic,
 parameterized build, and explicitly authorized hardware checks are documented
 in [Testing](docs/testing.md).

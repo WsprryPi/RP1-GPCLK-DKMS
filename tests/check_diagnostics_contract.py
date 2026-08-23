@@ -61,6 +61,13 @@ with tempfile.TemporaryDirectory() as temporary:
     assert module.CAPS[8]=="tone-continuous" and module.CAPS[9]=="tone-finite"
     assert set(report) >= set(contract["requiredSections"])
 
+    development=root/"development.json"
+    write(root,"/development.json",{"schema":"rp1-gpclk-source-development-manifest-v1","classification":"source-development","qualification":False,"moduleName":module.MODULE,"sourceCommit":"a"*40,"renderedVersion":"1.1.2","targetKernel":kernel,"route":"gpio4"})
+    development_report=module.Collector(root,runner,kernel,"aarch64").collect(None,development)
+    assert development_report["development"]["status"]=="ok"
+    assert development_report["summary"]["compatibilityState"]=="Experimental"
+    assert development_report["development"]["releaseQualified"] is False
+
     gpio20=root/"sys/firmware/devicetree/base/axi/rp1/rp1-gpclk-dkms-gpio20"; gpio20.mkdir(parents=True)
     write(root,"/sys/firmware/devicetree/base/axi/rp1/rp1-gpclk-dkms-gpio20/status","okay\0")
     (gpio20/"wsprrypi,route").write_bytes((2).to_bytes(4,"big"))
