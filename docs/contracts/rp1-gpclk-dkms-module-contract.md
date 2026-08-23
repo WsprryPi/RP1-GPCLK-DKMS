@@ -203,6 +203,9 @@ acquire.
 
 Process death, interruption, timeout, unbind, and cleanup failure must converge
 to a safe terminal state or an explicit fault that prevents further use.
+STOP and close cancellation do not synthesize DMA completion or force-abort an
+active RP1 paced descriptor. They reject every successor and allow only the
+current kernel-bounded descriptor to drain before cleanup.
 
 On the validated Pi 5 firmware baseline, TICK_DMA0 may be enabled and running
 at 50 reference cycles while the downstream DMA_TICK0 handshake is disabled.

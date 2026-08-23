@@ -10,12 +10,14 @@ for token in ('RP1_GPCLK_IOC_QUERY_V2','RP1_GPCLK_IOC_SUBMIT_TONE_V2','RP1_GPCLK
     assert token in u
 assert 'request.capabilities = RP1_GPCLK_V1_CAPABILITIES' in d
 assert 'request.capabilities = RP1_GPCLK_V2_CAPABILITIES' in d
-assert e.count('complete_all(&device->dma_done);') >= 2
+assert 'complete_all(&device->dma_done);' not in e
 assert 'if (atomic_read(&device->stop_requested)) {' in e
 assert 'dmaengine_terminate_sync(device->dma_chan);' in e
 cancel = e[e.index("if (atomic_read(&device->stop_requested)) {"):]
 cancel = cancel[:cancel.index("return -ECANCELED;")]
 assert cancel.index("dmaengine_terminate_sync") < cancel.index("rp1_gpclk_tick_stop")
+stop_source = e[e.index("int rp1_gpclk_execution_stop"):]
+assert "complete_all(&device->dma_done)" not in stop_source
 finish=e.index('cleanup_ret = rp1_gpclk_execution_machine_finish')
 assert finish < e.index('rp1_gpclk_core_progress', finish)
 assert 'request->duration_ns != 0' in c

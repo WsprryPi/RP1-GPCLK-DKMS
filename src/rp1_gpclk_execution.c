@@ -903,7 +903,6 @@ int rp1_gpclk_execution_stop(struct rp1_gpclk_device *device, __u64 owner,
 		return result;
 	device->stop_reason = reason;
 	atomic_set(&device->stop_requested, 1);
-	complete_all(&device->dma_done);
 	if (READ_ONCE(device->worker))
 		wake_up_process(device->worker);
 	return RP1_GPCLK_CORE_OK;
@@ -935,7 +934,6 @@ void rp1_gpclk_execution_request_stop(struct rp1_gpclk_device *device,
 {
 	device->stop_reason = reason;
 	atomic_set(&device->stop_requested, 1);
-	complete_all(&device->dma_done);
 	if (READ_ONCE(device->worker))
 		wake_up_process(device->worker);
 }
