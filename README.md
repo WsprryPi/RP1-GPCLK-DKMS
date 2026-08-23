@@ -143,6 +143,11 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md), the
 [roadmap](docs/roadmap.md) before contributing. See [LICENSE.md](LICENSE.md)
 for licensing terms.
 
+The external Harness evidence boundary and the next consumer-integration step
+are defined by the
+[Qualification Harness integration contract](docs/contracts/qualification-harness-integration.md)
+and [Roadmap Step 4 WsprryPi handoff](docs/contracts/roadmap-step4-wsprrypi-handoff.md).
+
 ## Project boundary
 
 - This repository owns the kernel module, canonical UAPI, overlays, DKMS

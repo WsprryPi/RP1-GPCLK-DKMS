@@ -30,9 +30,14 @@ with tempfile.TemporaryDirectory() as temporary:
     write(root,"/proc/device-tree/model","Raspberry Pi 5 Model B")
     write(root,"/sys/module/rp1_gpclk_dkms/parameters/live_output","0")
     write(root,"/var/lib/rp1-gpclk-dkms/transaction.json",{"status":"complete","ownedFiles":[],"ownedDirectories":[]})
-    query={"status":"ok","abiMin":1,"abiMax":1,"route":"GPIO4","compatibilityState":"Compatible-unqualified",
-           "compatibilityReason":"identity-unknown","compatibilityId":"entry","capabilities":["route-identity"],"cleanupFault":False}
+    query={"status":"ok","queryVersion":2,"abiMin":1,"abiMax":2,"route":"GPIO4","compatibilityState":"Compatible-unqualified",
+           "compatibilityReason":"identity-unknown","compatibilityId":"entry","capabilities":["route-identity","tone-finite"],"cleanupFault":False}
     write(root,"/run/rp1-gpclk-dkms/query-fixture.json",query)
+    endpoint=root/"sys/firmware/devicetree/base/axi/rp1/rp1-gpclk-dkms-gpio4"; endpoint.mkdir(parents=True)
+    write(root,"/sys/firmware/devicetree/base/axi/rp1/rp1-gpclk-dkms-gpio4/status","okay\0")
+    (endpoint/"wsprrypi,route").write_bytes((1).to_bytes(4,"big"))
+    (endpoint/"compatible").write_bytes(b"wsprrypi,rp1-gpclk-dkms-v1\0")
+    (endpoint/"clocks").write_bytes(b"\0\0\0\x01\0\0\0\x21")
     release=root/"release"; release.mkdir()
     write(root,"/release/rp1-gpclk-compatibility-manifest.json",{"manifestId":"manifest","entries":[{"id":"entry","route":"GPIO4","state":"Compatible-unqualified","liveEligible":False,"reason":"build only"}]})
     write(root,"/release/release-metadata.json",{"release":module.VERSION})
@@ -47,7 +52,21 @@ with tempfile.TemporaryDirectory() as temporary:
     assert report["kernels"]["headers"][kernel]["present"] is True
     assert report["endpoint"]["present"] is False
     assert report["endpoint"]["bound"] is False
+    assert report["routeOverlay"]["topology"]=="exactly-one"
+    assert report["routeOverlay"]["moduleRouteMatchesActiveEndpoint"] is True
+    properties=report["routeOverlay"]["activeEndpointNodes"][0]["propertyIdentities"]
+    assert properties["compatible"]["status"]=="ok" and properties["compatible"]["sha256"]
+    assert properties["clocks"]["sizeBytes"]==8 and properties["dmas"]["status"]=="absent"
+    assert module.QUERY_V1_SIZE==304 and module.QUERY_V2_SIZE==320
+    assert module.CAPS[8]=="tone-continuous" and module.CAPS[9]=="tone-finite"
     assert set(report) >= set(contract["requiredSections"])
+
+    gpio20=root/"sys/firmware/devicetree/base/axi/rp1/rp1-gpclk-dkms-gpio20"; gpio20.mkdir(parents=True)
+    write(root,"/sys/firmware/devicetree/base/axi/rp1/rp1-gpclk-dkms-gpio20/status","okay\0")
+    (gpio20/"wsprrypi,route").write_bytes((2).to_bytes(4,"big"))
+    ambiguous=module.Collector(root,runner,kernel,"aarch64").collect(release)
+    assert ambiguous["routeOverlay"]["topology"]=="ambiguous"
+    assert ambiguous["routeOverlay"]["moduleRouteMatchesActiveEndpoint"] is False
 
     for state,category in (("Qualified","healthy-and-qualified"),("Experimental","healthy-but-experimental"),
                            ("Compatible-unqualified","build-compatible-but-live-disabled"),("Unavailable","unavailable"),("Rejected","rejected")):
@@ -75,7 +94,7 @@ with tempfile.TemporaryDirectory() as temporary:
 source=(ROOT/"scripts/rp1-gpclk-diagnostics.py").read_text()
 for prohibited in ("modprobe","dtoverlay","dkms add","dkms build","dkms install","/dev/mem","sign-file"):
     assert prohibited not in source
-for required in ("O_RDONLY","QUERY_IOCTL","permission-denied","journalctl","cleanupFaultLatch"):
+for required in ("O_RDONLY","QUERY_V2_IOCTL","QUERY_V1_IOCTL","permission-denied","journalctl","cleanupFaultLatch"):
     assert required in source
 operator=(ROOT/"docs/operator/diagnostics.md").read_text()
 assert "does not prove absence" in operator
