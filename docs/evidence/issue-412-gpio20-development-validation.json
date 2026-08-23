@@ -2,6 +2,7 @@
   "SPDX-License-Identifier": "MIT",
   "schemaVersion": 1,
   "evidenceClass": "gpio20-development-execution-and-cleanup",
+  "disposition": "superseded-for-exact-development-overlay-validation",
   "source": {
     "branch": "codex/issue-412-dual-route-functional-development",
     "commit": "5975b915770e7761bab2d877501fee41af039ced",
@@ -23,6 +24,13 @@
     "exactlyOneRoute": true,
     "physicalConnectionConfirmedByOperator": true,
     "attenuationConfirmedByOperator": true
+  },
+  "overlay": {
+    "sourcePackage": "rp1-gpclk-dkms 1.1.1-1",
+    "dtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "endpointName": "rp1-gpclk-dkms",
+    "exactDevelopmentOverlay": false,
+    "assessment": "Execution and cleanup results remain historical development evidence, but this run cannot validate the changed route-specific 1.1.2 overlay identity."
   },
   "transaction": {
     "id": "f91ce05d-5d37-4273-b912-fc5b2eb970dc",

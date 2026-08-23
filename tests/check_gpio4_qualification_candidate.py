@@ -10,6 +10,8 @@ implementation = (ROOT / "src/rp1_gpclk_compatibility.c").read_text()
 main = (ROOT / "src/rp1_gpclk_main.c").read_text()
 dispatch = (ROOT / "src/rp1_gpclk_uapi_dispatch.c").read_text()
 execution = (ROOT / "src/rp1_gpclk_execution.c").read_text()
+kernel_api = (ROOT / "src/rp1_gpclk_kernel_api.c").read_text()
+resource_header = (ROOT / "include/rp1_gpclk/resource_policy.h").read_text()
 rules = (ROOT / "debian/rules").read_text()
 route_manager = (ROOT / "scripts/rp1-gpclk-route-manager.py").read_text()
 
@@ -29,6 +31,12 @@ gpio20_case = gpio4_case[gpio4_case.index("case RP1_GPCLK_ROUTE_GPIO20:"):]
 assert gpio20_case.index("return true;") < gpio20_case.index("default:")
 assert 'strcmp(module_version, RP1_GPCLK_ROUTE_CANDIDATE_VERSION)' in implementation
 assert "pi5_model_b || !resources_validated" in implementation
+for token in (
+    'RP1_GPCLK_GPIO4_ENDPOINT_NAME "rp1-gpclk-dkms-gpio4"',
+    'RP1_GPCLK_GPIO20_ENDPOINT_NAME "rp1-gpclk-dkms-gpio20"',
+):
+    assert token in resource_header
+assert "rp1_gpclk_route_endpoint_validate(route," in kernel_api
 
 for token in (
     "static bool live_output;",

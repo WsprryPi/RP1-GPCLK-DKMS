@@ -135,7 +135,8 @@ operator installation.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md), the
 [module contract](docs/contracts/rp1-gpclk-dkms-module-contract.md), and
-[LICENSE.md](LICENSE.md) before contributing.
+[roadmap](docs/roadmap.md) before contributing. See [LICENSE.md](LICENSE.md)
+for licensing terms.
 
 ## Project boundary
 

@@ -37,6 +37,9 @@ int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 	if (ret || (route != RP1_GPCLK_ROUTE_GPIO4 &&
 		    route != RP1_GPCLK_ROUTE_GPIO20))
 		return -EINVAL;
+	if (rp1_gpclk_route_endpoint_validate(route,
+					     device->dev->of_node->name))
+		return -EINVAL;
 	ret = of_property_read_u32(device->dev->of_node, "wsprrypi,pin", &pin);
 	if (ret || rp1_gpclk_route_pin_validate(route, pin))
 		return -EINVAL;

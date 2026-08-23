@@ -273,6 +273,14 @@ authorization for their system effects. Output-disabled administration, live
 GPIO behavior, timing, transmission, and RF are separate evidence classes and
 must not be inferred from one another.
 
+For the 1.1.2 dual-route development identity, live compatibility also requires
+the route-specific endpoint node name emitted by the corresponding current
+overlay: `rp1-gpclk-dkms-gpio4` for route 1 or
+`rp1-gpclk-dkms-gpio20` for route 2. The predecessor shared
+`rp1-gpclk-dkms` endpoint name is rejected even when its remaining properties
+are otherwise valid. This prevents predecessor overlay bytes from satisfying
+the changed development candidate identity.
+
 ## Releases
 
 A release is tagged, checksummed, reproducible from source, and accompanied by

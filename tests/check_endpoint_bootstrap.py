@@ -104,6 +104,8 @@ assert "rp1-gpclk-dkms-gpio4" in OVERLAYS[0]
 assert "rp1-gpclk-dkms-gpio20" not in OVERLAYS[0]
 assert "rp1-gpclk-dkms-gpio20" in OVERLAYS[1]
 assert "rp1-gpclk-dkms-gpio4" not in OVERLAYS[1]
+assert "rp1_gpclk_route_endpoint_validate(route," in KERNEL_API
+assert "device->dev->of_node->name" in KERNEL_API
 
 for phrase in (
     "exactly one matching node",
