@@ -281,6 +281,12 @@ overlay: `rp1-gpclk-dkms-gpio4` for route 1 or
 are otherwise valid. This prevents predecessor overlay bytes from satisfying
 the changed development candidate identity.
 
+The repaired exact-overlay build reports candidate IDs ending in
+`development-candidate-r2`. The earlier development candidate IDs without the
+`-r2` suffix remain historical test identities and cannot satisfy the repaired
+client contract. Immutable module and overlay hashes remain mandatory evidence;
+the revision suffix is not a substitute for artifact hashing.
+
 ## Releases
 
 A release is tagged, checksummed, reproducible from source, and accompanied by

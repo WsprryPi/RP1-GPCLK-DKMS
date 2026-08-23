@@ -20,8 +20,8 @@ for token in (
     '#define RP1_GPCLK_ROUTE_CANDIDATE_KERNEL "6.18.34+rpt-rpi-2712"',
     '#define RP1_GPCLK_ROUTE_CANDIDATE_ARCH "aarch64"',
     '#define RP1_GPCLK_ROUTE_CANDIDATE_VERSION "1.1.2"',
-    "v1.1.2-pi5-gpio4-6.18.34-development-candidate",
-    "v1.1.2-pi5-gpio20-6.18.34-development-candidate",
+    "v1.1.2-pi5-gpio4-6.18.34-development-candidate-r2",
+    "v1.1.2-pi5-gpio20-6.18.34-development-candidate-r2",
 ):
     assert token in version + compat
 

@@ -13,9 +13,9 @@
 #define RP1_GPCLK_ROUTE_CANDIDATE_ARCH "aarch64"
 #define RP1_GPCLK_ROUTE_CANDIDATE_VERSION "1.1.2"
 #define RP1_GPCLK_GPIO4_DEVELOPMENT_CANDIDATE_ID \
-	"v1.1.2-pi5-gpio4-6.18.34-development-candidate"
+	"v1.1.2-pi5-gpio4-6.18.34-development-candidate-r2"
 #define RP1_GPCLK_GPIO20_DEVELOPMENT_CANDIDATE_ID \
-	"v1.1.2-pi5-gpio20-6.18.34-development-candidate"
+	"v1.1.2-pi5-gpio20-6.18.34-development-candidate-r2"
 
 bool rp1_gpclk_gpio4_candidate_allowed(__u32 route,
 				       const char *kernel_release,
