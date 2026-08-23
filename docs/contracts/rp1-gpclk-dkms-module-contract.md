@@ -230,10 +230,14 @@ transmission, RF behavior, or a different system.
 The dual-route functional-development branch contains independent GPIO4 and
 GPIO20 development-candidate entries for the Raspberry Pi 5 Model B / BCM2712
 / aarch64 / 6.18.34+rpt-rpi-2712 target class. The unique active device-tree
-route selects which entry can pass; the other route is absent. These entries
-permit development testing only and are reported as `Experimental`; they are
-not completed qualification or product live eligibility. Hostname is retained
-in target evidence and is not a kernel compatibility input.
+route selects which entry can pass; the other route is absent. Zero active
+route overlays provides no endpoint. Both overlays present is ambiguous and
+must fail closed; overlay order never selects a route. There is no fallback,
+substitution, or evidence transfer between GPIO4 and GPIO20. These entries
+permit bounded development testing only and are reported as `Experimental`;
+they are not completed qualification or normal product live eligibility.
+Hostname is retained in target evidence and is not a kernel compatibility
+input.
 
 ## Packaging and administration
 
@@ -287,12 +291,26 @@ The repaired exact-overlay build reports candidate IDs ending in
 client contract. Immutable module and overlay hashes remain mandatory evidence;
 the revision suffix is not a substitute for artifact hashing.
 
+GPIO4 r2 and GPIO20 r2 each have completed, independently bound target-functional
+development evidence for module execution and cleanup. Hardware-free validation
+and successful build, binding, or functional output are separate evidence
+classes. None establishes waveform or spectral integrity, timing or frequency
+accuracy, receiver capture or decode, WsprryPi product-path behavior, product
+eligibility, transmitter-system qualification, SDR qualification, RF
+qualification, packaging evidence, or release qualification.
+
 ## Releases
 
 A release is tagged, checksummed, reproducible from source, and accompanied by
 compatibility, provenance, licensing, and security metadata. The source
 version, tag, Debian version, DKMS version, module version, UAPI, package, and
 release metadata must agree according to the release policy.
+
+Version 1.1.2 remains an unreleased functional-development identity. Its
+current UAPI, source, overlays, compatibility entries, package naming,
+inventories, and hashes are development inputs, not frozen final consumer or
+release identities. Packaging and immutable artifact freezing require a later
+roadmap gate and separate review.
 
 WsprryPi consumes only an explicitly compatible tagged release. Module and
 application commits, reviews, releases, and qualification claims remain

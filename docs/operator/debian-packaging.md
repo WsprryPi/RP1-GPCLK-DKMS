@@ -2,9 +2,11 @@
 
 # Debian DKMS packaging
 
-Version 1.1.2 uses the standard Debian DKMS lifecycle. Build the package with
-`dpkg-buildpackage`; install, upgrade, or remove it with ordinary Debian package
-tools. `dh-dkms` provides the DKMS maintainer-script integration.
+The planned Version 1.1.2 package uses the standard Debian DKMS lifecycle.
+After the later package-freeze gate, build it with `dpkg-buildpackage`; install,
+upgrade, or remove a reviewed artifact with ordinary Debian package tools.
+`dh-dkms` provides the DKMS maintainer-script integration. No 1.1.2 package or
+final package identity is frozen by the current functional-development state.
 
 The product package owns:
 
@@ -77,7 +79,8 @@ are not WsprryPi runtime dependencies.
 
 ## Install
 
-Install the downloaded package with APT so dependencies are resolved:
+After a reviewed 1.1.2 package is produced in the later packaging roadmap step,
+install that downloaded artifact with APT so dependencies are resolved:
 
 ```sh
 sudo apt install ./rp1-gpclk-dkms_1.1.2-1_all.deb
@@ -117,9 +120,12 @@ From a tagged source checkout:
 dpkg-buildpackage -us -uc -b
 ```
 
-For source version `1.1.2`, the binary package version is `1.1.2-1` and the
-expected artifact name is `rp1-gpclk-dkms_1.1.2-1_all.deb`. The eventual
-release tag is `v1.1.2`; do not build a release artifact from a moving branch.
+For the intended source version `1.1.2`, the coordinated binary package label
+is `1.1.2-1`, the intended artifact name is
+`rp1-gpclk-dkms_1.1.2-1_all.deb`, and the eventual release tag is `v1.1.2`.
+These names do not freeze source, UAPI, overlay, compatibility, inventory,
+hash, artifact, or consumer identities. Do not build a release artifact from a
+moving branch.
 
 The resulting package is a new artifact. Building it successfully establishes
 only build compatibility and does not inherit qualification from the published
@@ -142,6 +148,12 @@ inventory and all sidecar/archive hashes, verifies source/version/UAPI/overlay
 identity, and requires GPIO4 and GPIO20 to remain unavailable and non-live.
 `validate_release.py` remains intentionally scoped to the separately generated
 published-release archive layout; the two validators are not interchangeable.
+
+This preliminary builder/validator pair predates the independent GPIO4 and
+GPIO20 r2 functional-development entries. It does not describe or package the
+current dual-route development state and must not be used to freeze a 1.1.2
+artifact. Reconciling that packaging implementation and its generated
+compatibility metadata is deferred to the later packaging roadmap step.
 
 The product package remains byte-identical when only qualification-side executor
 and plan files change. Those external files are not installed by the Debian
