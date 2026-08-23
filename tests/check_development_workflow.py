@@ -113,6 +113,7 @@ case "$2" in live_output=1) echo Y;; *) echo N;; esac >"$RP1_GPCLK_DEVELOPMENT_R
         assert replaced.returncode==0,replaced.stderr
         assert (replacement/"dkms-remove.log").is_file() and (replacement/"module-unload-for-replace.log").is_file()
         manifest=replacement/"rendered-source/DEVELOPMENT_MANIFEST.json"
+        assert (replacement.stat().st_mode & 0o777)==0o755
         status=command(str(source/"scripts/development-status"),"--manifest",str(manifest),"--json",env=environment)
         assert status.returncode==0 and json.loads(status.stdout)["developmentState"]=="development-loaded"
         unloaded=command(str(source/"scripts/development-module"),"unload","--manifest",str(manifest),env=environment)

@@ -310,7 +310,7 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
     source = pathlib.Path(args.source).resolve()
     evidence = pathlib.Path(args.evidence_directory).absolute()
     if evidence.exists(): raise Failure(f"evidence directory already exists: {evidence}")
-    evidence.mkdir(parents=True, mode=0o700)
+    evidence.mkdir(parents=True, mode=0o755)
     rendered = evidence / "rendered-source"
     manifest_path = render(source, rendered, args.module_version, args.allow_dirty)
     rollback_path = evidence / "ROLLBACK.json"
@@ -454,12 +454,13 @@ def enroll(manifest_path: pathlib.Path, route: str, kernel: str, remove: bool = 
     require_root(); manifest = load_manifest(manifest_path)
     if manifest.get("targetKernel") != kernel or manifest.get("route") != route:
         raise Failure("development enrollment kernel or route differs from manifest")
-    module = resolve_module(kernel, manifest["renderedVersion"])
-    print_mutation_identity(kernel, module["installedPath"])
     path = enrollment_path(manifest)
     if remove:
+        print_mutation_identity(kernel)
         if path.is_file(): path.unlink()
         return {"status": "removed", "path": str(path)}
+    module = resolve_module(kernel, manifest["renderedVersion"])
+    print_mutation_identity(kernel, module["installedPath"])
     record = {"schema": ENROLLMENT_SCHEMA, "classification": "Experimental", "qualification": False,
               "sourceCommit": manifest["sourceCommit"], "sourceManifestSha256": sha256(manifest_path),
               "developmentIdentitySha256":development_identity(manifest),
