@@ -1,0 +1,84 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "evidenceClass": "gpio20-r2-exact-overlay-development-execution-and-cleanup",
+  "source": {
+    "branch": "codex/issue-412-dual-route-functional-development",
+    "commit": "4c0ae1f6f6168ded724670bbde146cab30aee3f6",
+    "sourceArchiveSha256": "371e040e2518bc9004ad4f27cfbfd15eaaf3d50598b4052a67db1fc77f8bffbd"
+  },
+  "target": {
+    "hostname": "wspr5",
+    "model": "Raspberry Pi 5 Model B Rev 1.0",
+    "architecture": "aarch64",
+    "kernel": "6.18.34+rpt-rpi-2712",
+    "exactOverlayBootId": "1bda44a6-21b3-41da-bb9f-8e6597a90f8e",
+    "finalRestoredBootId": "d19606b0-ca5b-4aca-98ce-16420bbf8dd7"
+  },
+  "artifacts": {
+    "moduleSha256": "ae8ecdd688ef1d7606513e0c9047e5909a4f6ca9352bc637118a6db90400bb08",
+    "gpio20DtboSha256": "f8b08e3d8ccd72028d903eef6084a6b3fc1fc96d6ba26339cb63e30b29d23969",
+    "liveClientSha256": "7e7ff0d845854a904d84754d8f3d8ba41368bb11c4399230031db708fdbe183e",
+    "toneClientSha256": "ee48761965c5330aae317045f974e29a88c585da9072fccaaaa6bc20a2a68370",
+    "nativeBuildLogSha256": "b871ae6ba9156f147ac1500b9ffe8eff30e5e3cf9eaede22a9de83d5db67ed35"
+  },
+  "overlayIdentity": {
+    "route": "gpio20",
+    "routeId": 2,
+    "endpointName": "rp1-gpclk-dkms-gpio20",
+    "exactlyOneMatchingNode": true,
+    "gpio4NodeAbsent": true,
+    "predecessorDtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "predecessorEndpointName": "rp1-gpclk-dkms",
+    "predecessorRejected": true,
+    "predecessorRejection": "DT validation -EINVAL; probe -22; endpoint bootstrap action -4",
+    "predecessorRejectionLogSha256": "7b3db9f0e88d618ad0569f42ff1f12848d4a605b8d5da86cafb8c368c7016cb9"
+  },
+  "compatibility": {
+    "moduleVersion": "1.1.2",
+    "state": "Experimental",
+    "candidateId": "v1.1.2-pi5-gpio20-6.18.34-development-candidate-r2",
+    "capabilitiesHex": "0xff",
+    "liveOutputExplicitlyEnabledForCampaign": true
+  },
+  "results": {
+    "qrss": { "events": 1, "elapsedNs": 1000000000, "cleanupFault": 0, "terminalReason": "complete" },
+    "fskcw": { "events": 6, "elapsedNs": 6000000000, "cleanupFault": 0, "terminalReason": "complete" },
+    "dfcw": { "events": 8, "elapsedNs": 6000000000, "cleanupFault": 0, "terminalReason": "complete" },
+    "boundedCancellation": { "completedEvents": 1, "cleanupFault": 0, "terminalReason": "stopped" },
+    "abiV2FiniteTone": { "elapsedNs": 1000000000, "cleanupFault": 0, "terminalReason": "complete" },
+    "abiV2ContinuousStop": { "stopAfterNs": 1000000000, "cleanupFault": 0, "terminalReason": "stopped" },
+    "wspr": { "symbols": 162, "elapsedNs": 110592000000, "cleanupFault": 0, "terminalReason": "complete" }
+  },
+  "rawEvidence": {
+    "campaignTranscriptSha256": "09841a9d4c3b072aa4bd7ee11ff563cace7f0cec733c1fe03f7058683c473a89",
+    "campaignKernelLogSha256": "c4c3a6014b235713a38c215f89b681e2806a51c401900acd1f88360fb345fa4c"
+  },
+  "finalState": {
+    "packageOverlayRestoredSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
+    "configuredRoute": "gpio20",
+    "activeRoute": "gpio20",
+    "liveOutput": false,
+    "endpointOpen": false,
+    "gpio4": "inactive",
+    "gpio20": "input",
+    "wsprrypiService": "active",
+    "soapyRemoteService": "inactive",
+    "routeManagerQuery": "ok",
+    "pendingTransaction": null
+  },
+  "notValidated": [
+    "receiver capture",
+    "WSPR decode",
+    "QRSS decode",
+    "FSKCW decode",
+    "DFCW decode",
+    "timing accuracy",
+    "frequency accuracy",
+    "spectral behavior",
+    "SDR behavior",
+    "transmitter-system behavior",
+    "RF qualification",
+    "product live eligibility"
+  ]
+}
