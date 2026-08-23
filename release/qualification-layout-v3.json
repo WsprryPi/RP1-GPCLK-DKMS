@@ -1,6 +1,6 @@
 {
   "SPDX-License-Identifier": "MIT",
-  "expectedTag": "v1.1.1",
+  "expectedTag": "v1.1.2",
   "generatedMembers": [
     "COMPATIBILITY.json",
     "PRODUCT-INVENTORY.json",
@@ -8,7 +8,7 @@
     "TARGET-VERIFICATION.json"
   ],
   "package": "rp1-gpclk-dkms-qualification",
-  "release": "1.1.1",
+  "release": "1.1.2",
   "schemaVersion": 2,
   "sourceMembers": [
     "LICENSE.md",
@@ -16,8 +16,8 @@
     "LICENSES/Linux-syscall-note.txt",
     "LICENSES/MIT.txt",
     "docs/operator/debian-packaging.md",
-    "docs/releases/1.1.1-behavior.md",
-    "docs/releases/1.1.1-security.md",
+    "docs/releases/1.1.2-behavior.md",
+    "docs/releases/1.1.2-security.md",
     "release/qualification-layout-v2.json",
     "release/uapi-contract-freeze-v1.1.0.json",
     "schema/rp1-gpclk-compatibility-manifest-v1.schema.json",

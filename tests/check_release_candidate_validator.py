@@ -59,7 +59,9 @@ for token in (
     'candidate set differs', 'checksum coverage or ordering differs',
     'Debian member inventory differs', 'qualification content leaked',
     'source commit differs from expectation',
-    'candidate compatibility is not fully fail-closed',
+    'GPIO4 exact technical candidate identity differs',
+    'GPIO20 must remain unavailable',
+    'GPIO20 inherited a qualification-candidate identity',
     'qualification archive member inventory differs',
     'qualification sidecar byte mismatch',
 ):

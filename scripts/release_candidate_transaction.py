@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Exact 1.1.1 output-inhibited package and boot-route transaction executor."""
+"""Exact 1.1.2 output-inhibited package and boot-route transaction executor."""
 
 from __future__ import annotations
 
@@ -17,15 +17,15 @@ from typing import Callable
 
 PACKAGE = "rp1-gpclk-dkms"
 MODULE = "rp1_gpclk_dkms"
-VERSION = "1.1.1"
-DEBIAN_VERSION = "1.1.1-1"
+VERSION = "1.1.2"
+DEBIAN_VERSION = "1.1.2-1"
 HOST = "wspr5"
 ARCH = "aarch64"
 KERNEL = "6.18.34+rpt-rpi-2712"
 FIRMWARE = "69471177"
 BASE_DTB_SHA256 = "e67017e5d45b97af478ebc93d651a086f2adcb6a650fe453eb9f1cf47e66473f"
 KERNEL_CONFIG_SHA256 = "2a83d4324e9b47d418b4efac18d3af43d15cc956b71c5a8eb074060bf8383801"
-PACKAGE_SHA256 = "48d55aa9a906e83b36ed46560c81cd894024bc2d6bf375514b5e1618a43493af"
+PACKAGE_SHA256 = "507bd6894b7b60dbcb74b699f6d56b9df86450fb36b460f53b073c7d10514774"
 UAPI_SHA256 = "998ab96d7dbcc0d935c05758c46acba56bbcf92aa1b674b899bdab6932dc8384"
 GPIO4_DTBO_SHA256 = "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6"
 GPIO20_DTBO_SHA256 = "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"
@@ -118,7 +118,7 @@ def load_plan(path: Path) -> dict:
         raise ValueError("plan digest differs")
     value["planSha256"] = claimed
     fixed = {
-        "schemaVersion": 1, "kind": "rp1-gpclk-1.1.1-route-transaction",
+        "schemaVersion": 1, "kind": "rp1-gpclk-1.1.2-route-transaction",
         "host": HOST, "architecture": ARCH, "kernel": KERNEL,
         "firmware": FIRMWARE, "baseDtbSha256": BASE_DTB_SHA256,
         "kernelConfigSha256": KERNEL_CONFIG_SHA256,
@@ -585,7 +585,7 @@ def rollback(plan: dict, root: Path, journal: Path, execute: bool,
 def residue_audit(plan: dict, root: Path, service_journal: Path,
                   runner: Runner = run_command) -> dict:
     directory = rooted(root, JOURNAL_DIR)
-    expected_ids = {f"wspr5-1-1-1-{plan['sourceCommit'][:7]}-{operation}" for operation in (
+    expected_ids = {f"wspr5-1-1-2-{plan['sourceCommit'][:7]}-{operation}" for operation in (
         "service-policy", "deactivate-predecessor", "install-inactive",
         "select-gpio4", "select-gpio20", "restore-gpio4")}
     observed_ids = set()

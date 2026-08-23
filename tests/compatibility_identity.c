@@ -39,18 +39,27 @@ int main(void)
 		kernel, arch, NULL, true, true));
 
 	version = RP1_GPCLK_ROUTE_CANDIDATE_VERSION;
-	CHECK(!rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO4,
+	CHECK(rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO4,
 		RP1_GPCLK_ROUTE_CANDIDATE_KERNEL,
 		RP1_GPCLK_ROUTE_CANDIDATE_ARCH, version, true, true));
 	CHECK(!rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO20,
 		RP1_GPCLK_ROUTE_CANDIDATE_KERNEL,
 		RP1_GPCLK_ROUTE_CANDIDATE_ARCH, version, true, true));
 	CHECK(!strcmp(rp1_gpclk_route_candidate_id(RP1_GPCLK_ROUTE_GPIO4),
-		RP1_GPCLK_GPIO4_UNAVAILABLE_ID));
+		RP1_GPCLK_GPIO4_QUALIFICATION_CANDIDATE_ID));
 	CHECK(!strcmp(rp1_gpclk_route_candidate_id(RP1_GPCLK_ROUTE_GPIO20),
 		RP1_GPCLK_GPIO20_UNAVAILABLE_ID));
 	CHECK(strcmp(rp1_gpclk_route_candidate_id(RP1_GPCLK_ROUTE_GPIO4),
 		rp1_gpclk_route_candidate_id(RP1_GPCLK_ROUTE_GPIO20)));
-	puts("compatibility identity: PASS (GPIO4/GPIO20 independent and denied)");
+	CHECK(!rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO4,
+		RP1_GPCLK_ROUTE_CANDIDATE_KERNEL,
+		RP1_GPCLK_ROUTE_CANDIDATE_ARCH, "1.1.1", true, true));
+	CHECK(!rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO4,
+		RP1_GPCLK_ROUTE_CANDIDATE_KERNEL,
+		RP1_GPCLK_ROUTE_CANDIDATE_ARCH, version, false, true));
+	CHECK(!rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO4,
+		RP1_GPCLK_ROUTE_CANDIDATE_KERNEL,
+		RP1_GPCLK_ROUTE_CANDIDATE_ARCH, version, true, false));
+	puts("compatibility identity: PASS (GPIO4 candidate, GPIO20 unavailable)");
 	return 0;
 }

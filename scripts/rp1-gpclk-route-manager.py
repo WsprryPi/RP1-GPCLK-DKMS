@@ -7,7 +7,8 @@ from pathlib import Path, PurePosixPath
 from typing import Callable
 
 SCHEMA_VERSION=1; CONTRACT="rp1-gpclk-route-manager-v1"; PACKAGE="rp1-gpclk-dkms"
-VERSION="1.1.1"; DEBIAN_VERSION="1.1.1-1"; MODULE="rp1_gpclk_dkms"
+VERSION="1.1.2"; DEBIAN_VERSION="1.1.2-1"; MODULE="rp1_gpclk_dkms"
+PREDECESSOR_VERSION="1.1.1"; PREDECESSOR_DEBIAN_VERSION="1.1.1-1"
 CONFIG="/boot/firmware/config.txt"; BOOT_ID="/proc/sys/kernel/random/boot_id"
 JOURNAL_DIR="/var/lib/rp1-gpclk-dkms/route-transactions"
 UAPI=f"/usr/src/{PACKAGE}-{VERSION}/include/uapi/linux/rp1_gpclk.h"
@@ -81,8 +82,11 @@ def parse_config(payload:bytes)->str|None:
     if finish<start: raise ContractError("owned route marker order is malformed")
     block=text[start:finish]; block_routes=re.findall(r"^dtoverlay=rp1-gpclk-(gpio4|gpio20)$",block,re.M); lines=block.splitlines()
     current_line=f"# contract={CONTRACT} package={DEBIAN_VERSION} route={block_routes[0]}" if block_routes else ""
-    historical_line=f"# version={VERSION} route={block_routes[0]}" if block_routes else ""
-    if (len(block_routes)!=1 or all_routes!=block_routes or len(lines)!=4 or lines[0]!=BEGIN or lines[3]!=END or lines[1] not in {current_line,historical_line} or lines[2]!=f"dtoverlay=rp1-gpclk-{block_routes[0]}"): raise ContractError("owned route block is malformed or ambiguous")
+    historical_lines=({
+        f"# version={PREDECESSOR_VERSION} route={block_routes[0]}",
+        f"# contract={CONTRACT} package={PREDECESSOR_DEBIAN_VERSION} route={block_routes[0]}",
+    } if block_routes else set())
+    if (len(block_routes)!=1 or all_routes!=block_routes or len(lines)!=4 or lines[0]!=BEGIN or lines[3]!=END or lines[1] not in {current_line,*historical_lines} or lines[2]!=f"dtoverlay=rp1-gpclk-{block_routes[0]}"): raise ContractError("owned route block is malformed or ambiguous")
     return block_routes[0]
 
 def config_ownership(payload:bytes)->str:

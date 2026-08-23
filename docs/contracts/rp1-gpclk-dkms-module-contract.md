@@ -211,6 +211,13 @@ A successful module build establishes build compatibility only. It does not
 qualify loading, binding, GPIO output, timing, cleanup, coexistence,
 transmission, RF behavior, or a different system.
 
+Version 1.1.2 contains one exact GPIO4 qualification-candidate entry for the
+Raspberry Pi 5 Model B / BCM2712 / aarch64 / 6.18.34+rpt-rpi-2712 target class.
+That entry permits only entry into a separately authorized bounded attempt and
+is reported as `Experimental`; it is not completed qualification or product
+live eligibility. GPIO20 remains unavailable. Hostname is retained in target
+evidence and is not a kernel compatibility input.
+
 ## Packaging and administration
 
 The Debian package owns only its declared module source and inactive overlay

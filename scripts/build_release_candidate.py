@@ -18,12 +18,13 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
 LAYOUT = ROOT / "release/qualification-layout-v3.json"
-VERSION = "1.1.1"
-DEBIAN_VERSION = "1.1.1-1"
-TAG = "v1.1.1"
+VERSION = "1.1.2"
+DEBIAN_VERSION = "1.1.2-1"
+TAG = "v1.1.2"
 PACKAGE = "rp1-gpclk-dkms"
 QUALIFICATION = "rp1-gpclk-dkms-qualification"
-LAST_OUTPUT_INHIBITED_PACKAGE_SHA256 = "48d55aa9a906e83b36ed46560c81cd894024bc2d6bf375514b5e1618a43493af"
+RP1_GPCLK_GPIO4_KERNEL = "6.18.34+rpt-rpi-2712"
+PREDECESSOR_OUTPUT_INHIBITED_PACKAGE_SHA256 = "247bd7da35e4ad812a13828668fe03673da127bad7ed2b3e970876f3f21c002d"
 
 TRANSACTION_OPERATIONS = (
     "service-policy", "deactivate-predecessor", "install-inactive", "select-gpio4",
@@ -152,17 +153,17 @@ def validate_product(path: Path) -> tuple[dict, dict[str, bytes]]:
     ):
         raise ValueError("Debian control identity differs")
     required = {
-        "usr/src/rp1-gpclk-dkms-1.1.1/dkms.conf",
-        "usr/src/rp1-gpclk-dkms-1.1.1/Kbuild",
-        "usr/src/rp1-gpclk-dkms-1.1.1/Makefile",
-        "usr/src/rp1-gpclk-dkms-1.1.1/include/uapi/linux/rp1_gpclk.h",
-        "usr/src/rp1-gpclk-dkms-1.1.1/overlays/rp1-gpclk-gpio4.dts",
-        "usr/src/rp1-gpclk-dkms-1.1.1/overlays/rp1-gpclk-gpio20.dts",
+        "usr/src/rp1-gpclk-dkms-1.1.2/dkms.conf",
+        "usr/src/rp1-gpclk-dkms-1.1.2/Kbuild",
+        "usr/src/rp1-gpclk-dkms-1.1.2/Makefile",
+        "usr/src/rp1-gpclk-dkms-1.1.2/include/uapi/linux/rp1_gpclk.h",
+        "usr/src/rp1-gpclk-dkms-1.1.2/overlays/rp1-gpclk-gpio4.dts",
+        "usr/src/rp1-gpclk-dkms-1.1.2/overlays/rp1-gpclk-gpio20.dts",
         "usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo",
         "usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo",
         "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager",
         "usr/sbin/rp1-gpclk-route-manager",
-        "usr/share/rp1-gpclk-dkms/1.1.1/rp1-gpclk-route-manager-v1.schema.json",
+        "usr/share/rp1-gpclk-dkms/1.1.2/rp1-gpclk-route-manager-v1.schema.json",
         "usr/share/doc/rp1-gpclk-dkms/route-manager-v1.md",
         "usr/lib/systemd/system/rp1-gpclk-route-manager.socket",
         "usr/lib/systemd/system/rp1-gpclk-route-manager@.service",
@@ -170,16 +171,16 @@ def validate_product(path: Path) -> tuple[dict, dict[str, bytes]]:
     missing = required - set(data_files)
     if missing:
         raise ValueError(f"required product members absent: {sorted(missing)}")
-    allowed_roots = ("usr/src/rp1-gpclk-dkms-1.1.1/", "usr/lib/rp1-gpclk-dkms/",
+    allowed_roots = ("usr/src/rp1-gpclk-dkms-1.1.2/", "usr/lib/rp1-gpclk-dkms/",
                      "usr/libexec/rp1-gpclk-dkms/", "usr/lib/systemd/system/", "usr/sbin/",
-                     "usr/share/rp1-gpclk-dkms/1.1.1/", "usr/share/doc/rp1-gpclk-dkms/")
+                     "usr/share/rp1-gpclk-dkms/1.1.2/", "usr/share/doc/rp1-gpclk-dkms/")
     for name in data_files:
         if not name.startswith(allowed_roots):
             raise ValueError(f"unexpected product file root: {name}")
         if any(term in name.lower() for term in ("qualification", "evidence", "gate_d", "target-verification")):
             raise ValueError(f"qualification content in product: {name}")
-    dkms = data_files["usr/src/rp1-gpclk-dkms-1.1.1/dkms.conf"].decode()
-    if 'PACKAGE_VERSION="1.1.1"' not in dkms:
+    dkms = data_files["usr/src/rp1-gpclk-dkms-1.1.2/dkms.conf"].decode()
+    if 'PACKAGE_VERSION="1.1.2"' not in dkms:
         raise ValueError("installed DKMS version differs")
     if data_files["usr/sbin/rp1-gpclk-route-manager"] != data_files["usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager"]:
         raise ValueError("stable and libexec route-manager bytes differ")
@@ -203,21 +204,27 @@ def validate_product(path: Path) -> tuple[dict, dict[str, bytes]]:
 
 def compatibility(commit: str, epoch_iso: str, product_hash: str, data: dict[str, bytes]) -> dict:
     uapi_hash = sha256_bytes(
-        data["usr/src/rp1-gpclk-dkms-1.1.1/include/uapi/linux/rp1_gpclk.h"])
+        data["usr/src/rp1-gpclk-dkms-1.1.2/include/uapi/linux/rp1_gpclk.h"])
     entries = []
     for route, pin in (("GPIO4", 4), ("GPIO20", 20)):
         route_key = route.lower()
+        candidate = route == "GPIO4"
         entries.append({
-            "id": f"v1.1.1-{route_key}-evidence-required",
+            "id": ("v1.1.2-pi5-gpio4-6.18.34-qualification-candidate"
+                   if candidate else "v1.1.2-gpio20-evidence-required"),
             "route": route,
             "pin": pin,
-            "state": "Unavailable",
-            "liveEligible": False,
+            "state": "Experimental" if candidate else "Unavailable",
+            "liveEligible": candidate,
             "reason": (
-                "The exact 1.1.1-1 package has hardware-free build evidence only; "
-                f"{route} output-disabled lifecycle and route-specific live qualification are absent."
+                "Exact GPIO4 successor candidate for one separately authorized bounded "
+                "qualification attempt; predecessor output-inhibited route evidence does not "
+                "establish completed live, timing, spectral, transmitter, SDR, or RF qualification."
+                if candidate else
+                "GPIO20 has no route-specific live qualification-candidate evidence."
             ),
             "release": VERSION,
+            "moduleVersion": VERSION,
             "sourceCommit": commit,
             "packageSha256": product_hash,
             "uapiAbi": 2,
@@ -226,17 +233,39 @@ def compatibility(commit: str, epoch_iso: str, product_hash: str, data: dict[str
                 data[f"usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-{route_key}.dtbo"]),
             "supportedDriveMa": [2],
             "supportedModes": ["WSPR", "QRSS", "FSKCW", "DFCW", "TONE_CONTINUOUS", "TONE_FINITE"],
-            "missingEvidence": [
-                "installed-module-normalization-and-signing-identity",
-                "firmware-and-base-dtb-identity",
-                "live-device-tree-route-and-platform-binding",
-                "output-disabled-lifecycle-and-cleanup",
-                "route-specific-live-output-and-timing-qualification",
-            ],
+            "missingEvidence": ([
+                "exact-successor-target-installation-and-module-identity",
+                "externally-authorized-one-second-live-output-attempt",
+                "bounded-carrier-lifecycle-evidence",
+                "timing-frequency-spectral-transmitter-sdr-and-rf-qualification",
+            ] if candidate else [
+                "gpio20-qualification-candidate-enrollment",
+                "gpio20-route-specific-live-output-and-timing-qualification",
+            ]),
+            "qualificationCandidate": ({
+                "kernelRelease": RP1_GPCLK_GPIO4_KERNEL,
+                "architecture": "aarch64",
+                "modelCompatible": "raspberrypi,5-model-b",
+                "socClass": "BCM2712",
+                "routeId": 1,
+                "endpoint": "/dev/rp1-gpclk",
+                "clockProviderCompatible": "raspberrypi,rp1-clocks",
+                "clock": "RP1 GPCLK0",
+                "minimumDriveMa": 2,
+                "predecessorOutputInhibitedEvidence": {
+                    "packageSha256": PREDECESSOR_OUTPUT_INHIBITED_PACKAGE_SHA256,
+                    "archiveSha256": "af4bb75d7d747a6e9bab067c563fba4031db08c1ed1800c3cb4c8c4d2587561e",
+                    "manifestSha256": "0078e69f6886282ce4822bacf03b32056cd47dedf5f0cd3fc6357484c0379a29",
+                    "gpio4JournalSha256": "b5dc50842151f6719980ec5d7d06a0d12f514074215684929d5eb55dc71b361e",
+                    "gpio20JournalSha256": "212177a69d4f8d702fd5d0e6f9c25033adc1178b37814ac3996a7ea2310aa168",
+                    "restoredGpio4JournalSha256": "244b8604293b30912ec79a4b9fd4a4ad8b9caa899657c912542ef01b2dd49d9d",
+                    "claimCeiling": "output-inhibited-route-management-and-cleanup-only",
+                },
+            } if candidate else None),
         })
     return {
         "SPDX-License-Identifier": "MIT", "schemaVersion": 1,
-        "manifestId": f"rp1-gpclk-dkms-1.1.1-{commit}", "generatedAt": epoch_iso,
+        "manifestId": f"rp1-gpclk-dkms-1.1.2-{commit}", "generatedAt": epoch_iso,
         "module": {
             "name": "rp1_gpclk_dkms", "release": VERSION, "sourceCommit": commit,
             "sourceArchiveSha256": product_hash, "uapiAbi": 2,
@@ -248,9 +277,9 @@ def compatibility(commit: str, epoch_iso: str, product_hash: str, data: dict[str
 
 def target_plan(commit: str, product_hash: str, inventory_hash: str, identity_hash: str,
                 uapi_hash: str, gpio4_hash: str, gpio20_hash: str) -> dict:
-    release_set = "/home/pi/rp1-gpclk-v1.1.1-owned-service-executor-20260822/release-set"
-    staging = "/var/lib/rp1-gpclk-dkms/validation-1.1.1-service"
-    qualification_root = f"{staging}/rp1-gpclk-dkms-qualification-1.1.1"
+    release_set = "/home/pi/rp1-gpclk-v1.1.2-qualification-candidate/release-set"
+    staging = "/var/lib/rp1-gpclk-dkms/validation-1.1.2-service"
+    qualification_root = f"{staging}/rp1-gpclk-dkms-qualification-1.1.2"
     executor = f"{qualification_root}/scripts/release_candidate_transaction.py"
     inspector = f"{qualification_root}/scripts/inspect_rebooted_route.py"
     validator = f"{qualification_root}/scripts/validate_release_candidate.py"
@@ -258,7 +287,7 @@ def target_plan(commit: str, product_hash: str, inventory_hash: str, identity_ha
     def transaction(name: str) -> str:
         return f"{release_set}/TRANSACTION-PLAN-{name}.json"
     def journal(name: str) -> str:
-        return f"/var/lib/rp1-gpclk-dkms/route-transactions/wspr5-1-1-1-{commit[:7]}-{name}.json"
+        return f"/var/lib/rp1-gpclk-dkms/route-transactions/wspr5-1-1-2-{commit[:7]}-{name}.json"
     return {
         "SPDX-License-Identifier": "MIT", "schemaVersion": 1,
         "kind": "release-candidate-target-verification", "release": VERSION,
@@ -276,14 +305,14 @@ def target_plan(commit: str, product_hash: str, inventory_hash: str, identity_ha
         "steps": [
             {"id":"validated-transfer","argv":["/usr/bin/env",f"--chdir={release_set}","/usr/bin/sha256sum","--check","SHA256SUMS"],"mutating":False,"requiresAuthorization":False},
             {"id":"bootstrap-create","argv":["/usr/bin/sudo","-n","/usr/bin/mkdir","--mode=0700",staging],"mutating":True,"requiresAuthorization":True},
-            {"id":"bootstrap-extract-archive","argv":["/usr/bin/sudo","-n","/usr/bin/tar","--extract","--gzip","--file",f"{release_set}/rp1-gpclk-dkms-qualification-1.1.1.tar.gz","--directory",staging,"--no-same-owner","--no-same-permissions"],"mutating":True,"requiresAuthorization":True},
+            {"id":"bootstrap-extract-archive","argv":["/usr/bin/sudo","-n","/usr/bin/tar","--extract","--gzip","--file",f"{release_set}/rp1-gpclk-dkms-qualification-1.1.2.tar.gz","--directory",staging,"--no-same-owner","--no-same-permissions"],"mutating":True,"requiresAuthorization":True},
             {"id":"bootstrap-authenticate","argv":["/usr/bin/sudo","-n","/usr/bin/python3",validator,release_set,"--expect-source-commit",commit],"mutating":False,"requiresAuthorization":True},
             {"id":"bootstrap-controls","argv":["/usr/bin/sudo","-n","/usr/bin/python3",f"{qualification_root}/scripts/release_candidate_controls.py",qualification_root],"mutating":False,"requiresAuthorization":True},
             {"id":"read-only-preflight","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"preflight","--plan",transaction("deactivate-predecessor")],"mutating":False,"requiresAuthorization":False},
             {"id":"quiesce-services","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"quiesce-services","--plan",transaction("service-policy"),"--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True},
             {"id":"deactivate-predecessor-and-reboot","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"deactivate-and-reboot","--plan",transaction("deactivate-predecessor"),"--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":True},
             {"id":"reconcile-inactive-predecessor","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"reconcile","--plan",transaction("deactivate-predecessor"),"--journal",journal("deactivate-predecessor")],"mutating":False,"requiresAuthorization":True},
-            {"id":"install-inactive-package","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"install-inactive","--plan",transaction("install-inactive"),"--package",f"{release_set}/rp1-gpclk-dkms_1.1.1-1_all.deb","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":False},
+            {"id":"install-inactive-package","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"install-inactive","--plan",transaction("install-inactive"),"--package",f"{release_set}/rp1-gpclk-dkms_1.1.2-1_all.deb","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":False},
             {"id":"select-gpio4-and-reboot","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"apply-and-reboot","--plan",transaction("select-gpio4"),"--route","gpio4","--execute","--confirm-physical-topology"],"mutating":True,"requiresAuthorization":True,"rebootRequired":True},
             {"id":"reconcile-gpio4","argv":["/usr/bin/sudo","-n","/usr/bin/python3",executor,"reconcile","--plan",transaction("select-gpio4"),"--route","gpio4","--journal",journal("select-gpio4")],"mutating":False,"requiresAuthorization":True},
             {"id":"inspect-gpio4-output-disabled","argv":["/usr/bin/sudo","-n","/usr/bin/python3",inspector,"--route","gpio4","--evidence",f"{evidence}/gpio4-first.json"],"mutating":False,"requiresAuthorization":True},
@@ -303,19 +332,19 @@ def target_plan(commit: str, product_hash: str, inventory_hash: str, identity_ha
     }
 
 
-def transaction_plan(operation: str, commit: str, qualification_hash: str,
+def transaction_plan(operation: str, commit: str, package_hash: str, qualification_hash: str,
                      compatibility_hash: str, inventory_hash: str) -> dict:
     value = {
         "schemaVersion": 1,
-        "kind": "rp1-gpclk-1.1.1-route-transaction",
-        "operationId": f"wspr5-1-1-1-{commit[:7]}-{operation}",
+        "kind": "rp1-gpclk-1.1.2-route-transaction",
+        "operationId": f"wspr5-1-1-2-{commit[:7]}-{operation}",
         "host": "wspr5", "architecture": "aarch64",
         "kernel": "6.18.34+rpt-rpi-2712", "firmware": "69471177",
         "baseDtbSha256": "e67017e5d45b97af478ebc93d651a086f2adcb6a650fe453eb9f1cf47e66473f",
         "kernelConfigSha256": "2a83d4324e9b47d418b4efac18d3af43d15cc956b71c5a8eb074060bf8383801",
         "sourceCommit": commit,
-        "package": "rp1-gpclk-dkms_1.1.1-1_all.deb",
-        "packageSha256": "48d55aa9a906e83b36ed46560c81cd894024bc2d6bf375514b5e1618a43493af",
+        "package": "rp1-gpclk-dkms_1.1.2-1_all.deb",
+        "packageSha256": package_hash,
         "qualificationArchiveSha256": qualification_hash,
         "uapiSha256": "998ab96d7dbcc0d935c05758c46acba56bbcf92aa1b674b899bdab6932dc8384",
         "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
@@ -393,7 +422,7 @@ def main() -> None:
         output.mkdir(parents=True, mode=0o755)
     inventory, product_files = validate_product(product)
     product_hash = inventory["packageSha256"]
-    if product_hash != LAST_OUTPUT_INHIBITED_PACKAGE_SHA256:
+    if product_hash != PREDECESSOR_OUTPUT_INHIBITED_PACKAGE_SHA256:
         raise SystemExit(
             "qualification archive generation is blocked: the exact product package "
             "has no bound output-inhibited executor/evidence identity"
@@ -402,7 +431,7 @@ def main() -> None:
     layout = json.loads(LAYOUT.read_text())
     if layout["release"] != VERSION or layout["expectedTag"] != TAG:
         raise SystemExit("qualification layout release differs")
-    uapi_hash = sha256_bytes(product_files["usr/src/rp1-gpclk-dkms-1.1.1/include/uapi/linux/rp1_gpclk.h"])
+    uapi_hash = sha256_bytes(product_files["usr/src/rp1-gpclk-dkms-1.1.2/include/uapi/linux/rp1_gpclk.h"])
     gpio4_hash = sha256_bytes(product_files["usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo"])
     gpio20_hash = sha256_bytes(product_files["usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo"])
     identity = {
@@ -436,7 +465,7 @@ def main() -> None:
     for operation in TRANSACTION_OPERATIONS:
         name = f"TRANSACTION-PLAN-{operation}.json"
         value = transaction_plan(
-            operation, commit, sha256(qualification_path),
+            operation, commit, product_hash, sha256(qualification_path),
             sha256(output / "COMPATIBILITY.json"), sha256(output / "PRODUCT-INVENTORY.json"))
         (output / name).write_bytes(pretty(value))
         transaction_names.append(name)

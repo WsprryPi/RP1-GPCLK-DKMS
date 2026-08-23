@@ -16,14 +16,14 @@ import tempfile
 
 MODULE = "rp1_gpclk_dkms"
 PACKAGE = "rp1-gpclk-dkms"
-MODULE_VERSION = "1.1.1"
-PACKAGE_VERSION = "1.1.1-1"
+MODULE_VERSION = "1.1.2"
+PACKAGE_VERSION = "1.1.2-1"
 ENDPOINT = Path("/dev/rp1-gpclk")
 LIVE = Path("/sys/module/rp1_gpclk_dkms/parameters/live_output")
 DT_ROOT = Path("/proc/device-tree")
 COMPATIBLE = b"wsprrypi,rp1-gpclk-dkms-v1\x00"
 ROUTES = {"gpio4": (1, 4), "gpio20": (2, 20)}
-EVIDENCE_ROOT = Path("/var/lib/rp1-gpclk-dkms/validation-1.1.1-service/evidence")
+EVIDENCE_ROOT = Path("/var/lib/rp1-gpclk-dkms/validation-1.1.2-service/evidence")
 
 
 def command(argv: list[str]) -> str:

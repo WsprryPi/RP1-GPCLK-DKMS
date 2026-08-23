@@ -71,8 +71,8 @@ def service_runner(calls: list[list[str]], states: dict, fail_on: list[str] | No
 
 def plan(operation: str) -> dict:
     return {
-        "schemaVersion": 1, "kind": "rp1-gpclk-1.1.1-route-transaction",
-        "operationId": f"wspr5-1-1-1-1111111-{operation}", "host": tx.HOST,
+        "schemaVersion": 1, "kind": "rp1-gpclk-1.1.2-route-transaction",
+        "operationId": f"wspr5-1-1-2-1111111-{operation}", "host": tx.HOST,
         "architecture": tx.ARCH, "kernel": tx.KERNEL, "firmware": tx.FIRMWARE,
         "baseDtbSha256": tx.BASE_DTB_SHA256,
         "kernelConfigSha256": tx.KERNEL_CONFIG_SHA256,
@@ -196,7 +196,7 @@ with tempfile.TemporaryDirectory() as temporary:
         assert states == quiesced["serviceBefore"]
         for operation in ("deactivate-predecessor", "install-inactive", "select-gpio4",
                           "select-gpio20", "restore-gpio4"):
-            operation_id = f"wspr5-1-1-1-1111111-{operation}"
+            operation_id = f"wspr5-1-1-2-1111111-{operation}"
             tx.journal_write(tx.journal_path(service_root, operation_id), {
                 "operationId": operation_id, "sourceCommit": service_plan["sourceCommit"],
                 "qualificationArchiveSha256": service_plan["qualificationArchiveSha256"],

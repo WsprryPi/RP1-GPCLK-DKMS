@@ -21,9 +21,9 @@ def validate(root: Path) -> dict:
     identity = json.loads(identity_path.read_text())
     inventory = json.loads(inventory_path.read_text())
     plan = json.loads(plan_path.read_text())
-    if identity.get("release") != "1.1.1" or identity.get("expectedTag") != "v1.1.1":
+    if identity.get("release") != "1.1.2" or identity.get("expectedTag") != "v1.1.2":
         raise ValueError("qualification release identity differs")
-    if inventory.get("debianVersion") != "1.1.1-1":
+    if inventory.get("debianVersion") != "1.1.2-1":
         raise ValueError("product inventory version differs")
     if plan.get("kind") != "release-candidate-target-verification" or plan.get("schemaVersion") != 1:
         raise ValueError("target plan identity differs")
@@ -71,7 +71,7 @@ def validate(root: Path) -> dict:
         for argument in step.get("argv", []):
             if not isinstance(argument, str) or not argument.endswith(".py"):
                 continue
-            marker = "/rp1-gpclk-dkms-qualification-1.1.1/scripts/"
+            marker = "/rp1-gpclk-dkms-qualification-1.1.2/scripts/"
             relative = (argument if argument.startswith("scripts/") else
                         f"scripts/{argument.rsplit(marker, 1)[1]}" if marker in argument else None)
             if relative is not None and not (root / relative).is_file():
@@ -79,7 +79,7 @@ def validate(root: Path) -> dict:
     transfer = next(step for step in steps if step["id"] == "validated-transfer")
     if transfer["argv"] != [
             "/usr/bin/env",
-            "--chdir=/home/pi/rp1-gpclk-v1.1.1-owned-service-executor-20260822/release-set",
+            "--chdir=/home/pi/rp1-gpclk-v1.1.2-qualification-candidate/release-set",
             "/usr/bin/sha256sum", "--check", "SHA256SUMS"]:
         raise ValueError("transfer step does not enforce the complete checksum set")
     safety = plan.get("safety", {})
@@ -103,7 +103,7 @@ def main() -> None:
         for step in plan["steps"]:
             print(json.dumps(step, separators=(",", ":")))
     else:
-        print("Release 1.1.1 target controls: PASS (offline, unauthorized)")
+        print("Release 1.1.2 target controls: PASS (offline, unauthorized)")
 
 
 if __name__ == "__main__":

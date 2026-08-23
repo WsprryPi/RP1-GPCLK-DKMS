@@ -34,8 +34,8 @@ class Fixture:
         target=self.root/path.lstrip("/"); target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(payload)
     def runner(self,argv):
         self.calls.append(argv)
-        if argv[:3]==["/usr/bin/dpkg-query","-W","-f=${Status}|${Version}"]: return "install ok installed|1.1.1-1\n"
-        if argv[:4]==["/usr/sbin/modinfo","-F","version",manager.MODULE]: return "1.1.1\n"
+        if argv[:3]==["/usr/bin/dpkg-query","-W","-f=${Status}|${Version}"]: return "install ok installed|1.1.2-1\n"
+        if argv[:4]==["/usr/sbin/modinfo","-F","version",manager.MODULE]: return "1.1.2\n"
         if argv[:3]==["/usr/bin/systemctl","show","--property=ActiveState"]: return self.services[argv[-1]]+"\n"
         if argv[:2]==["/usr/bin/systemctl","stop"]:
             if argv[-1]==self.fail_stop: raise OSError("injected stop failure")
@@ -130,6 +130,14 @@ for payload in (
 legacy=(f"{manager.BEGIN}\n# version=1.1.1 route=gpio4\n"
         f"dtoverlay=rp1-gpclk-gpio4\n{manager.END}\n").encode()
 assert manager.parse_config(legacy)=="gpio4" and manager.config_ownership(legacy)=="historical-package-owned"
+
+predecessor=(f"{manager.BEGIN}\n# contract={manager.CONTRACT} package=1.1.1-1 route=gpio20\n"
+             f"dtoverlay=rp1-gpclk-gpio20\n{manager.END}\n").encode()
+assert manager.parse_config(predecessor)=="gpio20"
+assert manager.config_ownership(predecessor)=="historical-package-owned"
+upgraded=manager.config_for_route(b"# base\n\n"+predecessor,"gpio4")
+assert manager.parse_config(upgraded)=="gpio4" and manager.config_ownership(upgraded)=="current"
+assert b"package=1.1.1-1" not in upgraded and b"package=1.1.2-1" in upgraded
 
 with tempfile.TemporaryDirectory() as temporary:
     fixture=Fixture(pathlib.Path(temporary)); env=fixture.env(); env.path(manager.CONFIG).write_bytes(b"# base\n\n"+legacy)

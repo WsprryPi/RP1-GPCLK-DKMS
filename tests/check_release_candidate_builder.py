@@ -48,14 +48,14 @@ def ar_member(name: str, content: bytes) -> bytes:
 
 with tempfile.TemporaryDirectory() as temporary:
     root = Path(temporary)
-    product = root / "rp1-gpclk-dkms_1.1.1-1_all.deb"
+    product = root / "rp1-gpclk-dkms_1.1.2-1_all.deb"
     control = tar_xz({
-        "control": b"Package: rp1-gpclk-dkms\nVersion: 1.1.1-1\nArchitecture: all\n",
+        "control": b"Package: rp1-gpclk-dkms\nVersion: 1.1.2-1\nArchitecture: all\n",
         "md5sums": b"",
     })
-    base = "usr/src/rp1-gpclk-dkms-1.1.1"
+    base = "usr/src/rp1-gpclk-dkms-1.1.2"
     data_files = {
-        f"{base}/dkms.conf": b'PACKAGE_NAME="rp1-gpclk-dkms"\nPACKAGE_VERSION="1.1.1"\n',
+        f"{base}/dkms.conf": b'PACKAGE_NAME="rp1-gpclk-dkms"\nPACKAGE_VERSION="1.1.2"\n',
         f"{base}/Kbuild": b"obj-m += rp1_gpclk_dkms.o\n",
         f"{base}/Makefile": b"all:\n\t@true\n",
         f"{base}/include/uapi/linux/rp1_gpclk.h": b"uapi\n",
@@ -65,7 +65,7 @@ with tempfile.TemporaryDirectory() as temporary:
         "usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo": b"dtbo20\n",
         "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager": b"#!/usr/bin/python3\n",
         "usr/sbin/rp1-gpclk-route-manager": b"#!/usr/bin/python3\n",
-        "usr/share/rp1-gpclk-dkms/1.1.1/rp1-gpclk-route-manager-v1.schema.json": b"{}\n",
+        "usr/share/rp1-gpclk-dkms/1.1.2/rp1-gpclk-route-manager-v1.schema.json": b"{}\n",
         "usr/share/doc/rp1-gpclk-dkms/route-manager-v1.md": b"contract\n",
         "usr/lib/systemd/system/rp1-gpclk-route-manager.socket": b"[Socket]\n",
         "usr/lib/systemd/system/rp1-gpclk-route-manager@.service": b"[Service]\n",
@@ -78,12 +78,12 @@ with tempfile.TemporaryDirectory() as temporary:
         + ar_member("data.tar.xz", tar_xz(data_files))
     )
     inventory, extracted = builder.validate_product(product)
-    assert inventory["debianVersion"] == "1.1.1-1"
+    assert inventory["debianVersion"] == "1.1.2-1"
     assert inventory["packageSha256"] == builder.sha256(product)
     assert set(data_files) <= set(extracted)
     inventory_bytes = builder.pretty(inventory)
     identity = {
-        "release": "1.1.1", "expectedTag": "v1.1.1",
+        "release": "1.1.2", "expectedTag": "v1.1.2",
         "productPackageSha256": inventory["packageSha256"],
     }
     identity_bytes = builder.pretty(identity)
@@ -95,8 +95,23 @@ with tempfile.TemporaryDirectory() as temporary:
     compatibility = builder.compatibility("1" * 40, "2026-08-22T00:00:00-05:00",
                                           inventory["packageSha256"], extracted)
     assert {entry["route"] for entry in compatibility["entries"]} == {"GPIO4", "GPIO20"}
-    assert all(entry["uapiAbi"] == 2 and entry["release"] == "1.1.1"
-               and entry["state"] == "Unavailable" and entry["liveEligible"] is False
+    by_route = {entry["route"]: entry for entry in compatibility["entries"]}
+    assert by_route["GPIO4"]["state"] == "Experimental"
+    assert by_route["GPIO4"]["liveEligible"] is True
+    assert "qualification-candidate" in by_route["GPIO4"]["id"]
+    candidate = by_route["GPIO4"]["qualificationCandidate"]
+    assert candidate["kernelRelease"] == "6.18.34+rpt-rpi-2712"
+    assert candidate["architecture"] == "aarch64"
+    assert candidate["modelCompatible"] == "raspberrypi,5-model-b"
+    assert candidate["socClass"] == "BCM2712" and candidate["routeId"] == 1
+    assert candidate["endpoint"] == "/dev/rp1-gpclk"
+    assert candidate["clock"] == "RP1 GPCLK0" and candidate["minimumDriveMa"] == 2
+    assert candidate["predecessorOutputInhibitedEvidence"]["packageSha256"] == builder.PREDECESSOR_OUTPUT_INHIBITED_PACKAGE_SHA256
+    assert candidate["predecessorOutputInhibitedEvidence"]["claimCeiling"] == "output-inhibited-route-management-and-cleanup-only"
+    assert by_route["GPIO20"]["state"] == "Unavailable"
+    assert by_route["GPIO20"]["liveEligible"] is False
+    assert by_route["GPIO20"]["qualificationCandidate"] is None
+    assert all(entry["uapiAbi"] == 2 and entry["release"] == "1.1.2"
                for entry in compatibility["entries"])
     assert compatibility["entries"][0]["id"] != compatibility["entries"][1]["id"]
     assert compatibility["entries"][0]["overlayDtboSha256"] != compatibility["entries"][1]["overlayDtboSha256"]
@@ -129,7 +144,7 @@ with tempfile.TemporaryDirectory() as temporary:
     transfer = next(step for step in plan["steps"] if step["id"] == "validated-transfer")
     assert transfer["argv"] == [
         "/usr/bin/env",
-        "--chdir=/home/pi/rp1-gpclk-v1.1.1-owned-service-executor-20260822/release-set",
+        "--chdir=/home/pi/rp1-gpclk-v1.1.2-qualification-candidate/release-set",
         "/usr/bin/sha256sum", "--check", "SHA256SUMS",
     ]
 
@@ -211,5 +226,5 @@ assert git_mode("scripts/inspect_rebooted_route.py") == "100755"
 assert git_mode("scripts/release_candidate_transaction.py") == "100755"
 builder_source = (ROOT / "scripts/build_release_candidate.py").read_text()
 assert "qualification archive generation is blocked" in builder_source
-assert builder.LAST_OUTPUT_INHIBITED_PACKAGE_SHA256 == "48d55aa9a906e83b36ed46560c81cd894024bc2d6bf375514b5e1618a43493af"
+assert builder.PREDECESSOR_OUTPUT_INHIBITED_PACKAGE_SHA256 == "247bd7da35e4ad812a13828668fe03673da127bad7ed2b3e970876f3f21c002d"
 print("Release candidate builder and target-plan contract: PASS")

@@ -2,15 +2,15 @@
 
 # Debian DKMS packaging
 
-Version 1.1.1 uses the standard Debian DKMS lifecycle. Build the package with
+Version 1.1.2 uses the standard Debian DKMS lifecycle. Build the package with
 `dpkg-buildpackage`; install, upgrade, or remove it with ordinary Debian package
 tools. `dh-dkms` provides the DKMS maintainer-script integration.
 
 The product package owns:
 
-- the module build closure under `/usr/src/rp1-gpclk-dkms-1.1.1`, including
+- the module build closure under `/usr/src/rp1-gpclk-dkms-1.1.2`, including
   the canonical UAPI at
-  `/usr/src/rp1-gpclk-dkms-1.1.1/include/uapi/linux/rp1_gpclk.h`;
+  `/usr/src/rp1-gpclk-dkms-1.1.2/include/uapi/linux/rp1_gpclk.h`;
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo`; and
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo`.
 
@@ -28,10 +28,10 @@ Both overlays remain inactive. The package does not edit `config.txt`, apply an
 overlay, select a route, load the module, enable output, or reboot. Installing
 the package therefore does not authorize or initiate GPIO activity.
 
-Version 1.1.1 additionally installs the stable application executor at
+Version 1.1.2 additionally installs the stable application executor at
 `/usr/sbin/rp1-gpclk-route-manager` (with a byte-identical package-owned copy
 at `/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager`), its closed JSON schema
-at `/usr/share/rp1-gpclk-dkms/1.1.1/rp1-gpclk-route-manager-v1.schema.json`,
+at `/usr/share/rp1-gpclk-dkms/1.1.2/rp1-gpclk-route-manager-v1.schema.json`,
 and its consumer contract at
 `/usr/share/doc/rp1-gpclk-dkms/route-manager-v1.md`. These are the only route
 manager executable/data additions. The package also installs disabled
@@ -80,7 +80,7 @@ are not WsprryPi runtime dependencies.
 Install the downloaded package with APT so dependencies are resolved:
 
 ```sh
-sudo apt install ./rp1-gpclk-dkms_1.1.1-1_all.deb
+sudo apt install ./rp1-gpclk-dkms_1.1.2-1_all.deb
 ```
 
 After installation, inspect DKMS status and the installed files. Do not select
@@ -117,9 +117,9 @@ From a tagged source checkout:
 dpkg-buildpackage -us -uc -b
 ```
 
-For source version `1.1.1`, the binary package version is `1.1.1-1` and the
-expected artifact name is `rp1-gpclk-dkms_1.1.1-1_all.deb`. The eventual
-release tag is `v1.1.1`; do not build a release artifact from a moving branch.
+For source version `1.1.2`, the binary package version is `1.1.2-1` and the
+expected artifact name is `rp1-gpclk-dkms_1.1.2-1_all.deb`. The eventual
+release tag is `v1.1.2`; do not build a release artifact from a moving branch.
 
 The resulting package is a new artifact. Building it successfully establishes
 only build compatibility and does not inherit qualification from the published
@@ -143,7 +143,7 @@ identity, and requires GPIO4 and GPIO20 to remain unavailable and non-live.
 `validate_release.py` remains intentionally scoped to the separately generated
 published-release archive layout; the two validators are not interchangeable.
 
-The 1.1.1 package remains byte-identical when only qualification-side executor
+The product package remains byte-identical when only qualification-side executor
 and plan files change. Those external files are not installed by the Debian
 package. Any change to package members, module source, overlays, UAPI, or
 embedded identity instead requires a new package version.

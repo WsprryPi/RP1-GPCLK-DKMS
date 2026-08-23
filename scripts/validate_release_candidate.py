@@ -14,9 +14,9 @@ import stat
 import subprocess
 import tarfile
 
-VERSION = "1.1.1"
-DEBIAN_VERSION = "1.1.1-1"
-TAG = "v1.1.1"
+VERSION = "1.1.2"
+DEBIAN_VERSION = "1.1.2-1"
+TAG = "v1.1.2"
 PACKAGE = "rp1-gpclk-dkms"
 QUALIFICATION = "rp1-gpclk-dkms-qualification"
 FILES = {
@@ -239,8 +239,37 @@ def validate(root: Path, expected_source_commit: str | None) -> dict:
     entries = compatibility.get("entries")
     if not isinstance(entries, list) or {entry.get("route") for entry in entries} != {"GPIO4", "GPIO20"}:
         fail("compatibility route inventory differs")
-    if any(entry.get("state") != "Unavailable" or entry.get("liveEligible") is not False for entry in entries):
-        fail("candidate compatibility is not fully fail-closed")
+    by_route = {entry["route"]: entry for entry in entries}
+    gpio4, gpio20 = by_route["GPIO4"], by_route["GPIO20"]
+    if (gpio4.get("state"), gpio4.get("liveEligible")) != ("Experimental", True):
+        fail("GPIO4 qualification-candidate identity differs")
+    if (gpio20.get("state"), gpio20.get("liveEligible")) != ("Unavailable", False):
+        fail("GPIO20 must remain unavailable")
+    if "qualification-candidate" not in gpio4.get("id", ""):
+        fail("GPIO4 candidate ID does not state its limited scope")
+    expected_candidate = {
+        "kernelRelease": "6.18.34+rpt-rpi-2712",
+        "architecture": "aarch64",
+        "modelCompatible": "raspberrypi,5-model-b",
+        "socClass": "BCM2712",
+        "routeId": 1,
+        "endpoint": "/dev/rp1-gpclk",
+        "clockProviderCompatible": "raspberrypi,rp1-clocks",
+        "clock": "RP1 GPCLK0",
+        "minimumDriveMa": 2,
+    }
+    candidate = gpio4.get("qualificationCandidate")
+    if not isinstance(candidate, dict) or any(candidate.get(key) != value
+                                              for key, value in expected_candidate.items()):
+        fail("GPIO4 exact technical candidate identity differs")
+    predecessor = candidate.get("predecessorOutputInhibitedEvidence", {})
+    if (predecessor.get("packageSha256") !=
+            "247bd7da35e4ad812a13828668fe03673da127bad7ed2b3e970876f3f21c002d" or
+            predecessor.get("claimCeiling") !=
+            "output-inhibited-route-management-and-cleanup-only"):
+        fail("GPIO4 predecessor evidence binding differs or exceeds its claim")
+    if gpio20.get("qualificationCandidate") is not None:
+        fail("GPIO20 inherited a qualification-candidate identity")
     if sha256(root / "COMPATIBILITY.json") != metadata.get("compatibilitySha256"):
         fail("compatibility sidecar hash differs")
     if (plan.get("kind"), plan.get("release"), plan.get("debianVersion"), plan.get("expectedTag")) != ("release-candidate-target-verification", VERSION, DEBIAN_VERSION, TAG):
@@ -270,7 +299,7 @@ def validate(root: Path, expected_source_commit: str | None) -> dict:
             fail(f"transaction plan digest differs: {name}")
         if (transaction.get("kind"), transaction.get("sourceCommit"),
             transaction.get("qualificationArchiveSha256")) != (
-                "rp1-gpclk-1.1.1-route-transaction", source_commit,
+                "rp1-gpclk-1.1.2-route-transaction", source_commit,
                 sha256(root / metadata["qualificationArchive"])):
             fail(f"transaction plan identity differs: {name}")
         if metadata["transactionPlans"].get(name) != sha256(root / name):
