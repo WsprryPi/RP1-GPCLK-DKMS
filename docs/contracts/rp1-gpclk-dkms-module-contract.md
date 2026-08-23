@@ -204,6 +204,14 @@ acquire.
 Process death, interruption, timeout, unbind, and cleanup failure must converge
 to a safe terminal state or an explicit fault that prevents further use.
 
+On the validated Pi 5 firmware baseline, TICK_DMA0 may be enabled and running
+at 50 reference cycles while the downstream DMA_TICK0 handshake is disabled.
+After exclusive acquisition of both MMIO resources, development execution may
+temporarily stop and later restore only that exact `CTRL=3`, `CYCLES=50`,
+`DMA_TICK_EN=0`, `DMA_TICK_CTRL=0` baseline. All other nonzero combinations
+remain ownership conflicts. This exception does not permit takeover of an
+active DMA handshake or a different tick configuration.
+
 ## Compatibility
 
 Compatibility is deny-by-default. A live-eligible entry binds the module

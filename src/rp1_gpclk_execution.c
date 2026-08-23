@@ -27,6 +27,8 @@
 #define RP1_GPCLK_DMA_TICK_SINGLE BIT(1)
 #define RP1_GPCLK_DMA_TICK_FINISH_CLEAR BIT(0)
 #define RP1_GPCLK_DMA_TICK_DWELL (19U << 4)
+#define RP1_GPCLK_FIRMWARE_TICK_CTRL 3U
+#define RP1_GPCLK_FIRMWARE_TICK_CYCLES 50U
 #define RP1_GPCLK_COMPLETION_SLACK_MS 1000U
 #define RP1_GPCLK_QUIESCE_TIMEOUT_MS 122000U
 
@@ -173,7 +175,11 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 	device->initial_dma_tick0_ctrl =
 		readl(device->dma_tick0 + RP1_GPCLK_DMA_TICK0_CTRL);
 	device->tick_state_captured = true;
-	if (device->initial_tick_dma0_ctrl || device->initial_dma_tick0_en) {
+	if (device->initial_dma_tick0_en || device->initial_dma_tick0_ctrl ||
+	    (device->initial_tick_dma0_ctrl &&
+	     (device->initial_tick_dma0_ctrl != RP1_GPCLK_FIRMWARE_TICK_CTRL ||
+	      device->initial_tick_dma0_cycles !=
+		RP1_GPCLK_FIRMWARE_TICK_CYCLES))) {
 		dev_err(device->dev,
 			"phase4d startup conflict: tick=%08x/%08x/%08x/%08x\n",
 			device->initial_tick_dma0_ctrl,

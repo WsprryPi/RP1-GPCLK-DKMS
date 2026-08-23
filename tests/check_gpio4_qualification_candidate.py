@@ -9,6 +9,7 @@ compat = (ROOT / "include/rp1_gpclk/compatibility.h").read_text()
 implementation = (ROOT / "src/rp1_gpclk_compatibility.c").read_text()
 main = (ROOT / "src/rp1_gpclk_main.c").read_text()
 dispatch = (ROOT / "src/rp1_gpclk_uapi_dispatch.c").read_text()
+execution = (ROOT / "src/rp1_gpclk_execution.c").read_text()
 rules = (ROOT / "debian/rules").read_text()
 route_manager = (ROOT / "scripts/rp1-gpclk-route-manager.py").read_text()
 
@@ -44,6 +45,12 @@ for token in (
 
 assert "RP1_GPCLK_COMPAT_EXPERIMENTAL" in dispatch
 assert "RP1_GPCLK_COMPAT_QUALIFIED" not in dispatch
+for token in (
+    "RP1_GPCLK_FIRMWARE_TICK_CTRL 3U",
+    "RP1_GPCLK_FIRMWARE_TICK_CYCLES 50U",
+    "device->initial_dma_tick0_en || device->initial_dma_tick0_ctrl",
+):
+    assert token in execution
 assert "MODULE_VERSION := 1.1.2" in rules
 for prohibited in ("live_output=1", "/dev/mem", "shell=True", "/bin/sh"):
     assert prohibited not in route_manager
