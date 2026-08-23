@@ -95,6 +95,12 @@ compatibility, Harness, schema, and validator identities. Produce semantically
 valid hardware-free plans and rehearsals for all five modes and a fully
 resolved-but-not-authorized carrier plan template.
 
+The resulting Step 5 campaign must preserve five distinct tests in this order:
+finite carrier, WSPR, QRSS, FSKCW, and DFCW. The latter three are the required
+QRSS-family modes and must remain separate plan, capture, analysis, lifecycle,
+cleanup, result, and evidence records. No aggregate or representative keyed
+test may replace any of the three.
+
 Step 5 may begin only after a separate operator review supplies one exact route,
 target and receiver identity, physical connection and safe-level basis,
 calibration decision, frequency, finite duration, timing bounds, new artifact

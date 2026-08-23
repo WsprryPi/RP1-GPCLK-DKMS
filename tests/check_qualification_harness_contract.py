@@ -29,4 +29,8 @@ for prohibited in ("/dev/mem", "automatic fallback", "continuous TONE"):
 
 assert "does not authorize Step 5" in handoff
 assert "The template is not authorization" in contract
+required_campaign = "finite carrier, WSPR, QRSS, FSKCW, and DFCW"
+assert required_campaign in handoff
+assert "QRSS, FSKCW, and DFCW are the three required QRSS-family modes" in contract
+assert "one keyed-mode result does not satisfy another" in contract
 print("Qualification Harness integration contract: PASS")

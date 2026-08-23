@@ -233,9 +233,23 @@ calibration applicability, spectral interpretation, and claim scope.
 
 ## First live-plan template
 
-The Step 5 entry plan is one finite carrier operation, never continuous TONE.
-It uses ABI-v2 finite TONE and a kernel-enforced duration. Step 3 leaves these
-run-specific values unresolved until Step 4 and the later operator gate:
+The Step 5 campaign contains five separate test definitions:
+
+1. finite carrier (`TONE`), never continuous TONE;
+2. WSPR;
+3. QRSS;
+4. FSKCW; and
+5. DFCW.
+
+QRSS, FSKCW, and DFCW are the three required QRSS-family modes. Each has its
+own explicit mode parameters, plan identity, lifecycle result, capture and
+analysis evidence, cleanup result, and semantic validation. A passing carrier
+does not replace any mode test, and one keyed-mode result does not satisfy another.
+
+The first Step 5 entry plan is the finite carrier test. It uses ABI-v2 finite
+TONE and a kernel-enforced duration. The carrier gate must pass before WSPR or
+the three QRSS-family tests proceed. Step 3 leaves these run-specific values
+unresolved until Step 4 and the later operator gate:
 
 - WsprryPi revision/executable: `REQUIRED-BEFORE-LIVE`;
 - DKMS revision/module/artifact/manifest: `REQUIRED-BEFORE-LIVE`;
