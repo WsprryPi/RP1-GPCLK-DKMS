@@ -1,0 +1,39 @@
+<!-- SPDX-License-Identifier: MIT -->
+
+# Roadmap
+
+This roadmap records deferred engineering work. An item here is not an
+implemented capability, compatibility promise, or qualification claim.
+
+## Rebootless route switching through runtime overlays
+
+Backlog safe application and removal of the GPIO4 and GPIO20 device-tree
+overlays at runtime so an administrator may change the active RP1 GPCLK0 route
+without rebooting. The current supported route-manager contract continues to
+require an attributable boot-block update and reboot.
+
+The future design must preserve zero-or-exactly-one route ownership and must
+never bind GPIO4 and GPIO20 simultaneously, even transiently. Before runtime
+switching can replace the reboot boundary, implementation and target evidence
+must cover:
+
+- fixed GPIO4/GPIO20 choices with no caller-selected overlay, path, device,
+  service, command, or shell interface;
+- output-disabled preflight and application execution/scheduling idleness;
+- endpoint closure, exclusive ownership, and completed generation cleanup;
+- bounded driver unbind, module lifetime, DMA drain, clock disable, and pin
+  return to the defined safe state;
+- removal of the old overlay before application and binding of the new one;
+- rejection and recovery for zero-route, duplicate-route, partial-transition,
+  stale-device, busy-resource, and cleanup-fault states;
+- attributable journaling, atomic state transitions, readback, rollback, and
+  process-death recovery;
+- configured-versus-active route reporting without relying on a new boot ID;
+- fixed-service quiescence and restoration through the restricted route-manager
+  protocol; and
+- independent GPIO4 and GPIO20 hardware validation, including repeated
+  switching and failure injection with output inhibited before any separately
+  authorized live testing.
+
+Until those requirements are implemented and validated, routine operation on
+an already active route requires no reboot, but changing routes does.

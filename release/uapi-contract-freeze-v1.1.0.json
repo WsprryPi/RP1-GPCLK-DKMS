@@ -1,0 +1,200 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "artifactSet": {
+    "debianPackage": {
+      "name": "rp1-gpclk-dkms_1.1.0-1_all.deb",
+      "sha256": "830a63493dc98c0777d4fa653bca5d25789bddc062c4b5fe95e2e937cdd4d9d7",
+      "size": 24228
+    },
+    "locationOnBuildHost": "/home/pi/rp1-gpclk-v1.1.0.aGnNAW",
+    "module": {
+      "name": "rp1_gpclk_dkms.ko",
+      "sha256": "52222ef79b18baa8e4e8ee8f98481858d0dacc32644f7af00f2d49a9a6c168c8",
+      "signed": false,
+      "size": 70608
+    },
+    "qualificationArchive": {
+      "name": "rp1-gpclk-dkms-qualification-1.1.0.tar.gz",
+      "sha256": "c7fc6ef0fe5fc1d85ad1390bdefcb66d5f7a888af0b45c7a325cb8b94a6a54e3",
+      "size": 23058
+    },
+    "sourceArchive": {
+      "name": "rp1-gpclk-dkms-1.1.0-source.tar.gz",
+      "sha256": "2b56aefe3c1bec7eb92189235bf4fe8e3bfc369d5637794e1c43efa7acdab7f9",
+      "size": 1114714
+    }
+  },
+  "compatibility": {
+    "default": "Unavailable",
+    "gpio20": "Unavailable",
+    "liveOutputModuleParameterRequired": true,
+    "positiveEntryRequired": true,
+    "priorGpio4EvidenceTransfers": false
+  },
+  "debianVersion": "1.1.0-1",
+  "dkmsVersion": "1.1.0",
+  "endpoint": {
+    "group": "root",
+    "mode": "0600",
+    "owner": "root",
+    "path": "/dev/rp1-gpclk",
+    "publisher": "kernel-module"
+  },
+  "expectedTag": "v1.1.0",
+  "freezePolicy": {
+    "consumerMayStart": true,
+    "finalDocumentationFreezePending": true,
+    "targetEvidenceMayUpdateReleaseClaimsWithoutChangingUapi": true,
+    "v1HistoricalIdentityPreserved": true
+  },
+  "kind": "rp1-gpclk-uapi-contract-freeze",
+  "modes": [
+    {
+      "command": "SUBMIT_WSPR",
+      "name": "WSPR",
+      "value": 1
+    },
+    {
+      "command": "SUBMIT_EVENTS",
+      "name": "QRSS",
+      "value": 2
+    },
+    {
+      "command": "SUBMIT_EVENTS",
+      "name": "FSKCW",
+      "value": 3
+    },
+    {
+      "command": "SUBMIT_EVENTS",
+      "name": "DFCW",
+      "value": 4
+    },
+    {
+      "command": "SUBMIT_TONE_V2",
+      "name": "TONE",
+      "value": 5
+    }
+  ],
+  "moduleVersion": "1.1.0",
+  "release": "1.1.0",
+  "routes": [
+    {
+      "liveEligible": false,
+      "name": "GPIO4",
+      "pin": 4,
+      "value": 1
+    },
+    {
+      "liveEligible": false,
+      "name": "GPIO20",
+      "pin": 20,
+      "value": 2
+    }
+  ],
+  "schemaVersion": 1,
+  "sourceBaseCommit": "864e29f432c6349fc6a159e896bfe9fe11bedfe7",
+  "sourceCommit": "69cae98c9e2a1f4428000801534dc2c705c22cc5",
+  "status": "normative-frozen-target-evidence-pending",
+  "uapi": {
+    "abi": 2,
+    "abiMin": 1,
+    "capabilities": [
+      {
+        "bit": 8,
+        "name": "TONE_CONTINUOUS"
+      },
+      {
+        "bit": 9,
+        "name": "TONE_FINITE"
+      }
+    ],
+    "commands": [
+      {
+        "abi": 1,
+        "direction": "read-write",
+        "name": "QUERY",
+        "number": 32,
+        "size": 304
+      },
+      {
+        "abi": 1,
+        "direction": "read-write",
+        "name": "ACQUIRE",
+        "number": 33,
+        "size": 64
+      },
+      {
+        "abi": 1,
+        "direction": "read-write",
+        "name": "SUBMIT_WSPR",
+        "number": 34,
+        "size": 112
+      },
+      {
+        "abi": 1,
+        "direction": "read-write",
+        "name": "SUBMIT_EVENTS",
+        "number": 35,
+        "size": 112
+      },
+      {
+        "abi": 1,
+        "direction": "write",
+        "name": "STOP",
+        "number": 36,
+        "size": 56
+      },
+      {
+        "abi": 1,
+        "direction": "read-write",
+        "name": "GET_STATE",
+        "number": 37,
+        "size": 88
+      },
+      {
+        "abi": 1,
+        "direction": "write",
+        "name": "RELEASE",
+        "number": 38,
+        "size": 48
+      },
+      {
+        "abi": 2,
+        "direction": "read-write",
+        "name": "QUERY_V2",
+        "number": 39,
+        "size": 320
+      },
+      {
+        "abi": 2,
+        "direction": "read-write",
+        "name": "SUBMIT_TONE_V2",
+        "number": 40,
+        "size": 112
+      },
+      {
+        "abi": 2,
+        "direction": "write",
+        "name": "RELEASE_V2",
+        "number": 41,
+        "size": 56
+      }
+    ],
+    "magic": 184,
+    "path": "include/uapi/linux/rp1_gpclk.h",
+    "sha256": "998ab96d7dbcc0d935c05758c46acba56bbcf92aa1b674b899bdab6932dc8384",
+    "toneOperations": [
+      {
+        "durationNs": "must-be-zero",
+        "name": "CONTINUOUS",
+        "value": 1
+      },
+      {
+        "durationNsMax": 120000000000,
+        "durationNsMin": 1000000,
+        "name": "FINITE",
+        "value": 2
+      }
+    ]
+  }
+}

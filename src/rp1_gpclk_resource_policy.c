@@ -1,5 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-only OR MIT
+#include <linux/string.h>
+
 #include "rp1_gpclk/resource_policy.h"
+
+int rp1_gpclk_route_endpoint_validate(__u32 route, const char *name)
+{
+	if (!name)
+		return -1;
+	if (route == RP1_GPCLK_ROUTE_GPIO4 &&
+	    !strcmp(name, RP1_GPCLK_GPIO4_ENDPOINT_NAME))
+		return 0;
+	if (route == RP1_GPCLK_ROUTE_GPIO20 &&
+	    !strcmp(name, RP1_GPCLK_GPIO20_ENDPOINT_NAME))
+		return 0;
+	return -1;
+}
 
 int rp1_gpclk_route_pin_validate(__u32 route, __u32 pin)
 {

@@ -4,12 +4,14 @@
 #include <linux/limits.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_fdt.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/utsname.h>
 
 #include "rp1_gpclk/bootstrap_policy.h"
+#include "rp1_gpclk/compatibility.h"
 #include "rp1_gpclk/device.h"
 #include "rp1_gpclk/execution.h"
 #include "rp1_gpclk/kernel_api.h"
@@ -35,9 +37,15 @@ bool rp1_gpclk_live_output_eligible(const struct rp1_gpclk_device *device)
 static bool rp1_gpclk_release_identity_allowed(
 	const struct rp1_gpclk_device *device)
 {
-	/* Phase 5.2 has no exact positive release-manifest entry. */
-	(void)device;
-	return false;
+	return device &&
+		rp1_gpclk_route_candidate_allowed(device->route,
+			utsname()->release, utsname()->machine,
+			RP1_GPCLK_MODULE_VERSION,
+			of_machine_is_compatible("raspberrypi,5-model-b"),
+			device->clock && device->dma_chan &&
+			device->pinctrl &&
+			device->tick_dma0 && device->dma_tick0 &&
+			device->rate_exclusive);
 }
 
 static atomic64_t rp1_gpclk_next_owner = ATOMIC64_INIT(0);
@@ -185,7 +193,7 @@ static int rp1_gpclk_probe(struct platform_device *pdev)
 	if (live_output && !device->live_eligible) {
 		ret = -EOPNOTSUPP;
 		dev_err_probe(&pdev->dev, ret,
-			      "live output rejected: release has no positive compatibility entry\n");
+			      "live output rejected by exact route compatibility policy\n");
 		goto release_resources;
 	}
 
@@ -297,6 +305,23 @@ static void rp1_gpclk_find_endpoint(struct device_node **selected,
 		if (*matching_nodes == 1U)
 			*selected = of_node_get(node);
 	}
+}
+
+static int rp1_gpclk_validate_endpoint_topology(void)
+{
+	struct device_node *node;
+	unsigned int matching_nodes;
+	int ret;
+
+	rp1_gpclk_find_endpoint(&node, &matching_nodes);
+	if (matching_nodes != 1U) {
+		pr_err("rp1-gpclk-dkms: pre-registration topology rejected %u matching nodes\n",
+		       matching_nodes);
+		return matching_nodes ? -EEXIST : -ENODEV;
+	}
+	ret = of_device_is_available(node) ? 0 : -ENODEV;
+	of_node_put(node);
+	return ret;
 }
 
 static bool rp1_gpclk_bound_to_this_driver(struct platform_device *pdev)
@@ -461,6 +486,9 @@ static int __init rp1_gpclk_init(void)
 {
 	int ret;
 
+	ret = rp1_gpclk_validate_endpoint_topology();
+	if (ret)
+		return ret;
 	ret = bus_register_notifier(&platform_bus_type,
 				    &rp1_gpclk_platform_bus_notifier);
 	if (ret)

@@ -3,19 +3,22 @@
 """Bounded, read-only RP1-GPCLK-DKMS diagnostics."""
 
 from __future__ import annotations
-import argparse, fcntl, grp, hashlib, json, os, pathlib, platform, pwd, stat, struct, subprocess
+import argparse, errno, fcntl, grp, hashlib, json, os, pathlib, platform, pwd, stat, struct, subprocess
 from typing import Callable
 
-PACKAGE, MODULE, VERSION = "rp1-gpclk-dkms", "rp1_gpclk_dkms", "0.0.0-phase5.53"
+PACKAGE, MODULE, VERSION = "rp1-gpclk-dkms", "rp1_gpclk_dkms", "1.1.2"
 DEVICE = "/dev/rp1-gpclk"
 FILE_LIMIT, LOG_LIMIT, COMMAND_LIMIT, TIMEOUT = 4096, 16384, 8192, 5
-QUERY_FORMAT = "<HHIHHIIIIQIIIIIIQQ64s64s64s4Q"
-QUERY_SIZE = struct.calcsize(QUERY_FORMAT)
-QUERY_IOCTL = 0xC0000000 | (QUERY_SIZE << 16) | (0xB8 << 8) | 0x20
+# The UAPI uses __aligned_u64, so native C alignment is part of the ioctl size.
+QUERY_V1_FORMAT = "@HHIHHIIIIQIIIIIIQQ64s64s64s4Q"
+QUERY_V2_FORMAT = "@HHIHHIIIIQIIIIIIQQQQ64s64s64s4Q"
+QUERY_V1_SIZE, QUERY_V2_SIZE = struct.calcsize(QUERY_V1_FORMAT), struct.calcsize(QUERY_V2_FORMAT)
+QUERY_V1_IOCTL = 0xC0000000 | (QUERY_V1_SIZE << 16) | (0xB8 << 8) | 0x20
+QUERY_V2_IOCTL = 0xC0000000 | (QUERY_V2_SIZE << 16) | (0xB8 << 8) | 0x27
 STATES = {1:"Qualified",2:"Experimental",3:"Compatible-unqualified",4:"Unavailable",5:"Rejected"}
 REASONS = {0:"none",1:"manifest-missing",2:"identity-unknown",3:"identity-mismatch",4:"build-unsupported",5:"signature-rejected",6:"resource-unavailable",7:"resource-conflict",8:"self-test-failed",9:"cleanup-latched",10:"administrator-enrollment-required"}
 ROUTES = {1:"GPIO4",2:"GPIO20"}
-CAPS = {0:"submit-wspr",1:"submit-events",2:"stop-drain",3:"stable-state",4:"route-identity",5:"compat-identity",6:"cleanup-fault-latch",7:"live-eligible"}
+CAPS = {0:"submit-wspr",1:"submit-events",2:"stop-drain",3:"stable-state",4:"route-identity",5:"compat-identity",6:"cleanup-fault-latch",7:"live-eligible",8:"tone-continuous",9:"tone-finite"}
 
 def sha256(path: pathlib.Path) -> str | None:
     try:
@@ -72,25 +75,41 @@ class Collector:
             fixture=self.json_file("/run/rp1-gpclk-dkms/query-fixture.json")
             return fixture.get("value",fixture) if fixture.get("status")=="ok" else fixture
         try:
-            payload=bytearray(QUERY_SIZE); struct.pack_into("<HHI",payload,0,QUERY_SIZE,1,0)
             descriptor=os.open(self.path(DEVICE),os.O_RDONLY|os.O_CLOEXEC|os.O_NONBLOCK)
-            try: fcntl.ioctl(descriptor,QUERY_IOCTL,payload,True)
+            try:
+                payload=bytearray(QUERY_V2_SIZE); struct.pack_into("<HHI",payload,0,QUERY_V2_SIZE,2,0)
+                try:
+                    fcntl.ioctl(descriptor,QUERY_V2_IOCTL,payload,True)
+                    values=struct.unpack(QUERY_V2_FORMAT,payload); query_version=2; identity_index=20
+                except OSError as error:
+                    if error.errno not in {errno.EOPNOTSUPP, errno.ENOTTY}: raise
+                    payload=bytearray(QUERY_V1_SIZE); struct.pack_into("<HHI",payload,0,QUERY_V1_SIZE,1,0)
+                    fcntl.ioctl(descriptor,QUERY_V1_IOCTL,payload,True)
+                    values=struct.unpack(QUERY_V1_FORMAT,payload); query_version=1; identity_index=18
             finally: os.close(descriptor)
-            values=struct.unpack(QUERY_FORMAT,payload); bits=values[9]
+            bits=values[9]
             reason=REASONS.get(values[7],f"unknown-{values[7]}")
-            return {"status":"ok","abiMin":values[3],"abiMax":values[4],"route":ROUTES.get(values[5],f"unknown-{values[5]}"),
+            result={"status":"ok","queryVersion":query_version,"abiMin":values[3],"abiMax":values[4],"route":ROUTES.get(values[5],f"unknown-{values[5]}"),
                 "compatibilityState":STATES.get(values[6],f"unknown-{values[6]}"),"compatibilityReason":REASONS.get(values[7],f"unknown-{values[7]}"),
                 "cleanupFault":reason=="cleanup-latched",
                 "capabilityMask":f"0x{bits:016x}","capabilities":[name for bit,name in CAPS.items() if bits&(1<<bit)],
-                "unknownCapabilityMask":f"0x{bits&~0xff:016x}","moduleId":values[18].split(b"\0",1)[0].decode(errors="replace"),
-                "buildId":values[19].split(b"\0",1)[0].decode(errors="replace"),"compatibilityId":values[20].split(b"\0",1)[0].decode(errors="replace")}
+                "unknownCapabilityMask":f"0x{bits&~0x3ff:016x}","moduleId":values[identity_index].split(b"\0",1)[0].decode(errors="replace"),
+                "buildId":values[identity_index+1].split(b"\0",1)[0].decode(errors="replace"),"compatibilityId":values[identity_index+2].split(b"\0",1)[0].decode(errors="replace")}
+            if query_version==2:
+                result.update(minToneDurationNs=values[18],maxToneDurationNs=values[19])
+            return result
         except PermissionError: return {"status":"indeterminate","reason":"permission-denied"}
         except FileNotFoundError: return {"status":"unavailable","reason":"endpoint-absent"}
         except OSError as error: return {"status":"rejected","reason":f"query-failed-{error.errno}"}
-    def collect(self, release_directory: pathlib.Path|None=None) -> dict:
-        module_path=f"/lib/modules/{self.kernel}/updates/dkms/{MODULE}.ko"
+    def collect(self, release_directory: pathlib.Path|None=None, development_manifest: pathlib.Path|None=None) -> dict:
+        module_candidates=[]
+        module_directory=self.path(f"/lib/modules/{self.kernel}/updates/dkms")
+        if module_directory.is_dir():
+            module_candidates=sorted(path for path in module_directory.glob(f"{MODULE}.ko*") if path.is_file() and not path.is_symlink())
+        module_local=module_candidates[0] if len(module_candidates)==1 else self.path(f"/lib/modules/{self.kernel}/updates/dkms/{MODULE}.ko")
+        module_path="/"+str(module_local.relative_to(self.root)) if self.root!=pathlib.Path("/") else str(module_local)
         kernels=sorted(p.name for p in self.path("/lib/modules").glob("*") if p.is_dir())
-        module_file=self.metadata(module_path); module_file["sha256"]=sha256(self.path(module_path))
+        module_file=self.metadata(module_path); module_file["sha256"]=sha256(self.path(module_path)); module_file["compression"]="none" if module_local.name.endswith(".ko") else module_local.suffix.lstrip(".")
         modinfo={name:self.runner(["modinfo","-F",field,module_path]) for name,field in
             (("version","version"),("vermagic","vermagic"),("signer","signer"),("signatureKeyId","sig_key"),("signatureAlgorithm","sig_id"),("signatureHashAlgorithm","sig_hashalgo"))}
         transaction=self.json_file(f"/var/lib/{PACKAGE}/transaction.json")
@@ -100,7 +119,8 @@ class Collector:
         endpoint=self.metadata(DEVICE); driver=self.path("/sys/bus/platform/drivers/rp1-gpclk-dkms")
         endpoint["boundDevices"]=sorted(p.name for p in driver.glob("*") if p.name not in {"bind","unbind","module","uevent"})[:8]
         endpoint["bound"]=bool(endpoint["boundDevices"])
-        return {"SPDX-License-Identifier":"MIT","schemaVersion":1,"readOnly":True,
+        development=self._development(development_manifest)
+        result={"SPDX-License-Identifier":"MIT","schemaVersion":1,"readOnly":True,
             "collectionLimits":{"commandSeconds":TIMEOUT,"commandStreamBytes":COMMAND_LIMIT,"fileBytes":FILE_LIMIT,"kernelLogBytes":LOG_LIMIT,"kernelLogScope":"current boot, matching rp1_gpclk or rp1-gpclk only"},
             "summary":classify(query,selected,transaction,enrollment),
             "package":{"version":VERSION,"manager":self.runner(["dpkg-query","-W","-f=${Status} ${Version}",PACKAGE]),"dkms":self.runner(["dkms","status","-m",PACKAGE])},
@@ -113,6 +133,23 @@ class Collector:
             "routeOverlay":self._route_overlay(query),"hardwareIdentity":self._hardware(),
             "kernelDiagnostics":self.runner(["journalctl","-k","-b","--no-pager","-g","rp1[_-]gpclk","--output=short-monotonic"]),
             "residue":self._residue(transaction),"assurance":"A clean report does not prove absence of competing or direct-MMIO software."}
+        result["development"]=development
+        if development.get("status")=="ok":
+            result["summary"]={"category":"healthy-but-experimental" if query.get("status")=="ok" else "source-development",
+                               "compatibilityState":"Experimental","reason":"exact-source-development-manifest; not release-qualified"}
+        return result
+    @staticmethod
+    def _development(supplied):
+        if supplied is None: return {"status":"not-supplied"}
+        try:
+            path=pathlib.Path(supplied); value=json.loads(path.read_text())
+            if (value.get("schema")!="rp1-gpclk-source-development-manifest-v1" or
+                    value.get("classification")!="source-development" or value.get("qualification") is not False or
+                    value.get("moduleName")!=MODULE): return {"status":"rejected","reason":"invalid-development-manifest","path":str(path)}
+            return {"status":"ok","path":str(path),"sha256":sha256(path),"classification":"Experimental",
+                    "releaseQualified":False,"sourceCommit":value.get("sourceCommit"),"renderedVersion":value.get("renderedVersion"),
+                    "targetKernel":value.get("targetKernel"),"route":value.get("route")}
+        except (OSError,json.JSONDecodeError): return {"status":"rejected","reason":"unreadable-development-manifest","path":str(supplied)}
     def _release(self,supplied):
         base=pathlib.Path(supplied) if supplied else self.path(f"/usr/share/{PACKAGE}/{VERSION}")
         result={"path":str(base),"status":"ok" if base.is_dir() and not base.is_symlink() else "absent"}
@@ -133,12 +170,39 @@ class Collector:
     def _route_overlay(self,query):
         route=query.get("route") if query.get("status")=="ok" else None
         name={"GPIO4":"rp1-gpclk-gpio4.dtbo","GPIO20":"rp1-gpclk-gpio20.dtbo"}.get(route)
+        nodes=[]; of_root=self.path("/sys/firmware/devicetree/base")
+        if of_root.is_dir():
+            for endpoint_name, expected_route in (("rp1-gpclk-dkms-gpio4","GPIO4"),("rp1-gpclk-dkms-gpio20","GPIO20")):
+                for node in sorted(of_root.rglob(endpoint_name))[:2]:
+                    status=self._dt_property(node/"status") or "okay"
+                    raw_route=self._dt_bytes(node/"wsprrypi,route")
+                    route_number=int.from_bytes(raw_route,"big") if raw_route and len(raw_route)==4 else None
+                    nodes.append({"name":endpoint_name,"path":str(node.relative_to(of_root)),"status":status,
+                                  "declaredRoute":ROUTES.get(route_number,f"unknown-{route_number}"),"expectedRoute":expected_route,
+                                  "propertyIdentities":{property_name:self._dt_identity(node/property_name) for property_name in
+                                      ("compatible","reg","clocks","clock-names","dmas","dma-names","pinctrl-names")}})
+        active=[item for item in nodes if item["status"]=="okay"]
         return {"selectedRoute":route or "indeterminate","selectedArtifact":name,"artifactSha256":sha256(self.path(f"/boot/firmware/overlays/{name}")) if name else None,
-                "persistentConfiguration":self.read("/boot/firmware/config.txt",LOG_LIMIT),"runtimeRoute":self.read("/proc/device-tree/rp1-gpclk/route")}
+                "persistentConfiguration":self.read("/boot/firmware/config.txt",LOG_LIMIT),"activeEndpointNodes":active,
+                "topology":"exactly-one" if len(active)==1 else "none" if not active else "ambiguous",
+                "moduleRouteMatchesActiveEndpoint":len(active)==1 and active[0]["declaredRoute"]==route and active[0]["expectedRoute"]==route}
     def _hardware(self):
-        result={name:self.read(path) for name,path in {"model":"/proc/device-tree/model","revision":"/proc/device-tree/system/linux,revision","clockProvider":"/proc/device-tree/rp1/clocks/compatible","clockId":"/proc/device-tree/rp1-gpclk/clock-id","dmaController":"/proc/device-tree/rp1-gpclk/dmas","pinctrl":"/proc/device-tree/rp1-gpclk/pinctrl-names"}.items()}
+        result={name:self.read(path) for name,path in {"model":"/proc/device-tree/model","revision":"/proc/device-tree/system/linux,revision","firmwareVersion":"/sys/firmware/devicetree/base/chosen/bootloader/version"}.items()}
         result["baseDeviceTreeSha256"]=sha256(self.path("/sys/firmware/fdt"))
         return result
+    @staticmethod
+    def _dt_bytes(path:pathlib.Path)->bytes|None:
+        try: return path.read_bytes() if path.is_file() and not path.is_symlink() else None
+        except OSError: return None
+    @classmethod
+    def _dt_property(cls,path:pathlib.Path)->str|None:
+        value=cls._dt_bytes(path)
+        return value.rstrip(b"\0").decode(errors="replace") if value is not None else None
+    @classmethod
+    def _dt_identity(cls,path:pathlib.Path)->dict:
+        value=cls._dt_bytes(path)
+        return {"status":"absent"} if value is None else {
+            "status":"ok","sizeBytes":len(value),"sha256":hashlib.sha256(value).hexdigest()}
     @staticmethod
     def _signature_status(modinfo):
         signer=modinfo["signer"]
@@ -175,6 +239,8 @@ def classify(query,selected,transaction,enrollment):
     return {"category":"unavailable","compatibilityState":"Unavailable","reason":selected.get("reason",query.get("reason","required-identity-unavailable"))}
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__); parser.add_argument("--release-directory",type=pathlib.Path); args=parser.parse_args()
-    print(json.dumps(Collector().collect(args.release_directory),indent=2,sort_keys=True))
+    parser=argparse.ArgumentParser(description=__doc__); parser.add_argument("--release-directory",type=pathlib.Path)
+    parser.add_argument("--development-manifest",type=pathlib.Path); args=parser.parse_args()
+    if args.release_directory and args.development_manifest: parser.error("choose a release directory or a development manifest, not both")
+    print(json.dumps(Collector().collect(args.release_directory,args.development_manifest),indent=2,sort_keys=True))
 if __name__=="__main__": main()

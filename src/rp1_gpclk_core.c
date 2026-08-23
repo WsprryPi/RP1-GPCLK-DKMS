@@ -25,6 +25,13 @@ static int rp1_gpclk_header_valid(const struct rp1_gpclk_uapi_header *header,
            header->version == RP1_GPCLK_UAPI_ABI_V1 && header->flags == 0;
 }
 
+static int rp1_gpclk_header_v2_valid(
+    const struct rp1_gpclk_uapi_header *header, __u16 size)
+{
+    return header && header->size == size &&
+           header->version == RP1_GPCLK_UAPI_ABI_V2 && header->flags == 0;
+}
+
 static int rp1_gpclk_route_valid(__u32 route)
 {
     return route == RP1_GPCLK_ROUTE_GPIO4 ||
@@ -334,6 +341,45 @@ int rp1_gpclk_core_submit_events(
         core->plan_tones[index] = tones[index];
     for (index = 0; index < request->event_count; index++)
         core->plan_events[index] = events[index];
+    core->value.plan_loaded = 1;
+    return RP1_GPCLK_CORE_OK;
+}
+
+int rp1_gpclk_core_submit_tone(struct rp1_gpclk_core *core, __u64 owner_id,
+                              struct rp1_gpclk_submit_tone_v2 *request)
+{
+    int result;
+
+    if (!core || !request ||
+        !rp1_gpclk_header_v2_valid(&request->header, sizeof(*request)) ||
+        request->generation != 0 ||
+        request->expected_route != core->value.route ||
+        request->fractional_bits != RP1_GPCLK_FRACTIONAL_BITS ||
+        request->tick_divider != RP1_GPCLK_TICK_DIVIDER ||
+        !rp1_gpclk_drive_valid(request->drive_ma) || request->reserved0 != 0 ||
+        !rp1_gpclk_reserved_zero(request->reserved, 4) ||
+        !rp1_gpclk_tones_valid(&request->tone, 1, 0))
+        return RP1_GPCLK_CORE_INVALID;
+    if (request->operation == RP1_GPCLK_TONE_OPERATION_CONTINUOUS) {
+        if (request->duration_ns != 0)
+            return RP1_GPCLK_CORE_INVALID;
+    } else if (request->operation == RP1_GPCLK_TONE_OPERATION_FINITE) {
+        if (request->duration_ns < RP1_GPCLK_TONE_DURATION_NS_MIN ||
+            request->duration_ns > RP1_GPCLK_TONE_DURATION_NS_MAX)
+            return RP1_GPCLK_CORE_INVALID;
+    } else {
+        return RP1_GPCLK_CORE_INVALID;
+    }
+    result = rp1_gpclk_submit_begin(core, owner_id, request->lease_id,
+                                    request->generation, 1,
+                                    &request->generation);
+    if (result != RP1_GPCLK_CORE_OK)
+        return result;
+    core->plan_mode = RP1_GPCLK_MODE_TONE;
+    core->plan_tone_count = 1;
+    core->plan_event_count = 0;
+    core->plan_symbol_count = 0;
+    core->plan_tones[0] = request->tone;
     core->value.plan_loaded = 1;
     return RP1_GPCLK_CORE_OK;
 }

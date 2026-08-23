@@ -5,17 +5,22 @@
 #include <linux/string.h>
 #include <linux/uaccess.h>
 
+#include "rp1_gpclk/compatibility.h"
 #include "rp1_gpclk/device.h"
 #include "rp1_gpclk/execution.h"
 #include "rp1_gpclk/kernel_api.h"
 #include "rp1_gpclk/uapi_dispatch.h"
 #include "rp1_gpclk/version.h"
 
-#define RP1_GPCLK_PHASE4A_CAPABILITIES \
+#define RP1_GPCLK_V1_CAPABILITIES \
 	(RP1_GPCLK_CAP_SUBMIT_WSPR | RP1_GPCLK_CAP_SUBMIT_EVENTS | \
 	 RP1_GPCLK_CAP_STOP_DRAIN | RP1_GPCLK_CAP_STABLE_STATE | \
 	 RP1_GPCLK_CAP_ROUTE_IDENTITY | RP1_GPCLK_CAP_COMPAT_IDENTITY | \
 	 RP1_GPCLK_CAP_CLEANUP_FAULT_LATCH)
+
+#define RP1_GPCLK_V2_CAPABILITIES \
+	(RP1_GPCLK_V1_CAPABILITIES | RP1_GPCLK_CAP_TONE_CONTINUOUS | \
+	 RP1_GPCLK_CAP_TONE_FINITE)
 
 #define RP1_GPCLK_PHASE4A_INERT_CAPABILITIES \
 	(RP1_GPCLK_CAP_ROUTE_IDENTITY | RP1_GPCLK_CAP_COMPAT_IDENTITY | \
@@ -38,6 +43,13 @@ static bool rp1_gpclk_header_valid(const struct rp1_gpclk_uapi_header *header,
 {
 	return header->size == size &&
 		header->version == RP1_GPCLK_UAPI_ABI_V1 && header->flags == 0;
+}
+
+static bool rp1_gpclk_header_v2_valid(
+	const struct rp1_gpclk_uapi_header *header, size_t size)
+{
+	return header->size == size &&
+		header->version == RP1_GPCLK_UAPI_ABI_V2 && header->flags == 0;
 }
 
 static long rp1_gpclk_core_error(int result)
@@ -90,7 +102,7 @@ static long rp1_gpclk_query(struct rp1_gpclk_file *context, void __user *user)
 		RP1_GPCLK_COMPAT_COMPATIBLE_UNQUALIFIED;
 	request.compatibility_reason =
 		RP1_GPCLK_COMPAT_REASON_ADMIN_ENROLLMENT_REQUIRED;
-	request.capabilities = RP1_GPCLK_PHASE4A_CAPABILITIES;
+	request.capabilities = RP1_GPCLK_V1_CAPABILITIES;
 	if (rp1_gpclk_live_output_eligible(context->device))
 		request.capabilities |= RP1_GPCLK_CAP_LIVE_ELIGIBLE;
 	if (rp1_gpclk_live_output_eligible(context->device))
@@ -105,7 +117,56 @@ static long rp1_gpclk_query(struct rp1_gpclk_file *context, void __user *user)
 	strscpy(request.module_id, "rp1-gpclk-dkms", sizeof(request.module_id));
 	strscpy(request.build_id, RP1_GPCLK_MODULE_VERSION,
 		sizeof(request.build_id));
-	strscpy(request.compatibility_id, "phase5.2-no-positive-release-entry",
+	strscpy(request.compatibility_id, rp1_gpclk_route_candidate_id(route),
+		sizeof(request.compatibility_id));
+	if (copy_to_user(user, &request, sizeof(request)))
+		return -EFAULT;
+	return 0;
+}
+
+static long rp1_gpclk_query_v2(struct rp1_gpclk_file *context, void __user *user)
+{
+	struct rp1_gpclk_query_v2 request;
+	__u32 route;
+
+	if (copy_from_user(&request, user, sizeof(request)))
+		return -EFAULT;
+	if (!rp1_gpclk_header_v2_valid(&request.header, sizeof(request)) ||
+	    request.reserved0 || request.reserved1 ||
+	    !rp1_gpclk_reserved_zero(request.reserved, 4))
+		return -EINVAL;
+	mutex_lock(&context->device->lock);
+	if (context->device->dead) {
+		mutex_unlock(&context->device->lock);
+		return -ENODEV;
+	}
+	route = context->device->route;
+	mutex_unlock(&context->device->lock);
+	memset(&request, 0, sizeof(request));
+	request.header.size = sizeof(request);
+	request.header.version = RP1_GPCLK_UAPI_ABI_V2;
+	request.abi_min = RP1_GPCLK_UAPI_ABI_V1;
+	request.abi_max = RP1_GPCLK_UAPI_ABI_V2;
+	request.route = route;
+	request.compatibility_state = RP1_GPCLK_COMPAT_COMPATIBLE_UNQUALIFIED;
+	request.compatibility_reason = RP1_GPCLK_COMPAT_REASON_ADMIN_ENROLLMENT_REQUIRED;
+	request.capabilities = RP1_GPCLK_V2_CAPABILITIES;
+	if (rp1_gpclk_live_output_eligible(context->device)) {
+		request.capabilities |= RP1_GPCLK_CAP_LIVE_ELIGIBLE;
+		request.compatibility_state = RP1_GPCLK_COMPAT_EXPERIMENTAL;
+	}
+	request.max_tones = RP1_GPCLK_MAX_TONES;
+	request.wspr_symbols = RP1_GPCLK_WSPR_SYMBOLS;
+	request.max_events = RP1_GPCLK_MAX_EVENTS;
+	request.max_dither_period = RP1_GPCLK_DITHER_PERIOD_MAX;
+	request.supported_drive_ma_mask = RP1_GPCLK_DRIVE_SUPPORT_2_MA;
+	request.max_event_duration_ns = RP1_GPCLK_EVENT_DURATION_NS_MAX;
+	request.max_request_duration_ns = RP1_GPCLK_REQUEST_DURATION_NS_MAX;
+	request.min_tone_duration_ns = RP1_GPCLK_TONE_DURATION_NS_MIN;
+	request.max_tone_duration_ns = RP1_GPCLK_TONE_DURATION_NS_MAX;
+	strscpy(request.module_id, "rp1-gpclk-dkms", sizeof(request.module_id));
+	strscpy(request.build_id, RP1_GPCLK_MODULE_VERSION, sizeof(request.build_id));
+	strscpy(request.compatibility_id, rp1_gpclk_route_candidate_id(route),
 		sizeof(request.compatibility_id));
 	if (copy_to_user(user, &request, sizeof(request)))
 		return -EFAULT;
@@ -115,7 +176,7 @@ static long rp1_gpclk_query(struct rp1_gpclk_file *context, void __user *user)
 static long rp1_gpclk_acquire(struct rp1_gpclk_file *context, void __user *user)
 {
 	struct rp1_gpclk_acquire_v1 request;
-	__u64 available = RP1_GPCLK_PHASE4A_CAPABILITIES;
+	__u64 available = RP1_GPCLK_V2_CAPABILITIES;
 	int result;
 
 	if (copy_from_user(&request, user, sizeof(request)))
@@ -269,6 +330,40 @@ free_tones:
 	return result;
 }
 
+static long rp1_gpclk_submit_tone_v2(struct rp1_gpclk_file *context,
+				     void __user *user)
+{
+	struct rp1_gpclk_submit_tone_v2 request;
+	long result;
+
+	if (copy_from_user(&request, user, sizeof(request)))
+		return -EFAULT;
+	if (!rp1_gpclk_header_v2_valid(&request.header, sizeof(request)) ||
+	    request.reserved0 || !rp1_gpclk_reserved_zero(request.reserved, 4))
+		return -EINVAL;
+	if (!rp1_gpclk_live_output_eligible(context->device))
+		return -EACCES;
+	mutex_lock(&context->device->lock);
+	if (context->device->dead)
+		result = -ENODEV;
+	else
+		result = rp1_gpclk_execution_submit_tone(context->device,
+			context->owner, &request);
+	mutex_unlock(&context->device->lock);
+	if (!result && copy_to_user(user, &request, sizeof(request))) {
+		mutex_lock(&context->device->lock);
+		rp1_gpclk_execution_stop(context->device, context->owner,
+			request.lease_id, request.generation, RP1_GPCLK_REASON_STOPPED);
+		mutex_unlock(&context->device->lock);
+		result = -EFAULT;
+	} else {
+		result = rp1_gpclk_execution_error(result);
+	}
+	if (!result)
+		rp1_gpclk_execution_activate(context->device);
+	return result;
+}
+
 static long rp1_gpclk_stop(struct rp1_gpclk_file *context, void __user *user)
 {
 	struct rp1_gpclk_stop_v1 request;
@@ -334,6 +429,43 @@ static long rp1_gpclk_get_state(struct rp1_gpclk_file *context,
 	return 0;
 }
 
+static long rp1_gpclk_release_v2(struct rp1_gpclk_file *context,
+				 void __user *user)
+{
+	struct rp1_gpclk_release_v2 request;
+	int result;
+
+	if (copy_from_user(&request, user, sizeof(request)))
+		return -EFAULT;
+	if (!rp1_gpclk_header_v2_valid(&request.header, sizeof(request)) ||
+	    !rp1_gpclk_reserved_zero(request.reserved, 4))
+		return -EINVAL;
+	mutex_lock(&context->device->lock);
+	result = context->device->dead ? -ENODEV :
+		rp1_gpclk_execution_stop(context->device, context->owner,
+			request.lease_id, request.generation,
+			RP1_GPCLK_REASON_STOPPED);
+	mutex_unlock(&context->device->lock);
+	if (result != RP1_GPCLK_CORE_OK &&
+	    !(result == RP1_GPCLK_CORE_STATE &&
+	      completion_done(&context->device->execution_done)))
+		return rp1_gpclk_execution_error(result);
+	if (result == RP1_GPCLK_CORE_OK) {
+		long waited = wait_for_completion_interruptible_timeout(
+			&context->device->execution_done, msecs_to_jiffies(2000));
+
+		if (waited < 0)
+			return waited;
+		if (waited == 0)
+			return -ETIMEDOUT;
+	}
+	mutex_lock(&context->device->lock);
+	result = rp1_gpclk_core_release(&context->device->core, context->owner,
+		request.lease_id);
+	mutex_unlock(&context->device->lock);
+	return rp1_gpclk_core_error(result);
+}
+
 static long rp1_gpclk_release_lease(struct rp1_gpclk_file *context,
 				    void __user *user)
 {
@@ -359,6 +491,12 @@ long rp1_gpclk_uapi_dispatch(struct file *file, unsigned int command,
 	void __user *user = (void __user *)argument;
 
 	switch (command) {
+	case RP1_GPCLK_IOC_QUERY_V2:
+		return rp1_gpclk_query_v2(context, user);
+	case RP1_GPCLK_IOC_SUBMIT_TONE_V2:
+		return rp1_gpclk_submit_tone_v2(context, user);
+	case RP1_GPCLK_IOC_RELEASE_V2:
+		return rp1_gpclk_release_v2(context, user);
 	case RP1_GPCLK_IOC_QUERY:
 		return rp1_gpclk_query(context, user);
 	case RP1_GPCLK_IOC_ACQUIRE:

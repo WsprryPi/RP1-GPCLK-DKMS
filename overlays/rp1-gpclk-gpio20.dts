@@ -22,7 +22,7 @@
 };
 
 &rp1 {
-	rp1_gpclk_dkms: rp1-gpclk-dkms {
+	rp1_gpclk_dkms_gpio20: rp1-gpclk-dkms-gpio20 {
 		compatible = "wsprrypi,rp1-gpclk-dkms-v1";
 		reg = <0xc0 0x40174024 0x0 0x8>,
 		      <0xc0 0x40158000 0x0 0x8>;

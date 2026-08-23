@@ -1,0 +1,31 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "expectedTag": "v1.1.2",
+  "generatedMembers": [
+    "COMPATIBILITY.json",
+    "PRODUCT-INVENTORY.json",
+    "QUALIFICATION.json",
+    "TARGET-VERIFICATION.json"
+  ],
+  "package": "rp1-gpclk-dkms-qualification",
+  "release": "1.1.2",
+  "schemaVersion": 2,
+  "sourceMembers": [
+    "LICENSE.md",
+    "LICENSES/GPL-2.0-only.txt",
+    "LICENSES/Linux-syscall-note.txt",
+    "LICENSES/MIT.txt",
+    "docs/operator/debian-packaging.md",
+    "docs/releases/1.1.2-behavior.md",
+    "docs/releases/1.1.2-security.md",
+    "release/qualification-layout-v2.json",
+    "release/uapi-contract-freeze-v1.1.0.json",
+    "schema/rp1-gpclk-compatibility-manifest-v1.schema.json",
+    "schema/rp1-gpclk-uapi-contract-freeze-v1.schema.json",
+    "scripts/release_candidate_controls.py",
+    "scripts/inspect_rebooted_route.py",
+    "scripts/release_candidate_transaction.py",
+    "scripts/validate_release_candidate.py",
+    "tools/gate_d_uapi_probe.c"
+  ]
+}

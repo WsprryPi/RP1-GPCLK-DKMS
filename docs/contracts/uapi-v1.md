@@ -2,6 +2,16 @@
 
 # RP1 GPCLK UAPI ABI v1 contract
 
+## Frozen 1.0.1 identity
+
+The normative 1.0.1 endpoint is `/dev/rp1-gpclk`. The ABI version is 1 and
+the SHA-256 of the byte-authoritative header is
+`1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb`.
+`release/uapi-contract-freeze-v1.0.1.json` records the machine-readable
+identity. Changing the endpoint, header bytes, ioctl numbers or sizes, route
+identities, or existing semantics reopens the 1.0.1 normative freeze and
+invalidates consumer work based on it.
+
 ## Authority and status
 
 The byte-authoritative header is `include/uapi/linux/rp1_gpclk.h`. This
@@ -96,3 +106,5 @@ reviewed revision assigns them.
 The stable administrative routes are GPIO4 value 1 and GPIO20 value 2. A
 queried route reports the overlay-bound route; `ACQUIRE.expected_route` must
 match it and cannot remux or change the administrative route.
+GPIO4 and GPIO20 have independent compatibility evidence: approval or
+qualification of one route never approves the other.

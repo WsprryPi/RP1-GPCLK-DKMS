@@ -10,7 +10,8 @@
     (RP1_GPCLK_CAP_SUBMIT_WSPR | RP1_GPCLK_CAP_SUBMIT_EVENTS | \
      RP1_GPCLK_CAP_STOP_DRAIN | RP1_GPCLK_CAP_STABLE_STATE | \
      RP1_GPCLK_CAP_ROUTE_IDENTITY | RP1_GPCLK_CAP_COMPAT_IDENTITY | \
-     RP1_GPCLK_CAP_CLEANUP_FAULT_LATCH | RP1_GPCLK_CAP_LIVE_ELIGIBLE)
+     RP1_GPCLK_CAP_CLEANUP_FAULT_LATCH | RP1_GPCLK_CAP_LIVE_ELIGIBLE | \
+     RP1_GPCLK_CAP_TONE_CONTINUOUS | RP1_GPCLK_CAP_TONE_FINITE)
 
 enum rp1_gpclk_core_result {
     RP1_GPCLK_CORE_OK = 0,
@@ -85,6 +86,8 @@ int rp1_gpclk_core_submit_events(
     struct rp1_gpclk_submit_events_v1 *request,
     const struct rp1_gpclk_tone_v1 *tones,
     const struct rp1_gpclk_event_v1 *events);
+int rp1_gpclk_core_submit_tone(struct rp1_gpclk_core *core, __u64 owner_id,
+                              struct rp1_gpclk_submit_tone_v2 *request);
 int rp1_gpclk_core_progress(struct rp1_gpclk_core *core, __u64 owner_id,
                            __u64 lease_id, __u64 generation);
 int rp1_gpclk_core_stop(struct rp1_gpclk_core *core, __u64 owner_id,

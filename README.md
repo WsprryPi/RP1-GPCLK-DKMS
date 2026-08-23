@@ -29,9 +29,15 @@ does not automatically extend to a different kernel, firmware, device tree,
 route, host, or physical installation. See the
 [1.0.0 release notes](docs/releases/1.0.0-behavior.md) for the precise claim.
 
-Version 1.0.1 is an unreleased corrective candidate for boot-time RP1 endpoint
-binding. See the [planned 1.0.1 behavior](docs/releases/1.0.1-behavior.md); it
-has hardware-free evidence only and is not a qualified or consumable release.
+Version 1.0.1 remains an unreleased historical corrective candidate. Version
+1.1.2 is the current interim development identity. The dual-route development
+branch preserves ABI v2 and permits the exact, uniquely selected GPIO4 or
+GPIO20 target class to enter separately authorized functional testing.
+Source/DKMS/module version `1.1.2`, Debian version `1.1.2-1`, and eventual tag
+`v1.1.2` are the intended coordinated version labels, not frozen artifact or
+consumer identities. See the
+[planned 1.1.2 behavior](docs/releases/1.1.2-behavior.md). Development
+eligibility is `Experimental`, not completed live or RF qualification.
 
 ## Safety
 
@@ -75,15 +81,16 @@ only; it does not qualify installation or hardware behavior on a target.
 
 The byte-authoritative userspace header is
 [`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The
-[UAPI documentation](docs/contracts/uapi-v1.md) describes request validation,
-capabilities, ownership, submission, state, cancellation, and additive
-evolution rules.
+[ABI v2 UAPI documentation](docs/contracts/uapi-v2.md) describes negotiation,
+explicit continuous and finite TONE requests, ownership, state, cancellation,
+and preserved ABI v1 behavior.
 
 The API supports:
 
 - `QUERY` for capabilities and compatibility state;
 - `ACQUIRE` and `RELEASE` for exclusive ownership;
-- bounded WSPR and event-program submission;
+- bounded WSPR and keyed-event submission;
+- explicit continuous and kernel-bounded finite TONE submission;
 - `GET_STATE` for stable runtime and terminal state; and
 - `STOP` for generation-specific bounded cancellation.
 
@@ -110,6 +117,22 @@ make check
 make package-check
 ```
 
+For a maintainer-facing build/install/load workflow from an exact unreleased
+Git commit, see [Exact-source development lifecycle](docs/operator/source-development.md).
+That path is package-independent and remains explicitly Experimental; it does
+not create release or qualification identity.
+
+The maintained test inventory and the distinction between automatic,
+parameterized build, and explicitly authorized hardware checks are documented
+in [Testing](docs/testing.md).
+
+Build and validate an unreleased development candidate without publishing it:
+
+```sh
+make release-unit DEVELOPMENT=1 OUTPUT_DIR=/absolute/output/directory
+make validate-release DEVELOPMENT=1 OUTPUT_DIR=/absolute/output/directory
+```
+
 Build the module against an explicitly selected local kernel build tree:
 
 ```sh
@@ -122,7 +145,13 @@ operator installation.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md), the
 [module contract](docs/contracts/rp1-gpclk-dkms-module-contract.md), and
-[LICENSE.md](LICENSE.md) before contributing.
+[roadmap](docs/roadmap.md) before contributing. See [LICENSE.md](LICENSE.md)
+for licensing terms.
+
+The external Harness evidence boundary and the next consumer-integration step
+are defined by the
+[Qualification Harness integration contract](docs/contracts/qualification-harness-integration.md)
+and [Roadmap Step 4 WsprryPi handoff](docs/contracts/roadmap-step4-wsprrypi-handoff.md).
 
 ## Project boundary
 

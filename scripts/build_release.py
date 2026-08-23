@@ -61,7 +61,11 @@ def validate_versions(layout: dict) -> None:
     if not match or match.group(1) != layout["release"]:
         raise SystemExit("module metadata and release layout versions differ")
     dkms = (ROOT / "dkms.conf").read_text()
-    if f'PACKAGE_VERSION="{layout["release"]}"' not in dkms:
+    version_lines = {
+        f'PACKAGE_VERSION="{layout["release"]}"',
+        'PACKAGE_VERSION="#MODULE_VERSION#"',
+    }
+    if not any(line in dkms for line in version_lines):
         raise SystemExit("dkms.conf and release layout versions differ")
     if f'PACKAGE_NAME="{layout["package"]}"' not in dkms:
         raise SystemExit("dkms.conf and release layout package names differ")

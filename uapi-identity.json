@@ -1,6 +1,6 @@
 {
   "SPDX-License-Identifier": "MIT",
-  "abi": 1,
+  "abi": 2,
   "path": "include/uapi/linux/rp1_gpclk.h",
-  "sha256": "1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb"
+  "sha256": "998ab96d7dbcc0d935c05758c46acba56bbcf92aa1b674b899bdab6932dc8384"
 }

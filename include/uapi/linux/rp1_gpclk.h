@@ -6,6 +6,7 @@
 #include <linux/types.h>
 
 #define RP1_GPCLK_UAPI_ABI_V1 1U
+#define RP1_GPCLK_UAPI_ABI_V2 2U
 #define RP1_GPCLK_IOC_MAGIC 0xb8
 
 #define RP1_GPCLK_MODULE_ID_MAX 64U
@@ -22,6 +23,9 @@
 #define RP1_GPCLK_EVENT_DURATION_NS_MIN 1ULL
 #define RP1_GPCLK_EVENT_DURATION_NS_MAX 120000000000ULL
 #define RP1_GPCLK_REQUEST_DURATION_NS_MAX 120000000000ULL
+#define RP1_GPCLK_TONE_DURATION_NS_MIN 1000000ULL
+#define RP1_GPCLK_TONE_DURATION_NS_MAX 120000000000ULL
+#define RP1_GPCLK_TONE_CONTINUOUS_CHUNK_NS 1000000000ULL
 
 struct rp1_gpclk_uapi_header {
     __u16 size;
@@ -41,6 +45,13 @@ enum rp1_gpclk_mode {
     RP1_GPCLK_MODE_QRSS = 2,
     RP1_GPCLK_MODE_FSKCW = 3,
     RP1_GPCLK_MODE_DFCW = 4,
+    RP1_GPCLK_MODE_TONE = 5,
+};
+
+enum rp1_gpclk_tone_operation {
+    RP1_GPCLK_TONE_OPERATION_INVALID = 0,
+    RP1_GPCLK_TONE_OPERATION_CONTINUOUS = 1,
+    RP1_GPCLK_TONE_OPERATION_FINITE = 2,
 };
 
 enum rp1_gpclk_compatibility_state {
@@ -102,6 +113,8 @@ enum rp1_gpclk_terminal_reason {
 #define RP1_GPCLK_CAP_COMPAT_IDENTITY (1ULL << 5)
 #define RP1_GPCLK_CAP_CLEANUP_FAULT_LATCH (1ULL << 6)
 #define RP1_GPCLK_CAP_LIVE_ELIGIBLE (1ULL << 7)
+#define RP1_GPCLK_CAP_TONE_CONTINUOUS (1ULL << 8)
+#define RP1_GPCLK_CAP_TONE_FINITE (1ULL << 9)
 
 #define RP1_GPCLK_DRIVE_MA_2 2U
 #define RP1_GPCLK_DRIVE_MA_4 4U
@@ -132,6 +145,31 @@ struct rp1_gpclk_query_v1 {
     __u32 reserved1;
     __aligned_u64 max_event_duration_ns;
     __aligned_u64 max_request_duration_ns;
+    char module_id[RP1_GPCLK_MODULE_ID_MAX];
+    char build_id[RP1_GPCLK_BUILD_ID_MAX];
+    char compatibility_id[RP1_GPCLK_COMPAT_ID_MAX];
+    __aligned_u64 reserved[4];
+};
+
+struct rp1_gpclk_query_v2 {
+    struct rp1_gpclk_uapi_header header;
+    __u16 abi_min;
+    __u16 abi_max;
+    __u32 route;
+    __u32 compatibility_state;
+    __u32 compatibility_reason;
+    __u32 reserved0;
+    __aligned_u64 capabilities;
+    __u32 max_tones;
+    __u32 wspr_symbols;
+    __u32 max_events;
+    __u32 max_dither_period;
+    __u32 supported_drive_ma_mask;
+    __u32 reserved1;
+    __aligned_u64 max_event_duration_ns;
+    __aligned_u64 max_request_duration_ns;
+    __aligned_u64 min_tone_duration_ns;
+    __aligned_u64 max_tone_duration_ns;
     char module_id[RP1_GPCLK_MODULE_ID_MAX];
     char build_id[RP1_GPCLK_BUILD_ID_MAX];
     char compatibility_id[RP1_GPCLK_COMPAT_ID_MAX];
@@ -199,6 +237,21 @@ struct rp1_gpclk_submit_events_v1 {
     __aligned_u64 reserved[4];
 };
 
+struct rp1_gpclk_submit_tone_v2 {
+    struct rp1_gpclk_uapi_header header;
+    __aligned_u64 lease_id;
+    __aligned_u64 generation;
+    struct rp1_gpclk_tone_v1 tone;
+    __aligned_u64 duration_ns;
+    __u32 operation;
+    __u32 expected_route;
+    __u32 fractional_bits;
+    __u32 tick_divider;
+    __u32 drive_ma;
+    __u32 reserved0;
+    __aligned_u64 reserved[4];
+};
+
 struct rp1_gpclk_stop_v1 {
     struct rp1_gpclk_uapi_header header;
     __aligned_u64 lease_id;
@@ -216,6 +269,13 @@ struct rp1_gpclk_state_v1 {
     __u32 cleanup_fault;
     __aligned_u64 elapsed_ns;
     __aligned_u64 remaining_ns;
+    __aligned_u64 reserved[4];
+};
+
+struct rp1_gpclk_release_v2 {
+    struct rp1_gpclk_uapi_header header;
+    __aligned_u64 lease_id;
+    __aligned_u64 generation;
     __aligned_u64 reserved[4];
 };
 
@@ -239,5 +299,11 @@ struct rp1_gpclk_release_v1 {
     _IOWR(RP1_GPCLK_IOC_MAGIC, 0x25, struct rp1_gpclk_state_v1)
 #define RP1_GPCLK_IOC_RELEASE \
     _IOW(RP1_GPCLK_IOC_MAGIC, 0x26, struct rp1_gpclk_release_v1)
+#define RP1_GPCLK_IOC_QUERY_V2 \
+    _IOWR(RP1_GPCLK_IOC_MAGIC, 0x27, struct rp1_gpclk_query_v2)
+#define RP1_GPCLK_IOC_SUBMIT_TONE_V2 \
+    _IOWR(RP1_GPCLK_IOC_MAGIC, 0x28, struct rp1_gpclk_submit_tone_v2)
+#define RP1_GPCLK_IOC_RELEASE_V2 \
+    _IOW(RP1_GPCLK_IOC_MAGIC, 0x29, struct rp1_gpclk_release_v2)
 
 #endif /* _UAPI_LINUX_RP1_GPCLK_H */

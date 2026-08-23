@@ -60,6 +60,18 @@ int main(void)
 	CHECK(rp1_gpclk_route_pin_validate(99, 99) != 0);
 	CHECK(rp1_gpclk_route_pin_validate(RP1_GPCLK_ROUTE_GPIO4, 20) != 0);
 	CHECK(rp1_gpclk_route_pin_validate(RP1_GPCLK_ROUTE_GPIO20, 4) != 0);
+	CHECK(rp1_gpclk_route_endpoint_validate(RP1_GPCLK_ROUTE_GPIO4,
+		RP1_GPCLK_GPIO4_ENDPOINT_NAME) == 0);
+	CHECK(rp1_gpclk_route_endpoint_validate(RP1_GPCLK_ROUTE_GPIO20,
+		RP1_GPCLK_GPIO20_ENDPOINT_NAME) == 0);
+	CHECK(rp1_gpclk_route_endpoint_validate(RP1_GPCLK_ROUTE_GPIO4,
+		RP1_GPCLK_GPIO20_ENDPOINT_NAME) != 0);
+	CHECK(rp1_gpclk_route_endpoint_validate(RP1_GPCLK_ROUTE_GPIO20,
+		RP1_GPCLK_GPIO4_ENDPOINT_NAME) != 0);
+	CHECK(rp1_gpclk_route_endpoint_validate(RP1_GPCLK_ROUTE_GPIO4,
+		"rp1-gpclk-dkms") != 0);
+	CHECK(rp1_gpclk_route_endpoint_validate(RP1_GPCLK_ROUTE_GPIO20,
+		NULL) != 0);
 
 	CHECK(rp1_gpclk_derive_target(0x10000000U, 0x100003ffU,
 		RP1_GPCLK_DIV_FRAC_OFFSET, RP1_GPCLK_REGISTER_BYTES,

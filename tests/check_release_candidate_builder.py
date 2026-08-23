@@ -4,7 +4,7 @@
 import io
 import json
 from pathlib import Path
-import stat
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -48,14 +48,14 @@ def ar_member(name: str, content: bytes) -> bytes:
 
 with tempfile.TemporaryDirectory() as temporary:
     root = Path(temporary)
-    product = root / "rp1-gpclk-dkms_1.0.0-1_all.deb"
+    product = root / "rp1-gpclk-dkms_1.1.2-1_all.deb"
     control = tar_xz({
-        "control": b"Package: rp1-gpclk-dkms\nVersion: 1.0.0-1\nArchitecture: all\n",
+        "control": b"Package: rp1-gpclk-dkms\nVersion: 1.1.2-1\nArchitecture: all\n",
         "md5sums": b"",
     })
-    base = "usr/src/rp1-gpclk-dkms-1.0.0"
+    base = "usr/src/rp1-gpclk-dkms-1.1.2"
     data_files = {
-        f"{base}/dkms.conf": b'PACKAGE_NAME="rp1-gpclk-dkms"\nPACKAGE_VERSION="1.0.0"\n',
+        f"{base}/dkms.conf": b'PACKAGE_NAME="rp1-gpclk-dkms"\nPACKAGE_VERSION="1.1.2"\n',
         f"{base}/Kbuild": b"obj-m += rp1_gpclk_dkms.o\n",
         f"{base}/Makefile": b"all:\n\t@true\n",
         f"{base}/include/uapi/linux/rp1_gpclk.h": b"uapi\n",
@@ -63,6 +63,12 @@ with tempfile.TemporaryDirectory() as temporary:
         f"{base}/overlays/rp1-gpclk-gpio20.dts": b"gpio20\n",
         "usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo": b"dtbo4\n",
         "usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo": b"dtbo20\n",
+        "usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager": b"#!/usr/bin/python3\n",
+        "usr/sbin/rp1-gpclk-route-manager": b"#!/usr/bin/python3\n",
+        "usr/share/rp1-gpclk-dkms/1.1.2/rp1-gpclk-route-manager-v1.schema.json": b"{}\n",
+        "usr/share/doc/rp1-gpclk-dkms/route-manager-v1.md": b"contract\n",
+        "usr/lib/systemd/system/rp1-gpclk-route-manager.socket": b"[Socket]\n",
+        "usr/lib/systemd/system/rp1-gpclk-route-manager@.service": b"[Service]\n",
         "usr/share/doc/rp1-gpclk-dkms/copyright": b"MIT\n",
     }
     product.write_bytes(
@@ -72,24 +78,54 @@ with tempfile.TemporaryDirectory() as temporary:
         + ar_member("data.tar.xz", tar_xz(data_files))
     )
     inventory, extracted = builder.validate_product(product)
-    assert inventory["debianVersion"] == "1.0.0-1"
+    assert inventory["debianVersion"] == "1.1.2-1"
     assert inventory["packageSha256"] == builder.sha256(product)
     assert set(data_files) <= set(extracted)
     inventory_bytes = builder.pretty(inventory)
     identity = {
-        "release": "1.0.0", "expectedTag": "v1.0.0",
+        "release": "1.1.2", "expectedTag": "v1.1.2",
         "productPackageSha256": inventory["packageSha256"],
     }
     identity_bytes = builder.pretty(identity)
     plan = builder.target_plan(
-        inventory["packageSha256"], builder.sha256_bytes(inventory_bytes),
+        "1" * 40, inventory["packageSha256"], builder.sha256_bytes(inventory_bytes),
         builder.sha256_bytes(identity_bytes), builder.sha256_bytes(b"uapi\n"),
         builder.sha256_bytes(b"dtbo4\n"), builder.sha256_bytes(b"dtbo20\n"),
     )
+    compatibility = builder.compatibility("1" * 40, "2026-08-22T00:00:00-05:00",
+                                          inventory["packageSha256"], extracted)
+    assert {entry["route"] for entry in compatibility["entries"]} == {"GPIO4", "GPIO20"}
+    by_route = {entry["route"]: entry for entry in compatibility["entries"]}
+    assert by_route["GPIO4"]["state"] == "Experimental"
+    assert by_route["GPIO4"]["liveEligible"] is True
+    assert "qualification-candidate" in by_route["GPIO4"]["id"]
+    candidate = by_route["GPIO4"]["qualificationCandidate"]
+    assert candidate["kernelRelease"] == "6.18.34+rpt-rpi-2712"
+    assert candidate["architecture"] == "aarch64"
+    assert candidate["modelCompatible"] == "raspberrypi,5-model-b"
+    assert candidate["socClass"] == "BCM2712" and candidate["routeId"] == 1
+    assert candidate["endpoint"] == "/dev/rp1-gpclk"
+    assert candidate["clock"] == "RP1 GPCLK0" and candidate["minimumDriveMa"] == 2
+    assert candidate["predecessorOutputInhibitedEvidence"]["packageSha256"] == builder.PREDECESSOR_OUTPUT_INHIBITED_PACKAGE_SHA256
+    assert candidate["predecessorOutputInhibitedEvidence"]["claimCeiling"] == "output-inhibited-route-management-and-cleanup-only"
+    assert by_route["GPIO20"]["state"] == "Unavailable"
+    assert by_route["GPIO20"]["liveEligible"] is False
+    assert by_route["GPIO20"]["qualificationCandidate"] is None
+    assert all(entry["uapiAbi"] == 2 and entry["release"] == "1.1.2"
+               for entry in compatibility["entries"])
+    assert compatibility["entries"][0]["id"] != compatibility["entries"][1]["id"]
+    assert compatibility["entries"][0]["overlayDtboSha256"] != compatibility["entries"][1]["overlayDtboSha256"]
+    serialized = json.dumps(compatibility)
+    for stale in ("1.0.1", "phase4d", "uapiAbi\": 1"):
+        assert stale not in serialized
     qualification_root = root / "qualification"
     qualification_root.mkdir()
     (qualification_root / "scripts").mkdir()
     (qualification_root / "scripts/release_candidate_target.py").write_text("# fixture\n")
+    (qualification_root / "scripts/inspect_rebooted_route.py").write_text("# fixture\n")
+    (qualification_root / "scripts/release_candidate_transaction.py").write_text("# fixture\n")
+    (qualification_root / "scripts/release_candidate_controls.py").write_text("# fixture\n")
+    (qualification_root / "scripts/validate_release_candidate.py").write_text("# fixture\n")
     (qualification_root / "PRODUCT-INVENTORY.json").write_bytes(inventory_bytes)
     (qualification_root / "QUALIFICATION.json").write_bytes(identity_bytes)
     (qualification_root / "TARGET-VERIFICATION.json").write_bytes(builder.pretty(plan))
@@ -97,11 +133,20 @@ with tempfile.TemporaryDirectory() as temporary:
     assert plan["authorized"] is False and plan["executed"] is False
     assert set(plan["physicalSafety"].values()) == {"fresh-operator-confirmation-required"}
     assert all(not step["mutating"] or step["requiresAuthorization"] for step in plan["steps"])
-    invoked = {arg for step in plan["steps"] for arg in step["argv"] if arg.startswith("scripts/")}
-    layout = json.loads((ROOT / "release/qualification-layout-v2.json").read_text())
+    assert plan["safety"]["bootChange"] is True and plan["safety"]["reboot"] is True
+    assert all(plan["safety"][field] is False for field in
+               ("liveOutput", "endpointAcquire", "clockOrRateChange", "dma",
+                "gpioOutput", "carrier", "sdrCapture", "transmissionOrRf"))
+    invoked = {arg for step in plan["steps"] for arg in step.get("argv", [])
+               if arg.startswith("scripts/")}
+    layout = json.loads((ROOT / "release/qualification-layout-v3.json").read_text())
     assert invoked <= set(layout["sourceMembers"])
     transfer = next(step for step in plan["steps"] if step["id"] == "validated-transfer")
-    assert transfer["argv"] == ["/usr/bin/sha256sum", "--check", "SHA256SUMS"]
+    assert transfer["argv"] == [
+        "/usr/bin/env",
+        "--chdir=/home/pi/rp1-gpclk-v1.1.2-qualification-candidate/release-set",
+        "/usr/bin/sha256sum", "--check", "SHA256SUMS",
+    ]
 
     bad = bytearray(product.read_bytes())
     bad[0] = 0
@@ -122,6 +167,13 @@ assert 'choices=("gpio4", "gpio20")' in target_source
 assert "/dev/mem" not in target_source
 assert "applied.stdout" not in target_source
 assert "if len(residual) == 1 and len(matches) == 1" in target_source
+
+route_inspector = (ROOT / "scripts/inspect_rebooted_route.py").read_text()
+for token in ("/dev/rp1-gpclk", "/dev/rp1-gpclk0", "wsprrypi,route",
+              "wsprrypi,pin", "/sys/bus/platform/devices", "live output is not disabled"):
+    assert token in route_inspector
+for prohibited in ("live_output=1", "dtoverlay", "/sbin/reboot", "/dev/mem"):
+    assert prohibited not in route_inspector
 
 
 def exercise_overlay_capture(apply_stdout: str) -> None:
@@ -162,5 +214,17 @@ assert "FROM docker.io/library/debian@sha256:c94f5ddd41327aa2d4a7cfba7889056c029
 for package in ("build-essential", "debhelper", "dh-dkms", "device-tree-compiler", "python3"):
     assert package in containerfile
 
-assert stat.S_IMODE((ROOT / "scripts/build_release_candidate.py").stat().st_mode) in {0o644, 0o755}
+def git_mode(path: str) -> str:
+    return subprocess.check_output(
+        ["git", "ls-files", "--stage", "--", path], cwd=ROOT, text=True
+    ).split()[0]
+
+
+assert git_mode("scripts/build_release_candidate.py") == "100755"
+assert git_mode("scripts/validate_release_candidate.py") == "100755"
+assert git_mode("scripts/inspect_rebooted_route.py") == "100755"
+assert git_mode("scripts/release_candidate_transaction.py") == "100755"
+builder_source = (ROOT / "scripts/build_release_candidate.py").read_text()
+assert "qualification archive generation is blocked" in builder_source
+assert builder.PREDECESSOR_OUTPUT_INHIBITED_PACKAGE_SHA256 == "247bd7da35e4ad812a13828668fe03673da127bad7ed2b3e970876f3f21c002d"
 print("Release candidate builder and target-plan contract: PASS")

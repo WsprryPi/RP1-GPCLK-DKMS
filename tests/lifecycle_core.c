@@ -680,6 +680,111 @@ static void test_fault_points(void)
     }
 }
 
+static void setup_tone(struct rp1_gpclk_submit_tone_v2 *request,
+		       __u64 lease, __u32 operation, __u64 duration_ns)
+{
+	memset(request, 0, sizeof(*request));
+	request->header.size = sizeof(*request);
+	request->header.version = RP1_GPCLK_UAPI_ABI_V2;
+	request->lease_id = lease;
+	request->operation = operation;
+	request->expected_route = RP1_GPCLK_ROUTE_GPIO4;
+	request->fractional_bits = RP1_GPCLK_FRACTIONAL_BITS;
+	request->tick_divider = RP1_GPCLK_TICK_DIVIDER;
+	request->drive_ma = RP1_GPCLK_DRIVE_MA_2;
+	request->duration_ns = duration_ns;
+	fill_tones(&request->tone, 1, 2);
+}
+
+static void test_tone_continuous_lifecycle(void)
+{
+	struct rp1_gpclk_submit_tone_v2 request;
+	struct rp1_gpclk_core core;
+	__u64 lease;
+
+	rp1_gpclk_core_init(&core);
+	lease = acquire(&core, OWNER_A);
+	setup_tone(&request, lease, RP1_GPCLK_TONE_OPERATION_CONTINUOUS, 0);
+	CHECK(rp1_gpclk_core_submit_tone(&core, OWNER_A, &request) ==
+	      RP1_GPCLK_CORE_OK);
+	CHECK(request.generation == 1);
+	CHECK(core.value.state == RP1_GPCLK_STATE_RUNNING);
+	CHECK(core.value.completed_units == 0);
+	CHECK(core.value.total_units == 1);
+	CHECK(rp1_gpclk_core_release(&core, OWNER_A, lease) ==
+	      RP1_GPCLK_CORE_BUSY);
+	CHECK(rp1_gpclk_core_stop(&core, OWNER_A, lease, request.generation) ==
+	      RP1_GPCLK_CORE_OK);
+	CHECK(core.value.state == RP1_GPCLK_STATE_DRAINING);
+	CHECK(rp1_gpclk_core_progress(&core, OWNER_A, lease,
+				      request.generation) == RP1_GPCLK_CORE_OK);
+	CHECK(core.value.state == RP1_GPCLK_STATE_COMPLETE);
+	CHECK(core.value.terminal_reason == RP1_GPCLK_REASON_STOPPED);
+}
+
+static void test_tone_finite_boundaries_and_completion(void)
+{
+	struct rp1_gpclk_submit_tone_v2 request;
+	struct rp1_gpclk_core core;
+	struct rp1_gpclk_core before;
+	__u64 lease;
+
+	rp1_gpclk_core_init(&core);
+	lease = acquire(&core, OWNER_A);
+	setup_tone(&request, lease, RP1_GPCLK_TONE_OPERATION_FINITE, 0);
+	before = core;
+	CHECK(rp1_gpclk_core_submit_tone(&core, OWNER_A, &request) ==
+	      RP1_GPCLK_CORE_INVALID);
+	CHECK(memcmp(&before, &core, sizeof(core)) == 0);
+	setup_tone(&request, lease, RP1_GPCLK_TONE_OPERATION_FINITE,
+		   RP1_GPCLK_TONE_DURATION_NS_MAX + 1);
+	CHECK(rp1_gpclk_core_submit_tone(&core, OWNER_A, &request) ==
+	      RP1_GPCLK_CORE_INVALID);
+	setup_tone(&request, lease, RP1_GPCLK_TONE_OPERATION_CONTINUOUS, 1);
+	CHECK(rp1_gpclk_core_submit_tone(&core, OWNER_A, &request) ==
+	      RP1_GPCLK_CORE_INVALID);
+	setup_tone(&request, lease, RP1_GPCLK_TONE_OPERATION_FINITE,
+		   RP1_GPCLK_TONE_DURATION_NS_MIN);
+	CHECK(rp1_gpclk_core_submit_tone(&core, OWNER_A, &request) ==
+	      RP1_GPCLK_CORE_OK);
+	CHECK(rp1_gpclk_core_progress(&core, OWNER_A, lease,
+				      request.generation) == RP1_GPCLK_CORE_OK);
+	CHECK(core.value.state == RP1_GPCLK_STATE_COMPLETE);
+	CHECK(core.value.terminal_reason == RP1_GPCLK_REASON_COMPLETE);
+}
+
+static void test_tone_fail_closed_matrix(void)
+{
+	struct rp1_gpclk_submit_tone_v2 request;
+	struct rp1_gpclk_core core;
+	struct rp1_gpclk_core before;
+	__u64 lease;
+
+	rp1_gpclk_core_init(&core);
+	lease = acquire(&core, OWNER_A);
+#define EXPECT_TONE_INVALID(change) do { \
+	setup_tone(&request, lease, RP1_GPCLK_TONE_OPERATION_FINITE, 1000000000ULL); \
+	change; before = core; \
+	CHECK(rp1_gpclk_core_submit_tone(&core, OWNER_A, &request) == RP1_GPCLK_CORE_INVALID); \
+	CHECK(memcmp(&before, &core, sizeof(core)) == 0); \
+} while (0)
+	EXPECT_TONE_INVALID(request.header.size--);
+	EXPECT_TONE_INVALID(request.header.version = RP1_GPCLK_UAPI_ABI_V1);
+	EXPECT_TONE_INVALID(request.header.flags = 1);
+	EXPECT_TONE_INVALID(request.operation = RP1_GPCLK_TONE_OPERATION_INVALID);
+	EXPECT_TONE_INVALID(request.expected_route = RP1_GPCLK_ROUTE_GPIO20);
+	EXPECT_TONE_INVALID(request.drive_ma = 3);
+	EXPECT_TONE_INVALID(request.reserved0 = 1);
+	EXPECT_TONE_INVALID(request.reserved[0] = 1);
+	EXPECT_TONE_INVALID(request.generation = 1);
+	EXPECT_TONE_INVALID(request.tone.upper_divider_q16++);
+#undef EXPECT_TONE_INVALID
+	setup_tone(&request, lease + 1, RP1_GPCLK_TONE_OPERATION_FINITE,
+		   1000000000ULL);
+	CHECK(rp1_gpclk_core_submit_tone(&core, OWNER_A, &request) ==
+	      RP1_GPCLK_CORE_STALE);
+}
+
 int main(void)
 {
     RUN(test_initial_and_acquire);
@@ -699,6 +804,9 @@ int main(void)
     RUN(test_failure_reason_matrix);
     RUN(test_central_terminal_guard);
     RUN(test_fault_points);
+    RUN(test_tone_continuous_lifecycle);
+    RUN(test_tone_finite_boundaries_and_completion);
+    RUN(test_tone_fail_closed_matrix);
     printf("lifecycle core: PASS (%u groups)\n", tests_run);
     return 0;
 }

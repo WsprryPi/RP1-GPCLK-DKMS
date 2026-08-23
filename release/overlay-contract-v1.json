@@ -3,8 +3,6 @@
   "schemaVersion": 1,
   "selection": {"exactlyOne": true, "arbitraryGpioParameter": false, "automaticSubstitution": false, "hotMutation": false},
   "sharedIdentity": {
-    "endpointLabel": "rp1_gpclk_dkms",
-    "endpointName": "rp1-gpclk-dkms",
     "compatible": "wsprrypi,rp1-gpclk-dkms-v1",
     "clockProvider": "rp1_clocks",
     "clockId": "RP1_CLK_GP0",
@@ -16,8 +14,8 @@
     "pinctrlNames": ["default", "active", "safe"]
   },
   "routes": {
-    "gpio4": {"routeId": 1, "pin": 4, "source": "overlays/rp1-gpclk-gpio4.dts", "dtbo": "rp1-gpclk-gpio4.dtbo"},
-    "gpio20": {"routeId": 2, "pin": 20, "source": "overlays/rp1-gpclk-gpio20.dts", "dtbo": "rp1-gpclk-gpio20.dtbo"}
+    "gpio4": {"routeId": 1, "pin": 4, "endpointLabel": "rp1_gpclk_dkms_gpio4", "endpointName": "rp1-gpclk-dkms-gpio4", "source": "overlays/rp1-gpclk-gpio4.dts", "dtbo": "rp1-gpclk-gpio4.dtbo"},
+    "gpio20": {"routeId": 2, "pin": 20, "endpointLabel": "rp1_gpclk_dkms_gpio20", "endpointName": "rp1-gpclk-dkms-gpio20", "source": "overlays/rp1-gpclk-gpio20.dts", "dtbo": "rp1-gpclk-gpio20.dtbo"}
   },
   "evidenceIndependence": {"gpio4NeverAuthorizesGpio20": true, "gpio20NeverAuthorizesGpio4": true},
   "safeState": {"function": "gpio", "inputEnable": true, "bias": "disabled", "appliesTo": ["default", "safe"]},
