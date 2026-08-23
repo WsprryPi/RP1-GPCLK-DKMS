@@ -112,8 +112,11 @@ int main(int argc, char **argv)
 		RP1_GPCLK_ROUTE_GPIO4 : expected_route) ||
 	    query.compatibility_state != RP1_GPCLK_COMPAT_EXPERIMENTAL ||
 	    (query.capabilities & REQUIRED_CAPS) != REQUIRED_CAPS ||
-	    strcmp(query.build_id, "0.0.0-phase4d-combined") ||
-	    strcmp(query.compatibility_id, "phase4d-wspr5-combined-6.18.34"))
+	    strcmp(query.build_id, "1.1.2") ||
+	    strcmp(query.compatibility_id,
+		expected_route == RP1_GPCLK_ROUTE_GPIO4 ?
+		"v1.1.2-pi5-gpio4-6.18.34-development-candidate" :
+		"v1.1.2-pi5-gpio20-6.18.34-development-candidate"))
 		return EXIT_FAILURE;
 	if (!strcmp(argv[1], "query") || !strcmp(argv[1], "query-gpio4"))
 		return EXIT_SUCCESS;
