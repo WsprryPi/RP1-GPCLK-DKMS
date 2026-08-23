@@ -1,0 +1,94 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "schemaVersion": 1,
+  "evidenceClass": "gpio4-r2-exact-overlay-development-execution-and-cleanup",
+  "source": {
+    "branch": "codex/issue-412-dual-route-functional-development",
+    "commit": "4c0ae1f6f6168ded724670bbde146cab30aee3f6",
+    "sourceArchiveSha256": "371e040e2518bc9004ad4f27cfbfd15eaaf3d50598b4052a67db1fc77f8bffbd"
+  },
+  "target": {
+    "hostname": "wspr5",
+    "model": "Raspberry Pi 5 Model B Rev 1.0",
+    "architecture": "aarch64",
+    "kernel": "6.18.34+rpt-rpi-2712",
+    "predecessorRejectionBootId": "59374095-8610-4ee5-bfdf-af3bfa24e7e7",
+    "interruptedPreCampaignBootId": "12883b15-4bcb-4d51-9a1a-135e2370e5ad",
+    "successfulExactOverlayBootId": "28458186-84c8-40fe-9285-a4e8dfa8acbe",
+    "finalRestoredBootId": "dae2ba77-5e3b-4d0c-a751-d6aaa3c32424",
+    "interruption": "The operator power-cycled wspr5 after mDNS became unavailable. The first campaign SSH command never connected; the post-power-cycle audit proved live_output disabled, the installed module loaded, the endpoint closed, and GPIO4 in its input state before the successful campaign began."
+  },
+  "routeTransaction": {
+    "id": "2dfe83ec-9267-4b4b-bb5d-eaa6d3d2a3e8",
+    "requestId": "issue412-gpio4-r2-adversarial-20260823",
+    "actor": "codex-authorized-by-lbussy",
+    "journalSha256": "c5cab69ecfa3860941391323ad783fdb5531c7dc999f1acbb4455029b53fc49b",
+    "status": "complete"
+  },
+  "artifacts": {
+    "moduleSha256": "ae8ecdd688ef1d7606513e0c9047e5909a4f6ca9352bc637118a6db90400bb08",
+    "gpio4DtboSha256": "f2e29a250a9de7901aca5e2adc504ea3f053c23319bce3986bd48f81ae7af211",
+    "liveClientSha256": "7e7ff0d845854a904d84754d8f3d8ba41368bb11c4399230031db708fdbe183e",
+    "toneClientSha256": "ee48761965c5330aae317045f974e29a88c585da9072fccaaaa6bc20a2a68370",
+    "nativeBuildLogSha256": "b871ae6ba9156f147ac1500b9ffe8eff30e5e3cf9eaede22a9de83d5db67ed35"
+  },
+  "overlayIdentity": {
+    "route": "gpio4",
+    "routeId": 1,
+    "endpointName": "rp1-gpclk-dkms-gpio4",
+    "exactlyOneMatchingNode": true,
+    "gpio20NodeAbsent": true,
+    "predecessorDtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "predecessorEndpointName": "rp1-gpclk-dkms",
+    "predecessorRejected": true,
+    "predecessorRejection": "DT validation -EINVAL; probe -22; endpoint bootstrap action -4",
+    "predecessorRejectionLogSha256": "3c23b59faae50b2be4563a5b4127d7f5657e046146c7e2ecc1254ed6d4f2eb50"
+  },
+  "compatibility": {
+    "moduleVersion": "1.1.2",
+    "state": "Experimental",
+    "candidateId": "v1.1.2-pi5-gpio4-6.18.34-development-candidate-r2",
+    "capabilitiesHex": "0xff",
+    "liveOutputExplicitlyEnabledForCampaign": true
+  },
+  "results": {
+    "qrss": { "events": 1, "elapsedNs": 1000000000, "cleanupFault": 0, "terminalReason": "complete" },
+    "fskcw": { "events": 6, "elapsedNs": 6000000000, "cleanupFault": 0, "terminalReason": "complete" },
+    "dfcw": { "events": 8, "elapsedNs": 6000000000, "cleanupFault": 0, "terminalReason": "complete" },
+    "boundedCancellation": { "completedEvents": 1, "cleanupFault": 0, "terminalReason": "stopped" },
+    "abiV2FiniteTone": { "elapsedNs": 1000000000, "cleanupFault": 0, "terminalReason": "complete" },
+    "abiV2ContinuousStop": { "stopAfterNs": 1000000000, "cleanupFault": 0, "terminalReason": "stopped" },
+    "wspr": { "symbols": 162, "elapsedNs": 110592000000, "cleanupFault": 0, "terminalReason": "complete" }
+  },
+  "rawEvidence": {
+    "campaignTranscriptSha256": "6fd967c0f3d0a1ddbc49d4c5eee73a2a3f0ab94f800314c327f46a47abd65d1e",
+    "campaignKernelLogSha256": "3db40a031708336d4e51dce15d15df9a040aeda8257c1659355bc0618351c3b1"
+  },
+  "finalState": {
+    "packageOverlayRestoredSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
+    "configuredRoute": "gpio4",
+    "activeRoute": "gpio4",
+    "liveOutput": false,
+    "endpointOpen": false,
+    "gpio4": "input",
+    "gpio20": "inactive",
+    "wsprrypiService": "active",
+    "soapyRemoteService": "inactive",
+    "routeManagerQuery": "ok",
+    "pendingTransaction": null
+  },
+  "notValidated": [
+    "receiver capture",
+    "WSPR decode",
+    "QRSS decode",
+    "FSKCW decode",
+    "DFCW decode",
+    "timing accuracy",
+    "frequency accuracy",
+    "spectral behavior",
+    "SDR behavior",
+    "transmitter-system behavior",
+    "RF qualification",
+    "product live eligibility"
+  ]
+}
