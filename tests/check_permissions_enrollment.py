@@ -108,4 +108,4 @@ else:
 source = (ROOT / "scripts/rp1-gpclk-admin.py").read_text()
 for prohibited in ("udev", "setfacl", "chmod 066", "chgrp", "setuid", "/dev/mem", "custom-kernel"):
     assert prohibited not in source
-print("Phase 5.5 permissions and enrollment: PASS")
+print("permissions and enrollment: PASS")

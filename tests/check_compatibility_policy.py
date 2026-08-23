@@ -94,4 +94,4 @@ for impossible in ({"state": "Qualified", "liveEligible": False, "reason": "x"},
         pass
     else:
         raise AssertionError("impossible prior state/live combination accepted")
-print("Phase 5.6 compatibility and update policy: PASS")
+print("compatibility and update policy: PASS")

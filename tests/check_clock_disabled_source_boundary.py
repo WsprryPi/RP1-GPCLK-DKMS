@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Enforce the clock-disabled Phase 2C source boundary."""
+"""Enforce the clock-disabled source boundary."""
 
 from pathlib import Path
 import re
@@ -49,7 +49,7 @@ forbidden = {
 }
 for label, pattern in forbidden.items():
     if re.search(pattern, all_source):
-        raise SystemExit(f"Phase 2C contains {label}")
+        raise SystemExit(f"clock-disabled source contains {label}")
 
 for token in ("static bool live_output;",
               "module_param(live_output, bool, 0444)",
@@ -64,4 +64,4 @@ positions = [release.index(token) for token in ordered]
 if positions != sorted(positions):
     raise SystemExit("resources are not released in reverse acquisition order")
 
-print("Phase 2C integration boundary: PASS")
+print("clock-disabled source boundary: PASS")

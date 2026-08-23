@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Deterministic offline checks for the Phase 5.8 diagnostics contract."""
+"""Deterministic offline checks for the diagnostics contract."""
 
 from __future__ import annotations
 import importlib.util, json, pathlib, tempfile
@@ -80,4 +80,4 @@ for required in ("O_RDONLY","QUERY_IOCTL","permission-denied","journalctl","clea
 operator=(ROOT/"docs/operator/diagnostics.md").read_text()
 assert "does not prove absence" in operator
 assert commands and all(command[0] in {"dpkg-query","dkms","modinfo","journalctl"} for command in commands)
-print("Phase 5.8 diagnostics contracts: PASS")
+print("diagnostics contracts: PASS")

@@ -116,6 +116,10 @@ make check
 make package-check
 ```
 
+The maintained test inventory and the distinction between automatic,
+parameterized build, and explicitly authorized hardware checks are documented
+in [Testing](docs/testing.md).
+
 Build and validate an unreleased development candidate without publishing it:
 
 ```sh

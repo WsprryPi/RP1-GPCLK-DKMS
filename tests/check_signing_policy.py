@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Deterministic offline checks for the Phase 5.7 signing contract."""
+"""Deterministic offline checks for the signing contract."""
 
 from __future__ import annotations
 
@@ -122,4 +122,4 @@ assert "exact expected DKMS signer and signature key ID are required" in adminis
 assert "required module signer identity differs" in administrator
 assert "required module signature key ID differs" in administrator
 
-print("Phase 5.7 signing contracts: PASS")
+print("signing contracts: PASS")

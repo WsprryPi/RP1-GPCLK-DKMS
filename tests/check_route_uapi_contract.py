@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Enforce the Phase 3 route injection and first-interface freeze."""
+"""Enforce route injection and the canonical interface freeze."""
 
 import hashlib
 import json
@@ -67,14 +67,14 @@ for pattern in (r"\bclk_(?:prepare|enable|prepare_enable|set_rate|set_parent)\s*
                 r"\bpinctrl_select_state\s*\(",
                 r"\b(?:dmaengine_prep|dmaengine_submit|dma_async_issue_pending)\b"):
     if re.search(pattern, SOURCE):
-        raise SystemExit("Phase 3 crossed the clock-disabled boundary")
+        raise SystemExit("route/UAPI contract crossed the clock-disabled boundary")
 
 fixtures = {p.name: p.read_text(encoding="utf-8")
             for p in (ROOT / "overlays/fixtures").glob("*.dts")}
 for name in ("rp1-gpclk-route-invalid.dts",
              "rp1-gpclk-gpio20-route-mismatch.dts"):
     if name not in fixtures:
-        raise SystemExit(f"missing Phase 3 fixture {name}")
+        raise SystemExit(f"missing route/UAPI fixture {name}")
 require(fixtures["rp1-gpclk-route-invalid.dts"],
         ('wsprrypi,route = <3>',), "invalid-route fixture")
 require(fixtures["rp1-gpclk-gpio20-route-mismatch.dts"],
@@ -109,4 +109,4 @@ for sequence in ((1, 2, 1) * 3, (2, 1, 2) * 3):
     if owner is not None:
         raise SystemExit("modeled route sequence leaked endpoint ownership")
 
-print("Phase 3 GPIO20 injection and interface freeze: PASS")
+print("route injection and interface freeze: PASS")

@@ -102,4 +102,4 @@ for mutation in (
     else:
         raise AssertionError("invalid representative matrix accepted")
 
-print("Phase 5.10 representative-system matrix: PASS")
+print("representative-system matrix: PASS")

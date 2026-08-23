@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Enforce the offline Phase 2D build and DKMS contract."""
+"""Enforce the offline module build and DKMS contract."""
 
 from pathlib import Path
 import re
@@ -63,4 +63,4 @@ forbidden = re.compile(r"\b(?:dkms\s+(?:add|build|install|remove)|insmod|modprob
 if forbidden.search(offline):
     raise SystemExit("offline checks contain a module lifecycle operation")
 
-print("Phase 2D build configuration: PASS")
+print("build and DKMS configuration: PASS")

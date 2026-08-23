@@ -77,4 +77,4 @@ for mutation in (
     else:
         raise AssertionError("invalid calibrated-review release policy accepted")
 
-print("Phase 5.12 calibrated-review release policy: PASS")
+print("calibrated-review release policy: PASS")

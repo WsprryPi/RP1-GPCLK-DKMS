@@ -161,6 +161,6 @@ int main(void)
 	assert(run(GATE_D_BUSY_OWNER, &fixture, &stop, &result) == -1);
 	assert(fixture.acquires == 0 && fixture.closes == 1);
 
-	puts("Gate D busy-state injector: PASS");
+	puts("busy-state injector: PASS");
 	return 0;
 }

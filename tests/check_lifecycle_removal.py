@@ -97,4 +97,4 @@ source = (ROOT / "scripts/lifecycle_policy.py").read_text()
 for prohibited in ("subprocess", "os.system", "modprobe", "dtoverlay", "/dev/mem", "reboot"):
     assert prohibited not in source
 
-print("Phase 5.9 lifecycle policy: PASS")
+print("lifecycle and removal policy: PASS")

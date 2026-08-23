@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Offline Phase 5.4 overlay identity and route-transition checks."""
+"""Offline overlay identity and route-transition checks."""
 from __future__ import annotations
 import hashlib
 import importlib.util
@@ -19,8 +19,8 @@ def load(name: str, path: pathlib.Path):
     spec.loader.exec_module(value)
     return value
 
-admin = load("rp1_admin_phase54", ROOT / "scripts/rp1-gpclk-admin.py")
-builder = load("rp1_builder_phase54", ROOT / "scripts/build_release.py")
+admin = load("rp1_admin_overlay", ROOT / "scripts/rp1-gpclk-admin.py")
+builder = load("rp1_builder_overlay", ROOT / "scripts/build_release.py")
 contract = json.loads((ROOT / "release/overlay-contract-v1.json").read_text())
 assert contract["selection"] == {"exactlyOne": True, "arbitraryGpioParameter": False,
                                   "automaticSubstitution": False, "hotMutation": False}
@@ -29,7 +29,7 @@ assert all(contract["evidenceIndependence"].values())
 assert set(contract["routes"]) == set(admin.ROUTES) == {"gpio4", "gpio20"}
 dtc = shutil.which("dtc")
 if not dtc:
-    raise SystemExit("dtc is required for Phase 5.4 deterministic overlay validation")
+    raise SystemExit("dtc is required for deterministic overlay validation")
 shared = contract["sharedIdentity"]
 compiled = {}
 endpoint_names = set()
@@ -125,4 +125,4 @@ for malformed in ({**snapshot, "unknown": False},
 source = (ROOT / "scripts/rp1-gpclk-admin.py").read_text()
 for prohibited in ("dtoverlay", "config.txt", "modprobe", "live_output=1", "/dev/mem"):
     assert prohibited not in source
-print("Phase 5.4 overlay contract: PASS")
+print("overlay administration contract: PASS")

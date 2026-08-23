@@ -29,4 +29,4 @@ for kernel in allowed:
 for kernel in excluded:
     assert not pattern.fullmatch(kernel), kernel
 
-print("Phase 5.54 DKMS kernel scope: PASS")
+print("DKMS kernel scope: PASS")

@@ -8,6 +8,7 @@ tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/rp1-gpclk-offline.XXXXXX")
 trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
 
 python3 "$repo_dir/tests/check_spdx.py"
+python3 "$repo_dir/tests/check_test_inventory.py"
 python3 "$repo_dir/tests/check_uapi_identity.py"
 python3 "$repo_dir/tests/check_release_1_0_1_contract_freeze.py"
 python3 "$repo_dir/tests/check_release_1_1_0_contract_freeze.py"
@@ -15,37 +16,30 @@ python3 "$repo_dir/tests/check_tone_v2_static.py"
 python3 "$repo_dir/tests/check_gpio4_qualification_candidate.py"
 python3 "$repo_dir/tests/check_module_identity_verifier.py"
 python3 "$repo_dir/tests/check_manifest.py"
-python3 "$repo_dir/tests/check_phase2c_integration.py"
+python3 "$repo_dir/tests/check_clock_disabled_source_boundary.py"
 python3 "$repo_dir/tests/check_endpoint_bootstrap.py"
-python3 "$repo_dir/tests/check_phase2d_build.py"
-python3 "$repo_dir/tests/check_phase2e_target_assets.py"
-python3 "$repo_dir/tests/check_phase3_interface_freeze.py"
-python3 "$repo_dir/tests/check_phase3b_target_assets.py"
-python3 "$repo_dir/tests/check_phase4a_live_path.py"
-python3 "$repo_dir/tests/check_phase4d_combined_gate.py"
+python3 "$repo_dir/tests/check_build_contract.py"
+python3 "$repo_dir/tests/check_route_uapi_contract.py"
 python3 "$repo_dir/tests/check_debian_packaging.py"
-python3 "$repo_dir/tests/check_phase5_4_overlay.py"
-python3 "$repo_dir/tests/check_phase5_5_permissions.py"
-python3 "$repo_dir/tests/check_phase5_6_compatibility.py"
-python3 "$repo_dir/tests/check_phase5_7_signing.py"
-python3 "$repo_dir/tests/check_phase5_8_diagnostics.py"
-python3 "$repo_dir/tests/check_phase5_9_lifecycle.py"
-python3 "$repo_dir/tests/check_phase5_10_matrix.py"
-python3 "$repo_dir/tests/check_phase5_12_calibrated_review.py"
+python3 "$repo_dir/tests/check_overlay_admin_contract.py"
+python3 "$repo_dir/tests/check_permissions_enrollment.py"
+python3 "$repo_dir/tests/check_compatibility_policy.py"
+python3 "$repo_dir/tests/check_signing_policy.py"
+python3 "$repo_dir/tests/check_diagnostics_contract.py"
+python3 "$repo_dir/tests/check_lifecycle_removal.py"
+python3 "$repo_dir/tests/check_representative_system_matrix.py"
+python3 "$repo_dir/tests/check_calibrated_review_policy.py"
+python3 "$repo_dir/tests/check_dkms_kernel_scope.py"
 python3 "$repo_dir/tests/check_artifact_scoped_invalidation_policy.py"
 python3 "$repo_dir/tests/check_release_candidate_builder.py"
 python3 "$repo_dir/tests/check_release_candidate_transaction.py"
 python3 "$repo_dir/tests/check_route_manager.py"
 python3 "$repo_dir/tests/check_release_candidate_validator.py"
-python3 "$repo_dir/tests/test_phase2e_dmesg.py"
 python3 "$repo_dir/tests/check_doc_links.py"
 
 if command -v shellcheck >/dev/null 2>&1; then
     shellcheck "$repo_dir/tests/run-offline-checks.sh" \
-        "$repo_dir/scripts/rp1-gpclk-lifecycle.sh" \
-        "$repo_dir/tests/phase2e-target-test.sh" \
-        "$repo_dir/tests/phase3b-target-test.sh" \
-        "$repo_dir/tests/phase4a-target-test.sh"
+        "$repo_dir/scripts/rp1-gpclk-lifecycle.sh"
     echo "shellcheck: PASS"
 else
     echo "shellcheck: SKIP (not installed)"
@@ -66,9 +60,9 @@ echo "UAPI probe compile: PASS"
 ${CC:-cc} -std=c11 -Wall -Wextra -Werror -DGATE_D_BUSY_LIBRARY \
     -I"$repo_dir/tests/fixtures/linux" -I"$repo_dir/include/uapi" \
     -I"$repo_dir/tools" "$repo_dir/tools/gate_d_busy_injector.c" \
-    "$repo_dir/tests/gate_d_busy_injector_test.c" \
-    -o "$tmp_dir/gate_d_busy_injector_test"
-"$tmp_dir/gate_d_busy_injector_test"
+    "$repo_dir/tests/busy_state_injector_test.c" \
+    -o "$tmp_dir/busy_state_injector_test"
+"$tmp_dir/busy_state_injector_test"
 
 ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
     -DRP1_GPCLK_HOST_TEST \
