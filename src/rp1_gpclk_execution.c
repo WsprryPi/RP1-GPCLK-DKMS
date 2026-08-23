@@ -627,7 +627,8 @@ static int rp1_gpclk_execution_thread(void *argument)
 
 	context.expected = expected;
 	cleanup_ret = rp1_gpclk_execution_machine_finish(
-		&rp1_gpclk_machine_ops, &context, expected != 0);
+		&rp1_gpclk_machine_ops, &context,
+		expected != 0 && ret != -ECANCELED);
 	if (cleanup_ret) {
 		ret = cleanup_ret;
 		rp1_gpclk_publish_failure(device, ret, true);

@@ -11,6 +11,7 @@ for token in ('RP1_GPCLK_IOC_QUERY_V2','RP1_GPCLK_IOC_SUBMIT_TONE_V2','RP1_GPCLK
 assert 'request.capabilities = RP1_GPCLK_V1_CAPABILITIES' in d
 assert 'request.capabilities = RP1_GPCLK_V2_CAPABILITIES' in d
 assert 'complete_all(&device->dma_done);' not in e
+assert "expected != 0 && ret != -ECANCELED" in e
 assert 'if (atomic_read(&device->stop_requested)) {' in e
 assert 'dmaengine_terminate_sync(device->dma_chan);' in e
 cancel = e[e.index("if (atomic_read(&device->stop_requested)) {"):]
