@@ -7,6 +7,12 @@ Run `rp1-gpclk-diagnostics` to print a bounded JSON report. Optionally pass
 does not install, load, bind, apply an overlay, enroll, change GPIO, repair, or
 remove anything.
 
+For an exact-source installation, pass
+`--development-manifest DEVELOPMENT_MANIFEST.json` instead. Diagnostics checks
+the separate source-development schema and reports it as Experimental and not
+release-qualified. A release directory and development manifest are mutually
+exclusive.
+
 Endpoint discovery checks `/dev/rp1-gpclk`, the only canonical ABI v1/v2 path.
 The historical `/dev/rp1-gpclk0` spelling is not a supported fallback. A
 missing endpoint is reported as unavailable; diagnostics do not create a

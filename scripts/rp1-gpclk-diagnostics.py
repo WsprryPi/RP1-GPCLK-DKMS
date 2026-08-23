@@ -101,10 +101,15 @@ class Collector:
         except PermissionError: return {"status":"indeterminate","reason":"permission-denied"}
         except FileNotFoundError: return {"status":"unavailable","reason":"endpoint-absent"}
         except OSError as error: return {"status":"rejected","reason":f"query-failed-{error.errno}"}
-    def collect(self, release_directory: pathlib.Path|None=None) -> dict:
-        module_path=f"/lib/modules/{self.kernel}/updates/dkms/{MODULE}.ko"
+    def collect(self, release_directory: pathlib.Path|None=None, development_manifest: pathlib.Path|None=None) -> dict:
+        module_candidates=[]
+        module_directory=self.path(f"/lib/modules/{self.kernel}/updates/dkms")
+        if module_directory.is_dir():
+            module_candidates=sorted(path for path in module_directory.glob(f"{MODULE}.ko*") if path.is_file() and not path.is_symlink())
+        module_local=module_candidates[0] if len(module_candidates)==1 else self.path(f"/lib/modules/{self.kernel}/updates/dkms/{MODULE}.ko")
+        module_path="/"+str(module_local.relative_to(self.root)) if self.root!=pathlib.Path("/") else str(module_local)
         kernels=sorted(p.name for p in self.path("/lib/modules").glob("*") if p.is_dir())
-        module_file=self.metadata(module_path); module_file["sha256"]=sha256(self.path(module_path))
+        module_file=self.metadata(module_path); module_file["sha256"]=sha256(self.path(module_path)); module_file["compression"]="none" if module_local.name.endswith(".ko") else module_local.suffix.lstrip(".")
         modinfo={name:self.runner(["modinfo","-F",field,module_path]) for name,field in
             (("version","version"),("vermagic","vermagic"),("signer","signer"),("signatureKeyId","sig_key"),("signatureAlgorithm","sig_id"),("signatureHashAlgorithm","sig_hashalgo"))}
         transaction=self.json_file(f"/var/lib/{PACKAGE}/transaction.json")
@@ -114,7 +119,8 @@ class Collector:
         endpoint=self.metadata(DEVICE); driver=self.path("/sys/bus/platform/drivers/rp1-gpclk-dkms")
         endpoint["boundDevices"]=sorted(p.name for p in driver.glob("*") if p.name not in {"bind","unbind","module","uevent"})[:8]
         endpoint["bound"]=bool(endpoint["boundDevices"])
-        return {"SPDX-License-Identifier":"MIT","schemaVersion":1,"readOnly":True,
+        development=self._development(development_manifest)
+        result={"SPDX-License-Identifier":"MIT","schemaVersion":1,"readOnly":True,
             "collectionLimits":{"commandSeconds":TIMEOUT,"commandStreamBytes":COMMAND_LIMIT,"fileBytes":FILE_LIMIT,"kernelLogBytes":LOG_LIMIT,"kernelLogScope":"current boot, matching rp1_gpclk or rp1-gpclk only"},
             "summary":classify(query,selected,transaction,enrollment),
             "package":{"version":VERSION,"manager":self.runner(["dpkg-query","-W","-f=${Status} ${Version}",PACKAGE]),"dkms":self.runner(["dkms","status","-m",PACKAGE])},
@@ -127,6 +133,23 @@ class Collector:
             "routeOverlay":self._route_overlay(query),"hardwareIdentity":self._hardware(),
             "kernelDiagnostics":self.runner(["journalctl","-k","-b","--no-pager","-g","rp1[_-]gpclk","--output=short-monotonic"]),
             "residue":self._residue(transaction),"assurance":"A clean report does not prove absence of competing or direct-MMIO software."}
+        result["development"]=development
+        if development.get("status")=="ok":
+            result["summary"]={"category":"healthy-but-experimental" if query.get("status")=="ok" else "source-development",
+                               "compatibilityState":"Experimental","reason":"exact-source-development-manifest; not release-qualified"}
+        return result
+    @staticmethod
+    def _development(supplied):
+        if supplied is None: return {"status":"not-supplied"}
+        try:
+            path=pathlib.Path(supplied); value=json.loads(path.read_text())
+            if (value.get("schema")!="rp1-gpclk-source-development-manifest-v1" or
+                    value.get("classification")!="source-development" or value.get("qualification") is not False or
+                    value.get("moduleName")!=MODULE): return {"status":"rejected","reason":"invalid-development-manifest","path":str(path)}
+            return {"status":"ok","path":str(path),"sha256":sha256(path),"classification":"Experimental",
+                    "releaseQualified":False,"sourceCommit":value.get("sourceCommit"),"renderedVersion":value.get("renderedVersion"),
+                    "targetKernel":value.get("targetKernel"),"route":value.get("route")}
+        except (OSError,json.JSONDecodeError): return {"status":"rejected","reason":"unreadable-development-manifest","path":str(supplied)}
     def _release(self,supplied):
         base=pathlib.Path(supplied) if supplied else self.path(f"/usr/share/{PACKAGE}/{VERSION}")
         result={"path":str(base),"status":"ok" if base.is_dir() and not base.is_symlink() else "absent"}
@@ -216,6 +239,8 @@ def classify(query,selected,transaction,enrollment):
     return {"category":"unavailable","compatibilityState":"Unavailable","reason":selected.get("reason",query.get("reason","required-identity-unavailable"))}
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__); parser.add_argument("--release-directory",type=pathlib.Path); args=parser.parse_args()
-    print(json.dumps(Collector().collect(args.release_directory),indent=2,sort_keys=True))
+    parser=argparse.ArgumentParser(description=__doc__); parser.add_argument("--release-directory",type=pathlib.Path)
+    parser.add_argument("--development-manifest",type=pathlib.Path); args=parser.parse_args()
+    if args.release_directory and args.development_manifest: parser.error("choose a release directory or a development manifest, not both")
+    print(json.dumps(Collector().collect(args.release_directory,args.development_manifest),indent=2,sort_keys=True))
 if __name__=="__main__": main()

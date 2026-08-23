@@ -261,6 +261,14 @@ provenance and possible load eligibility; it does not qualify behavior.
 Diagnostics are bounded and read-only. They do not install, load, bind, repair,
 select a route, change boot state, operate GPIO, or enable output.
 
+Exact-source maintainer development is a separate, package-independent
+administrative path. Its manifest binds the exact Git commit, explicitly
+recorded source state, bounded rendering transformation, DKMS/module/kernel,
+UAPI, overlays, route, installed artifact, tools, and removal evidence. Its
+state is visibly `source-development` and at most `Experimental`; it cannot
+create release metadata, satisfy release compatibility, or establish product
+or RF qualification. The canonical module name remains `rp1_gpclk_dkms`.
+
 ## Validation
 
 Ordinary checks are offline, unprivileged, network-free, hardware-free, and

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 
-.PHONY: all modules check package-check release-unit validate-release validate-release-candidate clean
+.PHONY: all modules check development-check package-check release-unit validate-release validate-release-candidate clean
 
 all: modules
 
@@ -10,6 +10,9 @@ modules:
 
 check:
 	./tests/run-offline-checks.sh
+
+development-check:
+	python3 tests/check_development_workflow.py
 
 package-check:
 	python3 tests/check_debian_packaging.py

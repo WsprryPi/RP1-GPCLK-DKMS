@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: MIT
 set -eu
 
+python3 tests/check_development_workflow.py
+
 unset CDPATH
 repo_dir=$(cd -- "$(dirname -- "$0")/.." && pwd)
 tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/rp1-gpclk-offline.XXXXXX")
