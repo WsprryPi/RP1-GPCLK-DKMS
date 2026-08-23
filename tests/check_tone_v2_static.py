@@ -12,6 +12,7 @@ assert 'request.capabilities = RP1_GPCLK_V1_CAPABILITIES' in d
 assert 'request.capabilities = RP1_GPCLK_V2_CAPABILITIES' in d
 assert 'complete_all(&device->dma_done);' not in e
 assert "expected != 0 && ret != -ECANCELED" in e
+assert "completion_done(&context->device->execution_done)" in d
 assert 'if (atomic_read(&device->stop_requested)) {' in e
 assert 'dmaengine_terminate_sync(device->dma_chan);' in e
 cancel = e[e.index("if (atomic_read(&device->stop_requested)) {"):]

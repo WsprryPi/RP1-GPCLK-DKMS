@@ -446,9 +446,11 @@ static long rp1_gpclk_release_v2(struct rp1_gpclk_file *context,
 			request.lease_id, request.generation,
 			RP1_GPCLK_REASON_STOPPED);
 	mutex_unlock(&context->device->lock);
-	if (result != RP1_GPCLK_CORE_OK)
+	if (result != RP1_GPCLK_CORE_OK &&
+	    !(result == RP1_GPCLK_CORE_STATE &&
+	      completion_done(&context->device->execution_done)))
 		return rp1_gpclk_execution_error(result);
-	{
+	if (result == RP1_GPCLK_CORE_OK) {
 		long waited = wait_for_completion_interruptible_timeout(
 			&context->device->execution_done, msecs_to_jiffies(2000));
 
