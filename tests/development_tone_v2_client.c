@@ -43,9 +43,21 @@ int main(int argc, char **argv)
 	struct rp1_gpclk_submit_tone_v2 submit = { 0 };
 	struct rp1_gpclk_state_v1 state = { 0 };
 	struct rp1_gpclk_release_v2 release = { 0 };
+	const char *route_environment = getenv("RP1_GPCLK_TEST_ROUTE");
+	const char *compatibility_id;
+	uint32_t expected_route = RP1_GPCLK_ROUTE_GPIO20;
 	uint32_t operation;
 	int fd;
 
+	if (route_environment && !strcmp(route_environment, "4"))
+		expected_route = RP1_GPCLK_ROUTE_GPIO4;
+	else if (route_environment && strcmp(route_environment, "20")) {
+		fprintf(stderr, "RP1_GPCLK_TEST_ROUTE must be 4 or 20\n");
+		return 2;
+	}
+	compatibility_id = expected_route == RP1_GPCLK_ROUTE_GPIO4 ?
+		"v1.1.2-pi5-gpio4-6.18.34-development-candidate" :
+		"v1.1.2-pi5-gpio20-6.18.34-development-candidate";
 	if (argc != 2 || (strcmp(argv[1], "finite") && strcmp(argv[1], "continuous")))
 		return 2;
 	operation = !strcmp(argv[1], "finite") ?
@@ -54,13 +66,12 @@ int main(int argc, char **argv)
 	if (fd < 0) { perror("open"); return 1; }
 	header(&query.header, sizeof(query), RP1_GPCLK_UAPI_ABI_V2);
 	if (ioctl(fd, RP1_GPCLK_IOC_QUERY_V2, &query)) { perror("QUERY_V2"); return 1; }
-	if (query.route != RP1_GPCLK_ROUTE_GPIO4 || strcmp(query.build_id, "1.1.2") ||
-	    strcmp(query.compatibility_id,
-		"v1.1.2-pi5-gpio4-6.18.34-development-candidate") ||
+	if (query.route != expected_route || strcmp(query.build_id, "1.1.2") ||
+	    strcmp(query.compatibility_id, compatibility_id) ||
 	    !(query.capabilities & RP1_GPCLK_CAP_LIVE_ELIGIBLE))
 		return 1;
 	header(&acquire.header, sizeof(acquire), RP1_GPCLK_UAPI_ABI_V1);
-	acquire.expected_route = RP1_GPCLK_ROUTE_GPIO4;
+	acquire.expected_route = expected_route;
 	acquire.required_capabilities = RP1_GPCLK_CAP_LIVE_ELIGIBLE |
 		RP1_GPCLK_CAP_TONE_CONTINUOUS | RP1_GPCLK_CAP_TONE_FINITE;
 	if (ioctl(fd, RP1_GPCLK_IOC_ACQUIRE, &acquire)) { perror("ACQUIRE"); return 1; }
@@ -70,7 +81,7 @@ int main(int argc, char **argv)
 	submit.duration_ns = operation == RP1_GPCLK_TONE_OPERATION_FINITE ?
 		1000000000ULL : 0;
 	submit.operation = operation;
-	submit.expected_route = RP1_GPCLK_ROUTE_GPIO4;
+	submit.expected_route = expected_route;
 	submit.fractional_bits = RP1_GPCLK_FRACTIONAL_BITS;
 	submit.tick_divider = RP1_GPCLK_TICK_DIVIDER;
 	submit.drive_ma = RP1_GPCLK_DRIVE_MA_2;
