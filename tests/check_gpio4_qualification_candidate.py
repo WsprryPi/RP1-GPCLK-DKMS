@@ -20,15 +20,15 @@ for token in (
     '#define RP1_GPCLK_ROUTE_CANDIDATE_KERNEL "6.18.34+rpt-rpi-2712"',
     '#define RP1_GPCLK_ROUTE_CANDIDATE_ARCH "aarch64"',
     '#define RP1_GPCLK_ROUTE_CANDIDATE_VERSION "1.1.2"',
-    "v1.1.2-pi5-gpio4-6.18.34-development-candidate-r2",
-    "v1.1.2-pi5-gpio20-6.18.34-development-candidate-r2",
+    "v1.1.2-pi5-gpio4-6.18.34-development-candidate-r3",
+    "v1.1.2-pi5-gpio20-6.18.34-development-candidate-r3",
 ):
     assert token in version + compat
 
 gpio4_case = implementation[implementation.index("case RP1_GPCLK_ROUTE_GPIO4:"):]
-assert gpio4_case.index("return true;") < gpio4_case.index("case RP1_GPCLK_ROUTE_GPIO20:")
 gpio20_case = gpio4_case[gpio4_case.index("case RP1_GPCLK_ROUTE_GPIO20:"):]
-assert gpio20_case.index("return true;") < gpio20_case.index("default:")
+assert gpio20_case.index("return false;") < gpio20_case.index("default:")
+assert "Neither route inherits" in implementation
 assert 'strcmp(module_version, RP1_GPCLK_ROUTE_CANDIDATE_VERSION)' in implementation
 assert "pi5_model_b || !resources_validated" in implementation
 for token in (

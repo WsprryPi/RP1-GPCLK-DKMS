@@ -11,7 +11,8 @@
      RP1_GPCLK_CAP_STOP_DRAIN | RP1_GPCLK_CAP_STABLE_STATE | \
      RP1_GPCLK_CAP_ROUTE_IDENTITY | RP1_GPCLK_CAP_COMPAT_IDENTITY | \
      RP1_GPCLK_CAP_CLEANUP_FAULT_LATCH | RP1_GPCLK_CAP_LIVE_ELIGIBLE | \
-     RP1_GPCLK_CAP_TONE_CONTINUOUS | RP1_GPCLK_CAP_TONE_FINITE)
+     RP1_GPCLK_CAP_TONE_CONTINUOUS | RP1_GPCLK_CAP_TONE_FINITE | \
+     RP1_GPCLK_CAP_PASSIVE_SNAPSHOT)
 
 enum rp1_gpclk_core_result {
     RP1_GPCLK_CORE_OK = 0,
@@ -104,6 +105,8 @@ int rp1_gpclk_core_mark_dead(struct rp1_gpclk_core *core, __u32 reason);
 int rp1_gpclk_core_get_state(const struct rp1_gpclk_core *core,
                             __u64 owner_id, __u64 lease_id, __u64 generation,
                             struct rp1_gpclk_core_snapshot *snapshot);
+int rp1_gpclk_core_get_public_state(const struct rp1_gpclk_core *core,
+                                    struct rp1_gpclk_core_snapshot *snapshot);
 
 #ifdef RP1_GPCLK_HOST_TEST
 void rp1_gpclk_core_inject_fault(struct rp1_gpclk_core *core,

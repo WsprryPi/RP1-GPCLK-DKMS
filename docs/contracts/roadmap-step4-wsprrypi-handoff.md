@@ -24,8 +24,8 @@ receiver, GPIO, transmission, waveform, decode, product, SDR, or RF work.
    diagnostics, route-manager, overlay, and compatibility identities; do not
    accept a moving branch or version ordering.
 2. Support only
-   `v1.1.2-pi5-gpio4-6.18.34-development-candidate-r2` and
-   `v1.1.2-pi5-gpio20-6.18.34-development-candidate-r2`, independently. Keep
+   `v1.1.2-pi5-gpio4-6.18.34-development-candidate-r3` and
+   `v1.1.2-pi5-gpio20-6.18.34-development-candidate-r3`, independently. Keep
    state `Experimental`; never display or serialize it as Qualified.
 3. Preserve the completed guarded-development policy and its one-use exact
    operation/route physical confirmation. A route change, identity change,
@@ -71,7 +71,7 @@ receiver, GPIO, transmission, waveform, decode, product, SDR, or RF work.
 ## Hardware-free acceptance
 
 - exact 1.1.2/UAPI/route identity success and every near-match rejection;
-- independent GPIO4 r2 and GPIO20 r2 plan, policy, and result fixtures;
+- independent GPIO4 r3 and GPIO20 r3 plan, policy, and result fixtures;
 - requested/persisted/configured/active/module/reconciled/eligible mismatch
   matrix and zero/both-route rejection;
 - all five modes through application-plan validation and simulated planning;

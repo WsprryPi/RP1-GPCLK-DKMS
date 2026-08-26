@@ -12,13 +12,49 @@ FILE_LIMIT, LOG_LIMIT, COMMAND_LIMIT, TIMEOUT = 4096, 16384, 8192, 5
 # The UAPI uses __aligned_u64, so native C alignment is part of the ioctl size.
 QUERY_V1_FORMAT = "@HHIHHIIIIQIIIIIIQQ64s64s64s4Q"
 QUERY_V2_FORMAT = "@HHIHHIIIIQIIIIIIQQQQ64s64s64s4Q"
+SNAPSHOT_V3_FORMAT = "@HHIHH" + "I"*18 + "6Q64s64s64s8Q"
 QUERY_V1_SIZE, QUERY_V2_SIZE = struct.calcsize(QUERY_V1_FORMAT), struct.calcsize(QUERY_V2_FORMAT)
+SNAPSHOT_V3_SIZE = struct.calcsize(SNAPSHOT_V3_FORMAT)
 QUERY_V1_IOCTL = 0xC0000000 | (QUERY_V1_SIZE << 16) | (0xB8 << 8) | 0x20
 QUERY_V2_IOCTL = 0xC0000000 | (QUERY_V2_SIZE << 16) | (0xB8 << 8) | 0x27
+SNAPSHOT_V3_IOCTL = 0xC0000000 | (SNAPSHOT_V3_SIZE << 16) | (0xB8 << 8) | 0x2A
 STATES = {1:"Qualified",2:"Experimental",3:"Compatible-unqualified",4:"Unavailable",5:"Rejected"}
 REASONS = {0:"none",1:"manifest-missing",2:"identity-unknown",3:"identity-mismatch",4:"build-unsupported",5:"signature-rejected",6:"resource-unavailable",7:"resource-conflict",8:"self-test-failed",9:"cleanup-latched",10:"administrator-enrollment-required"}
 ROUTES = {1:"GPIO4",2:"GPIO20"}
 CAPS = {0:"submit-wspr",1:"submit-events",2:"stop-drain",3:"stable-state",4:"route-identity",5:"compat-identity",6:"cleanup-fault-latch",7:"live-eligible",8:"tone-continuous",9:"tone-finite"}
+CAPS[10] = "passive-snapshot"
+OPERATION_STATES = {0:"IDLE",1:"RUNNING",2:"DRAINING",3:"COMPLETE",4:"FAILED",5:"DEAD"}
+TERMINAL_REASONS = {0:"none",1:"complete",2:"stopped",3:"owner-closed",4:"provider-removed",5:"deadline-missed",6:"invalid-request",7:"resource-unavailable",8:"startup-conflict",9:"dma-failed",10:"clock-failed",11:"pinctrl-failed",12:"readback-failed",13:"cleanup-failed",14:"compatibility-rejected",15:"internal-error"}
+OBSERVATIONS = {0:"unknown",1:"false",2:"true"}
+DRAIN_STATES = {0:"none",1:"active",2:"complete"}
+SNAPSHOT_FLAGS = {0:"current-event-valid",1:"elapsed-valid",2:"remaining-valid"}
+
+def decode_passive_snapshot(payload: bytes) -> dict:
+    if len(payload)!=SNAPSHOT_V3_SIZE: return {"status":"rejected","reason":"malformed-snapshot-size"}
+    values=struct.unpack(SNAPSHOT_V3_FORMAT,payload)
+    if values[0]!=SNAPSHOT_V3_SIZE or values[1]!=3 or values[2]!=0:
+        return {"status":"rejected","reason":"malformed-snapshot-header"}
+    route,compat_state,compat_reason,operation,terminal,current_event,flags,cleanup,owner,lease,live_output,live_eligible,drain,gpio_safe,clock_quiescent,dma_quiescent,stable,reserved0=values[5:23]
+    if reserved0 or flags & ~0x7: return {"status":"rejected","reason":"unknown-snapshot-flags"}
+    observations=(cleanup,owner,lease,live_output,live_eligible,gpio_safe,clock_quiescent,dma_quiescent,stable)
+    if route not in ROUTES or compat_state not in STATES or compat_reason not in REASONS or operation not in OPERATION_STATES or terminal not in TERMINAL_REASONS or drain not in DRAIN_STATES or any(item not in OBSERVATIONS for item in observations):
+        return {"status":"rejected","reason":"unknown-snapshot-enum"}
+    capabilities,generation,elapsed,remaining,min_tone,max_tone=values[23:29]
+    if capabilities & ~0x7ff: return {"status":"rejected","reason":"unknown-snapshot-capability"}
+    if any(values[index] != 0 for index in range(32,40)): return {"status":"rejected","reason":"nonzero-snapshot-reserved"}
+    valid={name:bool(flags&(1<<bit)) for bit,name in SNAPSHOT_FLAGS.items()}
+    return {"status":"ok","snapshotVersion":3,"abiMin":values[3],"abiMax":values[4],
+        "route":ROUTES[route],"compatibilityState":STATES[compat_state],"compatibilityReason":REASONS[compat_reason],
+        "operationState":OPERATION_STATES[operation],"terminalReason":TERMINAL_REASONS[terminal],
+        "currentEvent":current_event if valid["current-event-valid"] else None,"generation":generation,
+        "elapsedNs":elapsed if valid["elapsed-valid"] else None,"remainingNs":remaining if valid["remaining-valid"] else None,
+        "cleanupFault":OBSERVATIONS[cleanup],"ownerPresent":OBSERVATIONS[owner],"leasePresent":OBSERVATIONS[lease],
+        "liveOutput":OBSERVATIONS[live_output],"liveEligible":OBSERVATIONS[live_eligible],"drainState":DRAIN_STATES[drain],
+        "gpioSafe":OBSERVATIONS[gpio_safe],"clockQuiescent":OBSERVATIONS[clock_quiescent],"dmaQuiescent":OBSERVATIONS[dma_quiescent],"stable":OBSERVATIONS[stable],
+        "capabilityMask":f"0x{capabilities:016x}","capabilities":[name for bit,name in CAPS.items() if capabilities&(1<<bit)],
+        "minToneDurationNs":min_tone,"maxToneDurationNs":max_tone,
+        "moduleId":values[29].split(b"\0",1)[0].decode(errors="replace"),"buildId":values[30].split(b"\0",1)[0].decode(errors="replace"),"compatibilityId":values[31].split(b"\0",1)[0].decode(errors="replace"),
+        "nonOwning":True,"leaseTokenExposed":False,"descriptorClosed":True}
 
 def sha256(path: pathlib.Path) -> str | None:
     try:
@@ -101,6 +137,23 @@ class Collector:
         except PermissionError: return {"status":"indeterminate","reason":"permission-denied"}
         except FileNotFoundError: return {"status":"unavailable","reason":"endpoint-absent"}
         except OSError as error: return {"status":"rejected","reason":f"query-failed-{error.errno}"}
+    def passive_snapshot(self) -> dict:
+        if self.root != pathlib.Path("/"):
+            fixture=self.json_file("/run/rp1-gpclk-dkms/passive-snapshot-fixture.json")
+            return fixture.get("value",fixture) if fixture.get("status")=="ok" else fixture
+        descriptor=None
+        try:
+            descriptor=os.open(self.path(DEVICE),os.O_RDONLY|os.O_CLOEXEC|os.O_NONBLOCK)
+            payload=bytearray(SNAPSHOT_V3_SIZE)
+            struct.pack_into("<HHI",payload,0,SNAPSHOT_V3_SIZE,3,0)
+            fcntl.ioctl(descriptor,SNAPSHOT_V3_IOCTL,payload,True)
+            return decode_passive_snapshot(payload)
+        except PermissionError: return {"status":"indeterminate","reason":"permission-denied"}
+        except FileNotFoundError: return {"status":"unavailable","reason":"endpoint-absent"}
+        except OSError as error:
+            return {"status":"unsupported","reason":"passive-snapshot-unsupported"} if error.errno in {errno.EOPNOTSUPP,errno.ENOTTY} else {"status":"rejected","reason":f"snapshot-failed-{error.errno}"}
+        finally:
+            if descriptor is not None: os.close(descriptor)
     def collect(self, release_directory: pathlib.Path|None=None, development_manifest: pathlib.Path|None=None) -> dict:
         module_candidates=[]
         module_directory=self.path(f"/lib/modules/{self.kernel}/updates/dkms")
@@ -114,7 +167,7 @@ class Collector:
             (("version","version"),("vermagic","vermagic"),("signer","signer"),("signatureKeyId","sig_key"),("signatureAlgorithm","sig_id"),("signatureHashAlgorithm","sig_hashalgo"))}
         transaction=self.json_file(f"/var/lib/{PACKAGE}/transaction.json")
         enrollment=self.json_file(f"/etc/{PACKAGE}/enrollment.json")
-        query=self.query(); release=self._release(release_directory)
+        query=self.query(); snapshot=self.passive_snapshot(); release=self._release(release_directory)
         selected=select_manifest_entry(release.get("manifest"),query)
         endpoint=self.metadata(DEVICE); driver=self.path("/sys/bus/platform/drivers/rp1-gpclk-dkms")
         endpoint["boundDevices"]=sorted(p.name for p in driver.glob("*") if p.name not in {"bind","unbind","module","uevent"})[:8]
@@ -128,7 +181,7 @@ class Collector:
             "build":{"transaction":transaction,"logs":self._build_logs()},
             "module":{"installedPath":module_path,"file":module_file,"metadata":modinfo,
                       "signatureStatus":self._signature_status(modinfo),"loaded":self.path(f"/sys/module/{MODULE}").is_dir(),"liveGate":self.read(f"/sys/module/{MODULE}/parameters/live_output"),"taint":self.read("/proc/sys/kernel/tainted")},
-            "endpoint":endpoint,"uapi":query,"release":release,"compatibility":selected,"enrollment":enrollment,
+            "endpoint":endpoint,"uapi":query,"passiveSnapshot":snapshot,"release":release,"compatibility":selected,"enrollment":enrollment,
             "cleanupFaultLatch":query.get("cleanupFault","not-exposed-by-QUERY-v1") if query.get("status")=="ok" else query,
             "routeOverlay":self._route_overlay(query),"hardwareIdentity":self._hardware(),
             "kernelDiagnostics":self.runner(["journalctl","-k","-b","--no-pager","-g","rp1[_-]gpclk","--output=short-monotonic"]),

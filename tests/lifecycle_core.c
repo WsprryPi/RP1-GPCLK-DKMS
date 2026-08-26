@@ -115,11 +115,16 @@ static void test_initial_and_acquire(void)
 {
     struct rp1_gpclk_core core;
     struct rp1_gpclk_core before;
+    struct rp1_gpclk_core_snapshot snapshot;
     __u64 lease;
 
     rp1_gpclk_core_init(&core);
     CHECK(core.value.state == RP1_GPCLK_STATE_IDLE);
     CHECK(core.value.owner_id == 0);
+    CHECK(rp1_gpclk_core_get_public_state(&core, &snapshot) ==
+          RP1_GPCLK_CORE_OK);
+    CHECK(snapshot.owner_id == 0 && snapshot.lease_id == 0);
+    CHECK(snapshot.generation == 0);
     before = core;
     CHECK(rp1_gpclk_core_acquire(&core, 0, RP1_GPCLK_ROUTE_GPIO4, 0, &lease) ==
           RP1_GPCLK_CORE_INVALID);
@@ -128,6 +133,56 @@ static void test_initial_and_acquire(void)
     before = core;
     CHECK(rp1_gpclk_core_acquire(&core, OWNER_B, RP1_GPCLK_ROUTE_GPIO20, 0,
                                  &lease) == RP1_GPCLK_CORE_BUSY);
+    CHECK(memcmp(&before, &core, sizeof(core)) == 0);
+}
+
+static void test_passive_retained_terminal_state(void)
+{
+    struct rp1_gpclk_core core;
+    struct rp1_gpclk_core_snapshot snapshot;
+    __u64 lease;
+    __u64 generation;
+
+    rp1_gpclk_core_init(&core);
+    lease = acquire(&core, OWNER_A);
+    generation = submit_events(&core, OWNER_A, lease, 1);
+    CHECK(rp1_gpclk_core_progress(&core, OWNER_A, lease, generation) ==
+          RP1_GPCLK_CORE_OK);
+    CHECK(rp1_gpclk_core_release(&core, OWNER_A, lease) ==
+          RP1_GPCLK_CORE_OK);
+    CHECK(rp1_gpclk_core_get_public_state(&core, &snapshot) ==
+          RP1_GPCLK_CORE_OK);
+    CHECK(snapshot.owner_id == 0 && snapshot.lease_id == 0);
+    CHECK(snapshot.generation == generation);
+    CHECK(snapshot.state == RP1_GPCLK_STATE_COMPLETE);
+    CHECK(snapshot.terminal_reason == RP1_GPCLK_REASON_COMPLETE);
+
+    lease = acquire(&core, OWNER_B);
+    CHECK(rp1_gpclk_core_get_public_state(&core, &snapshot) ==
+          RP1_GPCLK_CORE_OK);
+    CHECK(snapshot.owner_id == OWNER_B && snapshot.lease_id == lease);
+    CHECK(snapshot.generation == 0);
+    CHECK(snapshot.state == RP1_GPCLK_STATE_IDLE);
+}
+
+static void test_passive_inspection_does_not_mutate_owner(void)
+{
+    struct rp1_gpclk_core core;
+    struct rp1_gpclk_core before;
+    struct rp1_gpclk_core_snapshot snapshot;
+    __u64 lease;
+
+    rp1_gpclk_core_init(&core);
+    lease = acquire(&core, OWNER_A);
+    before = core;
+    CHECK(rp1_gpclk_core_get_public_state(&core, &snapshot) ==
+          RP1_GPCLK_CORE_OK);
+    CHECK(snapshot.owner_id == OWNER_A && snapshot.lease_id == lease);
+    CHECK(memcmp(&before, &core, sizeof(core)) == 0);
+    /* A passive descriptor close has no core call; a second observation is
+     * therefore identical and the actual owner remains authoritative. */
+    CHECK(rp1_gpclk_core_get_public_state(&core, &snapshot) ==
+          RP1_GPCLK_CORE_OK);
     CHECK(memcmp(&before, &core, sizeof(core)) == 0);
 }
 
@@ -788,6 +843,8 @@ static void test_tone_fail_closed_matrix(void)
 int main(void)
 {
     RUN(test_initial_and_acquire);
+    RUN(test_passive_retained_terminal_state);
+    RUN(test_passive_inspection_does_not_mutate_owner);
     RUN(test_routes_capabilities_and_wrap);
     RUN(test_validation);
     RUN(test_validation_matrix);

@@ -3,7 +3,7 @@
 """Deterministic offline checks for the diagnostics contract."""
 
 from __future__ import annotations
-import importlib.util, json, pathlib, tempfile
+import importlib.util, json, pathlib, struct, tempfile
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location("diagnostics",ROOT/"scripts/rp1-gpclk-diagnostics.py")
@@ -33,6 +33,9 @@ with tempfile.TemporaryDirectory() as temporary:
     query={"status":"ok","queryVersion":2,"abiMin":1,"abiMax":2,"route":"GPIO4","compatibilityState":"Compatible-unqualified",
            "compatibilityReason":"identity-unknown","compatibilityId":"entry","capabilities":["route-identity","tone-finite"],"cleanupFault":False}
     write(root,"/run/rp1-gpclk-dkms/query-fixture.json",query)
+    snapshot={"status":"ok","snapshotVersion":3,"route":"GPIO4","operationState":"IDLE",
+              "stable":"true","nonOwning":True,"leaseTokenExposed":False,"descriptorClosed":True}
+    write(root,"/run/rp1-gpclk-dkms/passive-snapshot-fixture.json",snapshot)
     endpoint=root/"sys/firmware/devicetree/base/axi/rp1/rp1-gpclk-dkms-gpio4"; endpoint.mkdir(parents=True)
     write(root,"/sys/firmware/devicetree/base/axi/rp1/rp1-gpclk-dkms-gpio4/status","okay\0")
     (endpoint/"wsprrypi,route").write_bytes((1).to_bytes(4,"big"))
@@ -52,12 +55,14 @@ with tempfile.TemporaryDirectory() as temporary:
     assert report["kernels"]["headers"][kernel]["present"] is True
     assert report["endpoint"]["present"] is False
     assert report["endpoint"]["bound"] is False
+    assert report["passiveSnapshot"]==snapshot
     assert report["routeOverlay"]["topology"]=="exactly-one"
     assert report["routeOverlay"]["moduleRouteMatchesActiveEndpoint"] is True
     properties=report["routeOverlay"]["activeEndpointNodes"][0]["propertyIdentities"]
     assert properties["compatible"]["status"]=="ok" and properties["compatible"]["sha256"]
     assert properties["clocks"]["sizeBytes"]==8 and properties["dmas"]["status"]=="absent"
     assert module.QUERY_V1_SIZE==304 and module.QUERY_V2_SIZE==320
+    assert module.SNAPSHOT_V3_SIZE==392
     assert module.CAPS[8]=="tone-continuous" and module.CAPS[9]=="tone-finite"
     assert set(report) >= set(contract["requiredSections"])
 
@@ -98,10 +103,74 @@ with tempfile.TemporaryDirectory() as temporary:
     found=module.Collector(root,runner,kernel)._residue(journal)
     assert found["status"]=="interrupted-operation-residue" and found["paths"]==["/owned","/owned/file"]
 
+def snapshot_payload(**changes):
+    values=[392,3,0,1,3,1,3,2,3,1,7,0x7,1,1,1,1,2,2,2,2,2,0,0,
+            0x7ff,9,100,200,1_000,9_000,
+            b"rp1_gpclk_dkms",b"build",b"compat",0,0,0,0,0,0,0,0]
+    indexes={"size":0,"version":1,"header_flags":2,"route":5,"compat_state":6,
+             "operation":8,"terminal":9,"snapshot_flags":11,"cleanup":12,
+             "owner":13,"lease":14,"live_output":15,"live_eligible":16,
+             "drain":17,"gpio":18,"clock":19,"dma":20,"stable":21,
+             "reserved0":22,"capabilities":23,"generation":24,"elapsed":25,
+             "remaining":26,"reserved1":32}
+    for name,value in changes.items(): values[indexes[name]]=value
+    return struct.pack(module.SNAPSHOT_V3_FORMAT,*values)
+
+decoded=module.decode_passive_snapshot(snapshot_payload())
+assert decoded["status"]=="ok" and decoded["generation"]==9
+assert decoded["elapsedNs"]==100 and decoded["remainingNs"]==200
+assert decoded["nonOwning"] is True and decoded["leaseTokenExposed"] is False
+running=module.decode_passive_snapshot(snapshot_payload(operation=1,terminal=0,drain=0,
+    owner=2,lease=2,gpio=1,clock=1,dma=1,stable=1))
+assert running["operationState"]=="RUNNING" and running["ownerPresent"]=="true"
+assert running["leasePresent"]=="true" and "leaseId" not in running
+draining=module.decode_passive_snapshot(snapshot_payload(operation=2,terminal=0,drain=1,stable=1))
+assert draining["operationState"]=="DRAINING" and draining["drainState"]=="active"
+complete=module.decode_passive_snapshot(snapshot_payload(operation=3,terminal=1,drain=2,owner=1,lease=1))
+assert complete["operationState"]=="COMPLETE" and complete["drainState"]=="complete"
+failed=module.decode_passive_snapshot(snapshot_payload(operation=4,terminal=13,cleanup=2,stable=1))
+assert failed["operationState"]=="FAILED" and failed["cleanupFault"]=="true"
+for field in ("gpio","clock","dma"):
+    assert module.decode_passive_snapshot(snapshot_payload(**{field:1}))[{"gpio":"gpioSafe","clock":"clockQuiescent","dma":"dmaQuiescent"}[field]]=="false"
+assert module.decode_passive_snapshot(snapshot_payload(snapshot_flags=0))["elapsedNs"] is None
+for changes,reason in (({"size":391},"malformed-snapshot-header"),
+                       ({"version":4},"malformed-snapshot-header"),
+                       ({"header_flags":1},"malformed-snapshot-header"),
+                       ({"snapshot_flags":8},"unknown-snapshot-flags"),
+                       ({"route":99},"unknown-snapshot-enum"),
+                       ({"stable":99},"unknown-snapshot-enum"),
+                       ({"capabilities":0x800},"unknown-snapshot-capability"),
+                       ({"reserved1":1},"nonzero-snapshot-reserved")):
+    assert module.decode_passive_snapshot(snapshot_payload(**changes))["reason"]==reason
+assert module.decode_passive_snapshot(snapshot_payload()[:-1])["reason"]=="malformed-snapshot-size"
+
+# Exercise descriptor closure without accessing a real endpoint.
+original_open,original_ioctl,original_close=module.os.open,module.fcntl.ioctl,module.os.close
+closed=[]
+try:
+    module.os.open=lambda *_args,**_kwargs: 71
+    module.fcntl.ioctl=lambda _fd,_request,buffer,_mutate: buffer.__setitem__(slice(None),snapshot_payload())
+    module.os.close=lambda descriptor: closed.append(descriptor)
+    assert module.Collector().passive_snapshot()["status"]=="ok" and closed==[71]
+    closed.clear()
+    def rejected(*_args,**_kwargs): raise OSError(5,"fixture")
+    module.fcntl.ioctl=rejected
+    assert module.Collector().passive_snapshot()["status"]=="rejected" and closed==[71]
+    closed.clear()
+    def unsupported(*_args,**_kwargs): raise OSError(module.errno.ENOTTY,"fixture")
+    module.fcntl.ioctl=unsupported
+    assert module.Collector().passive_snapshot()["status"]=="unsupported" and closed==[71]
+    module.os.open=lambda *_args,**_kwargs: (_ for _ in ()).throw(PermissionError())
+    assert module.Collector().passive_snapshot()["reason"]=="permission-denied"
+    module.os.open=lambda *_args,**_kwargs: (_ for _ in ()).throw(FileNotFoundError())
+    assert module.Collector().passive_snapshot()["reason"]=="endpoint-absent"
+finally:
+    module.os.open,module.fcntl.ioctl,module.os.close=original_open,original_ioctl,original_close
+
 source=(ROOT/"scripts/rp1-gpclk-diagnostics.py").read_text()
 for prohibited in ("modprobe","dtoverlay","dkms add","dkms build","dkms install","/dev/mem","sign-file"):
     assert prohibited not in source
-for required in ("O_RDONLY","QUERY_V2_IOCTL","QUERY_V1_IOCTL","permission-denied","journalctl","cleanupFaultLatch"):
+for required in ("O_RDONLY","QUERY_V2_IOCTL","QUERY_V1_IOCTL","SNAPSHOT_V3_IOCTL","permission-denied","journalctl","cleanupFaultLatch"):
     assert required in source
 operator=(ROOT/"docs/operator/diagnostics.md").read_text()
 assert "does not prove absence" in operator

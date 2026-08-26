@@ -489,17 +489,22 @@ int rp1_gpclk_core_release(struct rp1_gpclk_core *core, __u64 owner_id,
         return RP1_GPCLK_CORE_FAULT;
     if (core->value.state == RP1_GPCLK_STATE_DEAD) {
         core->value.owner_id = 0;
+        core->value.lease_id = 0;
+        core->value.route = RP1_GPCLK_ROUTE_INVALID;
         core->owner_closing = 0;
         return RP1_GPCLK_CORE_OK;
     }
     core->value.owner_id = 0;
     core->value.lease_id = 0;
-    core->value.generation = 0;
+    /* Retain the completed generation and terminal outcome for passive
+     * inspection.  The next acquire resets them before accepting work. */
     core->value.route = RP1_GPCLK_ROUTE_INVALID;
-    core->value.state = RP1_GPCLK_STATE_IDLE;
-    core->value.terminal_reason = RP1_GPCLK_REASON_NONE;
-    core->value.total_units = 0;
-    core->value.completed_units = 0;
+    if (core->value.generation == 0) {
+        core->value.state = RP1_GPCLK_STATE_IDLE;
+        core->value.terminal_reason = RP1_GPCLK_REASON_NONE;
+        core->value.total_units = 0;
+        core->value.completed_units = 0;
+    }
     core->value.drain_units = 0;
     core->value.terminal_publications = 0;
     core->value.terminal_attempts = 0;
@@ -549,6 +554,15 @@ int rp1_gpclk_core_get_state(const struct rp1_gpclk_core *core,
     if (!core || !snapshot ||
         !rp1_gpclk_generation_matches(core, owner_id, lease_id, generation))
         return RP1_GPCLK_CORE_STALE;
+    *snapshot = core->value;
+    return RP1_GPCLK_CORE_OK;
+}
+
+int rp1_gpclk_core_get_public_state(const struct rp1_gpclk_core *core,
+                                    struct rp1_gpclk_core_snapshot *snapshot)
+{
+    if (!core || !snapshot)
+        return RP1_GPCLK_CORE_INVALID;
     *snapshot = core->value;
     return RP1_GPCLK_CORE_OK;
 }

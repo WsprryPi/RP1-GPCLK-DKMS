@@ -13,7 +13,7 @@ the separate source-development schema and reports it as Experimental and not
 release-qualified. A release directory and development manifest are mutually
 exclusive.
 
-Endpoint discovery checks `/dev/rp1-gpclk`, the only canonical ABI v1/v2 path.
+Endpoint discovery checks `/dev/rp1-gpclk`, the only canonical ABI v1/v2/v3 path.
 The historical `/dev/rp1-gpclk0` spelling is not a supported fallback. A
 missing endpoint is reported as unavailable; diagnostics do not create a
 platform device or attempt binding.
@@ -22,6 +22,18 @@ Diagnostics attempts the additive ABI-v2 query first and falls back to ABI v1
 only when the endpoint reports that v2 is unsupported. The report records the
 query version, complete advertised capability mask, ABI range, module/build/
 compatibility identities, and finite-TONE bounds when v2 is available.
+
+When ABI v3 is available, diagnostics also performs one read-only
+`GET_SNAPSHOT_V3` request on a separately opened descriptor and closes that
+descriptor in all outcomes. The request never acquires an execution owner or
+lease and never exposes a lease token. It reports the route and compatibility
+identity, owner/lease presence, operation and drain state, retained terminal
+reason and generation, valid elapsed/remaining time, cleanup fault, live-output
+and live-eligibility observations, and tri-state GPIO/clock/DMA quiescence.
+`unknown` is preserved as unknown; it is never converted into a safe result.
+The descriptor open itself is passive but still counts as endpoint access and
+therefore requires separate target authorization before running diagnostics on
+a target.
 
 Active route discovery walks the live device tree for the exact
 `rp1-gpclk-dkms-gpio4` and `rp1-gpclk-dkms-gpio20` endpoint names. It reports

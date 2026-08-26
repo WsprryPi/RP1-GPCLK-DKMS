@@ -15,9 +15,9 @@ script, `python -m` entry point, published schemas, maintained semantic
 validators, supported replay/fixture interfaces, and machine-readable result
 bundles. No WsprryPi or DKMS code may import undocumented Harness internals.
 
-The current module state is `Experimental`. GPIO4 r2 and GPIO20 r2 are separate
-targets; identity, authorization, results, and retained evidence never transfer
-between them.
+The current module state is `Experimental`. GPIO4 r3 and GPIO20 r3 are separate
+live-ineligible targets pending exact-build requalification; identity,
+authorization, results, and retained evidence never transfer between them.
 
 ## Identity record
 
@@ -52,7 +52,7 @@ package identity remains an explicit blocker rather than a fabricated value.
 - exactly one enabled `rp1-gpclk-dkms-gpio4` or
   `rp1-gpclk-dkms-gpio20` endpoint, with the matching `wsprrypi,route`
   property;
-- exact GPIO4 r2 or GPIO20 r2 compatibility ID and `Experimental` state; and
+- exact GPIO4 r3 or GPIO20 r3 compatibility ID and `Experimental` state; and
 - package route-manager transaction ID, status, boot IDs, configuration
   hashes, attribution, and reconciliation result.
 
@@ -253,7 +253,7 @@ unresolved until Step 4 and the later operator gate:
 
 - WsprryPi revision/executable: `REQUIRED-BEFORE-LIVE`;
 - DKMS revision/module/artifact/manifest: `REQUIRED-BEFORE-LIVE`;
-- route: one of GPIO4 r2 or GPIO20 r2, independently authorized;
+- route: one of GPIO4 r3 or GPIO20 r3, independently authorized;
 - transmitter host alias and current target identities: `REQUIRED-BEFORE-LIVE`;
 - receiver, calibration binding, connection, attenuation, load/antenna state,
   center/analysis frequency, sample rate, bandwidth, and gain:

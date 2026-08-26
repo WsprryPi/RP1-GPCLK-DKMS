@@ -150,8 +150,9 @@ identity, and requires GPIO4 and GPIO20 to remain unavailable and non-live.
 published-release archive layout; the two validators are not interchangeable.
 
 This preliminary builder/validator pair predates the independent GPIO4 and
-GPIO20 r2 functional-development entries. It does not describe or package the
-current dual-route development state and must not be used to freeze a 1.1.2
+GPIO20 r2 functional-development evidence and the current ABI-v3 r3 identities.
+It does not describe or package the current dual-route development state and
+must not be used to freeze a 1.1.2
 artifact. Reconciling that packaging implementation and its generated
 compatibility metadata is deferred to the later packaging roadmap step.
 

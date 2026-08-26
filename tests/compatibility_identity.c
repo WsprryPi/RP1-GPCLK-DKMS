@@ -39,10 +39,10 @@ int main(void)
 		kernel, arch, NULL, true, true));
 
 	version = RP1_GPCLK_ROUTE_CANDIDATE_VERSION;
-	CHECK(rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO4,
+	CHECK(!rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO4,
 		RP1_GPCLK_ROUTE_CANDIDATE_KERNEL,
 		RP1_GPCLK_ROUTE_CANDIDATE_ARCH, version, true, true));
-	CHECK(rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO20,
+	CHECK(!rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO20,
 		RP1_GPCLK_ROUTE_CANDIDATE_KERNEL,
 		RP1_GPCLK_ROUTE_CANDIDATE_ARCH, version, true, true));
 	CHECK(!strcmp(rp1_gpclk_route_candidate_id(RP1_GPCLK_ROUTE_GPIO4),

@@ -271,6 +271,12 @@ or RF qualification. The canonical module name remains `rp1_gpclk_dkms`.
 
 ## Validation
 
+The additive ABI-v3 passive snapshot contract is specified in
+`docs/contracts/uapi-v3-passive-snapshot.md`. It exposes presence and tri-state
+observations without granting ownership or disclosing lease tokens. Terminal
+generation, reason, and completed-unit state remain observable after lease
+release until the next successful acquire.
+
 Ordinary checks are offline, unprivileged, network-free, hardware-free, and
 safe to repeat. Implementation changes receive deterministic tests. Kernel
 build results record the kernel, configuration, compiler, architecture, module
@@ -293,11 +299,13 @@ overlay: `rp1-gpclk-dkms-gpio4` for route 1 or
 are otherwise valid. This prevents predecessor overlay bytes from satisfying
 the changed development candidate identity.
 
-The repaired exact-overlay build reports candidate IDs ending in
-`development-candidate-r2`. The earlier development candidate IDs without the
-`-r2` suffix remain historical test identities and cannot satisfy the repaired
-client contract. Immutable module and overlay hashes remain mandatory evidence;
-the revision suffix is not a substitute for artifact hashing.
+The ABI-v3 passive-snapshot build reports candidate IDs ending in
+`development-candidate-r3`. The r3 build does not inherit either route's r2
+target evidence and is live-ineligible until each exact route-specific artifact
+is separately requalified. Earlier candidate IDs remain historical identities
+and cannot satisfy the current client contract. Immutable module and overlay
+hashes remain mandatory evidence; the revision suffix is not a substitute for
+artifact hashing.
 
 GPIO4 r2 and GPIO20 r2 each have completed, independently bound target-functional
 development evidence for module execution and cleanup. Hardware-free validation

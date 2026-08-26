@@ -20,8 +20,8 @@ for boundary in ("fixture blockage", "semantic validator", "exactly one",
                  "immutable", "terminal-silence", "REQUIRED-BEFORE-LIVE"):
     assert boundary in contract
 for route_id in (
-    "v1.1.2-pi5-gpio4-6.18.34-development-candidate-r2",
-    "v1.1.2-pi5-gpio20-6.18.34-development-candidate-r2",
+    "v1.1.2-pi5-gpio4-6.18.34-development-candidate-r3",
+    "v1.1.2-pi5-gpio20-6.18.34-development-candidate-r3",
 ):
     assert route_id in handoff
 for prohibited in ("/dev/mem", "automatic fallback", "continuous TONE"):

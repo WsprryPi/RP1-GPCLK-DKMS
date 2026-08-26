@@ -35,12 +35,15 @@ bool rp1_gpclk_route_candidate_allowed(__u32 route,
 	    strcmp(module_version, RP1_GPCLK_ROUTE_CANDIDATE_VERSION))
 		return false;
 
-	/* The unique active DT route selects one development candidate. */
+	/*
+	 * The v3 UAPI changes the exact source identity.  Neither route inherits
+	 * the r2 target evidence; a later, route-specific qualification may enable
+	 * an r3 candidate.
+	 */
 	switch (route) {
 	case RP1_GPCLK_ROUTE_GPIO4:
-		return true;
 	case RP1_GPCLK_ROUTE_GPIO20:
-		return true;
+		return false;
 	default:
 		return false;
 	}

@@ -181,7 +181,7 @@
       }
     ],
     "magic": 184,
-    "path": "include/uapi/linux/rp1_gpclk.h",
+    "path": "release/uapi/rp1_gpclk-v1.1.0.h",
     "sha256": "998ab96d7dbcc0d935c05758c46acba56bbcf92aa1b674b899bdab6932dc8384",
     "toneOperations": [
       {
