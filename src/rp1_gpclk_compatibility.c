@@ -36,14 +36,15 @@ bool rp1_gpclk_route_candidate_allowed(__u32 route,
 		return false;
 
 	/*
-	 * The v3 UAPI changes the exact source identity.  Neither route inherits
-	 * the r2 target evidence; a later, route-specific qualification may enable
-	 * an r3 candidate.
+	 * Eligibility only admits an exact r3 development candidate to an
+	 * explicitly authorized live attempt.  It does not transfer the r2
+	 * evidence or qualify either route; GPIO4 and GPIO20 still require
+	 * independent r3 evidence.
 	 */
 	switch (route) {
 	case RP1_GPCLK_ROUTE_GPIO4:
 	case RP1_GPCLK_ROUTE_GPIO20:
-		return false;
+		return true;
 	default:
 		return false;
 	}

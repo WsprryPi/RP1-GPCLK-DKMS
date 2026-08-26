@@ -27,8 +27,9 @@ for token in (
 
 gpio4_case = implementation[implementation.index("case RP1_GPCLK_ROUTE_GPIO4:"):]
 gpio20_case = gpio4_case[gpio4_case.index("case RP1_GPCLK_ROUTE_GPIO20:"):]
-assert gpio20_case.index("return false;") < gpio20_case.index("default:")
-assert "Neither route inherits" in implementation
+assert gpio20_case.index("return true;") < gpio20_case.index("default:")
+assert "does not transfer the r2" in implementation
+assert "independent r3 evidence" in implementation
 assert 'strcmp(module_version, RP1_GPCLK_ROUTE_CANDIDATE_VERSION)' in implementation
 assert "pi5_model_b || !resources_validated" in implementation
 for token in (

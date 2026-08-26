@@ -301,11 +301,14 @@ the changed development candidate identity.
 
 The ABI-v3 passive-snapshot build reports candidate IDs ending in
 `development-candidate-r3`. The r3 build does not inherit either route's r2
-target evidence and is live-ineligible until each exact route-specific artifact
-is separately requalified. Earlier candidate IDs remain historical identities
-and cannot satisfy the current client contract. Immutable module and overlay
-hashes remain mandatory evidence; the revision suffix is not a substitute for
-artifact hashing.
+target evidence. Its exact Pi 5, kernel, architecture, module-version, resource,
+and route allowlist admits each candidate only to an explicitly authorized
+development attempt; eligibility is not qualification. Each exact
+route-specific artifact must still be separately requalified before a route can
+carry an r3 qualification claim. Earlier candidate IDs remain historical
+identities and cannot satisfy the current client contract. Immutable module and
+overlay hashes remain mandatory evidence; the revision suffix is not a
+substitute for artifact hashing.
 
 GPIO4 r2 and GPIO20 r2 each have completed, independently bound target-functional
 development evidence for module execution and cleanup. Hardware-free validation
