@@ -54,6 +54,13 @@ for token in (
 
 assert "RP1_GPCLK_COMPAT_EXPERIMENTAL" in dispatch
 assert "RP1_GPCLK_COMPAT_QUALIFIED" not in dispatch
+assert dispatch.count("rp1_gpclk_compatibility_reason(") == 4
+reason_helper = dispatch[
+    dispatch.index("static __u32 rp1_gpclk_compatibility_reason(") :
+    dispatch.index("static long rp1_gpclk_query(")
+]
+assert "device->live_eligible ? RP1_GPCLK_COMPAT_REASON_NONE" in reason_helper
+assert "RP1_GPCLK_COMPAT_REASON_ADMIN_ENROLLMENT_REQUIRED" in reason_helper
 for token in (
     "RP1_GPCLK_FIRMWARE_TICK_CTRL 3U",
     "RP1_GPCLK_FIRMWARE_TICK_CYCLES 50U",

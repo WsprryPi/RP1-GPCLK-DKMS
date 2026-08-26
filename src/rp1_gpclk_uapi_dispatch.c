@@ -84,6 +84,13 @@ static long rp1_gpclk_core_error(int result)
 	}
 }
 
+static __u32 rp1_gpclk_compatibility_reason(
+	const struct rp1_gpclk_device *device)
+{
+	return device->live_eligible ? RP1_GPCLK_COMPAT_REASON_NONE :
+		RP1_GPCLK_COMPAT_REASON_ADMIN_ENROLLMENT_REQUIRED;
+}
+
 static long rp1_gpclk_query(struct rp1_gpclk_file *context, void __user *user)
 {
 	struct rp1_gpclk_query_v1 request;
@@ -111,7 +118,7 @@ static long rp1_gpclk_query(struct rp1_gpclk_file *context, void __user *user)
 	request.compatibility_state =
 		RP1_GPCLK_COMPAT_COMPATIBLE_UNQUALIFIED;
 	request.compatibility_reason =
-		RP1_GPCLK_COMPAT_REASON_ADMIN_ENROLLMENT_REQUIRED;
+		rp1_gpclk_compatibility_reason(context->device);
 	request.capabilities = RP1_GPCLK_V1_CAPABILITIES;
 	if (rp1_gpclk_live_output_eligible(context->device))
 		request.capabilities |= RP1_GPCLK_CAP_LIVE_ELIGIBLE;
@@ -159,7 +166,8 @@ static long rp1_gpclk_query_v2(struct rp1_gpclk_file *context, void __user *user
 	request.abi_max = RP1_GPCLK_UAPI_ABI_V2;
 	request.route = route;
 	request.compatibility_state = RP1_GPCLK_COMPAT_COMPATIBLE_UNQUALIFIED;
-	request.compatibility_reason = RP1_GPCLK_COMPAT_REASON_ADMIN_ENROLLMENT_REQUIRED;
+	request.compatibility_reason =
+		rp1_gpclk_compatibility_reason(context->device);
 	request.capabilities = RP1_GPCLK_V2_CAPABILITIES;
 	if (rp1_gpclk_live_output_eligible(context->device)) {
 		request.capabilities |= RP1_GPCLK_CAP_LIVE_ELIGIBLE;
@@ -511,9 +519,7 @@ static long rp1_gpclk_get_snapshot_v3(struct rp1_gpclk_file *context,
 	request.compatibility_state = device->live_eligible ?
 		RP1_GPCLK_COMPAT_EXPERIMENTAL :
 		RP1_GPCLK_COMPAT_COMPATIBLE_UNQUALIFIED;
-	request.compatibility_reason = device->live_eligible ?
-		RP1_GPCLK_COMPAT_REASON_NONE :
-		RP1_GPCLK_COMPAT_REASON_ADMIN_ENROLLMENT_REQUIRED;
+	request.compatibility_reason = rp1_gpclk_compatibility_reason(device);
 	request.operation_state = core.state;
 	request.terminal_reason = core.terminal_reason;
 	request.current_event = core.completed_units;
