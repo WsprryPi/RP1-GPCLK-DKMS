@@ -82,6 +82,11 @@ def parse_config(payload:bytes)->str|None:
     start,finish=text.index(BEGIN),text.index(END)+len(END)
     if finish<start: raise ContractError("owned route marker order is malformed")
     block=text[start:finish]; block_routes=re.findall(r"^dtoverlay=rp1-gpclk-(gpio4|gpio20)$",block,re.M); lines=block.splitlines()
+    if os.environ.get(SOURCE_DEVELOPMENT_BINDING_ENV) and len(lines)==3 and len(all_routes)==1 and not block_routes:
+        route=all_routes[0]
+        marker=f"# contract={CONTRACT} package={PREDECESSOR_DEBIAN_VERSION} route={route}"
+        if lines==[BEGIN,marker,END]: return route
+        raise ContractError("source-development route ownership is malformed or ambiguous")
     current_line=f"# contract={CONTRACT} package={DEBIAN_VERSION} route={block_routes[0]}" if block_routes else ""
     historical_lines=({
         f"# version={PREDECESSOR_VERSION} route={block_routes[0]}",

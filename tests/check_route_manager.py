@@ -184,6 +184,12 @@ with tempfile.TemporaryDirectory() as temporary:
     try:
         result=manager.dispatch(request("query"),env); assert result["status"]=="ok" and result["state"]["activeRoute"]=="gpio4"
         rejected(lambda:manager.dispatch(request("preflight","gpio4"),env),"passive-query-only")
+        split=(f"{manager.BEGIN}\n# contract={manager.CONTRACT} package={manager.PREDECESSOR_DEBIAN_VERSION} route=gpio4\n{manager.END}\n"
+               "dtoverlay=rp1-gpclk-gpio4\n").encode()
+        env.path(manager.CONFIG).write_bytes(split); assert manager.dispatch(request("query"),env)["state"]["configuredRoute"]=="gpio4"
+        env.path(manager.CONFIG).write_bytes(split.replace(b"route=gpio4",b"route=gpio20")); rejected(lambda:manager.dispatch(request("query"),env),"ownership")
+        env.path(manager.CONFIG).write_bytes((f"{manager.BEGIN}\n# contract={manager.CONTRACT} package={manager.DEBIAN_VERSION} route=gpio4\n"
+                                              f"dtoverlay=rp1-gpclk-gpio4\n{manager.END}\n").encode())
         value["route"]="gpio20"; binding.write_text(json.dumps(value)); rejected(lambda:manager.dispatch(request("query"),env),"binding differs")
         binding.write_text("not-json"); rejected(lambda:manager.dispatch(request("query"),env),"malformed")
     finally:
