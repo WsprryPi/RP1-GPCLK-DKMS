@@ -8,6 +8,7 @@ SCHEMA="rp1-gpclk-route-manager-source-development-v1"
 MANIFEST_SCHEMA="rp1-gpclk-source-development-manifest-v1"
 BASE="/opt/rp1-gpclk-dkms-development"
 DROPIN="/etc/systemd/system/rp1-gpclk-route-manager@.service.d/90-source-development.conf"
+UNIT="rp1-gpclk-route-manager@source-development-status.service"
 RECORD="/var/lib/rp1-gpclk-dkms/development/route-manager.json"
 PACKAGE_PATHS=("/usr/sbin/rp1-gpclk-route-manager","/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager","/usr/lib/systemd/system/rp1-gpclk-route-manager@.service")
 COMPAT={"gpio4":"v1.1.2-pi5-gpio4-6.18.34-development-candidate-r3","gpio20":"v1.1.2-pi5-gpio20-6.18.34-development-candidate-r3"}
@@ -80,7 +81,7 @@ def clean_source(path:pathlib.Path)->tuple[str,pathlib.Path]:
 def install(args:argparse.Namespace)->dict:
     require_root(); safety=observations(); source=manifest(args.module_manifest,args.route,args.kernel); commit,executable=clean_source(args.source); target=paths(commit)
     if target["record"].exists() or target["directory"].exists() or target["dropin"].exists(): raise Failure("source-development route-manager state already exists")
-    package_before=package_inventory(); previous={"fragment":systemctl("show","-p","FragmentPath","--value","rp1-gpclk-route-manager@.service"),"dropins":systemctl("show","-p","DropInPaths","--value","rp1-gpclk-route-manager@.service"),"execStart":systemctl("show","-p","ExecStart","--value","rp1-gpclk-route-manager@.service")}
+    package_before=package_inventory(); previous={"unit":UNIT,"fragment":systemctl("show","-p","FragmentPath","--value",UNIT),"dropins":systemctl("show","-p","DropInPaths","--value",UNIT),"execStart":systemctl("show","-p","ExecStart","--value",UNIT)}
     record={"schema":SCHEMA,"classification":"Experimental/source-development","qualification":False,"status":"prepared","sourceCommit":commit,"moduleSourceCommit":source["sourceCommit"],"moduleManifest":str(args.module_manifest),"moduleManifestSha256":digest(args.module_manifest),"kernel":args.kernel,"route":args.route,"compatibilityId":COMPAT[args.route],"packageFilesBefore":package_before,"previousUnitResolution":previous,"createdFiles":[str(target[key]) for key in ("executable","manifest","binding","dropin")],"installedAtUnix":int(time.time())}
     atomic(target["record"],canonical(record),0o600)
     try:
@@ -104,7 +105,7 @@ def status(args:argparse.Namespace)->dict:
     if binding!=record.get("binding") or digest(target["executable"])!=binding.get("executableSha256") or digest(target["manifest"])!=binding.get("sourceManifestSha256") or digest(target["dropin"])!=record.get("dropinSha256"): raise Failure("active source-development artifact identity differs")
     package_after=package_inventory()
     if package_after!=record["packageFilesBefore"]: raise Failure("Debian-owned route-manager files changed")
-    dropins=systemctl("show","-p","DropInPaths","--value","rp1-gpclk-route-manager@.service"); resolved=systemctl("show","-p","ExecStart","--value","rp1-gpclk-route-manager@.service")
+    dropins=systemctl("show","-p","DropInPaths","--value",UNIT); resolved=systemctl("show","-p","ExecStart","--value",UNIT)
     if str(target["dropin"]) not in dropins or str(target["executable"]) not in resolved: raise Failure("systemd does not resolve the exact source-development executable")
     query=None
     if root("/")==pathlib.Path("/"):
