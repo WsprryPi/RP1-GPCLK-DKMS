@@ -269,6 +269,12 @@ state is visibly `source-development` and at most `Experimental`; it cannot
 create release metadata, satisfy release compatibility, or establish product
 or RF qualification. The canonical module name remains `rp1_gpclk_dkms`.
 
+The exact-source route-manager lifecycle is likewise package-independent. It
+must preserve Debian-owned executables and unit fragments, use a reversible
+administrator drop-in, bind userspace and module source identities separately,
+and expose only passive query while active. Successful deployment or query is
+not execution authorization or qualification.
+
 ## Validation
 
 The additive ABI-v3 passive snapshot contract is specified in

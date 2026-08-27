@@ -15,6 +15,7 @@ UAPI=f"/usr/src/{PACKAGE}-{VERSION}/include/uapi/linux/rp1_gpclk.h"
 OVERLAY_DIR="/boot/firmware/overlays"
 BEGIN="# BEGIN RP1-GPCLK-DKMS OWNED ROUTE"; END="# END RP1-GPCLK-DKMS OWNED ROUTE"
 UAPI_SHA256="f0af5ffda91f4ba82285dc278452eae28b2eeffa635ebd6ee473bf7393a6a54e"
+SOURCE_DEVELOPMENT_BINDING_ENV="RP1_GPCLK_SOURCE_DEVELOPMENT_BINDING"
 OVERLAY_SHA256={"gpio4":"c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6","gpio20":"8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"}
 ROUTE_ID={"gpio4":1,"gpio20":2}; OPERATIONS={"query","preflight","apply-and-reboot","rollback","reconcile"}
 MUTATIONS={"apply-and-reboot","rollback","reconcile"}; SERVICES=("wsprrypi.service","soapyremote-server.service")
@@ -106,7 +107,41 @@ def boot_id(env:Environment)->str:
     if not BOOT_ID_RE.fullmatch(value): raise ContractError("boot ID is malformed")
     return value
 
+def source_development_identity(env:Environment,binding_name:str)->dict:
+    binding_path=env.path(binding_name)
+    if binding_path.is_symlink() or not binding_path.is_file(): raise ContractError("source-development binding is absent or unsafe")
+    try: binding=json.loads(binding_path.read_text())
+    except (OSError,json.JSONDecodeError) as error: raise ContractError("source-development binding is malformed") from error
+    required={"schema","classification","qualification","sourceCommit","moduleSourceCommit","sourceManifest","sourceManifestSha256","executable","executableSha256","module","moduleVersion","uapiSha256","kernel","route","compatibilityId"}
+    if (set(binding)!=required or binding["schema"]!="rp1-gpclk-route-manager-source-development-v1" or
+            binding["classification"]!="Experimental/source-development" or binding["qualification"] is not False or
+            not re.fullmatch(r"[0-9a-f]{40}",str(binding["sourceCommit"])) or
+            not re.fullmatch(r"[0-9a-f]{40}",str(binding["moduleSourceCommit"])) or
+            binding["module"]!=MODULE or binding["moduleVersion"]!=VERSION or
+            binding["route"] not in ROUTE_ID or not re.fullmatch(r"[0-9a-f]{64}",str(binding["uapiSha256"]))):
+        raise ContractError("source-development binding identity differs")
+    executable=env.path(binding["executable"]); manifest=env.path(binding["sourceManifest"])
+    if executable.is_symlink() or not executable.is_file() or sha256(executable)!=binding["executableSha256"]: raise ContractError("source-development executable identity differs")
+    if manifest.is_symlink() or not manifest.is_file() or sha256(manifest)!=binding["sourceManifestSha256"]: raise ContractError("source-development manifest identity differs")
+    try: manifest_value=json.loads(manifest.read_text())
+    except (OSError,json.JSONDecodeError) as error: raise ContractError("source-development manifest is malformed") from error
+    if (manifest_value.get("schema")!="rp1-gpclk-source-development-manifest-v1" or
+            manifest_value.get("classification")!="source-development" or manifest_value.get("qualification") is not False or
+            manifest_value.get("sourceCommit")!=binding["moduleSourceCommit"] or manifest_value.get("renderedVersion")!=VERSION or
+            manifest_value.get("targetKernel")!=binding["kernel"] or manifest_value.get("route")!=binding["route"] or
+            manifest_value.get("uapiIdentity",{}).get("sha256")!=binding["uapiSha256"]):
+        raise ContractError("source-development manifest binding differs")
+    if env.runner(["/usr/sbin/modinfo","-F","version",MODULE]).strip()!=VERSION: raise ContractError("module identity differs")
+    if env.root==Path("/") and os.uname().release!=binding["kernel"]: raise ContractError("target kernel differs")
+    return {"package":PACKAGE,"debianVersion":"installed-package-not-authoritative","module":MODULE,"moduleVersion":VERSION,
+            "uapiSha256":binding["uapiSha256"],"sourceDevelopment":{"classification":binding["classification"],
+            "qualification":False,"sourceCommit":binding["sourceCommit"],"moduleSourceCommit":binding["moduleSourceCommit"],"manifestSha256":binding["sourceManifestSha256"],
+            "executable":binding["executable"],"executableSha256":binding["executableSha256"],"kernel":binding["kernel"],
+            "route":binding["route"],"compatibilityId":binding["compatibilityId"]}}
+
 def fixed_identity(env:Environment)->dict:
+    binding=os.environ.get(SOURCE_DEVELOPMENT_BINDING_ENV)
+    if binding: return source_development_identity(env,binding)
     package=env.runner(["/usr/bin/dpkg-query","-W","-f=${Status}|${Version}",PACKAGE]).strip()
     if package!=f"install ok installed|{DEBIAN_VERSION}": raise ContractError("package identity differs")
     module=env.runner(["/usr/sbin/modinfo","-F","version",MODULE]).strip()
@@ -316,6 +351,8 @@ def reconcile(request:dict,env:Environment)->dict:
 
 def dispatch(value:object,env:Environment=Environment(),*,reboot:bool=True)->dict:
     request=parse_request(value); operation=request["operation"]
+    if os.environ.get(SOURCE_DEVELOPMENT_BINDING_ENV) and operation!="query":
+        raise ContractError("source-development route-manager integration is passive-query-only")
     if operation in {"query","preflight"}:
         result=response(operation,"ok",inspect(env,operation=="preflight",False))
         if operation=="preflight": result["state"]["requestedRoute"]=request["route"]

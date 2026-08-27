@@ -85,6 +85,33 @@ The status state progresses through `development-built`,
 and `development-live-enabled`. `release-qualified` is deliberately separate
 and is never produced by this workflow.
 
+## Passive exact-source route manager
+
+When an enrolled Experimental module is intentionally newer than the installed
+Debian package, install the route manager from a clean, exact Git checkout
+without replacing package-owned files:
+
+```sh
+sudo ./scripts/development-route-manager install \
+  --source /absolute/clean/checkout \
+  --module-manifest /absolute/module/DEVELOPMENT_MANIFEST.json \
+  --kernel "$(uname -r)" --route gpio4
+sudo ./scripts/development-route-manager status
+sudo ./scripts/development-route-manager rollback
+```
+
+The installer copies the executable and module manifest below
+`/opt/rp1-gpclk-dkms-development/COMMIT`, records their separate source
+commits and hashes, and activates only a drop-in below `/etc/systemd/system`.
+The package executables and unit fragment remain unchanged. This integration
+accepts only passive `query`; every route mutation remains subject to the
+packaged identity contract. Status authenticates systemd resolution, package
+file preservation, the module binding, selected route, endpoint closure, and
+the passive socket response. Rollback removes only the recorded integration
+files and restores packaged unit resolution. None of these operations opens
+the endpoint, reloads the module, changes the route, enables output, or creates
+a qualification claim.
+
 ## Removal and rollback
 
 Remove an enrollment using the exact command recorded in its JSON file. Unload

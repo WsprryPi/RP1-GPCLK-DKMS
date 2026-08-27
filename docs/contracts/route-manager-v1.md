@@ -31,3 +31,12 @@ format only inside a journaled, quiesced route mutation. No evidence is moved,
 renamed, deleted, or rewritten merely to permit operation.
 
 Any future 1.1.2 executor-bearing package will be a new artifact. Output-inhibited evidence bound to predecessor package SHA-256 `247bd7da35e4ad812a13828668fe03673da127bad7ed2b3e970876f3f21c002d` establishes only that predecessor's GPIO4/GPIO20/restored-GPIO4 route-manager lifecycle and cleanup. It does not validate future package bytes or transfer completed live eligibility. The r2 source evidence is independently route-bound development execution and cleanup evidence, not package, waveform-integrity, decode, product-live, or RF qualification.
+
+An explicit source-development binding may replace only the service
+`ExecStart` through a recorded `/etc/systemd/system` drop-in. It binds the
+clean userspace source commit and executable hash separately from the enrolled
+module source commit and development-manifest hash. In this mode the executor
+accepts `query` only and uses the authenticated Experimental module/UAPI/route
+binding instead of the unrelated installed-package version gate. All malformed,
+pending, ambiguous, or mismatched route state still fails closed. Packaged
+preflight, reconciliation, and mutation identity rules are unchanged.

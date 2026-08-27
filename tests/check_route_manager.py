@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 """Hardware-free fixtures for the installed route-manager contract."""
-import copy, importlib.util, json, pathlib, tempfile
+import copy, importlib.util, json, os, pathlib, tempfile
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location("route_manager",ROOT/"scripts/rp1-gpclk-route-manager.py")
@@ -171,6 +171,24 @@ for bad in (
     {"schemaVersion":1,"operation":"apply-and-reboot","route":"gpio4","execute":False,"requestId":"wsprrypi-00000001","actor":"app"},
     {"schemaVersion":1,"operation":"rollback","execute":True,"requestId":"short","actor":"app"},
 ): rejected(lambda bad=bad:manager.parse_request(bad))
+
+with tempfile.TemporaryDirectory() as temporary:
+    fixture=Fixture(pathlib.Path(temporary)); env=fixture.env(); fixture.activate("gpio4")
+    env.path(manager.CONFIG).write_bytes(manager.config_for_route(b"# base\n","gpio4"))
+    executable=env.path("/opt/development/rp1-gpclk-route-manager"); executable.parent.mkdir(parents=True); executable.write_bytes((ROOT/"scripts/rp1-gpclk-route-manager.py").read_bytes())
+    manifest=env.path("/opt/development/DEVELOPMENT_MANIFEST.json")
+    manifest.write_text(json.dumps({"schema":"rp1-gpclk-source-development-manifest-v1","classification":"source-development","qualification":False,"sourceCommit":"7"*40,"renderedVersion":"1.1.2","targetKernel":"fixture-kernel","route":"gpio4","uapiIdentity":{"sha256":manager.sha256_bytes(fixture.uapi)}}))
+    binding=env.path("/opt/development/binding.json")
+    value={"schema":"rp1-gpclk-route-manager-source-development-v1","classification":"Experimental/source-development","qualification":False,"sourceCommit":"8"*40,"moduleSourceCommit":"7"*40,"sourceManifest":"/opt/development/DEVELOPMENT_MANIFEST.json","sourceManifestSha256":manager.sha256(manifest),"executable":"/opt/development/rp1-gpclk-route-manager","executableSha256":manager.sha256(executable),"module":manager.MODULE,"moduleVersion":"1.1.2","uapiSha256":manager.sha256_bytes(fixture.uapi),"kernel":"fixture-kernel","route":"gpio4","compatibilityId":"v1.1.2-pi5-gpio4-6.18.34-development-candidate-r3"}
+    binding.write_text(json.dumps(value)); old=os.environ.get(manager.SOURCE_DEVELOPMENT_BINDING_ENV); os.environ[manager.SOURCE_DEVELOPMENT_BINDING_ENV]="/opt/development/binding.json"
+    try:
+        result=manager.dispatch(request("query"),env); assert result["status"]=="ok" and result["state"]["activeRoute"]=="gpio4"
+        rejected(lambda:manager.dispatch(request("preflight","gpio4"),env),"passive-query-only")
+        value["route"]="gpio20"; binding.write_text(json.dumps(value)); rejected(lambda:manager.dispatch(request("query"),env),"binding differs")
+        binding.write_text("not-json"); rejected(lambda:manager.dispatch(request("query"),env),"malformed")
+    finally:
+        if old is None: os.environ.pop(manager.SOURCE_DEVELOPMENT_BINDING_ENV,None)
+        else: os.environ[manager.SOURCE_DEVELOPMENT_BINDING_ENV]=old
 
 source=(ROOT/"scripts/rp1-gpclk-route-manager.py").read_text()
 for prohibited in ("shell=True","/dev/mem","live_output=1","release_candidate_transaction","sudo","/bin/sh"):

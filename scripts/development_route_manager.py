@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+"""Install and authenticate a passive exact-source route manager without replacing package files."""
+from __future__ import annotations
+import argparse, hashlib, json, os, pathlib, re, shutil, socket, stat, subprocess, sys, time
+
+SCHEMA="rp1-gpclk-route-manager-source-development-v1"
+MANIFEST_SCHEMA="rp1-gpclk-source-development-manifest-v1"
+BASE="/opt/rp1-gpclk-dkms-development"
+DROPIN="/etc/systemd/system/rp1-gpclk-route-manager@.service.d/90-source-development.conf"
+RECORD="/var/lib/rp1-gpclk-dkms/development/route-manager.json"
+PACKAGE_PATHS=("/usr/sbin/rp1-gpclk-route-manager","/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager","/usr/lib/systemd/system/rp1-gpclk-route-manager@.service")
+COMPAT={"gpio4":"v1.1.2-pi5-gpio4-6.18.34-development-candidate-r3","gpio20":"v1.1.2-pi5-gpio20-6.18.34-development-candidate-r3"}
+
+class Failure(RuntimeError): pass
+def root(path:str)->pathlib.Path:
+    base=pathlib.Path(os.environ.get("RP1_GPCLK_DEVELOPMENT_ROOT","/")); value=pathlib.Path(path)
+    return base/str(value).lstrip("/") if base!=pathlib.Path("/") else value
+def digest(path:pathlib.Path)->str:
+    value=hashlib.sha256();
+    with path.open("rb") as stream:
+        while chunk:=stream.read(1024*1024): value.update(chunk)
+    return value.hexdigest()
+def canonical(value:object)->bytes: return json.dumps(value,indent=2,sort_keys=True).encode()+b"\n"
+def atomic(path:pathlib.Path,payload:bytes,mode:int)->None:
+    path.parent.mkdir(parents=True,exist_ok=True); temporary=path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    with temporary.open("xb") as stream: stream.write(payload); stream.flush(); os.fsync(stream.fileno())
+    temporary.chmod(mode); os.replace(temporary,path)
+def run(argv:list[str],check:bool=True)->subprocess.CompletedProcess[str]:
+    result=subprocess.run(argv,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,check=False,env={**os.environ,"LC_ALL":"C"})
+    if check and result.returncode: raise Failure(f"command failed ({result.returncode}): {' '.join(argv)}: {result.stderr.strip()}")
+    return result
+def systemctl(*args:str,check:bool=True)->str:
+    tool=os.environ.get("RP1_GPCLK_TOOL_SYSTEMCTL","/usr/bin/systemctl"); return run([tool,*args],check=check).stdout.strip()
+def load(path:pathlib.Path)->dict:
+    try: value=json.loads(path.read_text())
+    except (OSError,json.JSONDecodeError) as error: raise Failure(f"JSON record is unreadable: {path}") from error
+    if not isinstance(value,dict): raise Failure("JSON record is not an object")
+    return value
+def require_root()->None:
+    if not os.environ.get("RP1_GPCLK_DEVELOPMENT_TEST_ROOT") and os.geteuid()!=0: raise Failure("operation requires root")
+def observations()->dict:
+    live=root("/sys/module/rp1_gpclk_dkms/parameters/live_output")
+    if not live.is_file() or live.read_text().strip() not in {"N","0"}: raise Failure("live_output is enabled, absent, or unknown")
+    module=root("/sys/module/rp1_gpclk_dkms/refcnt"); refcount=int(module.read_text().strip()) if module.is_file() else 0
+    if refcount!=0: raise Failure("module reference count is not zero")
+    endpoint=root("/dev/rp1-gpclk")
+    if endpoint.exists():
+        meta=endpoint.stat()
+        for fd in root("/proc").glob("[0-9]*/fd/*"):
+            try: opened=fd.stat()
+            except OSError: continue
+            if (opened.st_dev,opened.st_ino)==(meta.st_dev,meta.st_ino): raise Failure("RP1 GPCLK endpoint is open")
+    active=systemctl("is-active","wsprrypi.service",check=False)
+    if active not in {"inactive","failed"}: raise Failure("wsprrypi.service is active or unknown")
+    return {"liveOutput":False,"moduleRefcount":refcount,"endpointOpen":False,"wsprrypiService":active}
+def manifest(path:pathlib.Path,route:str,kernel:str)->dict:
+    value=load(path)
+    if (value.get("schema")!=MANIFEST_SCHEMA or value.get("classification")!="source-development" or value.get("qualification") is not False or
+            value.get("sourceState")!="clean" or value.get("targetKernel")!=kernel or value.get("route")!=route or
+            value.get("renderedVersion")!="1.1.2" or not re.fullmatch(r"[0-9a-f]{40}",str(value.get("sourceCommit","")))): raise Failure("development manifest identity differs")
+    return value
+def package_inventory()->list[dict]:
+    result=[]
+    for name in PACKAGE_PATHS:
+        path=root(name)
+        if path.is_symlink() or not path.is_file(): raise Failure(f"packaged path is absent or unsafe: {name}")
+        result.append({"path":name,"sha256":digest(path),"mode":stat.S_IMODE(path.stat().st_mode)})
+    return result
+def paths(commit:str)->dict[str,pathlib.Path]:
+    directory=root(f"{BASE}/{commit}")
+    return {"directory":directory,"executable":directory/"rp1-gpclk-route-manager","manifest":directory/"DEVELOPMENT_MANIFEST.json","binding":directory/"binding.json","dropin":root(DROPIN),"record":root(RECORD)}
+def clean_source(path:pathlib.Path)->tuple[str,pathlib.Path]:
+    source=path.resolve(); executable=source/"scripts/rp1-gpclk-route-manager.py"
+    if executable.is_symlink() or not executable.is_file(): raise Failure("source route-manager executable is absent or unsafe")
+    commit=run(["git","-C",str(source),"rev-parse","HEAD"]).stdout.strip()
+    if not re.fullmatch(r"[0-9a-f]{40}",commit): raise Failure("source commit is invalid")
+    if run(["git","-C",str(source),"status","--porcelain"]).stdout: raise Failure("source tree is dirty")
+    return commit,executable
+def install(args:argparse.Namespace)->dict:
+    require_root(); safety=observations(); source=manifest(args.module_manifest,args.route,args.kernel); commit,executable=clean_source(args.source); target=paths(commit)
+    if target["record"].exists() or target["directory"].exists() or target["dropin"].exists(): raise Failure("source-development route-manager state already exists")
+    package_before=package_inventory(); previous={"fragment":systemctl("show","-p","FragmentPath","--value","rp1-gpclk-route-manager@.service"),"dropins":systemctl("show","-p","DropInPaths","--value","rp1-gpclk-route-manager@.service"),"execStart":systemctl("show","-p","ExecStart","--value","rp1-gpclk-route-manager@.service")}
+    record={"schema":SCHEMA,"classification":"Experimental/source-development","qualification":False,"status":"prepared","sourceCommit":commit,"moduleSourceCommit":source["sourceCommit"],"moduleManifest":str(args.module_manifest),"moduleManifestSha256":digest(args.module_manifest),"kernel":args.kernel,"route":args.route,"compatibilityId":COMPAT[args.route],"packageFilesBefore":package_before,"previousUnitResolution":previous,"createdFiles":[str(target[key]) for key in ("executable","manifest","binding","dropin")],"installedAtUnix":int(time.time())}
+    atomic(target["record"],canonical(record),0o600)
+    try:
+        target["directory"].mkdir(parents=True,mode=0o755)
+        shutil.copyfile(executable,target["executable"]); target["executable"].chmod(0o755)
+        shutil.copyfile(args.module_manifest,target["manifest"]); target["manifest"].chmod(0o644)
+        binding={"schema":SCHEMA,"classification":"Experimental/source-development","qualification":False,"sourceCommit":commit,"moduleSourceCommit":source["sourceCommit"],"sourceManifest":str(target["manifest"]),"sourceManifestSha256":digest(target["manifest"]),"executable":str(target["executable"]),"executableSha256":digest(target["executable"]),"module":"rp1_gpclk_dkms","moduleVersion":"1.1.2","uapiSha256":source["uapiIdentity"]["sha256"],"kernel":args.kernel,"route":args.route,"compatibilityId":COMPAT[args.route]}
+        atomic(target["binding"],canonical(binding),0o644)
+        dropin=("# SPDX-License-Identifier: MIT\n[Service]\nExecStart=\n"+f"ExecStart={target['executable']}\n"+f"Environment=RP1_GPCLK_SOURCE_DEVELOPMENT_BINDING={target['binding']}\n").encode()
+        atomic(target["dropin"],dropin,0o644); systemctl("daemon-reload"); systemctl("restart","rp1-gpclk-route-manager.socket")
+        record.update(status="installed",binding=binding,dropinSha256=digest(target["dropin"])); atomic(target["record"],canonical(record),0o600)
+        return status(argparse.Namespace(record=target["record"]))
+    except BaseException:
+        try: rollback(argparse.Namespace(record=target["record"]))
+        except BaseException: pass
+        raise
+def status(args:argparse.Namespace)->dict:
+    record=load(args.record); commit=record.get("sourceCommit",""); target=paths(commit)
+    if record.get("schema")!=SCHEMA or record.get("classification")!="Experimental/source-development" or record.get("qualification") is not False or record.get("status")!="installed": raise Failure("source-development record is incomplete")
+    safety=observations(); binding=load(target["binding"])
+    if binding!=record.get("binding") or digest(target["executable"])!=binding.get("executableSha256") or digest(target["manifest"])!=binding.get("sourceManifestSha256") or digest(target["dropin"])!=record.get("dropinSha256"): raise Failure("active source-development artifact identity differs")
+    package_after=package_inventory()
+    if package_after!=record["packageFilesBefore"]: raise Failure("Debian-owned route-manager files changed")
+    dropins=systemctl("show","-p","DropInPaths","--value","rp1-gpclk-route-manager@.service"); resolved=systemctl("show","-p","ExecStart","--value","rp1-gpclk-route-manager@.service")
+    if str(target["dropin"]) not in dropins or str(target["executable"]) not in resolved: raise Failure("systemd does not resolve the exact source-development executable")
+    query=None
+    if root("/")==pathlib.Path("/"):
+        client=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM); client.settimeout(5)
+        try:
+            client.connect("/run/rp1-gpclk-dkms/route-manager.sock"); client.sendall(b'{"schemaVersion":1,"operation":"query"}\n'); payload=b""
+            while not payload.endswith(b"\n"): payload+=client.recv(65536)
+            query=json.loads(payload)
+        finally: client.close()
+        state=query.get("state",{}) if isinstance(query,dict) else {}
+        if query.get("status")!="ok" or state.get("configuredRoute")!=binding["route"] or state.get("activeRoute")!=binding["route"] or state.get("pendingTransaction") is not None: raise Failure("passive QUERY does not authenticate the selected idle route")
+    return {"status":"ok","classification":record["classification"],"qualification":False,"sourceCommit":commit,"moduleSourceCommit":record["moduleSourceCommit"],"record":str(args.record),"binding":binding,"passiveQuery":query,"dropin":{"path":str(target["dropin"]),"sha256":record["dropinSha256"]},"systemd":{"dropInPaths":dropins,"execStart":resolved},"packageFiles":package_after,"safety":safety,"rollbackCommand":f"sudo ./scripts/development-route-manager rollback --record {args.record}"}
+def rollback(args:argparse.Namespace)->dict:
+    require_root(); record=load(args.record); commit=record.get("sourceCommit",""); target=paths(commit)
+    if record.get("schema")!=SCHEMA or not re.fullmatch(r"[0-9a-f]{40}",commit): raise Failure("rollback record is invalid")
+    observations()
+    allowed={str(target[key]) for key in ("executable","manifest","binding","dropin")}
+    if set(record.get("createdFiles",[]))!=allowed: raise Failure("rollback record created-file set is incomplete")
+    for key in ("dropin","binding","manifest","executable"):
+        path=target[key]
+        if path.exists():
+            if path.is_symlink() or not path.is_file(): raise Failure(f"rollback refuses altered path: {path}")
+            path.unlink()
+    try: target["directory"].rmdir()
+    except FileNotFoundError: pass
+    systemctl("daemon-reload"); systemctl("restart","rp1-gpclk-route-manager.socket")
+    if package_inventory()!=record["packageFilesBefore"]: raise Failure("packaged files differ after rollback")
+    record["status"]="rolled-back"; atomic(args.record,canonical(record),0o600)
+    return {"status":"rolled-back","record":str(args.record),"scope":"recorded-files-only","packageFiles":record["packageFilesBefore"]}
+def main()->int:
+    parser=argparse.ArgumentParser(); sub=parser.add_subparsers(dest="operation",required=True)
+    install_parser=sub.add_parser("install"); install_parser.add_argument("--source",type=pathlib.Path,required=True); install_parser.add_argument("--module-manifest",type=pathlib.Path,required=True); install_parser.add_argument("--route",choices=sorted(COMPAT),required=True); install_parser.add_argument("--kernel",required=True)
+    for name in ("status","rollback"): sub.add_parser(name).add_argument("--record",type=pathlib.Path,default=root(RECORD))
+    args=parser.parse_args()
+    try: result={"install":install,"status":status,"rollback":rollback}[args.operation](args); print(json.dumps(result,indent=2,sort_keys=True)); return 0
+    except (Failure,OSError,ValueError,KeyError,subprocess.SubprocessError) as error: print(f"error: {error}",file=sys.stderr); return 2
+if __name__=="__main__": raise SystemExit(main())

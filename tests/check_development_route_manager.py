@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+"""Hardware-free checks for the passive source-development route-manager lifecycle."""
+import importlib.util, json, os, pathlib, shutil, subprocess, tempfile
+
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+SPEC=importlib.util.spec_from_file_location("development_route_manager",ROOT/"scripts/development_route_manager.py")
+DEV=importlib.util.module_from_spec(SPEC); SPEC.loader.exec_module(DEV)
+
+def executable(path:pathlib.Path,body:str)->None:
+    path.write_text("#!/bin/sh\nset -eu\n"+body); path.chmod(0o755)
+
+with tempfile.TemporaryDirectory() as temporary:
+    base=pathlib.Path(temporary); fake=base/"root"; source=base/"source"; tools=base/"tools"; tools.mkdir()
+    shutil.copytree(ROOT,source,ignore=shutil.ignore_patterns(".git","__pycache__"))
+    subprocess.run(["git","init","-q"],cwd=source,check=True); subprocess.run(["git","config","user.email","test@example.invalid"],cwd=source,check=True)
+    subprocess.run(["git","config","user.name","test"],cwd=source,check=True); subprocess.run(["git","add","."],cwd=source,check=True)
+    subprocess.run(["git","commit","-qm","fixture"],cwd=source,check=True)
+    commit=subprocess.run(["git","rev-parse","HEAD"],cwd=source,text=True,stdout=subprocess.PIPE,check=True).stdout.strip()
+    for name in DEV.PACKAGE_PATHS:
+        path=fake/name.lstrip("/"); path.parent.mkdir(parents=True,exist_ok=True); path.write_text(name+"\n"); path.chmod(0o755 if "/usr/sbin/" in name or "/libexec/" in name else 0o644)
+    live=fake/"sys/module/rp1_gpclk_dkms/parameters/live_output"; live.parent.mkdir(parents=True); live.write_text("N\n")
+    (fake/"sys/module/rp1_gpclk_dkms/refcnt").write_text("0\n")
+    state=base/"systemd.json"; state.write_text(json.dumps({"dropin":"","exec":"/usr/sbin/rp1-gpclk-route-manager"}))
+    executable(tools/"systemctl",r'''state="$RP1_TEST_SYSTEMD_STATE"
+case "$1:${2:-}" in
+ is-active:wsprrypi.service) echo inactive; exit 3;;
+ show:-p)
+   value=$(cat "$state")
+   case "$3" in FragmentPath) echo /usr/lib/systemd/system/rp1-gpclk-route-manager@.service;; DropInPaths) python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["dropin"])' "$state";; ExecStart) python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["exec"])' "$state";; esac;;
+ daemon-reload:) :;;
+ restart:rp1-gpclk-route-manager.socket)
+   drop="$RP1_GPCLK_DEVELOPMENT_ROOT/etc/systemd/system/rp1-gpclk-route-manager@.service.d/90-source-development.conf"
+   if [ -f "$drop" ]; then execpath=$(sed -n 's/^ExecStart=\(\/.*\)$/\1/p' "$drop"); python3 -c 'import json,sys; json.dump({"dropin":sys.argv[2],"exec":sys.argv[3]},open(sys.argv[1],"w"))' "$state" "$drop" "$execpath"; else echo '{"dropin":"","exec":"/usr/sbin/rp1-gpclk-route-manager"}' >"$state"; fi;;
+ *) echo "unexpected systemctl: $*" >&2; exit 2;;
+esac
+''')
+    manifest=base/"module-manifest.json"; manifest.write_text(json.dumps({"schema":DEV.MANIFEST_SCHEMA,"classification":"source-development","qualification":False,"sourceState":"clean","sourceCommit":"7"*40,"targetKernel":"fixture-kernel","route":"gpio4","renderedVersion":"1.1.2","uapiIdentity":{"sha256":"f0af5ffda91f4ba82285dc278452eae28b2eeffa635ebd6ee473bf7393a6a54e"}}))
+    old=dict(os.environ); os.environ.update({"RP1_GPCLK_DEVELOPMENT_ROOT":str(fake),"RP1_GPCLK_DEVELOPMENT_TEST_ROOT":"1","RP1_GPCLK_TOOL_SYSTEMCTL":str(tools/"systemctl"),"RP1_TEST_SYSTEMD_STATE":str(state)})
+    try:
+        args=type("Args",(),{"source":source,"module_manifest":manifest,"route":"gpio4","kernel":"fixture-kernel"})()
+        installed=DEV.install(args); assert installed["status"]=="ok" and installed["sourceCommit"]==commit
+        package_before=DEV.package_inventory(); assert DEV.status(type("Args",(),{"record":DEV.root(DEV.RECORD)})())==installed
+        installed["binding"]["route"]="gpio20"
+        binding=DEV.root(f"{DEV.BASE}/{commit}/binding.json"); binding.write_bytes(DEV.canonical(installed["binding"]))
+        try: DEV.status(type("Args",(),{"record":DEV.root(DEV.RECORD)})())
+        except DEV.Failure: pass
+        else: raise AssertionError("altered binding accepted")
+        binding.write_bytes(DEV.canonical(json.loads(DEV.root(DEV.RECORD).read_text())["binding"]))
+        unrelated=fake/"etc/systemd/system/unrelated.service"; unrelated.parent.mkdir(parents=True,exist_ok=True); unrelated.write_text("preserve\n")
+        rolled=DEV.rollback(type("Args",(),{"record":DEV.root(DEV.RECORD)})()); assert rolled["status"]=="rolled-back"
+        assert unrelated.read_text()=="preserve\n" and DEV.package_inventory()==package_before and not DEV.root(DEV.DROPIN).exists()
+        assert json.loads(state.read_text())["exec"]=="/usr/sbin/rp1-gpclk-route-manager"
+        (source/"README.md").write_text((source/"README.md").read_text()+"dirty\n")
+        try: DEV.clean_source(source)
+        except DEV.Failure: pass
+        else: raise AssertionError("dirty source accepted")
+    finally:
+        os.environ.clear(); os.environ.update(old)
+
+source=(ROOT/"scripts/development_route_manager.py").read_text()
+for forbidden in ("modprobe ","/dev/mem","live_output=1","Soapy","transmit"):
+    assert forbidden not in source
+print("source-development route manager lifecycle: PASS")
