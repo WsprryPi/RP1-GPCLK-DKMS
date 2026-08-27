@@ -16,6 +16,7 @@ OVERLAY_DIR="/boot/firmware/overlays"
 BEGIN="# BEGIN RP1-GPCLK-DKMS OWNED ROUTE"; END="# END RP1-GPCLK-DKMS OWNED ROUTE"
 UAPI_SHA256="f0af5ffda91f4ba82285dc278452eae28b2eeffa635ebd6ee473bf7393a6a54e"
 SOURCE_DEVELOPMENT_BINDING_ENV="RP1_GPCLK_SOURCE_DEVELOPMENT_BINDING"
+ADOPTION_SCHEMA="rp1-gpclk-route-manager-current-boot-adoption-v1"
 OVERLAY_SHA256={"gpio4":"c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6","gpio20":"8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"}
 ROUTE_ID={"gpio4":1,"gpio20":2}; OPERATIONS={"query","preflight","apply-and-reboot","rollback","reconcile"}
 MUTATIONS={"apply-and-reboot","rollback","reconcile"}; SERVICES=("wsprrypi.service","soapyremote-server.service")
@@ -117,7 +118,7 @@ def source_development_identity(env:Environment,binding_name:str)->dict:
     if binding_path.is_symlink() or not binding_path.is_file(): raise ContractError("source-development binding is absent or unsafe")
     try: binding=json.loads(binding_path.read_text())
     except (OSError,json.JSONDecodeError) as error: raise ContractError("source-development binding is malformed") from error
-    required={"schema","classification","qualification","sourceCommit","moduleSourceCommit","sourceManifest","sourceManifestSha256","executable","executableSha256","module","moduleVersion","uapiSha256","kernel","route","compatibilityId"}
+    required={"schema","classification","qualification","sourceCommit","moduleSourceCommit","sourceManifest","sourceManifestSha256","executable","executableSha256","adoptionRecord","module","moduleVersion","uapiSha256","kernel","route","compatibilityId"}
     if (set(binding)!=required or binding["schema"]!="rp1-gpclk-route-manager-source-development-v1" or
             binding["classification"]!="Experimental/source-development" or binding["qualification"] is not False or
             not re.fullmatch(r"[0-9a-f]{40}",str(binding["sourceCommit"])) or
@@ -143,6 +144,29 @@ def source_development_identity(env:Environment,binding_name:str)->dict:
             "qualification":False,"sourceCommit":binding["sourceCommit"],"moduleSourceCommit":binding["moduleSourceCommit"],"manifestSha256":binding["sourceManifestSha256"],
             "executable":binding["executable"],"executableSha256":binding["executableSha256"],"kernel":binding["kernel"],
             "route":binding["route"],"compatibilityId":binding["compatibilityId"]}}
+
+def source_development_ownership(env:Environment,payload:bytes,state:dict)->str:
+    identity=state["identity"].get("sourceDevelopment")
+    if not identity: return config_ownership(payload)
+    binding_path=env.path(os.environ[SOURCE_DEVELOPMENT_BINDING_ENV]); binding=json.loads(binding_path.read_text())
+    adoption_path=env.path(binding["adoptionRecord"])
+    if not adoption_path.is_file() or adoption_path.is_symlink(): return "historical-package-owned"
+    metadata=adoption_path.stat()
+    if env.root==Path("/") and (metadata.st_uid!=0 or stat.S_IMODE(metadata.st_mode)!=0o600): raise ContractError("source-development adoption record ownership differs")
+    try: adoption=json.loads(adoption_path.read_text())
+    except (OSError,json.JSONDecodeError) as error: raise ContractError("source-development adoption record is malformed") from error
+    required={"schema","classification","qualification","adoptedAtUnix","bootId","configSha256","route","sourceCommit","executableSha256","moduleSourceCommit","moduleManifestSha256","moduleVersion","uapiSha256","kernel","compatibilityId"}
+    expected={"schema":ADOPTION_SCHEMA,"classification":"Experimental/source-development","qualification":False,
+              "bootId":state["bootId"],"configSha256":state["configSha256"],"route":state["configuredRoute"],
+              "sourceCommit":identity["sourceCommit"],"executableSha256":identity["executableSha256"],
+              "moduleSourceCommit":identity["moduleSourceCommit"],"moduleManifestSha256":identity["manifestSha256"],
+              "moduleVersion":VERSION,"uapiSha256":state["identity"]["uapiSha256"],"kernel":identity["kernel"],
+              "compatibilityId":identity["compatibilityId"]}
+    if set(adoption)!=required or not isinstance(adoption.get("adoptedAtUnix"),int) or any(adoption.get(key)!=value for key,value in expected.items()):
+        raise ContractError("source-development adoption record identity differs")
+    if state["configuredRoute"]!=identity["route"] or state["activeRoute"]!=identity["route"] or state["pendingTransaction"] is not None:
+        raise ContractError("source-development current-boot route adoption is stale or inconsistent")
+    return "current"
 
 def fixed_identity(env:Environment)->dict:
     binding=os.environ.get(SOURCE_DEVELOPMENT_BINDING_ENV)
@@ -255,7 +279,8 @@ def inspect(env:Environment,observe_safety:bool=False,require_quiesced:bool=Fals
     if config.is_symlink() or not config.is_file() or not stat.S_ISREG(config.stat().st_mode): raise ContractError("boot configuration is absent or unsafe")
     payload=config.read_bytes(); journals=load_journals(env); pending=next((v for _,v in journals if v["status"] not in {"complete","rolled-back"}),None)
     historical=[value["historical"] for _,value in journals if "historical" in value]
-    result={"identity":fixed_identity(env),"configuredRoute":parse_config(payload),"bootOwnership":config_ownership(payload),"activeRoute":active_route(env),"bootId":boot_id(env),"configSha256":sha256_bytes(payload),"pendingTransaction":pending,"journalCount":len(journals),"historicalJournals":historical}
+    result={"identity":fixed_identity(env),"configuredRoute":parse_config(payload),"activeRoute":active_route(env),"bootId":boot_id(env),"configSha256":sha256_bytes(payload),"pendingTransaction":pending,"journalCount":len(journals),"historicalJournals":historical}
+    result["bootOwnership"]=source_development_ownership(env,payload,result)
     if observe_safety: result["safety"]=service_safety(env,require_quiesced)
     return result
 def response(operation:str,status:str,state:dict)->dict: return {"schemaVersion":1,"contract":CONTRACT,"operation":operation,"status":status,"state":state}

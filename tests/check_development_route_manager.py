@@ -21,6 +21,8 @@ with tempfile.TemporaryDirectory() as temporary:
         path=fake/name.lstrip("/"); path.parent.mkdir(parents=True,exist_ok=True); path.write_text(name+"\n"); path.chmod(0o755 if "/usr/sbin/" in name or "/libexec/" in name else 0o644)
     live=fake/"sys/module/rp1_gpclk_dkms/parameters/live_output"; live.parent.mkdir(parents=True); live.write_text("N\n")
     (fake/"sys/module/rp1_gpclk_dkms/refcnt").write_text("0\n")
+    boot=fake/"proc/sys/kernel/random/boot_id"; boot.parent.mkdir(parents=True); boot.write_text("11111111-2222-3333-4444-555555555555\n")
+    config=fake/"boot/firmware/config.txt"; config.parent.mkdir(parents=True); config.write_text("fixture gpio4 config\n")
     state=base/"systemd.json"; state.write_text(json.dumps({"dropin":"","exec":"/usr/sbin/rp1-gpclk-route-manager"}))
     executable(tools/"systemctl",r'''state="$RP1_TEST_SYSTEMD_STATE"
 case "$1:${2:-}" in
@@ -39,14 +41,37 @@ esac
     old=dict(os.environ); os.environ.update({"RP1_GPCLK_DEVELOPMENT_ROOT":str(fake),"RP1_GPCLK_DEVELOPMENT_TEST_ROOT":"1","RP1_GPCLK_TOOL_SYSTEMCTL":str(tools/"systemctl"),"RP1_TEST_SYSTEMD_STATE":str(state)})
     try:
         args=type("Args",(),{"source":source,"module_manifest":manifest,"route":"gpio4","kernel":"fixture-kernel"})()
-        installed=DEV.install(args); assert installed["status"]=="ok" and installed["sourceCommit"]==commit
-        package_before=DEV.package_inventory(); assert DEV.status(type("Args",(),{"record":DEV.root(DEV.RECORD)})())==installed
-        installed["binding"]["route"]="gpio20"
-        binding=DEV.root(f"{DEV.BASE}/{commit}/binding.json"); binding.write_bytes(DEV.canonical(installed["binding"]))
+        installed=DEV.install(args); assert installed["status"]=="deployed-awaiting-current-boot-adoption" and installed["sourceCommit"]==commit
+        status_args=type("Args",(),{"record":DEV.root(DEV.RECORD)})(); package_before=DEV.package_inventory()
+        try: DEV.status(status_args)
+        except DEV.Failure: pass
+        else: raise AssertionError("deployment without adoption reported ready")
+        binding=DEV.load(DEV.root(f"{DEV.BASE}/{commit}/binding.json"))
+        DEV.passive_query=lambda:{"status":"ok","state":{"bootOwnership":"historical-package-owned","configuredRoute":"gpio4","activeRoute":"gpio4","pendingTransaction":None,"bootId":boot.read_text().strip(),"configSha256":DEV.digest(config)}}
+        adopted=DEV.adopt(status_args); assert adopted["status"]=="ok" and adopted["passiveQuery"] is None
+        assert DEV.status(status_args)==adopted
+        altered=dict(binding); altered["route"]="gpio20"
+        binding_path=DEV.root(f"{DEV.BASE}/{commit}/binding.json"); binding_path.write_bytes(DEV.canonical(altered))
         try: DEV.status(type("Args",(),{"record":DEV.root(DEV.RECORD)})())
         except DEV.Failure: pass
         else: raise AssertionError("altered binding accepted")
-        binding.write_bytes(DEV.canonical(json.loads(DEV.root(DEV.RECORD).read_text())["binding"]))
+        binding_path.write_bytes(DEV.canonical(json.loads(DEV.root(DEV.RECORD).read_text())["binding"]))
+        boot.write_text("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee\n")
+        try: DEV.status(status_args)
+        except DEV.Failure: pass
+        else: raise AssertionError("stale boot adoption accepted")
+        boot.write_text("11111111-2222-3333-4444-555555555555\n")
+        assert DEV.rollback_adoption(status_args)["status"]=="adoption-rolled-back"
+        try: DEV.status(status_args)
+        except DEV.Failure: pass
+        else: raise AssertionError("removed adoption reported ready")
+        original_status=DEV.status; DEV.status=lambda unused:(_ for _ in ()).throw(DEV.Failure("injected readiness race"))
+        try: DEV.adopt(status_args)
+        except DEV.Failure: pass
+        else: raise AssertionError("failed adoption readiness was accepted")
+        finally: DEV.status=original_status
+        assert not DEV.paths(commit)["adoption"].exists()
+        DEV.adopt(status_args)
         unrelated=fake/"etc/systemd/system/unrelated.service"; unrelated.parent.mkdir(parents=True,exist_ok=True); unrelated.write_text("preserve\n")
         rolled=DEV.rollback(type("Args",(),{"record":DEV.root(DEV.RECORD)})()); assert rolled["status"]=="rolled-back"
         assert unrelated.read_text()=="preserve\n" and DEV.package_inventory()==package_before and not DEV.root(DEV.DROPIN).exists()

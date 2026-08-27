@@ -40,3 +40,12 @@ accepts `query` only and uses the authenticated Experimental module/UAPI/route
 binding instead of the unrelated installed-package version gate. All malformed,
 pending, ambiguous, or mismatched route state still fails closed. Packaged
 preflight, reconciliation, and mutation identity rules are unchanged.
+
+Source-development boot ownership is current only through an explicit
+`rp1-gpclk-route-manager-current-boot-adoption-v1` record. The root-owned record
+binds one boot ID and configuration digest to exact configured and active route,
+userspace commit and executable, module source manifest, kernel, UAPI, and
+compatibility identity. It is not inferred from historical journals. Missing,
+stale, altered, pending, or disagreeing state fails closed. Adoption changes no
+boot file, overlay, endpoint, module, output gate, GPIO, clock, or DMA state and
+does not authorize execution.

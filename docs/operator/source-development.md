@@ -96,14 +96,26 @@ sudo ./scripts/development-route-manager install \
   --source /absolute/clean/checkout \
   --module-manifest /absolute/module/DEVELOPMENT_MANIFEST.json \
   --kernel "$(uname -r)" --route gpio4
+sudo ./scripts/development-route-manager adopt-current-boot
 sudo ./scripts/development-route-manager status
+sudo ./scripts/development-route-manager rollback-adoption
 sudo ./scripts/development-route-manager rollback
 ```
 
 The installer copies the executable and module manifest below
 `/opt/rp1-gpclk-dkms-development/COMMIT`, records their separate source
 commits and hashes, and activates only a drop-in below `/etc/systemd/system`.
-The package executables and unit fragment remain unchanged. This integration
+The package executables and unit fragment remain unchanged. Installation alone
+is reported as `deployed-awaiting-current-boot-adoption`, not ready. The
+explicit adoption operation records the observed boot ID, complete boot
+configuration digest, configured and active route, executable and manifest
+identities, kernel, UAPI, and compatibility identity in a root-owned mode 0600
+record. Passive QUERY reports `bootOwnership: current` only while every bound
+field still matches and no route transaction is pending. A reboot, configuration
+change, route disagreement, artifact replacement, or missing record fails
+closed. Historical completed journals never substitute for adoption.
+
+This integration
 accepts only passive `query`; every route mutation remains subject to the
 packaged identity contract. Status authenticates systemd resolution, package
 file preservation, the module binding, selected route, endpoint closure, and

@@ -275,6 +275,12 @@ administrator drop-in, bind userspace and module source identities separately,
 and expose only passive query while active. Successful deployment or query is
 not execution authorization or qualification.
 
+Where source-development consumers require current boot ownership, deployment
+alone is insufficient. A separate attributable adoption record must bind the
+current boot and configuration digest to exact route, userspace, module,
+kernel, UAPI, and compatibility identities. Historical package ownership and
+completed historical journals do not establish that current proof.
+
 ## Validation
 
 The additive ABI-v3 passive snapshot contract is specified in

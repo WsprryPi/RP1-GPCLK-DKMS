@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse, hashlib, json, os, pathlib, re, shutil, socket, stat, subprocess, sys, time
 
 SCHEMA="rp1-gpclk-route-manager-source-development-v1"
+ADOPTION_SCHEMA="rp1-gpclk-route-manager-current-boot-adoption-v1"
 MANIFEST_SCHEMA="rp1-gpclk-source-development-manifest-v1"
 BASE="/opt/rp1-gpclk-dkms-development"
 DROPIN="/etc/systemd/system/rp1-gpclk-route-manager@.service.d/90-source-development.conf"
@@ -70,7 +71,7 @@ def package_inventory()->list[dict]:
     return result
 def paths(commit:str)->dict[str,pathlib.Path]:
     directory=root(f"{BASE}/{commit}")
-    return {"directory":directory,"executable":directory/"rp1-gpclk-route-manager","manifest":directory/"DEVELOPMENT_MANIFEST.json","binding":directory/"binding.json","dropin":root(DROPIN),"record":root(RECORD)}
+    return {"directory":directory,"executable":directory/"rp1-gpclk-route-manager","manifest":directory/"DEVELOPMENT_MANIFEST.json","binding":directory/"binding.json","adoption":directory/"current-boot-ownership.json","dropin":root(DROPIN),"record":root(RECORD)}
 def clean_source(path:pathlib.Path)->tuple[str,pathlib.Path]:
     source=path.resolve(); executable=source/"scripts/rp1-gpclk-route-manager.py"
     if executable.is_symlink() or not executable.is_file(): raise Failure("source route-manager executable is absent or unsafe")
@@ -78,22 +79,28 @@ def clean_source(path:pathlib.Path)->tuple[str,pathlib.Path]:
     if not re.fullmatch(r"[0-9a-f]{40}",commit): raise Failure("source commit is invalid")
     if run(["git","-C",str(source),"status","--porcelain"]).stdout: raise Failure("source tree is dirty")
     return commit,executable
+def passive_query()->dict:
+    client=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM); client.settimeout(5)
+    try:
+        client.connect("/run/rp1-gpclk-dkms/route-manager.sock"); client.sendall(b'{"schemaVersion":1,"operation":"query"}\n'); client.shutdown(socket.SHUT_WR)
+        return json.loads(client.makefile("rb").readline())
+    finally: client.close()
 def install(args:argparse.Namespace)->dict:
     require_root(); safety=observations(); source=manifest(args.module_manifest,args.route,args.kernel); commit,executable=clean_source(args.source); target=paths(commit)
     if target["record"].exists() or target["directory"].exists() or target["dropin"].exists(): raise Failure("source-development route-manager state already exists")
     package_before=package_inventory(); previous={"unit":UNIT,"fragment":systemctl("show","-p","FragmentPath","--value",UNIT),"dropins":systemctl("show","-p","DropInPaths","--value",UNIT),"execStart":systemctl("show","-p","ExecStart","--value",UNIT)}
-    record={"schema":SCHEMA,"classification":"Experimental/source-development","qualification":False,"status":"prepared","sourceCommit":commit,"moduleSourceCommit":source["sourceCommit"],"moduleManifest":str(args.module_manifest),"moduleManifestSha256":digest(args.module_manifest),"kernel":args.kernel,"route":args.route,"compatibilityId":COMPAT[args.route],"packageFilesBefore":package_before,"previousUnitResolution":previous,"createdFiles":[str(target[key]) for key in ("executable","manifest","binding","dropin")],"installedAtUnix":int(time.time())}
+    record={"schema":SCHEMA,"classification":"Experimental/source-development","qualification":False,"status":"prepared","sourceCommit":commit,"moduleSourceCommit":source["sourceCommit"],"moduleManifest":str(args.module_manifest),"moduleManifestSha256":digest(args.module_manifest),"kernel":args.kernel,"route":args.route,"compatibilityId":COMPAT[args.route],"packageFilesBefore":package_before,"previousUnitResolution":previous,"createdFiles":[str(target[key]) for key in ("executable","manifest","binding","adoption","dropin")],"installedAtUnix":int(time.time())}
     atomic(target["record"],canonical(record),0o600)
     try:
         target["directory"].mkdir(parents=True,mode=0o755)
         shutil.copyfile(executable,target["executable"]); target["executable"].chmod(0o755)
         shutil.copyfile(args.module_manifest,target["manifest"]); target["manifest"].chmod(0o644)
-        binding={"schema":SCHEMA,"classification":"Experimental/source-development","qualification":False,"sourceCommit":commit,"moduleSourceCommit":source["sourceCommit"],"sourceManifest":str(target["manifest"]),"sourceManifestSha256":digest(target["manifest"]),"executable":str(target["executable"]),"executableSha256":digest(target["executable"]),"module":"rp1_gpclk_dkms","moduleVersion":"1.1.2","uapiSha256":source["uapiIdentity"]["sha256"],"kernel":args.kernel,"route":args.route,"compatibilityId":COMPAT[args.route]}
+        binding={"schema":SCHEMA,"classification":"Experimental/source-development","qualification":False,"sourceCommit":commit,"moduleSourceCommit":source["sourceCommit"],"sourceManifest":str(target["manifest"]),"sourceManifestSha256":digest(target["manifest"]),"executable":str(target["executable"]),"executableSha256":digest(target["executable"]),"adoptionRecord":str(target["adoption"]),"module":"rp1_gpclk_dkms","moduleVersion":"1.1.2","uapiSha256":source["uapiIdentity"]["sha256"],"kernel":args.kernel,"route":args.route,"compatibilityId":COMPAT[args.route]}
         atomic(target["binding"],canonical(binding),0o644)
         dropin=("# SPDX-License-Identifier: MIT\n[Service]\nExecStart=\n"+f"ExecStart={target['executable']}\n"+f"Environment=RP1_GPCLK_SOURCE_DEVELOPMENT_BINDING={target['binding']}\n").encode()
         atomic(target["dropin"],dropin,0o644); systemctl("daemon-reload"); systemctl("restart","rp1-gpclk-route-manager.socket")
         record.update(status="installed",binding=binding,dropinSha256=digest(target["dropin"])); atomic(target["record"],canonical(record),0o600)
-        return status(argparse.Namespace(record=target["record"]))
+        return {"status":"deployed-awaiting-current-boot-adoption","record":str(target["record"]),"sourceCommit":commit,"adoptionCommand":f"sudo ./scripts/development-route-manager adopt-current-boot --record {target['record']}"}
     except BaseException:
         try: rollback(argparse.Namespace(record=target["record"]))
         except BaseException: pass
@@ -107,24 +114,51 @@ def status(args:argparse.Namespace)->dict:
     if package_after!=record["packageFilesBefore"]: raise Failure("Debian-owned route-manager files changed")
     dropins=systemctl("show","-p","DropInPaths","--value",UNIT); resolved=systemctl("show","-p","ExecStart","--value",UNIT)
     if str(target["dropin"]) not in dropins or str(target["executable"]) not in resolved: raise Failure("systemd does not resolve the exact source-development executable")
+    adoption=load(target["adoption"])
+    boot=root("/proc/sys/kernel/random/boot_id"); config=root("/boot/firmware/config.txt")
+    adoption_fields={"schema","classification","qualification","adoptedAtUnix","bootId","configSha256","route","sourceCommit","executableSha256","moduleSourceCommit","moduleManifestSha256","moduleVersion","uapiSha256","kernel","compatibilityId"}
+    if (set(adoption)!=adoption_fields or adoption.get("schema")!=ADOPTION_SCHEMA or adoption.get("classification")!="Experimental/source-development" or
+            adoption.get("qualification") is not False or not isinstance(adoption.get("adoptedAtUnix"),int) or
+            adoption.get("bootId")!=(boot.read_text().strip() if boot.is_file() else None) or
+            adoption.get("configSha256")!=(digest(config) if config.is_file() else None) or adoption.get("route")!=binding["route"] or
+            adoption.get("sourceCommit")!=binding["sourceCommit"] or adoption.get("executableSha256")!=binding["executableSha256"] or
+            adoption.get("moduleSourceCommit")!=binding["moduleSourceCommit"] or adoption.get("moduleManifestSha256")!=binding["sourceManifestSha256"] or
+            adoption.get("moduleVersion")!=binding["moduleVersion"] or adoption.get("uapiSha256")!=binding["uapiSha256"] or
+            adoption.get("kernel")!=binding["kernel"] or adoption.get("compatibilityId")!=binding["compatibilityId"]): raise Failure("current-boot adoption record is stale or mismatched")
     query=None
     if root("/")==pathlib.Path("/"):
-        client=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM); client.settimeout(5)
-        try:
-            client.connect("/run/rp1-gpclk-dkms/route-manager.sock"); client.sendall(b'{"schemaVersion":1,"operation":"query"}\n'); client.shutdown(socket.SHUT_WR); payload=b""
-            while not payload.endswith(b"\n"): payload+=client.recv(65536)
-            query=json.loads(payload)
-        finally: client.close()
+        query=passive_query()
         state=query.get("state",{}) if isinstance(query,dict) else {}
-        if query.get("status")!="ok" or state.get("configuredRoute")!=binding["route"] or state.get("activeRoute")!=binding["route"] or state.get("pendingTransaction") is not None: raise Failure("passive QUERY does not authenticate the selected idle route")
-    return {"status":"ok","classification":record["classification"],"qualification":False,"sourceCommit":commit,"moduleSourceCommit":record["moduleSourceCommit"],"record":str(args.record),"binding":binding,"passiveQuery":query,"dropin":{"path":str(target["dropin"]),"sha256":record["dropinSha256"]},"systemd":{"dropInPaths":dropins,"execStart":resolved},"packageFiles":package_after,"safety":safety,"rollbackCommand":f"sudo ./scripts/development-route-manager rollback --record {args.record}"}
+        if query.get("status")!="ok" or state.get("configuredRoute")!=binding["route"] or state.get("activeRoute")!=binding["route"] or state.get("pendingTransaction") is not None or state.get("bootOwnership")!="current": raise Failure("passive QUERY does not authenticate current ownership of the selected idle route")
+    return {"status":"ok","classification":record["classification"],"qualification":False,"sourceCommit":commit,"moduleSourceCommit":record["moduleSourceCommit"],"record":str(args.record),"binding":binding,"adoption":{"path":str(target["adoption"]),"sha256":digest(target["adoption"]),"record":adoption},"passiveQuery":query,"dropin":{"path":str(target["dropin"]),"sha256":record["dropinSha256"]},"systemd":{"dropInPaths":dropins,"execStart":resolved},"packageFiles":package_after,"safety":safety,"rollbackCommand":f"sudo ./scripts/development-route-manager rollback --record {args.record}"}
+def adopt(args:argparse.Namespace)->dict:
+    require_root(); record=load(args.record); commit=record.get("sourceCommit",""); target=paths(commit)
+    if record.get("status")!="installed" or target["adoption"].exists(): raise Failure("deployment is not eligible for current-boot adoption")
+    observations(); binding=load(target["binding"])
+    query=passive_query()
+    state=query.get("state",{}) if isinstance(query,dict) else {}
+    if (query.get("status")!="ok" or state.get("bootOwnership")!="historical-package-owned" or state.get("configuredRoute")!=binding["route"] or
+            state.get("activeRoute")!=binding["route"] or state.get("pendingTransaction") is not None): raise Failure("deployment is not an exact idle historical route eligible for adoption")
+    adoption={"schema":ADOPTION_SCHEMA,"classification":"Experimental/source-development","qualification":False,"adoptedAtUnix":int(time.time()),
+              "bootId":state["bootId"],"configSha256":state["configSha256"],"route":binding["route"],"sourceCommit":binding["sourceCommit"],
+              "executableSha256":binding["executableSha256"],"moduleSourceCommit":binding["moduleSourceCommit"],"moduleManifestSha256":binding["sourceManifestSha256"],
+              "moduleVersion":binding["moduleVersion"],"uapiSha256":binding["uapiSha256"],"kernel":binding["kernel"],"compatibilityId":binding["compatibilityId"]}
+    atomic(target["adoption"],canonical(adoption),0o600)
+    try: result=status(args)
+    except BaseException:
+        target["adoption"].unlink(missing_ok=True); raise
+    result["adoption"]={"path":str(target["adoption"]),"sha256":digest(target["adoption"]),"record":adoption}; return result
+def rollback_adoption(args:argparse.Namespace)->dict:
+    require_root(); record=load(args.record); target=paths(record.get("sourceCommit","")); observations()
+    if not target["adoption"].is_file() or target["adoption"].is_symlink(): raise Failure("current-boot adoption record is absent or unsafe")
+    target["adoption"].unlink(); return {"status":"adoption-rolled-back","removed":str(target["adoption"]),"deploymentPreserved":True}
 def rollback(args:argparse.Namespace)->dict:
     require_root(); record=load(args.record); commit=record.get("sourceCommit",""); target=paths(commit)
     if record.get("schema")!=SCHEMA or not re.fullmatch(r"[0-9a-f]{40}",commit): raise Failure("rollback record is invalid")
     observations()
-    allowed={str(target[key]) for key in ("executable","manifest","binding","dropin")}
+    allowed={str(target[key]) for key in ("executable","manifest","binding","adoption","dropin")}
     if set(record.get("createdFiles",[]))!=allowed: raise Failure("rollback record created-file set is incomplete")
-    for key in ("dropin","binding","manifest","executable"):
+    for key in ("dropin","adoption","binding","manifest","executable"):
         path=target[key]
         if path.exists():
             if path.is_symlink() or not path.is_file(): raise Failure(f"rollback refuses altered path: {path}")
@@ -138,8 +172,8 @@ def rollback(args:argparse.Namespace)->dict:
 def main()->int:
     parser=argparse.ArgumentParser(); sub=parser.add_subparsers(dest="operation",required=True)
     install_parser=sub.add_parser("install"); install_parser.add_argument("--source",type=pathlib.Path,required=True); install_parser.add_argument("--module-manifest",type=pathlib.Path,required=True); install_parser.add_argument("--route",choices=sorted(COMPAT),required=True); install_parser.add_argument("--kernel",required=True)
-    for name in ("status","rollback"): sub.add_parser(name).add_argument("--record",type=pathlib.Path,default=root(RECORD))
+    for name in ("status","adopt-current-boot","rollback-adoption","rollback"): sub.add_parser(name).add_argument("--record",type=pathlib.Path,default=root(RECORD))
     args=parser.parse_args()
-    try: result={"install":install,"status":status,"rollback":rollback}[args.operation](args); print(json.dumps(result,indent=2,sort_keys=True)); return 0
+    try: result={"install":install,"status":status,"adopt-current-boot":adopt,"rollback-adoption":rollback_adoption,"rollback":rollback}[args.operation](args); print(json.dumps(result,indent=2,sort_keys=True)); return 0
     except (Failure,OSError,ValueError,KeyError,subprocess.SubprocessError) as error: print(f"error: {error}",file=sys.stderr); return 2
 if __name__=="__main__": raise SystemExit(main())
