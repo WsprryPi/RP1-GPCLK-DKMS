@@ -77,6 +77,15 @@ esac
         rolled=DEV.rollback(type("Args",(),{"record":DEV.root(DEV.RECORD)})()); assert rolled["status"]=="rolled-back"
         assert unrelated.read_text()=="preserve\n" and DEV.package_inventory()==package_before and not DEV.root(DEV.DROPIN).exists()
         assert json.loads(state.read_text())["exec"]=="/usr/sbin/rp1-gpclk-route-manager"
+        reinstalled=DEV.install(args); successor=DEV.load(DEV.root(DEV.RECORD)); predecessor=successor["predecessorRollbackRecord"]
+        assert reinstalled["status"]=="deployed-awaiting-current-boot-adoption"
+        assert predecessor["sourceCommit"]==commit and pathlib.Path(predecessor["path"]).is_file()
+        assert DEV.digest(pathlib.Path(predecessor["path"]))==predecessor["sha256"]
+        DEV.rollback(status_args)
+        DEV.root(DEV.RECORD).write_text("{}\n")
+        try: DEV.install(args)
+        except DEV.Failure: pass
+        else: raise AssertionError("malformed predecessor record accepted")
         (source/"README.md").write_text((source/"README.md").read_text()+"dirty\n")
         try: DEV.clean_source(source)
         except DEV.Failure: pass

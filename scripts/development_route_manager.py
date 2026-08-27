@@ -72,6 +72,24 @@ def package_inventory()->list[dict]:
 def paths(commit:str)->dict[str,pathlib.Path]:
     directory=root(f"{BASE}/{commit}")
     return {"directory":directory,"executable":directory/"rp1-gpclk-route-manager","manifest":directory/"DEVELOPMENT_MANIFEST.json","binding":directory/"binding.json","adoption":directory/"current-boot-ownership.json","dropin":root(DROPIN),"record":root(RECORD)}
+def archive_rolled_back_record(record_path:pathlib.Path)->dict|None:
+    if not record_path.exists(): return None
+    if record_path.is_symlink() or not record_path.is_file(): raise Failure("existing source-development record is unsafe")
+    record=load(record_path); commit=record.get("sourceCommit",""); target=paths(commit)
+    allowed={str(target[key]) for key in ("executable","manifest","binding","adoption","dropin")}
+    if (record.get("schema")!=SCHEMA or record.get("classification")!="Experimental/source-development" or
+            record.get("qualification") is not False or record.get("status")!="rolled-back" or
+            not re.fullmatch(r"[0-9a-f]{40}",commit) or set(record.get("createdFiles",[]))!=allowed):
+        raise Failure("existing source-development record is not a completed rollback")
+    if any(pathlib.Path(name).exists() for name in allowed) or target["directory"].exists():
+        raise Failure("rolled-back source-development artifacts still exist")
+    if package_inventory()!=record.get("packageFilesBefore"): raise Failure("packaged files differ from rolled-back record")
+    installed=record.get("installedAtUnix")
+    if not isinstance(installed,int): raise Failure("rolled-back source-development record has no installation identity")
+    archive=record_path.with_name(f"route-manager.rolled-back-{commit}-{installed}.json")
+    if archive.exists() or archive.is_symlink(): raise Failure("rolled-back source-development archive already exists")
+    os.replace(record_path,archive)
+    return {"path":str(archive),"sha256":digest(archive),"sourceCommit":commit,"installedAtUnix":installed}
 def clean_source(path:pathlib.Path)->tuple[str,pathlib.Path]:
     source=path.resolve(); executable=source/"scripts/rp1-gpclk-route-manager.py"
     if executable.is_symlink() or not executable.is_file(): raise Failure("source route-manager executable is absent or unsafe")
@@ -87,9 +105,10 @@ def passive_query()->dict:
     finally: client.close()
 def install(args:argparse.Namespace)->dict:
     require_root(); safety=observations(); source=manifest(args.module_manifest,args.route,args.kernel); commit,executable=clean_source(args.source); target=paths(commit)
-    if target["record"].exists() or target["directory"].exists() or target["dropin"].exists(): raise Failure("source-development route-manager state already exists")
+    predecessor=archive_rolled_back_record(target["record"])
+    if target["directory"].exists() or target["dropin"].exists(): raise Failure("source-development route-manager state already exists")
     package_before=package_inventory(); previous={"unit":UNIT,"fragment":systemctl("show","-p","FragmentPath","--value",UNIT),"dropins":systemctl("show","-p","DropInPaths","--value",UNIT),"execStart":systemctl("show","-p","ExecStart","--value",UNIT)}
-    record={"schema":SCHEMA,"classification":"Experimental/source-development","qualification":False,"status":"prepared","sourceCommit":commit,"moduleSourceCommit":source["sourceCommit"],"moduleManifest":str(args.module_manifest),"moduleManifestSha256":digest(args.module_manifest),"kernel":args.kernel,"route":args.route,"compatibilityId":COMPAT[args.route],"packageFilesBefore":package_before,"previousUnitResolution":previous,"createdFiles":[str(target[key]) for key in ("executable","manifest","binding","adoption","dropin")],"installedAtUnix":int(time.time())}
+    record={"schema":SCHEMA,"classification":"Experimental/source-development","qualification":False,"status":"prepared","sourceCommit":commit,"moduleSourceCommit":source["sourceCommit"],"moduleManifest":str(args.module_manifest),"moduleManifestSha256":digest(args.module_manifest),"kernel":args.kernel,"route":args.route,"compatibilityId":COMPAT[args.route],"packageFilesBefore":package_before,"previousUnitResolution":previous,"createdFiles":[str(target[key]) for key in ("executable","manifest","binding","adoption","dropin")],"installedAtUnix":int(time.time()),"predecessorRollbackRecord":predecessor}
     atomic(target["record"],canonical(record),0o600)
     try:
         target["directory"].mkdir(parents=True,mode=0o755)

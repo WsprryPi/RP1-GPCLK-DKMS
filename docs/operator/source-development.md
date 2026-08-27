@@ -107,7 +107,11 @@ The installer copies the executable and module manifest below
 commits and hashes, and activates only a drop-in below `/etc/systemd/system`.
 The package executables and unit fragment remain unchanged. Installation alone
 is reported as `deployed-awaiting-current-boot-adoption`, not ready. The
-explicit adoption operation records the observed boot ID, complete boot
+installer preserves a validated terminal `rolled-back` predecessor record under
+the same root-owned development state directory and binds its path and digest
+into the successor record. Active, malformed, altered, or archive-colliding
+predecessor state fails closed.
+The explicit adoption operation records the observed boot ID, complete boot
 configuration digest, configured and active route, executable and manifest
 identities, kernel, UAPI, and compatibility identity in a root-owned mode 0600
 record. Passive QUERY reports `bootOwnership: current` only while every bound
