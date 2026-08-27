@@ -203,6 +203,28 @@ def service_safety(env:Environment,require_quiesced:bool=False)->dict:
     if live.exists() and live.read_text().strip() not in {"N","0"}: raise ContractError("live_output is enabled or unknown")
     return {"services":observed,"servicesQuiesced":all(value in {"inactive","failed"} for value in observed.values()),"endpointOwned":True,"endpointOpen":False,"liveOutput":False}
 
+def source_development_passive_safety(env:Environment)->dict:
+    observed={}
+    for service in SERVICES:
+        active=env.runner(["/usr/bin/systemctl","show","--property=ActiveState","--value",service]).strip()
+        if active not in {"active","inactive","failed"}: raise ContractError(f"service state is unknown: {service}")
+        observed[service]=active
+    endpoint=env.path("/dev/rp1-gpclk")
+    if endpoint.is_symlink() or not endpoint.exists(): raise ContractError("RP1 GPCLK endpoint is absent or unsafe")
+    endpoint_stat=endpoint.stat()
+    if not stat.S_ISCHR(endpoint_stat.st_mode) or endpoint_stat.st_uid!=0 or endpoint_stat.st_gid!=0 or stat.S_IMODE(endpoint_stat.st_mode)!=0o600:
+        raise ContractError("endpoint ownership or mode differs")
+    endpoint_open=False
+    for fd in env.path("/proc").glob("[0-9]*/fd/*"):
+        try: opened=fd.stat()
+        except OSError: continue
+        if (opened.st_dev,opened.st_ino)==(endpoint_stat.st_dev,endpoint_stat.st_ino): endpoint_open=True; break
+    live=env.path(f"/sys/module/{MODULE}/parameters/live_output")
+    if not live.is_file(): raise ContractError("live_output is absent or unsafe")
+    live_value=live.read_text().strip()
+    if live_value not in {"N","0","Y","1"}: raise ContractError("live_output is unknown")
+    return {"services":observed,"servicesQuiesced":all(value in {"inactive","failed"} for value in observed.values()),"endpointOwned":True,"endpointOpen":endpoint_open,"liveOutput":live_value in {"Y","1"}}
+
 def active_route(env:Environment)->str|None:
     matches=[]; of_root=env.path("/sys/firmware/devicetree/base")
     if of_root.is_dir():
@@ -381,10 +403,12 @@ def reconcile(request:dict,env:Environment)->dict:
 
 def dispatch(value:object,env:Environment=Environment(),*,reboot:bool=True)->dict:
     request=parse_request(value); operation=request["operation"]
-    if os.environ.get(SOURCE_DEVELOPMENT_BINDING_ENV) and operation!="query":
+    source_development=bool(os.environ.get(SOURCE_DEVELOPMENT_BINDING_ENV))
+    if source_development and operation!="query":
         raise ContractError("source-development route-manager integration is passive-query-only")
     if operation in {"query","preflight"}:
         result=response(operation,"ok",inspect(env,operation=="preflight",False))
+        if source_development and operation=="query": result["state"]["safety"]=source_development_passive_safety(env)
         if operation=="preflight": result["state"]["requestedRoute"]=request["route"]
         return result
     if operation=="apply-and-reboot": return apply(request,env,reboot=reboot)

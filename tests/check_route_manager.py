@@ -182,7 +182,12 @@ with tempfile.TemporaryDirectory() as temporary:
     value={"schema":"rp1-gpclk-route-manager-source-development-v1","classification":"Experimental/source-development","qualification":False,"sourceCommit":"8"*40,"moduleSourceCommit":"7"*40,"sourceManifest":"/opt/development/DEVELOPMENT_MANIFEST.json","sourceManifestSha256":manager.sha256(manifest),"executable":"/opt/development/rp1-gpclk-route-manager","executableSha256":manager.sha256(executable),"adoptionRecord":"/opt/development/current-boot-ownership.json","module":manager.MODULE,"moduleVersion":"1.1.2","uapiSha256":manager.sha256_bytes(fixture.uapi),"kernel":"fixture-kernel","route":"gpio4","compatibilityId":"v1.1.2-pi5-gpio4-6.18.34-development-candidate-r3"}
     binding.write_text(json.dumps(value)); old=os.environ.get(manager.SOURCE_DEVELOPMENT_BINDING_ENV); os.environ[manager.SOURCE_DEVELOPMENT_BINDING_ENV]="/opt/development/binding.json"
     try:
+        original_passive_safety=manager.source_development_passive_safety
+        manager.source_development_passive_safety=lambda unused:{"services":{name:"inactive" for name in manager.SERVICES},"servicesQuiesced":True,"endpointOwned":True,"endpointOpen":False,"liveOutput":False}
         result=manager.dispatch(request("query"),env); assert result["status"]=="ok" and result["state"]["activeRoute"]=="gpio4" and result["state"]["bootOwnership"]=="historical-package-owned"
+        assert result["state"]["safety"]=={"services":{name:"inactive" for name in manager.SERVICES},"servicesQuiesced":True,"endpointOwned":True,"endpointOpen":False,"liveOutput":False}
+        manager.source_development_passive_safety=lambda unused:{"services":{name:"inactive" for name in manager.SERVICES},"servicesQuiesced":True,"endpointOwned":True,"endpointOpen":False,"liveOutput":True}
+        assert manager.dispatch(request("query"),env)["state"]["safety"]["liveOutput"] is True
         state=result["state"]; adoption=env.path(value["adoptionRecord"])
         adoption.write_text(json.dumps({"schema":manager.ADOPTION_SCHEMA,"classification":"Experimental/source-development","qualification":False,"adoptedAtUnix":1,"bootId":state["bootId"],"configSha256":state["configSha256"],"route":"gpio4","sourceCommit":value["sourceCommit"],"executableSha256":value["executableSha256"],"moduleSourceCommit":value["moduleSourceCommit"],"moduleManifestSha256":value["sourceManifestSha256"],"moduleVersion":"1.1.2","uapiSha256":value["uapiSha256"],"kernel":"fixture-kernel","compatibilityId":value["compatibilityId"]}))
         assert manager.dispatch(request("query"),env)["state"]["bootOwnership"]=="current"
@@ -199,6 +204,7 @@ with tempfile.TemporaryDirectory() as temporary:
         value["route"]="gpio20"; binding.write_text(json.dumps(value)); rejected(lambda:manager.dispatch(request("query"),env),"binding differs")
         binding.write_text("not-json"); rejected(lambda:manager.dispatch(request("query"),env),"malformed")
     finally:
+        manager.source_development_passive_safety=original_passive_safety
         if old is None: os.environ.pop(manager.SOURCE_DEVELOPMENT_BINDING_ENV,None)
         else: os.environ[manager.SOURCE_DEVELOPMENT_BINDING_ENV]=old
 

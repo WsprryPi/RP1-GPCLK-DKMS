@@ -281,6 +281,12 @@ current boot and configuration digest to exact route, userspace, module,
 kernel, UAPI, and compatibility identities. Historical package ownership and
 completed historical journals do not establish that current proof.
 
+While that exact-source binding is active, passive query also returns a nested
+`state.safety` snapshot containing authenticated endpoint ownership, endpoint
+open state, the observed immutable `live_output` gate, and bounded service
+states. The snapshot remains observational and cannot acquire the endpoint,
+change the module gate, or authorize an operation.
+
 ## Validation
 
 The additive ABI-v3 passive snapshot contract is specified in

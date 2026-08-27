@@ -115,6 +115,13 @@ field still matches and no route transaction is pending. A reboot, configuration
 change, route disagreement, artifact replacement, or missing record fails
 closed. Historical completed journals never substitute for adoption.
 
+The same source-development QUERY returns its authenticated runtime observations
+under `state.safety`: `endpointOwned` confirms the root-owned mode 0600
+character endpoint, `endpointOpen` reports whether a process currently holds
+it, `liveOutput` reports the immutable module load gate, and `services` records
+the bounded service observations. These fields are observations for the
+consuming policy; they do not acquire the endpoint or authorize output.
+
 This integration
 accepts only passive `query`; every route mutation remains subject to the
 packaged identity contract. Status authenticates systemd resolution, package

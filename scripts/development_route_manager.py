@@ -129,7 +129,12 @@ def status(args:argparse.Namespace)->dict:
     if root("/")==pathlib.Path("/"):
         query=passive_query()
         state=query.get("state",{}) if isinstance(query,dict) else {}
-        if query.get("status")!="ok" or state.get("configuredRoute")!=binding["route"] or state.get("activeRoute")!=binding["route"] or state.get("pendingTransaction") is not None or state.get("bootOwnership")!="current": raise Failure("passive QUERY does not authenticate current ownership of the selected idle route")
+        query_safety=state.get("safety",{}) if isinstance(state,dict) else {}
+        if (query.get("status")!="ok" or state.get("configuredRoute")!=binding["route"] or state.get("activeRoute")!=binding["route"] or
+                state.get("pendingTransaction") is not None or state.get("bootOwnership")!="current" or
+                query_safety.get("endpointOwned") is not True or query_safety.get("endpointOpen") is not False or
+                query_safety.get("liveOutput") is not False or not isinstance(query_safety.get("services"),dict)):
+            raise Failure("passive QUERY does not authenticate current ownership and exact idle safety of the selected route")
     return {"status":"ok","classification":record["classification"],"qualification":False,"sourceCommit":commit,"moduleSourceCommit":record["moduleSourceCommit"],"record":str(args.record),"binding":binding,"adoption":{"path":str(target["adoption"]),"sha256":digest(target["adoption"]),"record":adoption},"passiveQuery":query,"dropin":{"path":str(target["dropin"]),"sha256":record["dropinSha256"]},"systemd":{"dropInPaths":dropins,"execStart":resolved},"packageFiles":package_after,"safety":safety,"rollbackCommand":f"sudo ./scripts/development-route-manager rollback --record {args.record}"}
 def adopt(args:argparse.Namespace)->dict:
     require_root(); record=load(args.record); commit=record.get("sourceCommit",""); target=paths(commit)
