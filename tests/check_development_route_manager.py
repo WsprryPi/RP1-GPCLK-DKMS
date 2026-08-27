@@ -59,6 +59,7 @@ esac
         os.environ.clear(); os.environ.update(old)
 
 source=(ROOT/"scripts/development_route_manager.py").read_text()
+assert "client.shutdown(socket.SHUT_WR)" in source
 for forbidden in ("modprobe ","/dev/mem","live_output=1","Soapy","transmit"):
     assert forbidden not in source
 print("source-development route manager lifecycle: PASS")

@@ -111,7 +111,7 @@ def status(args:argparse.Namespace)->dict:
     if root("/")==pathlib.Path("/"):
         client=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM); client.settimeout(5)
         try:
-            client.connect("/run/rp1-gpclk-dkms/route-manager.sock"); client.sendall(b'{"schemaVersion":1,"operation":"query"}\n'); payload=b""
+            client.connect("/run/rp1-gpclk-dkms/route-manager.sock"); client.sendall(b'{"schemaVersion":1,"operation":"query"}\n'); client.shutdown(socket.SHUT_WR); payload=b""
             while not payload.endswith(b"\n"): payload+=client.recv(65536)
             query=json.loads(payload)
         finally: client.close()
