@@ -114,6 +114,17 @@ static int rp1_gpclk_release(struct inode *inode, struct file *file)
 	struct rp1_gpclk_file *context = file->private_data;
 
 	mutex_lock(&context->device->lock);
+	if (context->operation_live_lease &&
+	    context->device->operation_live_owner == context->owner &&
+	    context->device->operation_live_lease == context->operation_live_lease) {
+		context->device->operation_live_owner = 0;
+		context->device->operation_live_lease = 0;
+		memzero_explicit(context->device->operation_live_digest,
+			RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE);
+	}
+	context->operation_live_lease = 0;
+	memzero_explicit(context->operation_live_digest,
+		RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE);
 	if (rp1_gpclk_core_owner_close(&context->device->core,
 					context->owner) == RP1_GPCLK_CORE_OK)
 		rp1_gpclk_execution_request_stop(context->device,

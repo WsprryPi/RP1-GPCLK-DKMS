@@ -346,7 +346,7 @@ def transaction_plan(operation: str, commit: str, package_hash: str, qualificati
         "package": "rp1-gpclk-dkms_1.1.2-1_all.deb",
         "packageSha256": package_hash,
         "qualificationArchiveSha256": qualification_hash,
-        "uapiSha256": "f0af5ffda91f4ba82285dc278452eae28b2eeffa635ebd6ee473bf7393a6a54e",
+        "uapiSha256": "23f0d7626fe51ef58f11bcb48bf880d885acf7abfdca5f186e044a0fb1d786e1",
         "gpio4DtboSha256": "c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6",
         "gpio20DtboSha256": "8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa",
         "compatibilitySha256": compatibility_hash,

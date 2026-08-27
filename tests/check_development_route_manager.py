@@ -37,7 +37,7 @@ case "$1:${2:-}" in
  *) echo "unexpected systemctl: $*" >&2; exit 2;;
 esac
 ''')
-    manifest=base/"module-manifest.json"; manifest.write_text(json.dumps({"schema":DEV.MANIFEST_SCHEMA,"classification":"source-development","qualification":False,"sourceState":"clean","sourceCommit":"7"*40,"targetKernel":"fixture-kernel","route":"gpio4","renderedVersion":"1.1.2","uapiIdentity":{"sha256":"f0af5ffda91f4ba82285dc278452eae28b2eeffa635ebd6ee473bf7393a6a54e"}}))
+    manifest=base/"module-manifest.json"; manifest.write_text(json.dumps({"schema":DEV.MANIFEST_SCHEMA,"classification":"source-development","qualification":False,"sourceState":"clean","sourceCommit":"7"*40,"targetKernel":"fixture-kernel","route":"gpio4","renderedVersion":"1.1.2","uapiIdentity":{"sha256":"23f0d7626fe51ef58f11bcb48bf880d885acf7abfdca5f186e044a0fb1d786e1"}}))
     old=dict(os.environ); os.environ.update({"RP1_GPCLK_DEVELOPMENT_ROOT":str(fake),"RP1_GPCLK_DEVELOPMENT_TEST_ROOT":"1","RP1_GPCLK_TOOL_SYSTEMCTL":str(tools/"systemctl"),"RP1_TEST_SYSTEMD_STATE":str(state)})
     try:
         args=type("Args",(),{"source":source,"module_manifest":manifest,"route":"gpio4","kernel":"fixture-kernel"})()

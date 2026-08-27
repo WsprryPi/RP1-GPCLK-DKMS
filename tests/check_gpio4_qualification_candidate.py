@@ -20,16 +20,16 @@ for token in (
     '#define RP1_GPCLK_ROUTE_CANDIDATE_KERNEL "6.18.34+rpt-rpi-2712"',
     '#define RP1_GPCLK_ROUTE_CANDIDATE_ARCH "aarch64"',
     '#define RP1_GPCLK_ROUTE_CANDIDATE_VERSION "1.1.2"',
-    "v1.1.2-pi5-gpio4-6.18.34-development-candidate-r3",
-    "v1.1.2-pi5-gpio20-6.18.34-development-candidate-r3",
+    "v1.1.2-pi5-gpio4-6.18.34-development-candidate-r4",
+    "v1.1.2-pi5-gpio20-6.18.34-development-candidate-r4",
 ):
     assert token in version + compat
 
 gpio4_case = implementation[implementation.index("case RP1_GPCLK_ROUTE_GPIO4:"):]
 gpio20_case = gpio4_case[gpio4_case.index("case RP1_GPCLK_ROUTE_GPIO20:"):]
 assert gpio20_case.index("return true;") < gpio20_case.index("default:")
-assert "does not transfer the r2" in implementation
-assert "independent r3 evidence" in implementation
+assert "does not transfer the r3" in implementation
+assert "independent r4 evidence" in implementation
 assert 'strcmp(module_version, RP1_GPCLK_ROUTE_CANDIDATE_VERSION)' in implementation
 assert "pi5_model_b || !resources_validated" in implementation
 for token in (
@@ -61,6 +61,14 @@ reason_helper = dispatch[
 ]
 assert "device->live_eligible ? RP1_GPCLK_COMPAT_REASON_NONE" in reason_helper
 assert "RP1_GPCLK_COMPAT_REASON_ADMIN_ENROLLMENT_REQUIRED" in reason_helper
+for token in (
+    "RP1_GPCLK_IOC_ACQUIRE_V4",
+    "RP1_GPCLK_CAP_OPERATION_LIVE_GATE",
+    "rp1_gpclk_digest_nonzero",
+    "rp1_gpclk_operation_live_eligible",
+    "rp1_gpclk_revoke_operation_live",
+):
+    assert token in dispatch
 for token in (
     "RP1_GPCLK_FIRMWARE_TICK_CTRL 3U",
     "RP1_GPCLK_FIRMWARE_TICK_CYCLES 50U",

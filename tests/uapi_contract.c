@@ -12,6 +12,7 @@ ASSERT_EQ(sizeof(struct rp1_gpclk_query_v2), 320);
 ASSERT_EQ(sizeof(struct rp1_gpclk_submit_tone_v2), 112);
 ASSERT_EQ(sizeof(struct rp1_gpclk_release_v2), 56);
 ASSERT_EQ(sizeof(struct rp1_gpclk_snapshot_v3), 392);
+ASSERT_EQ(sizeof(struct rp1_gpclk_acquire_v4), 96);
 ASSERT_EQ(sizeof(struct rp1_gpclk_acquire_v1), 64);
 ASSERT_EQ(sizeof(struct rp1_gpclk_tone_v1), 24);
 ASSERT_EQ(sizeof(struct rp1_gpclk_submit_wspr_v1), 112);
@@ -37,6 +38,9 @@ ASSERT_EQ(_IOC_NR(RP1_GPCLK_IOC_QUERY_V2), 0x27);
 ASSERT_EQ(_IOC_NR(RP1_GPCLK_IOC_SUBMIT_TONE_V2), 0x28);
 ASSERT_EQ(_IOC_NR(RP1_GPCLK_IOC_RELEASE_V2), 0x29);
 ASSERT_EQ(_IOC_NR(RP1_GPCLK_IOC_GET_SNAPSHOT_V3), 0x2a);
+ASSERT_EQ(_IOC_NR(RP1_GPCLK_IOC_ACQUIRE_V4), 0x2b);
+ASSERT_EQ(_IOC_SIZE(RP1_GPCLK_IOC_ACQUIRE_V4),
+          sizeof(struct rp1_gpclk_acquire_v4));
 ASSERT_EQ(_IOC_SIZE(RP1_GPCLK_IOC_GET_SNAPSHOT_V3),
           sizeof(struct rp1_gpclk_snapshot_v3));
 ASSERT_EQ(_IOC_SIZE(RP1_GPCLK_IOC_QUERY), sizeof(struct rp1_gpclk_query_v1));
@@ -101,6 +105,7 @@ ASSERT_EQ(RP1_GPCLK_CAP_LIVE_ELIGIBLE, 1ULL << 7);
 ASSERT_EQ(RP1_GPCLK_CAP_TONE_CONTINUOUS, 1ULL << 8);
 ASSERT_EQ(RP1_GPCLK_CAP_TONE_FINITE, 1ULL << 9);
 ASSERT_EQ(RP1_GPCLK_CAP_PASSIVE_SNAPSHOT, 1ULL << 10);
+ASSERT_EQ(RP1_GPCLK_CAP_OPERATION_LIVE_GATE, 1ULL << 11);
 ASSERT_EQ(RP1_GPCLK_OBSERVATION_UNKNOWN, 0);
 ASSERT_EQ(RP1_GPCLK_OBSERVATION_FALSE, 1);
 ASSERT_EQ(RP1_GPCLK_OBSERVATION_TRUE, 2);

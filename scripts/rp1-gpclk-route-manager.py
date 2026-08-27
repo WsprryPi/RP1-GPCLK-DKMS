@@ -14,7 +14,7 @@ JOURNAL_DIR="/var/lib/rp1-gpclk-dkms/route-transactions"
 UAPI=f"/usr/src/{PACKAGE}-{VERSION}/include/uapi/linux/rp1_gpclk.h"
 OVERLAY_DIR="/boot/firmware/overlays"
 BEGIN="# BEGIN RP1-GPCLK-DKMS OWNED ROUTE"; END="# END RP1-GPCLK-DKMS OWNED ROUTE"
-UAPI_SHA256="f0af5ffda91f4ba82285dc278452eae28b2eeffa635ebd6ee473bf7393a6a54e"
+UAPI_SHA256="23f0d7626fe51ef58f11bcb48bf880d885acf7abfdca5f186e044a0fb1d786e1"
 SOURCE_DEVELOPMENT_BINDING_ENV="RP1_GPCLK_SOURCE_DEVELOPMENT_BINDING"
 ADOPTION_SCHEMA="rp1-gpclk-route-manager-current-boot-adoption-v1"
 OVERLAY_SHA256={"gpio4":"c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6","gpio20":"8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"}

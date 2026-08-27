@@ -25,6 +25,9 @@
 #define RP1_GPCLK_V3_CAPABILITIES \
 	(RP1_GPCLK_V2_CAPABILITIES | RP1_GPCLK_CAP_PASSIVE_SNAPSHOT)
 
+#define RP1_GPCLK_V4_CAPABILITIES \
+	(RP1_GPCLK_V3_CAPABILITIES | RP1_GPCLK_CAP_OPERATION_LIVE_GATE)
+
 #define RP1_GPCLK_PHASE4A_INERT_CAPABILITIES \
 	(RP1_GPCLK_CAP_ROUTE_IDENTITY | RP1_GPCLK_CAP_COMPAT_IDENTITY | \
 	 RP1_GPCLK_CAP_CLEANUP_FAULT_LATCH)
@@ -60,6 +63,55 @@ static bool rp1_gpclk_header_v3_valid(
 {
 	return header->size == size &&
 		header->version == RP1_GPCLK_UAPI_ABI_V3 && header->flags == 0;
+}
+
+static bool rp1_gpclk_header_v4_valid(
+	const struct rp1_gpclk_uapi_header *header, size_t size)
+{
+	return header->size == size &&
+		header->version == RP1_GPCLK_UAPI_ABI_V4 && header->flags == 0;
+}
+
+static bool rp1_gpclk_digest_nonzero(const __u8 *digest)
+{
+	size_t index;
+	__u8 aggregate = 0;
+
+	for (index = 0; index < RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE;
+	     index++)
+		aggregate |= digest[index];
+	return aggregate != 0;
+}
+
+static bool rp1_gpclk_operation_live_eligible(
+	const struct rp1_gpclk_file *context, __u64 lease)
+{
+	return rp1_gpclk_live_output_eligible(context->device) ||
+		(context->device->live_eligible && lease != 0 &&
+		 READ_ONCE(context->operation_live_lease) == lease &&
+		 READ_ONCE(context->device->operation_live_owner) == context->owner &&
+		 READ_ONCE(context->device->operation_live_lease) == lease &&
+		 !memcmp(context->operation_live_digest,
+			 context->device->operation_live_digest,
+			 RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE) &&
+		 rp1_gpclk_digest_nonzero(context->operation_live_digest));
+}
+
+static void rp1_gpclk_revoke_operation_live(
+	struct rp1_gpclk_file *context, __u64 lease)
+{
+	if (context->operation_live_lease != lease)
+		return;
+	if (context->device->operation_live_owner == context->owner &&
+	    context->device->operation_live_lease == lease) {
+		context->device->operation_live_owner = 0;
+		context->device->operation_live_lease = 0;
+		memzero_explicit(context->device->operation_live_digest,
+			RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE);
+	}
+	context->operation_live_lease = 0;
+	memzero_explicit(context->operation_live_digest,
+		RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE);
 }
 
 static long rp1_gpclk_core_error(int result)
@@ -232,6 +284,67 @@ static long rp1_gpclk_acquire(struct rp1_gpclk_file *context, void __user *user)
 	return 0;
 }
 
+static long rp1_gpclk_acquire_v4(struct rp1_gpclk_file *context,
+				 void __user *user)
+{
+	struct rp1_gpclk_acquire_v4 request;
+	__u64 required;
+	int result;
+
+	if (copy_from_user(&request, user, sizeof(request)))
+		return -EFAULT;
+	if (!rp1_gpclk_header_v4_valid(&request.header, sizeof(request)) ||
+	    request.authorization_flags != RP1_GPCLK_ACQUIRE_V4_F_AUTHORIZE_LIVE ||
+	    !rp1_gpclk_digest_nonzero(request.authorization_digest) ||
+	    !rp1_gpclk_reserved_zero(request.reserved, 4) || request.lease_id ||
+	    (request.required_capabilities & RP1_GPCLK_CAP_LIVE_ELIGIBLE) == 0 ||
+	    (request.required_capabilities &
+	     RP1_GPCLK_CAP_OPERATION_LIVE_GATE) == 0 ||
+	    (request.required_capabilities &
+	     ~(RP1_GPCLK_V4_CAPABILITIES | RP1_GPCLK_CAP_LIVE_ELIGIBLE)) != 0)
+		return -EINVAL;
+	mutex_lock(&context->device->lock);
+	if (context->device->dead)
+		result = -ENODEV;
+	else if (!context->device->live_eligible)
+		result = -EACCES;
+	else if (request.expected_route != context->device->route ||
+		 context->operation_live_lease ||
+		 context->device->operation_live_owner ||
+		 context->device->operation_live_lease)
+		result = -EBUSY;
+	else {
+		required = request.required_capabilities;
+		result = rp1_gpclk_core_acquire(&context->device->core,
+			context->owner, request.expected_route, required,
+			&request.lease_id);
+		if (result == RP1_GPCLK_CORE_OK) {
+			context->operation_live_lease = request.lease_id;
+			context->device->operation_live_owner = context->owner;
+			context->device->operation_live_lease = request.lease_id;
+			memcpy(context->operation_live_digest,
+				request.authorization_digest,
+				RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE);
+			memcpy(context->device->operation_live_digest,
+				request.authorization_digest,
+				RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE);
+		}
+		result = rp1_gpclk_core_error(result);
+	}
+	mutex_unlock(&context->device->lock);
+	if (result)
+		return result;
+	if (copy_to_user(user, &request, sizeof(request))) {
+		mutex_lock(&context->device->lock);
+		rp1_gpclk_revoke_operation_live(context, request.lease_id);
+		rp1_gpclk_core_release(&context->device->core, context->owner,
+			request.lease_id);
+		mutex_unlock(&context->device->lock);
+		return -EFAULT;
+	}
+	return 0;
+}
+
 static long rp1_gpclk_execution_error(int result)
 {
 	if (result <= RP1_GPCLK_CORE_OK &&
@@ -254,7 +367,7 @@ static long rp1_gpclk_submit_wspr(struct rp1_gpclk_file *context,
 	    request.reserved0 != 0 || request.reserved1 != 0 ||
 	    !rp1_gpclk_reserved_zero(request.reserved, 4))
 		return -EINVAL;
-	if (!rp1_gpclk_live_output_eligible(context->device))
+	if (!rp1_gpclk_operation_live_eligible(context, request.lease_id))
 		return -EACCES;
 	if (request.tone_count != RP1_GPCLK_MAX_TONES ||
 	    request.symbol_count != RP1_GPCLK_WSPR_SYMBOLS)
@@ -308,7 +421,7 @@ static long rp1_gpclk_submit_events(struct rp1_gpclk_file *context,
 	    request.reserved0 != 0 || request.reserved1 != 0 ||
 	    !rp1_gpclk_reserved_zero(request.reserved, 4))
 		return -EINVAL;
-	if (!rp1_gpclk_live_output_eligible(context->device))
+	if (!rp1_gpclk_operation_live_eligible(context, request.lease_id))
 		return -EACCES;
 	if (!request.tone_count || request.tone_count > RP1_GPCLK_MAX_TONES ||
 	    !request.event_count || request.event_count > RP1_GPCLK_MAX_EVENTS)
@@ -359,7 +472,7 @@ static long rp1_gpclk_submit_tone_v2(struct rp1_gpclk_file *context,
 	if (!rp1_gpclk_header_v2_valid(&request.header, sizeof(request)) ||
 	    request.reserved0 || !rp1_gpclk_reserved_zero(request.reserved, 4))
 		return -EINVAL;
-	if (!rp1_gpclk_live_output_eligible(context->device))
+	if (!rp1_gpclk_operation_live_eligible(context, request.lease_id))
 		return -EACCES;
 	mutex_lock(&context->device->lock);
 	if (context->device->dead)
@@ -514,7 +627,7 @@ static long rp1_gpclk_get_snapshot_v3(struct rp1_gpclk_file *context,
 	request.header.size = sizeof(request);
 	request.header.version = RP1_GPCLK_UAPI_ABI_V3;
 	request.abi_min = RP1_GPCLK_UAPI_ABI_V1;
-	request.abi_max = RP1_GPCLK_UAPI_ABI_V3;
+	request.abi_max = RP1_GPCLK_UAPI_ABI_V4;
 	request.route = device->route;
 	request.compatibility_state = device->live_eligible ?
 		RP1_GPCLK_COMPAT_EXPERIMENTAL :
@@ -530,7 +643,8 @@ static long rp1_gpclk_get_snapshot_v3(struct rp1_gpclk_file *context,
 		RP1_GPCLK_OBSERVATION_TRUE : RP1_GPCLK_OBSERVATION_FALSE;
 	request.lease_present = core.lease_id ?
 		RP1_GPCLK_OBSERVATION_TRUE : RP1_GPCLK_OBSERVATION_FALSE;
-	request.live_output = rp1_gpclk_live_output_enabled() ?
+	request.live_output = (rp1_gpclk_live_output_enabled() ||
+		device->operation_live_lease) ?
 		RP1_GPCLK_OBSERVATION_TRUE : RP1_GPCLK_OBSERVATION_FALSE;
 	request.live_eligible = device->live_eligible ?
 		RP1_GPCLK_OBSERVATION_TRUE : RP1_GPCLK_OBSERVATION_FALSE;
@@ -554,7 +668,7 @@ static long rp1_gpclk_get_snapshot_v3(struct rp1_gpclk_file *context,
 		request.clock_quiescent == RP1_GPCLK_OBSERVATION_TRUE &&
 		request.dma_quiescent == RP1_GPCLK_OBSERVATION_TRUE) ?
 		RP1_GPCLK_OBSERVATION_TRUE : RP1_GPCLK_OBSERVATION_FALSE;
-	request.capabilities = RP1_GPCLK_V3_CAPABILITIES;
+	request.capabilities = RP1_GPCLK_V4_CAPABILITIES;
 	if (device->live_eligible)
 		request.capabilities |= RP1_GPCLK_CAP_LIVE_ELIGIBLE;
 	request.generation = core.generation;
@@ -609,6 +723,8 @@ static long rp1_gpclk_release_v2(struct rp1_gpclk_file *context,
 	mutex_lock(&context->device->lock);
 	result = rp1_gpclk_core_release(&context->device->core, context->owner,
 		request.lease_id);
+	if (result == RP1_GPCLK_CORE_OK)
+		rp1_gpclk_revoke_operation_live(context, request.lease_id);
 	mutex_unlock(&context->device->lock);
 	return rp1_gpclk_core_error(result);
 }
@@ -627,6 +743,8 @@ static long rp1_gpclk_release_lease(struct rp1_gpclk_file *context,
 	mutex_lock(&context->device->lock);
 	result = rp1_gpclk_core_release(&context->device->core, context->owner,
 		request.lease_id);
+	if (result == RP1_GPCLK_CORE_OK)
+		rp1_gpclk_revoke_operation_live(context, request.lease_id);
 	mutex_unlock(&context->device->lock);
 	return rp1_gpclk_core_error(result);
 }
@@ -638,6 +756,8 @@ long rp1_gpclk_uapi_dispatch(struct file *file, unsigned int command,
 	void __user *user = (void __user *)argument;
 
 	switch (command) {
+	case RP1_GPCLK_IOC_ACQUIRE_V4:
+		return rp1_gpclk_acquire_v4(context, user);
 	case RP1_GPCLK_IOC_GET_SNAPSHOT_V3:
 		return rp1_gpclk_get_snapshot_v3(context, user);
 	case RP1_GPCLK_IOC_QUERY_V2:

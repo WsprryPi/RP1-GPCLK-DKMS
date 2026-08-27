@@ -13,7 +13,7 @@ lock = json.loads((ROOT / "uapi-identity.json").read_text(encoding="utf-8"))
 digest = hashlib.sha256(canonical.read_bytes()).hexdigest()
 if digest != lock["sha256"]:
     raise SystemExit(f"canonical UAPI digest drift: {digest}")
-if lock["abi"] != 3 or lock["path"] != "include/uapi/linux/rp1_gpclk.h":
+if lock["abi"] != 4 or lock["path"] != "include/uapi/linux/rp1_gpclk.h":
     raise SystemExit("UAPI identity metadata is inconsistent")
 if len(sys.argv) == 2 and canonical.read_bytes() != Path(sys.argv[1]).read_bytes():
     raise SystemExit("consumer UAPI is not byte-identical")

@@ -290,7 +290,9 @@ change the module gate, or authorize an operation.
 ## Validation
 
 The additive ABI-v3 passive snapshot contract is specified in
-`docs/contracts/uapi-v3-passive-snapshot.md`. It exposes presence and tri-state
+`docs/contracts/uapi-v3-passive-snapshot.md`. ABI v4 adds the operation-scoped
+live authorization described in `docs/contracts/uapi-v4-operation-live.md`.
+The passive snapshot exposes presence and tri-state
 observations without granting ownership or disclosing lease tokens. Terminal
 generation, reason, and completed-unit state remain observable after lease
 release until the next successful acquire.
@@ -317,13 +319,13 @@ overlay: `rp1-gpclk-dkms-gpio4` for route 1 or
 are otherwise valid. This prevents predecessor overlay bytes from satisfying
 the changed development candidate identity.
 
-The ABI-v3 passive-snapshot build reports candidate IDs ending in
-`development-candidate-r3`. The r3 build does not inherit either route's r2
+The ABI-v4 operation-scoped build reports candidate IDs ending in
+`development-candidate-r4`. The r4 build does not inherit either route's r3
 target evidence. Its exact Pi 5, kernel, architecture, module-version, resource,
 and route allowlist admits each candidate only to an explicitly authorized
 development attempt; eligibility is not qualification. Each exact
 route-specific artifact must still be separately requalified before a route can
-carry an r3 qualification claim. Earlier candidate IDs remain historical
+carry an r4 qualification claim. Earlier candidate IDs remain historical
 identities and cannot satisfy the current client contract. Immutable module and
 overlay hashes remain mandatory evidence; the revision suffix is not a
 substitute for artifact hashing.

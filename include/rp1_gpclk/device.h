@@ -54,6 +54,9 @@ struct rp1_gpclk_device {
 	bool clock_enabled;
 	bool pins_active_selected;
 	bool live_eligible;
+	__u64 operation_live_owner;
+	__u64 operation_live_lease;
+	__u8 operation_live_digest[RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE];
 	bool tick_state_captured;
 	unsigned long initial_rate;
 	__u32 initial_tick_dma0_ctrl;
@@ -70,6 +73,8 @@ struct rp1_gpclk_device {
 struct rp1_gpclk_file {
 	struct rp1_gpclk_device *device;
 	__u64 owner;
+	__u64 operation_live_lease;
+	__u8 operation_live_digest[RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE];
 };
 
 #endif /* RP1_GPCLK_DEVICE_H */

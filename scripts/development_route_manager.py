@@ -12,7 +12,7 @@ DROPIN="/etc/systemd/system/rp1-gpclk-route-manager@.service.d/90-source-develop
 UNIT="rp1-gpclk-route-manager@source-development-status.service"
 RECORD="/var/lib/rp1-gpclk-dkms/development/route-manager.json"
 PACKAGE_PATHS=("/usr/sbin/rp1-gpclk-route-manager","/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager","/usr/lib/systemd/system/rp1-gpclk-route-manager@.service")
-COMPAT={"gpio4":"v1.1.2-pi5-gpio4-6.18.34-development-candidate-r3","gpio20":"v1.1.2-pi5-gpio20-6.18.34-development-candidate-r3"}
+COMPAT={"gpio4":"v1.1.2-pi5-gpio4-6.18.34-development-candidate-r4","gpio20":"v1.1.2-pi5-gpio20-6.18.34-development-candidate-r4"}
 
 class Failure(RuntimeError): pass
 def root(path:str)->pathlib.Path:

@@ -36,10 +36,10 @@ bool rp1_gpclk_route_candidate_allowed(__u32 route,
 		return false;
 
 	/*
-	 * Eligibility only admits an exact r3 development candidate to an
-	 * explicitly authorized live attempt.  It does not transfer the r2
+	 * Eligibility only admits an exact r4 development candidate to an
+	 * explicitly authorized live attempt.  It does not transfer the r3
 	 * evidence or qualify either route; GPIO4 and GPIO20 still require
-	 * independent r3 evidence.
+	 * independent r4 evidence.
 	 */
 	switch (route) {
 	case RP1_GPCLK_ROUTE_GPIO4:
