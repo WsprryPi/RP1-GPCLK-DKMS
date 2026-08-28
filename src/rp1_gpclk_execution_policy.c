@@ -15,13 +15,19 @@ int rp1_gpclk_execution_tones_valid(const struct rp1_gpclk_tone_v1 *tones,
 	if (!tones || !tone_count || tone_count > RP1_GPCLK_MAX_TONES ||
 	    drive_ma != RP1_GPCLK_DRIVE_MA_2)
 		return -EINVAL;
-	integer = tones[0].lower_divider_q16 >> 16;
-	if (!integer || integer > 255)
+	integer = tones[0].lower_divider_q16 >>
+		RP1_GPCLK_DIVIDER_FRACTIONAL_BITS;
+	if (!integer || integer > RP1_GPCLK_DIVIDER_INTEGER_MAX)
 		return -ERANGE;
 	for (index = 0; index < tone_count; index++) {
-		if (tones[index].lower_divider_q16 > 0xffffffffULL ||
-		    (tones[index].lower_divider_q16 >> 16) != integer ||
-		    (tones[index].upper_divider_q16 >> 16) != integer)
+		if (tones[index].lower_divider_q16 > RP1_GPCLK_DIVIDER_Q16_MAX ||
+		    tones[index].upper_divider_q16 > RP1_GPCLK_DIVIDER_Q16_MAX ||
+		    tones[index].upper_divider_q16 !=
+			    tones[index].lower_divider_q16 + 1 ||
+		    (tones[index].lower_divider_q16 >>
+			    RP1_GPCLK_DIVIDER_FRACTIONAL_BITS) != integer ||
+		    (tones[index].upper_divider_q16 >>
+			    RP1_GPCLK_DIVIDER_FRACTIONAL_BITS) != integer)
 			return -ERANGE;
 	}
 	return 0;

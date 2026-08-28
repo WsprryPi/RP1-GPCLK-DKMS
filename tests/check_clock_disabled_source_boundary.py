@@ -23,6 +23,7 @@ required = {
     "clock phandle validation": "of_parse_phandle_with_args",
     "provider resource translation": "of_address_to_resource",
     "rate exclusion": "clk_rate_exclusive_get",
+    "independent XOSC clock": 'clk_get(device->dev, "xosc")',
     "DMA channel": "dma_request_chan(device->dev, \"tx\")",
     "DMA CPU-physical peripheral address":
         "device->divider_dma = (dma_addr_t)device->divider_phys",
@@ -58,8 +59,8 @@ for token in ("static bool live_output;",
         raise SystemExit(f"Phase 4A output-inhibit gate is missing {token}")
 
 release = api[api.index("void rp1_gpclk_resources_release"):]
-ordered = ["dma_release_channel", "pinctrl_put",
-           "clk_rate_exclusive_put", "clk_put"]
+ordered = ["dma_release_channel", "pinctrl_put", "device->xosc",
+           "clk_rate_exclusive_put", "device->clock"]
 positions = [release.index(token) for token in ordered]
 if positions != sorted(positions):
     raise SystemExit("resources are not released in reverse acquisition order")

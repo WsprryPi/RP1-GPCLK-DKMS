@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 
-.PHONY: all modules check development-check package-check release-unit validate-release validate-release-candidate clean
+.PHONY: all modules check development-check development-frequency-sweep-client package-check release-unit validate-release validate-release-candidate clean
 
 all: modules
 
@@ -13,6 +13,12 @@ check:
 
 development-check:
 	python3 tests/check_development_workflow.py
+
+development-frequency-sweep-client:
+	mkdir -p build
+	$(CXX) -std=c++20 -O2 -Wall -Wextra -Werror -pthread -Iinclude -Iinclude/uapi \
+		tests/development_frequency_sweep.cpp -lSoapySDR \
+		-o build/development-frequency-sweep
 
 package-check:
 	python3 tests/check_debian_packaging.py

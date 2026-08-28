@@ -25,6 +25,8 @@ struct rp1_gpclk_device {
 	void __iomem *dma_tick0;
 	struct miscdevice miscdev;
 	struct clk *clock;
+	struct clk *xosc;
+	struct clk *initial_parent;
 	struct dma_chan *dma_chan;
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pins_default;
@@ -52,6 +54,7 @@ struct rp1_gpclk_device {
 	bool dma_submitted;
 	bool clock_prepared;
 	bool clock_enabled;
+	bool parent_selected;
 	bool pins_active_selected;
 	bool live_eligible;
 	__u64 operation_live_owner;

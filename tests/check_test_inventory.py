@@ -14,6 +14,7 @@ RUNNERS = (
 # This validator requires an externally supplied module and kernel identity.
 PARAMETERIZED_UTILITIES = {"check_built_module.py"}
 TARGET_ONLY_C_CLIENTS = {"development_tone_v2_client.c"}
+TARGET_ONLY_CPP_CLIENTS = {"development_frequency_sweep.cpp"}
 
 checks = {path.name for path in TESTS.glob("check_*.py")}
 registered = {
@@ -37,6 +38,15 @@ if unclassified_c:
 if missing_clients:
     raise SystemExit(f"classified target clients are missing: {sorted(missing_clients)}")
 
+cpp_clients = {path.name for path in TESTS.glob("*.cpp")}
+unclassified_cpp = cpp_clients - TARGET_ONLY_CPP_CLIENTS
+missing_cpp_clients = TARGET_ONLY_CPP_CLIENTS - cpp_clients
+if unclassified_cpp:
+    raise SystemExit(f"unregistered C++ tests: {sorted(unclassified_cpp)}")
+if missing_cpp_clients:
+    raise SystemExit(f"classified C++ clients are missing: {sorted(missing_cpp_clients)}")
+
 print(f"test inventory: PASS ({len(registered)} registered, "
       f"{len(PARAMETERIZED_UTILITIES)} parameterized utility, "
-      f"{len(registered_c)} host C tests, {len(TARGET_ONLY_C_CLIENTS)} target client)")
+      f"{len(registered_c)} host C tests, {len(TARGET_ONLY_C_CLIENTS)} target C client, "
+      f"{len(TARGET_ONLY_CPP_CLIENTS)} target C++ client)")

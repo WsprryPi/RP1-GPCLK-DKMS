@@ -24,6 +24,7 @@ int rp1_gpclk_execution_machine_finish(
 	rp1_gpclk_first_error(&first, ops->disable_clock(context));
 	rp1_gpclk_first_error(&first, ops->unprepare_clock(context));
 	rp1_gpclk_first_error(&first, ops->select_safe(context));
+	rp1_gpclk_first_error(&first, ops->restore_parent(context));
 	rp1_gpclk_first_error(&first, ops->restore_rate(context));
 	return first;
 }

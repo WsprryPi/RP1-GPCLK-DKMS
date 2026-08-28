@@ -39,6 +39,58 @@ int main(void)
               tones, RP1_GPCLK_MAX_TONES, RP1_GPCLK_DRIVE_MA_2) != 0);
     tones[3] = tones[0];
 
+    tones[0].lower_divider_q16 = (255ULL << 16) + 1;
+    tones[0].upper_divider_q16 = tones[0].lower_divider_q16 + 1;
+    CHECK(rp1_gpclk_execution_tones_valid(
+              tones, 1, RP1_GPCLK_DRIVE_MA_2) == 0);
+    tones[0].lower_divider_q16 = (256ULL << 16) + 1;
+    tones[0].upper_divider_q16 = tones[0].lower_divider_q16 + 1;
+    CHECK(rp1_gpclk_execution_tones_valid(
+              tones, 1, RP1_GPCLK_DRIVE_MA_2) == 0);
+    tones[0].lower_divider_q16 = (368ULL << 16) + 1;
+    tones[0].upper_divider_q16 = tones[0].lower_divider_q16 + 1;
+    CHECK(rp1_gpclk_execution_tones_valid(
+              tones, 1, RP1_GPCLK_DRIVE_MA_2) == 0);
+    tones[0].lower_divider_q16 = (65534ULL << 16) + 1;
+    tones[0].upper_divider_q16 = tones[0].lower_divider_q16 + 1;
+    CHECK(rp1_gpclk_execution_tones_valid(
+              tones, 1, RP1_GPCLK_DRIVE_MA_2) == 0);
+    tones[0].lower_divider_q16 = (65535ULL << 16) + 1;
+    tones[0].upper_divider_q16 = tones[0].lower_divider_q16 + 1;
+    CHECK(rp1_gpclk_execution_tones_valid(
+              tones, 1, RP1_GPCLK_DRIVE_MA_2) == 0);
+    tones[0].lower_divider_q16 = 0xffffffffULL - 1;
+    tones[0].upper_divider_q16 = 0xffffffffULL;
+    CHECK(rp1_gpclk_execution_tones_valid(
+              tones, 1, RP1_GPCLK_DRIVE_MA_2) == 0);
+    tones[0].lower_divider_q16 = 0xffffffffULL;
+    tones[0].upper_divider_q16 = 0x100000000ULL;
+    CHECK(rp1_gpclk_execution_tones_valid(
+              tones, 1, RP1_GPCLK_DRIVE_MA_2) != 0);
+    tones[0].lower_divider_q16 = 0x100000000ULL;
+    tones[0].upper_divider_q16 = 0x100000001ULL;
+    CHECK(rp1_gpclk_execution_tones_valid(
+              tones, 1, RP1_GPCLK_DRIVE_MA_2) != 0);
+    tones[0].lower_divider_q16 = (368ULL << 16) + 7;
+    tones[0].upper_divider_q16 = tones[0].lower_divider_q16 + 2;
+    CHECK(rp1_gpclk_execution_tones_valid(
+              tones, 1, RP1_GPCLK_DRIVE_MA_2) != 0);
+    tones[0].lower_divider_q16 = (368ULL << 16) + 0xffff;
+    tones[0].upper_divider_q16 = tones[0].lower_divider_q16 + 1;
+    CHECK(rp1_gpclk_execution_tones_valid(
+              tones, 1, RP1_GPCLK_DRIVE_MA_2) != 0);
+    tones[0].lower_divider_q16 = 1;
+    tones[0].upper_divider_q16 = 2;
+    CHECK(rp1_gpclk_execution_tones_valid(
+              tones, 1, RP1_GPCLK_DRIVE_MA_2) != 0);
+    tones[0].lower_divider_q16 = (1ULL << 16) + 1;
+    tones[0].upper_divider_q16 = tones[0].lower_divider_q16 + 1;
+    CHECK(rp1_gpclk_execution_tones_valid(
+              tones, 1, RP1_GPCLK_DRIVE_MA_2) == 0);
+
+    tones[0].lower_divider_q16 = (3ULL << 16) + 10;
+    tones[0].upper_divider_q16 = tones[0].lower_divider_q16 + 1;
+
     CHECK(rp1_gpclk_execution_event_writes(10000000ULL, &writes) == 0);
     CHECK(writes == 978);
     CHECK(rp1_gpclk_execution_event_writes(1, &writes) != 0);

@@ -97,7 +97,8 @@ for overlay, route, pin in zip(OVERLAYS, (1, 2), (4, 20), strict=True):
     assert 'compatible = "wsprrypi,rp1-gpclk-dkms-v1"' in overlay
     assert f"wsprrypi,route = <{route}>" in overlay
     assert f"wsprrypi,pin = <{pin}>" in overlay
-    assert 'clock-names = "gpclk"' in overlay
+    assert 'clock-names = "gpclk", "xosc"' in overlay
+    assert 'clocks = <&rp1_clocks RP1_CLK_GP0>, <&clk_xosc>' in overlay
     assert 'dma-names = "tx"' in overlay
 
 assert "rp1-gpclk-dkms-gpio4" in OVERLAYS[0]
