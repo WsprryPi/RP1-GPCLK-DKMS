@@ -95,14 +95,16 @@ Provider identity, resource layout, DMA translation, pinctrl state, clock
 state, and route must all match an explicit compatibility entry before live use
 can become eligible.
 
-This experimental branch supplies GPCLK0 and the RP1 200 MHz `pll_sys` output
-as distinct named clock resources. An output operation explicitly selects the
+The module supplies GPCLK0 and the RP1 200 MHz `pll_sys` output as distinct
+named clock resources. An output operation explicitly selects the
 independently identified provider clock with the common clock framework,
 verifies parent and nominal-rate readback, and restores the preceding parent
 and rate during bounded cleanup. It does not authorize automatic substitution
-of another GPCLK0 source. Divider plans use the provider's 16-bit integer and 16-bit
-fractional GPCLK0 field: integer values 1 through 65,535 are valid, while the
-complete Q16 word remains bounded by `0xffffffff`.
+of another GPCLK0 source. Consumers must plan divider words from the contracted
+200 MHz nominal parent; a consumer that still assumes 50 MHz is incompatible.
+Divider plans use the provider's 16-bit integer and 16-bit fractional GPCLK0
+field: integer values 1 through 65,535 are valid, while the complete Q16 word
+remains bounded by `0xffffffff`.
 
 Only GPIO4 and GPIO20 are supported. They are separate administrative routes
 with distinct overlays and qualification. The module accepts no arbitrary GPIO

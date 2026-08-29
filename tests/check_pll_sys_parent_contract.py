@@ -8,6 +8,7 @@ API = (ROOT / "src/rp1_gpclk_kernel_api.c").read_text()
 EXECUTION = (ROOT / "src/rp1_gpclk_execution.c").read_text()
 MACHINE = (ROOT / "src/rp1_gpclk_execution_machine.c").read_text()
 POLICY = (ROOT / "include/rp1_gpclk/resource_policy.h").read_text()
+SWEEP = (ROOT / "tests/development_frequency_sweep.cpp").read_text()
 
 for token in (
     '#define RP1_GPCLK_PARENT_PROVIDER_COMPATIBLE "raspberrypi,rp1-clocks"',
@@ -51,5 +52,12 @@ for route in ("gpio4", "gpio20"):
     assert ('clocks = <&rp1_clocks RP1_CLK_GP0>, '
             '<&rp1_clocks RP1_PLL_SYS>;' in overlay)
     assert 'clock-names = "gpclk", "parent";' in overlay
+
+for token in (
+    "if ((lower >> 16) != ((lower + 1) >> 16))",
+    "const uint64_t nearest = static_cast<uint64_t>(llroundl(ideal))",
+    "std::clamp(ratio, 0.0L, 1.0L)",
+):
+    assert token in SWEEP, token
 
 print("deterministic PLL_SYS parent contract: PASS")

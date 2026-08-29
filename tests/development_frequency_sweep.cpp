@@ -132,16 +132,27 @@ Plan plan(double requested, long double parent, double maximum_direct)
 	const long double ideal = parent * 65536.0L / out.fundamental_hz;
 	if (ideal < 65536.0L || ideal > 4294967295.0L)
 		throw std::runtime_error("divider outside GPCLK0 Q16 field");
-	const uint64_t lower = static_cast<uint64_t>(floorl(ideal));
-	if (lower == 0xffffffffULL || (lower >> 16) != ((lower + 1) >> 16))
-		throw std::runtime_error("adjacent divider crosses integer field");
+	uint64_t lower = static_cast<uint64_t>(floorl(ideal));
+	if (lower == 0xffffffffULL)
+		throw std::runtime_error("divider outside GPCLK0 Q16 field");
+	if ((lower >> 16) != ((lower + 1) >> 16)) {
+		const uint64_t nearest = static_cast<uint64_t>(llroundl(ideal));
+
+		if (nearest == 0 || nearest >= 0xffffffffULL)
+			throw std::runtime_error("integer crossing has no bounded divider pair");
+		if ((nearest & 0xffffU) == 0xffffU)
+			lower = nearest - 1;
+		else
+			lower = nearest;
+	}
 	const long double low_hz = parent * 65536.0L / lower;
 	const long double high_div_hz = parent * 65536.0L / (lower + 1);
 	const long double ratio = (out.fundamental_hz - high_div_hz) /
 		(low_hz - high_div_hz);
 	out.tone.lower_divider_q16 = lower;
 	out.tone.upper_divider_q16 = lower + 1;
-	out.tone.lower_count = static_cast<uint32_t>(llroundl(ratio * kDitherPeriod));
+	out.tone.lower_count = static_cast<uint32_t>(llroundl(
+		std::clamp(ratio, 0.0L, 1.0L) * kDitherPeriod));
 	if (!out.tone.lower_count) out.tone.lower_count = 1;
 	if (out.tone.lower_count >= kDitherPeriod) out.tone.lower_count = kDitherPeriod - 1;
 	out.tone.upper_count = kDitherPeriod - out.tone.lower_count;
