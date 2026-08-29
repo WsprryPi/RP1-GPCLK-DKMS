@@ -15,6 +15,7 @@
 int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 {
 	struct of_phandle_args clock_spec;
+	struct of_phandle_args parent_spec;
 	struct of_phandle_args dma_spec;
 	struct resource resource;
 	struct resource rp1_resource;
@@ -25,12 +26,14 @@ int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 
 	if (!device || !device->dev || !device->dev->of_node)
 		return -ENODEV;
-	if (of_property_count_strings(device->dev->of_node, "clock-names") != 1 ||
+	if (of_property_count_strings(device->dev->of_node, "clock-names") != 2 ||
 	    of_count_phandle_with_args(device->dev->of_node, "clocks",
-				       "#clock-cells") != 1)
+				       "#clock-cells") != 2)
 		return -EINVAL;
 	if (of_property_match_string(device->dev->of_node, "clock-names",
-				     "gpclk") != 0)
+				     "gpclk") != 0 ||
+	    of_property_match_string(device->dev->of_node, "clock-names",
+				     "parent") != 1)
 		return -EINVAL;
 	ret = of_property_read_u32(device->dev->of_node, "wsprrypi,route",
 				   &route);
@@ -55,10 +58,21 @@ int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 		ret = -EINVAL;
 		goto put_clock_node;
 	}
+	ret = of_parse_phandle_with_args(device->dev->of_node, "clocks",
+					 "#clock-cells", 1, &parent_spec);
+	if (ret)
+		goto put_clock_node;
+	if (!of_device_is_compatible(parent_spec.np,
+				     RP1_GPCLK_PARENT_PROVIDER_COMPATIBLE) ||
+	    parent_spec.np != clock_spec.np || parent_spec.args_count != 1 ||
+	    parent_spec.args[0] != RP1_GPCLK_PARENT_CLOCK_ID) {
+		ret = -EINVAL;
+		goto put_parent_node;
+	}
 	ret = of_parse_phandle_with_args(device->dev->of_node, "dmas",
 					 "#dma-cells", 0, &dma_spec);
 	if (ret)
-		goto put_clock_node;
+		goto put_parent_node;
 	if (!of_device_is_compatible(dma_spec.np,
 				     RP1_GPCLK_DMA_PROVIDER_COMPATIBLE) ||
 	    dma_spec.args_count != 1 ||
@@ -94,6 +108,8 @@ int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 	}
 put_dma_node:
 	of_node_put(dma_spec.np);
+put_parent_node:
+	of_node_put(parent_spec.np);
 put_clock_node:
 	of_node_put(clock_spec.np);
 	return ret;
@@ -113,7 +129,16 @@ int rp1_gpclk_clock_acquire(struct rp1_gpclk_device *device)
 	if (ret)
 		goto put_clock;
 	device->rate_exclusive = true;
+	device->parent_clock = clk_get(device->dev, "parent");
+	if (IS_ERR(device->parent_clock)) {
+		ret = PTR_ERR(device->parent_clock);
+		device->parent_clock = NULL;
+		goto put_exclusive;
+	}
 	return 0;
+put_exclusive:
+	clk_rate_exclusive_put(device->clock);
+	device->rate_exclusive = false;
 put_clock:
 	clk_put(device->clock);
 	device->clock = NULL;
@@ -226,6 +251,10 @@ void rp1_gpclk_resources_release(struct rp1_gpclk_device *device)
 		device->pins_default = NULL;
 		device->pins_active = NULL;
 		device->pins_safe = NULL;
+	}
+	if (device->parent_clock) {
+		clk_put(device->parent_clock);
+		device->parent_clock = NULL;
 	}
 	if (device->rate_exclusive) {
 		clk_rate_exclusive_put(device->clock);

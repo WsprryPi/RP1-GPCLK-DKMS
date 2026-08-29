@@ -8,6 +8,10 @@
 #include <uapi/linux/rp1_gpclk.h>
 
 #define RP1_GPCLK_TICK_SOURCE_HZ 50000000ULL
+#define RP1_GPCLK_DIVIDER_INTEGER_BITS 16U
+#define RP1_GPCLK_DIVIDER_FRACTIONAL_BITS 16U
+#define RP1_GPCLK_DIVIDER_INTEGER_MAX 65535ULL
+#define RP1_GPCLK_DIVIDER_Q16_MAX 0xffffffffULL
 
 int rp1_gpclk_execution_tones_valid(const struct rp1_gpclk_tone_v1 *tones,
 				    __u32 tone_count, __u32 drive_ma);

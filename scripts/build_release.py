@@ -127,7 +127,9 @@ def build_dtbo(source: pathlib.Path, destination: pathlib.Path, dtc: str) -> Non
     text = source.read_text()
     text = re.sub(r"^#include <dt-bindings/clock/rp1.h>$", "", text, flags=re.M)
     text = re.sub(r"^#include <dt-bindings/mfd/rp1.h>$", "", text, flags=re.M)
-    text = text.replace("RP1_CLK_GP0", "33").replace("RP1_DMA_DMA_TICK_TICK0", "0x30")
+    text = (text.replace("RP1_CLK_GP0", "33")
+                .replace("RP1_PLL_SYS", "3")
+                .replace("RP1_DMA_DMA_TICK_TICK0", "0x30"))
     if "#include" in text:
         raise SystemExit(f"unresolved overlay include in {source.name}")
     with tempfile.NamedTemporaryFile("w", suffix=".dts", delete=False) as preprocessed:
@@ -227,7 +229,7 @@ def generate(output: pathlib.Path, development: bool) -> None:
         tools = {"python": python_identity, "dtc": dtc_identity,
                  "tar": {"format": "PAX", "implementation": "Python tarfile"},
                  "gzip": {"implementation": "Python gzip", "compresslevel": 9, "filename": "", "mtime": epoch},
-                 "overlayPreprocessor": {"implementation": "scripts/build_release.py fixed RP1 bindings", "RP1_CLK_GP0": 33, "RP1_DMA_DMA_TICK_TICK0": 48}}
+                 "overlayPreprocessor": {"implementation": "scripts/build_release.py fixed RP1 bindings", "RP1_CLK_GP0": 33, "RP1_PLL_SYS": 3, "RP1_DMA_DMA_TICK_TICK0": 48}}
         metadata = {
             "SPDX-License-Identifier": "MIT", "schemaVersion": 1, "package": layout["package"], "module": layout["module"],
             "release": layout["release"], "sourceCommit": commit, "expectedTag": layout["expectedTag"], "tagPresent": tagged,

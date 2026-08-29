@@ -18,6 +18,7 @@
 #include "rp1_gpclk/execution_machine.h"
 #include "rp1_gpclk/execution_policy.h"
 #include "rp1_gpclk/kernel_api.h"
+#include "rp1_gpclk/resource_policy.h"
 
 #define RP1_GPCLK_TICKS_DMA0_CTRL 0x0
 #define RP1_GPCLK_TICKS_DMA0_CYCLES 0x4
@@ -163,7 +164,6 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 	struct rp1_gpclk_execution_context *context = argument;
 	struct rp1_gpclk_device *device = context->device;
 	const struct rp1_gpclk_execution_plan *plan = context->plan;
-	struct clk *parent;
 	unsigned long parent_rate;
 	unsigned long requested_rate;
 	int ret;
@@ -200,10 +200,24 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 		return -EBUSY;
 	}
 	device->initial_rate = clk_get_rate(device->clock);
-	parent = clk_get_parent(device->clock);
-	if (!parent)
+	device->initial_parent = clk_get_parent(device->clock);
+	if (!device->initial_parent)
 		return -ENODEV;
-	parent_rate = clk_get_rate(parent);
+	ret = clk_set_parent(device->clock, device->parent_clock);
+	if (ret)
+		return ret;
+	device->parent_selected = true;
+	if (!clk_is_match(clk_get_parent(device->clock), device->parent_clock)) {
+		dev_err(device->dev,
+			"phase4d selected parent readback mismatch\n");
+		return -EIO;
+	}
+	parent_rate = clk_get_rate(device->parent_clock);
+	if (parent_rate != RP1_GPCLK_PARENT_RATE_HZ) {
+		dev_err(device->dev,
+			"phase4d selected parent rate mismatch: %lu\n", parent_rate);
+		return -ERANGE;
+	}
 	if (!parent_rate || parent_rate > (U64_MAX >> RP1_GPCLK_FRACTIONAL_BITS))
 		return -ERANGE;
 	requested_rate = DIV_ROUND_CLOSEST_ULL(
@@ -351,6 +365,28 @@ static int rp1_gpclk_machine_restore_rate(void *argument)
 	return 0;
 }
 
+static int rp1_gpclk_machine_restore_parent(void *argument)
+{
+	struct rp1_gpclk_device *device =
+		((struct rp1_gpclk_execution_context *)argument)->device;
+	struct clk *initial_parent = device->initial_parent;
+	int ret = 0;
+
+	device->initial_parent = NULL;
+	if (device->parent_selected && initial_parent) {
+		ret = clk_set_parent(device->clock, initial_parent);
+		if (!ret && !clk_is_match(clk_get_parent(device->clock),
+					      initial_parent))
+			ret = -EIO;
+		if (ret)
+			dev_err(device->dev,
+				"phase4d cleanup: clock parent restore failed: %d\n",
+				ret);
+	}
+	device->parent_selected = false;
+	return ret;
+}
+
 static const struct rp1_gpclk_execution_ops rp1_gpclk_machine_ops = {
 	.set_rate = rp1_gpclk_machine_set_rate,
 	.prepare = rp1_gpclk_machine_prepare,
@@ -361,6 +397,7 @@ static const struct rp1_gpclk_execution_ops rp1_gpclk_machine_ops = {
 	.disable_clock = rp1_gpclk_machine_disable,
 	.unprepare_clock = rp1_gpclk_machine_unprepare,
 	.select_safe = rp1_gpclk_machine_select_safe,
+	.restore_parent = rp1_gpclk_machine_restore_parent,
 	.restore_rate = rp1_gpclk_machine_restore_rate,
 };
 

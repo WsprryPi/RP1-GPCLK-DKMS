@@ -22,8 +22,8 @@
 		reg-names = "tick-dma0", "dma-tick0";
 		wsprrypi,route = <2>;
 		wsprrypi,pin = <20>;
-		clocks = <&rp1_clocks RP1_CLK_GP0>;
-		clock-names = "gpclk";
+		clocks = <&rp1_clocks RP1_CLK_GP0>, <&rp1_clocks RP1_PLL_SYS>;
+		clock-names = "gpclk", "parent";
 		pinctrl-names = "default", "active", "safe";
 		pinctrl-0 = <>;
 		pinctrl-1 = <&rp1_gpclk_dma_conflict_active>;

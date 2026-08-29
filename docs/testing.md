@@ -20,6 +20,50 @@ development client that can open the endpoint and request output. It is never
 compiled or executed by an ordinary test target and requires separate,
 route-specific hardware authorization.
 
+`development_frequency_sweep.cpp` is also target-only. Build it explicitly
+with `make development-frequency-sweep-client` on a target with SoapySDR
+development headers. Its default, hardware-free `--render-only` run requests
+16 uniformly spaced RF frequencies, inclusive, from 135.7 kHz through 148.0
+MHz. It uses finite two-second GPIO20 tones at 2 mA only with explicit `--live`,
+and measures them with SDRplay serial `2404058C60`. With the selected
+`pll_sys` parent, frequencies through the provider's 100 MHz GPCLK0 output
+limit use the fundamental; higher requested frequencies measure the third
+harmonic.
+Source-clock and receiver PPM values are separate explicit inputs; both default
+to zero. The CSV includes the divider plan, raw SDR estimate,
+receiver-corrected estimate, carrier level, worst spur outside a roughly 200 Hz
+carrier exclusion, median in-band noise, and rejected points. This diagnostic
+is never part of `make check` and does not itself authorize target or RF work.
+Repeat `--frequency-hz` for a repeatable selected-frequency comparison within
+the same range; otherwise the uniformly spaced vector is retained. Explicit
+`--parent-hz` and `--maximum-direct-hz` inputs allow the same client and RF
+vector to compare XOSC and PLL_SYS plans without changing its source. When an
+ideal pair straddles an integer-divider boundary, the renderer selects the
+nearest legal same-integer pair and clamps its weighting instead of rejecting
+the requested frequency.
+
+Render the wspr5 plan twice without touching hardware:
+
+```sh
+./build/development-frequency-sweep --render-only --points 16 --repeats 2 \
+  --source-rate-ppm 0 --receiver-ppm 1.078468 \
+  --output /tmp/rp1-gpclk-plan.csv
+```
+
+Run the same vector live only in an authorized GPIO20/SDRplay window:
+
+```sh
+./build/development-frequency-sweep --live --points 16 --repeats 3 \
+  --source-rate-ppm 0 --receiver-ppm 1.078468 \
+  --output /tmp/rp1-gpclk-live.csv
+```
+
+The transmitter PPM describes the selected source (`negative` means slow) and
+changes divider planning through `corrected_parent = 200 MHz * (1 + ppm/1e6)`.
+The receiver PPM corrects the SDR estimate by division by `(1 + ppm/1e6)`.
+The wspr5 values are development measurements for that device and receiver,
+not defaults for other systems.
+
 ## Historical compatibility checks
 
 The 1.0.1 and 1.1.0 contract-freeze checks are intentionally retained. They

@@ -14,6 +14,7 @@ struct rp1_gpclk_execution_ops {
 	int (*disable_clock)(void *context);
 	int (*unprepare_clock)(void *context);
 	int (*select_safe)(void *context);
+	int (*restore_parent)(void *context);
 	int (*restore_rate)(void *context);
 };
 
