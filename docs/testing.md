@@ -30,10 +30,13 @@ experiment, frequencies through the provider's 100 MHz GPCLK0 output limit use
 the fundamental; higher requested frequencies measure the third harmonic.
 Source-clock and receiver PPM values are separate explicit inputs; both default
 to zero. The CSV includes the divider plan, raw SDR estimate,
-receiver-corrected estimate, and rejected points. This diagnostic is never part
-of `make check` and does not itself authorize target or RF work.
-Use `--frequency-hz` for a repeatable single-point comparison within the same
-range; otherwise the uniformly spaced vector is retained.
+receiver-corrected estimate, carrier level, worst spur outside a roughly 200 Hz
+carrier exclusion, median in-band noise, and rejected points. This diagnostic
+is never part of `make check` and does not itself authorize target or RF work.
+Repeat `--frequency-hz` for a repeatable selected-frequency comparison within
+the same range; otherwise the uniformly spaced vector is retained. Explicit
+`--parent-hz` and `--maximum-direct-hz` inputs allow the same client and RF
+vector to compare XOSC and PLL_SYS plans without changing its source.
 
 Render the wspr5 plan twice without touching hardware:
 

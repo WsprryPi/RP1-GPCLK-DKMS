@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include <SoapySDR/Device.hpp>
 #include <SoapySDR/Formats.hpp>
+#include <algorithm>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -36,8 +37,9 @@ struct Options {
 	unsigned repeats = 1;
 	long double source_ppm = 0.0L;
 	long double receiver_ppm = 0.0L;
-	double frequency_hz = 0.0;
-	bool frequency_set = false;
+	long double parent_hz = kNominalParentHz;
+	double maximum_direct_hz = kMaximumDirectHz;
+	std::vector<double> frequencies_hz;
 	std::string output = "-";
 };
 struct Plan {
@@ -48,14 +50,20 @@ struct Plan {
 	double planned_rf_hz;
 	rp1_gpclk_tone_v1 tone;
 };
-struct Measurement { double raw_hz; double level_dbfs; size_t samples; };
+struct Measurement {
+	double raw_hz;
+	double level_dbfs;
+	double worst_spur_dbc;
+	double median_noise_dbc;
+	size_t samples;
+};
 
 [[noreturn]] void usage(const char *program, const std::string &error = {})
 {
 	if (!error.empty()) fprintf(stderr, "%s\n", error.c_str());
 	fprintf(stderr, "usage: %s [--render-only|--live] [--points 2..101] "
 		"[--repeats N] [--source-rate-ppm PPM] [--receiver-ppm PPM] "
-		"[--frequency-hz HZ] "
+		"[--parent-hz HZ] [--maximum-direct-hz HZ] [--frequency-hz HZ]... "
 		"[--output PATH|-]\n", program);
 	exit(error.empty() ? 0 : 2);
 }
@@ -90,10 +98,9 @@ Options options(int argc, char **argv)
 		else if (arg == "--repeats") out.repeats = whole(next("repeats"), "repeats");
 		else if (arg == "--source-rate-ppm") out.source_ppm = number(next("source PPM"), "source PPM");
 		else if (arg == "--receiver-ppm") out.receiver_ppm = number(next("receiver PPM"), "receiver PPM");
-		else if (arg == "--frequency-hz") {
-			out.frequency_hz = static_cast<double>(number(next("frequency"), "frequency"));
-			out.frequency_set = true;
-		}
+		else if (arg == "--parent-hz") out.parent_hz = number(next("parent frequency"), "parent frequency");
+		else if (arg == "--maximum-direct-hz") out.maximum_direct_hz = static_cast<double>(number(next("maximum direct frequency"), "maximum direct frequency"));
+		else if (arg == "--frequency-hz") out.frequencies_hz.push_back(static_cast<double>(number(next("frequency"), "frequency")));
 		else if (arg == "--output") out.output = next("output");
 		else if (arg == "--help") usage(argv[0]);
 		else usage(argv[0], "unknown option: " + arg);
@@ -102,9 +109,13 @@ Options options(int argc, char **argv)
 	if (!out.repeats || out.repeats > 100) usage(argv[0], "repeats must be 1..100");
 	if (fabsl(out.source_ppm) > 200 || fabsl(out.receiver_ppm) > 200)
 		usage(argv[0], "PPM values must be within +/-200");
-	if (out.frequency_set &&
-	    (out.frequency_hz < kMinimumHz || out.frequency_hz > kMaximumHz))
-		usage(argv[0], "frequency must be within 135700..148000000 Hz");
+	if (out.parent_hz <= 0 || out.parent_hz > 1000000000.0L ||
+	    out.maximum_direct_hz <= 0 || out.maximum_direct_hz > out.parent_hz ||
+	    out.maximum_direct_hz > kMaximumDirectHz)
+		usage(argv[0], "parent/direct frequencies are inconsistent");
+	for (double frequency : out.frequencies_hz)
+		if (frequency < kMinimumHz || frequency > kMaximumHz)
+			usage(argv[0], "frequency must be within 135700..148000000 Hz");
 	return out;
 }
 void set_header(rp1_gpclk_uapi_header &header, size_t size, uint16_t version)
@@ -112,11 +123,11 @@ void set_header(rp1_gpclk_uapi_header &header, size_t size, uint16_t version)
 	header.size = static_cast<uint16_t>(size);
 	header.version = version;
 }
-Plan plan(double requested, long double parent)
+Plan plan(double requested, long double parent, double maximum_direct)
 {
 	Plan out{};
 	out.requested_hz = requested;
-	out.harmonic = requested > kMaximumDirectHz ? 3U : 1U;
+	out.harmonic = requested > maximum_direct ? 3U : 1U;
 	out.fundamental_hz = requested / out.harmonic;
 	const long double ideal = parent * 65536.0L / out.fundamental_hz;
 	if (ideal < 65536.0L || ideal > 4294967295.0L)
@@ -273,45 +284,63 @@ Measurement capture(SoapySDR::Device *sdr, Endpoint &endpoint, const Plan &p)
 	const size_t expected_bin = expected_signed >= 0 ? static_cast<size_t>(expected_signed) :
 		static_cast<size_t>(static_cast<long>(kFftSize) + expected_signed);
 	const size_t search = static_cast<size_t>(20000 * kFftSize / kSampleRate);
-	size_t peak = expected_bin; double peak_power = 0;
+	size_t peak = expected_bin; long peak_offset = 0; double peak_power = 0;
 	for (long off = -static_cast<long>(search); off <= static_cast<long>(search); ++off) {
 		const size_t bin = (expected_bin + kFftSize + off) % kFftSize;
-		if (std::norm(samples[bin]) > peak_power) { peak_power = std::norm(samples[bin]); peak = bin; }
+		if (std::norm(samples[bin]) > peak_power) {
+			peak_power = std::norm(samples[bin]); peak = bin; peak_offset = off;
+		}
 	}
 	const long signed_bin = peak <= kFftSize / 2 ? static_cast<long>(peak) : static_cast<long>(peak) - kFftSize;
 	const double left = std::norm(samples[(peak + kFftSize - 1) % kFftSize]);
 	const double mid = std::norm(samples[peak]); const double right = std::norm(samples[(peak + 1) % kFftSize]);
 	const double denom = left - 2 * mid + right;
 	const double frac = denom == 0 ? 0 : .5 * (left - right) / denom;
+	std::vector<double> noise_bins;
+	double worst_spur = 0;
+	constexpr long kCarrierExclusionBins = 210;
+	for (long off = -static_cast<long>(search); off <= static_cast<long>(search); ++off) {
+		const long distance = std::abs(off - peak_offset);
+		if (distance <= kCarrierExclusionBins) continue;
+		const size_t bin = (expected_bin + kFftSize + off) % kFftSize;
+		const double bin_power = std::norm(samples[bin]);
+		noise_bins.push_back(bin_power);
+		worst_spur = std::max(worst_spur, bin_power);
+	}
+	const size_t middle = noise_bins.size() / 2;
+	std::nth_element(noise_bins.begin(), noise_bins.begin() + middle, noise_bins.end());
+	const double median_noise = noise_bins[middle];
 	return {center + (signed_bin + frac) * kSampleRate / kFftSize,
-		10 * log10(static_cast<double>(power / accepted)), accepted};
+		10 * log10(static_cast<double>(power / accepted)),
+		10 * log10(worst_spur / peak_power), 10 * log10(median_noise / peak_power),
+		accepted};
 }
 void header(FILE *out)
 {
-	fprintf(out, "repeat,index,requested_rf_hz,fundamental_hz,harmonic,planned_fundamental_hz,planned_rf_hz,lower_divider_q16,upper_divider_q16,lower_count,upper_count,raw_sdr_hz,corrected_sdr_hz,error_hz,error_ppm,level_dbfs,samples,status\n");
+	fprintf(out, "repeat,index,requested_rf_hz,fundamental_hz,harmonic,planned_fundamental_hz,planned_rf_hz,lower_divider_q16,upper_divider_q16,lower_count,upper_count,raw_sdr_hz,corrected_sdr_hz,error_hz,error_ppm,level_dbfs,worst_spur_dbc,median_noise_dbc,samples,status\n");
 }
 }
 int main(int argc, char **argv)
 {
 	try {
 		const Options o = options(argc, argv);
-		const long double parent = kNominalParentHz * (1 + o.source_ppm * 1e-6L);
+		const long double parent = o.parent_hz * (1 + o.source_ppm * 1e-6L);
 		FILE *out = o.output == "-" ? stdout : fopen(o.output.c_str(), "w");
 		if (!out) throw std::runtime_error("cannot open output");
 		SoapySDR::Device *sdr = nullptr;
 		if (o.live) { SoapySDR::Kwargs a; a["driver"] = "sdrplay"; a["serial"] = "2404058C60";
 			sdr = SoapySDR::Device::make(a); if (!sdr) throw std::runtime_error("SDRplay unavailable"); }
 		header(out);
-		const unsigned point_count = o.frequency_set ? 1U : o.points;
+		const unsigned point_count = o.frequencies_hz.empty() ? o.points : o.frequencies_hz.size();
 		for (unsigned repeat = 1; repeat <= o.repeats; ++repeat) for (unsigned index = 0; index < point_count; ++index) {
-			const double requested = o.frequency_set ? o.frequency_hz :
+			const double requested = !o.frequencies_hz.empty() ? o.frequencies_hz[index] :
 				kMinimumHz + (kMaximumHz - kMinimumHz) * index / (o.points - 1);
 			try {
-				const Plan p = plan(requested, parent);
-				if (!o.live) fprintf(out, "%u,%u,%.6f,%.6f,%u,%.9f,%.9f,%llu,%llu,%u,%u,,,,,,,planned\n", repeat, index, p.requested_hz, p.fundamental_hz, p.harmonic, p.planned_fundamental_hz, p.planned_rf_hz, static_cast<unsigned long long>(p.tone.lower_divider_q16), static_cast<unsigned long long>(p.tone.upper_divider_q16), p.tone.lower_count, p.tone.upper_count);
+				const Plan p = plan(requested, parent, o.maximum_direct_hz);
+				if (!o.live) fprintf(out, "%u,%u,%.6f,%.6f,%u,%.9f,%.9f,%llu,%llu,%u,%u,,,,,,,,,planned\n", repeat, index, p.requested_hz, p.fundamental_hz, p.harmonic, p.planned_fundamental_hz, p.planned_rf_hz, static_cast<unsigned long long>(p.tone.lower_divider_q16), static_cast<unsigned long long>(p.tone.upper_divider_q16), p.tone.lower_count, p.tone.upper_count);
 				else { Endpoint endpoint; const Measurement m = capture(sdr, endpoint, p); const double corrected = m.raw_hz / (1 + static_cast<double>(o.receiver_ppm) * 1e-6); const double error = corrected - requested;
-					fprintf(out, "%u,%u,%.6f,%.6f,%u,%.9f,%.9f,%llu,%llu,%u,%u,%.9f,%.9f,%.9f,%.9f,%.2f,%zu,measured\n", repeat, index, p.requested_hz, p.fundamental_hz, p.harmonic, p.planned_fundamental_hz, p.planned_rf_hz, static_cast<unsigned long long>(p.tone.lower_divider_q16), static_cast<unsigned long long>(p.tone.upper_divider_q16), p.tone.lower_count, p.tone.upper_count, m.raw_hz, corrected, error, error * 1e6 / requested, m.level_dbfs, m.samples); }
-			} catch (const std::exception &e) { fprintf(out, "%u,%u,%.6f,,,,,,,,,,,,,,,,rejected:%s\n", repeat, index, requested, e.what()); }
+					fprintf(out, "%u,%u,%.6f,%.6f,%u,%.9f,%.9f,%llu,%llu,%u,%u,%.9f,%.9f,%.9f,%.9f,%.2f,%.2f,%.2f,%zu,measured\n", repeat, index, p.requested_hz, p.fundamental_hz, p.harmonic, p.planned_fundamental_hz, p.planned_rf_hz, static_cast<unsigned long long>(p.tone.lower_divider_q16), static_cast<unsigned long long>(p.tone.upper_divider_q16), p.tone.lower_count, p.tone.upper_count, m.raw_hz, corrected, error, error * 1e6 / requested, m.level_dbfs, m.worst_spur_dbc, m.median_noise_dbc, m.samples); }
+			} catch (const std::exception &e) { fprintf(out, "%u,%u,%.6f,,,,,,,,,,,,,,,,,,,rejected:%s\n", repeat, index, requested, e.what()); }
 			fflush(out);
 		}
 		if (sdr) SoapySDR::Device::unmake(sdr);
