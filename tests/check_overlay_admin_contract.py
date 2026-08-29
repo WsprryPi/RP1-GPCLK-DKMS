@@ -45,7 +45,7 @@ with tempfile.TemporaryDirectory() as temporary:
                     f'wsprrypi,route = <{identity["routeId"]}>',
                     f'wsprrypi,pin = <{identity["pin"]}>',
                     f'clocks = <&{shared["clockProvider"]} {shared["clockId"]}>, '
-                    f'<&{shared["parentClockProvider"]}>',
+                    f'<&{shared["parentClockProvider"]} {shared["parentClockId"]}>',
                     f'clock-names = "{shared["clockName"]}", '
                     f'"{shared["parentClockName"]}"',
                     f'dmas = <&{shared["dmaProvider"]} {shared["dmaId"]}>',
@@ -63,7 +63,7 @@ with tempfile.TemporaryDirectory() as temporary:
         decompiled = subprocess.check_output([dtc, "-I", "dtb", "-O", "dts", str(first)],
                                              text=True, stderr=subprocess.DEVNULL)
         for token in (shared["compatible"], identity["endpointName"], "tick-dma0",
-                      "dma-tick0", "gpclk", "xosc", "default", "active", "safe", route):
+                      "dma-tick0", "gpclk", "parent", "default", "active", "safe", route):
             assert token in decompiled
         numeric = {"gpio4": ("0x01", "0x04"), "gpio20": ("0x02", "0x14")}[route]
         for token in (f"wsprrypi,route = <{numeric[0]}>", f"wsprrypi,pin = <{numeric[1]}>",
@@ -75,12 +75,12 @@ with tempfile.TemporaryDirectory() as temporary:
         # provider/property fixup so a numeric placeholder cannot pass alone.
         assert ("dmas = <&rp1_dma>, <0x30>" in decompiled or
                 "dmas = <0xffffffff 0x30>" in decompiled)
-        assert ("clocks = <&rp1_clocks>, <0x21>" in decompiled or
-                "clocks = <0xffffffff 0x21 0xffffffff>" in decompiled or
-                "clocks = <&rp1_clocks 0x21>, <&clk_xosc>" in decompiled)
+        assert ("clocks = <&rp1_clocks>, <0x21>, <&rp1_clocks>, <0x03>" in decompiled or
+                "clocks = <&rp1_clocks 0x21>, <&rp1_clocks 0x03>" in decompiled or
+                "clocks = <0xffffffff 0x21 0xffffffff 0x03>" in decompiled)
         for token in ("rp1_dma =", f'{identity["endpointName"]}:dmas:0',
                       "rp1_clocks =", f'{identity["endpointName"]}:clocks:0',
-                      "clk_xosc =", f'{identity["endpointName"]}:clocks:8'):
+                      f'{identity["endpointName"]}:clocks:8'):
             assert token in decompiled
         compiled[route] = (hashlib.sha256(source.read_bytes()).hexdigest(),
                            hashlib.sha256(first.read_bytes()).hexdigest())

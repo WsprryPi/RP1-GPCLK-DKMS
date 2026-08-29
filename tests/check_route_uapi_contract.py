@@ -28,8 +28,8 @@ def require(text: str, tokens: tuple[str, ...], label: str) -> None:
 
 shared = (
     'compatible = "wsprrypi,rp1-gpclk-dkms-v1"',
-    'clocks = <&rp1_clocks RP1_CLK_GP0>, <&clk_xosc>',
-    'clock-names = "gpclk", "xosc"',
+    'clocks = <&rp1_clocks RP1_CLK_GP0>, <&rp1_clocks RP1_PLL_SYS>',
+    'clock-names = "gpclk", "parent"',
     'pinctrl-names = "default", "active", "safe"',
     'dmas = <&rp1_dma RP1_DMA_DMA_TICK_TICK0>',
     'dma-names = "tx"',

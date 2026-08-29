@@ -19,7 +19,8 @@
 #include <linux/rp1_gpclk.h>
 
 namespace {
-constexpr long double kNominalParentHz = 50000000.0L;
+constexpr long double kNominalParentHz = 200000000.0L;
+constexpr double kMaximumDirectHz = 100000000.0;
 constexpr uint32_t kDitherPeriod = 66792U;
 constexpr double kMinimumHz = 135700.0;
 constexpr double kMaximumHz = 148000000.0;
@@ -35,6 +36,8 @@ struct Options {
 	unsigned repeats = 1;
 	long double source_ppm = 0.0L;
 	long double receiver_ppm = 0.0L;
+	double frequency_hz = 0.0;
+	bool frequency_set = false;
 	std::string output = "-";
 };
 struct Plan {
@@ -52,6 +55,7 @@ struct Measurement { double raw_hz; double level_dbfs; size_t samples; };
 	if (!error.empty()) fprintf(stderr, "%s\n", error.c_str());
 	fprintf(stderr, "usage: %s [--render-only|--live] [--points 2..101] "
 		"[--repeats N] [--source-rate-ppm PPM] [--receiver-ppm PPM] "
+		"[--frequency-hz HZ] "
 		"[--output PATH|-]\n", program);
 	exit(error.empty() ? 0 : 2);
 }
@@ -86,6 +90,10 @@ Options options(int argc, char **argv)
 		else if (arg == "--repeats") out.repeats = whole(next("repeats"), "repeats");
 		else if (arg == "--source-rate-ppm") out.source_ppm = number(next("source PPM"), "source PPM");
 		else if (arg == "--receiver-ppm") out.receiver_ppm = number(next("receiver PPM"), "receiver PPM");
+		else if (arg == "--frequency-hz") {
+			out.frequency_hz = static_cast<double>(number(next("frequency"), "frequency"));
+			out.frequency_set = true;
+		}
 		else if (arg == "--output") out.output = next("output");
 		else if (arg == "--help") usage(argv[0]);
 		else usage(argv[0], "unknown option: " + arg);
@@ -94,6 +102,9 @@ Options options(int argc, char **argv)
 	if (!out.repeats || out.repeats > 100) usage(argv[0], "repeats must be 1..100");
 	if (fabsl(out.source_ppm) > 200 || fabsl(out.receiver_ppm) > 200)
 		usage(argv[0], "PPM values must be within +/-200");
+	if (out.frequency_set &&
+	    (out.frequency_hz < kMinimumHz || out.frequency_hz > kMaximumHz))
+		usage(argv[0], "frequency must be within 135700..148000000 Hz");
 	return out;
 }
 void set_header(rp1_gpclk_uapi_header &header, size_t size, uint16_t version)
@@ -105,7 +116,7 @@ Plan plan(double requested, long double parent)
 {
 	Plan out{};
 	out.requested_hz = requested;
-	out.harmonic = requested > static_cast<double>(kNominalParentHz) ? 3U : 1U;
+	out.harmonic = requested > kMaximumDirectHz ? 3U : 1U;
 	out.fundamental_hz = requested / out.harmonic;
 	const long double ideal = parent * 65536.0L / out.fundamental_hz;
 	if (ideal < 65536.0L || ideal > 4294967295.0L)
@@ -291,8 +302,10 @@ int main(int argc, char **argv)
 		if (o.live) { SoapySDR::Kwargs a; a["driver"] = "sdrplay"; a["serial"] = "2404058C60";
 			sdr = SoapySDR::Device::make(a); if (!sdr) throw std::runtime_error("SDRplay unavailable"); }
 		header(out);
-		for (unsigned repeat = 1; repeat <= o.repeats; ++repeat) for (unsigned index = 0; index < o.points; ++index) {
-			const double requested = kMinimumHz + (kMaximumHz - kMinimumHz) * index / (o.points - 1);
+		const unsigned point_count = o.frequency_set ? 1U : o.points;
+		for (unsigned repeat = 1; repeat <= o.repeats; ++repeat) for (unsigned index = 0; index < point_count; ++index) {
+			const double requested = o.frequency_set ? o.frequency_hz :
+				kMinimumHz + (kMaximumHz - kMinimumHz) * index / (o.points - 1);
 			try {
 				const Plan p = plan(requested, parent);
 				if (!o.live) fprintf(out, "%u,%u,%.6f,%.6f,%u,%.9f,%.9f,%llu,%llu,%u,%u,,,,,,,planned\n", repeat, index, p.requested_hz, p.fundamental_hz, p.harmonic, p.planned_fundamental_hz, p.planned_rf_hz, static_cast<unsigned long long>(p.tone.lower_divider_q16), static_cast<unsigned long long>(p.tone.upper_divider_q16), p.tone.lower_count, p.tone.upper_count);

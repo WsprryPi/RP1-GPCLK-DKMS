@@ -25,7 +25,7 @@ struct rp1_gpclk_device {
 	void __iomem *dma_tick0;
 	struct miscdevice miscdev;
 	struct clk *clock;
-	struct clk *xosc;
+	struct clk *parent_clock;
 	struct clk *initial_parent;
 	struct dma_chan *dma_chan;
 	struct pinctrl *pinctrl;

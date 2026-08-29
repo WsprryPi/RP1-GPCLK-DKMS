@@ -25,18 +25,21 @@ with `make development-frequency-sweep-client` on a target with SoapySDR
 development headers. Its default, hardware-free `--render-only` run requests
 16 uniformly spaced RF frequencies, inclusive, from 135.7 kHz through 148.0
 MHz. It uses finite two-second GPIO20 tones at 2 mA only with explicit `--live`,
-and measures them with SDRplay serial `2404058C60`. Frequencies through 50 MHz
-use the fundamental; higher requested frequencies measure the third harmonic.
+and measures them with SDRplay serial `2404058C60`. On the `pll_sys`
+experiment, frequencies through the provider's 100 MHz GPCLK0 output limit use
+the fundamental; higher requested frequencies measure the third harmonic.
 Source-clock and receiver PPM values are separate explicit inputs; both default
 to zero. The CSV includes the divider plan, raw SDR estimate,
 receiver-corrected estimate, and rejected points. This diagnostic is never part
 of `make check` and does not itself authorize target or RF work.
+Use `--frequency-hz` for a repeatable single-point comparison within the same
+range; otherwise the uniformly spaced vector is retained.
 
 Render the wspr5 plan twice without touching hardware:
 
 ```sh
 ./build/development-frequency-sweep --render-only --points 16 --repeats 2 \
-  --source-rate-ppm -41.203682 --receiver-ppm 1.078468 \
+  --source-rate-ppm 0 --receiver-ppm 1.078468 \
   --output /tmp/rp1-gpclk-plan.csv
 ```
 
@@ -44,12 +47,12 @@ Run the same vector live only in an authorized GPIO20/SDRplay window:
 
 ```sh
 ./build/development-frequency-sweep --live --points 16 --repeats 3 \
-  --source-rate-ppm -41.203682 --receiver-ppm 1.078468 \
+  --source-rate-ppm 0 --receiver-ppm 1.078468 \
   --output /tmp/rp1-gpclk-live.csv
 ```
 
-The transmitter PPM describes the physical XOSC (`negative` means slow) and
-changes divider planning through `corrected_parent = 50 MHz * (1 + ppm/1e6)`.
+The transmitter PPM describes the selected source (`negative` means slow) and
+changes divider planning through `corrected_parent = 200 MHz * (1 + ppm/1e6)`.
 The receiver PPM corrects the SDR estimate by division by `(1 + ppm/1e6)`.
 The wspr5 values are development measurements for that device and receiver,
 not defaults for other systems.

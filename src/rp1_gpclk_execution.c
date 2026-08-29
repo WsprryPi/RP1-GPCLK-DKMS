@@ -203,19 +203,19 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 	device->initial_parent = clk_get_parent(device->clock);
 	if (!device->initial_parent)
 		return -ENODEV;
-	ret = clk_set_parent(device->clock, device->xosc);
+	ret = clk_set_parent(device->clock, device->parent_clock);
 	if (ret)
 		return ret;
 	device->parent_selected = true;
-	if (!clk_is_match(clk_get_parent(device->clock), device->xosc)) {
+	if (!clk_is_match(clk_get_parent(device->clock), device->parent_clock)) {
 		dev_err(device->dev,
-			"phase4d XOSC parent selection readback mismatch\n");
+			"phase4d selected parent readback mismatch\n");
 		return -EIO;
 	}
-	parent_rate = clk_get_rate(device->xosc);
-	if (parent_rate != RP1_GPCLK_XOSC_RATE_HZ) {
+	parent_rate = clk_get_rate(device->parent_clock);
+	if (parent_rate != RP1_GPCLK_PARENT_RATE_HZ) {
 		dev_err(device->dev,
-			"phase4d XOSC parent rate mismatch: %lu\n", parent_rate);
+			"phase4d selected parent rate mismatch: %lu\n", parent_rate);
 		return -ERANGE;
 	}
 	if (!parent_rate || parent_rate > (U64_MAX >> RP1_GPCLK_FRACTIONAL_BITS))

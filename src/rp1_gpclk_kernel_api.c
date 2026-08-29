@@ -15,15 +15,13 @@
 int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 {
 	struct of_phandle_args clock_spec;
-	struct of_phandle_args xosc_spec;
+	struct of_phandle_args parent_spec;
 	struct of_phandle_args dma_spec;
 	struct resource resource;
 	struct resource rp1_resource;
 	__u64 divider_phys;
 	__u32 pin;
 	__u32 route;
-	__u32 xosc_rate;
-	const char *xosc_name;
 	int ret;
 
 	if (!device || !device->dev || !device->dev->of_node)
@@ -35,7 +33,7 @@ int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 	if (of_property_match_string(device->dev->of_node, "clock-names",
 				     "gpclk") != 0 ||
 	    of_property_match_string(device->dev->of_node, "clock-names",
-				     "xosc") != 1)
+				     "parent") != 1)
 		return -EINVAL;
 	ret = of_property_read_u32(device->dev->of_node, "wsprrypi,route",
 				   &route);
@@ -61,25 +59,20 @@ int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 		goto put_clock_node;
 	}
 	ret = of_parse_phandle_with_args(device->dev->of_node, "clocks",
-					 "#clock-cells", 1, &xosc_spec);
+					 "#clock-cells", 1, &parent_spec);
 	if (ret)
 		goto put_clock_node;
-	ret = of_property_read_u32(xosc_spec.np, "clock-frequency", &xosc_rate);
-	if (!of_device_is_compatible(xosc_spec.np,
-				     RP1_GPCLK_XOSC_PROVIDER_COMPATIBLE) ||
-	    !of_node_name_eq(xosc_spec.np, RP1_GPCLK_XOSC_NODE_NAME) ||
-	    xosc_spec.args_count != 0 || ret ||
-	    xosc_rate != RP1_GPCLK_XOSC_RATE_HZ ||
-	    of_property_read_string(xosc_spec.np, "clock-output-names",
-				    &xosc_name) ||
-	    strcmp(xosc_name, RP1_GPCLK_XOSC_OUTPUT_NAME)) {
+	if (!of_device_is_compatible(parent_spec.np,
+				     RP1_GPCLK_PARENT_PROVIDER_COMPATIBLE) ||
+	    parent_spec.np != clock_spec.np || parent_spec.args_count != 1 ||
+	    parent_spec.args[0] != RP1_GPCLK_PARENT_CLOCK_ID) {
 		ret = -EINVAL;
-		goto put_xosc_node;
+		goto put_parent_node;
 	}
 	ret = of_parse_phandle_with_args(device->dev->of_node, "dmas",
 					 "#dma-cells", 0, &dma_spec);
 	if (ret)
-		goto put_xosc_node;
+		goto put_parent_node;
 	if (!of_device_is_compatible(dma_spec.np,
 				     RP1_GPCLK_DMA_PROVIDER_COMPATIBLE) ||
 	    dma_spec.args_count != 1 ||
@@ -115,8 +108,8 @@ int rp1_gpclk_dt_validate(struct rp1_gpclk_device *device)
 	}
 put_dma_node:
 	of_node_put(dma_spec.np);
-put_xosc_node:
-	of_node_put(xosc_spec.np);
+put_parent_node:
+	of_node_put(parent_spec.np);
 put_clock_node:
 	of_node_put(clock_spec.np);
 	return ret;
@@ -136,10 +129,10 @@ int rp1_gpclk_clock_acquire(struct rp1_gpclk_device *device)
 	if (ret)
 		goto put_clock;
 	device->rate_exclusive = true;
-	device->xosc = clk_get(device->dev, "xosc");
-	if (IS_ERR(device->xosc)) {
-		ret = PTR_ERR(device->xosc);
-		device->xosc = NULL;
+	device->parent_clock = clk_get(device->dev, "parent");
+	if (IS_ERR(device->parent_clock)) {
+		ret = PTR_ERR(device->parent_clock);
+		device->parent_clock = NULL;
 		goto put_exclusive;
 	}
 	return 0;
@@ -259,9 +252,9 @@ void rp1_gpclk_resources_release(struct rp1_gpclk_device *device)
 		device->pins_active = NULL;
 		device->pins_safe = NULL;
 	}
-	if (device->xosc) {
-		clk_put(device->xosc);
-		device->xosc = NULL;
+	if (device->parent_clock) {
+		clk_put(device->parent_clock);
+		device->parent_clock = NULL;
 	}
 	if (device->rate_exclusive) {
 		clk_rate_exclusive_put(device->clock);
