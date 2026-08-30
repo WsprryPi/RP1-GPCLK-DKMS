@@ -65,10 +65,11 @@ int rp1_gpclk_clock_setup(const struct rp1_gpclk_clock_setup_ops *ops,
 			return ret;
 		if (!integer_matches(ops->parent_rate(context),
 				     ops->output_rate(context), integer)) {
-			/* Move an ambiguous exact-integer boundary inward by one
-			 * requested Hz, but only after the parent has stabilized.
+			/* Shift the next seed by one requested Hz. Do not reset this
+			 * on reparenting: nearest-rate selection can otherwise cycle
+			 * forever between two parents (for example at 3570100 Hz).
 			 */
-			bias = ops->parent_rate(context) == parent ? bias + 1 : 0;
+			bias++;
 			continue;
 		}
 		ret = ops->select_parent(context);

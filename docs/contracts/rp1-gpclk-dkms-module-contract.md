@@ -111,7 +111,9 @@ selection can reparent GPCLK0, so checking the parent only before setting a
 rate is insufficient. While output is inactive, setup makes at most four
 attempts using the observed parent and verifies the planned integer
 divider against the provider's whole-Hz readback and Q16 divider bounds.
-An ambiguous integer boundary may move the seed request inward by one Hz.
+Every unsuccessful attempt moves the next seed request inward by one more Hz,
+including after a parent switch. Keeping that bias across parent switches
+prevents repeating an identical nearest-rate parent-selection cycle.
 The operation's fractional DMA sequence remains unchanged. Setup selects the
 contracted parent after the final rate request and verifies the parent,
 200 MHz nominal rate, and integer divider before activation. Preparation

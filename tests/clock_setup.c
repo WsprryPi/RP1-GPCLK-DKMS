@@ -10,6 +10,7 @@ struct model {
 	int error;
 	bool wrong_parent, wrong_integer, oscillate;
 	bool reject_parent, bad_readback;
+	bool nearest_parent;
 };
 
 static int set_rate(void *arg, __u64 rate)
@@ -21,6 +22,29 @@ static int set_rate(void *arg, __u64 rate)
 		return m->error;
 	m->parent = rate > 50000000 ||
 		(m->oscillate && !(m->calls % 2)) ? 200000000 : 50000000;
+	if (m->nearest_parent) {
+		const __u64 parents[] = {50000000, 200000000};
+		__u64 best_error = ~0ULL, rounded_rate = 0;
+		unsigned int i;
+
+		for (i = 0; i < 2; i++) {
+			__u64 d = ((parents[i] << 16) + rate / 2) / rate;
+			__u64 actual, error;
+
+			if (d < 65536 || d > (65535ULL << 16))
+				continue;
+			actual = (parents[i] << 16) / d;
+			error = actual > rate ? actual - rate : rate - actual;
+			if (error < best_error) {
+				best_error = error;
+				m->parent = parents[i];
+				rounded_rate = actual;
+			}
+		}
+		assert(rounded_rate);
+		/* The provider applies the rate selected by determine_rate. */
+		rate = rounded_rate;
+	}
 	m->divider = ((m->parent << 16) + rate / 2) / rate;
 	if (m->divider < 65536)
 		m->divider = 65536;
@@ -67,6 +91,11 @@ int main(void)
 	for (i = 0; i < sizeof(frequencies) / sizeof(frequencies[0]); i++) {
 		__u64 d = (200000000ULL << 16) / frequencies[i];
 		m = (struct model){.parent = 200000000, .desired_parent = 200000000};
+		assert(!rp1_gpclk_clock_setup(&ops, &m, d, 200000000));
+		assert(m.parent == 200000000 && (m.divider >> 16) == (d >> 16));
+		assert(m.calls <= 4);
+		m = (struct model){.parent = 200000000, .desired_parent = 200000000,
+			.nearest_parent = true};
 		assert(!rp1_gpclk_clock_setup(&ops, &m, d, 200000000));
 		assert(m.parent == 200000000 && (m.divider >> 16) == (d >> 16));
 		assert(m.calls <= 4);
