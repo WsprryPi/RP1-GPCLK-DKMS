@@ -62,6 +62,7 @@ struct rp1_gpclk_device {
 	__u8 operation_live_digest[RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE];
 	bool tick_state_captured;
 	unsigned long initial_rate;
+	int clock_cleanup_error;
 	__u32 initial_tick_dma0_ctrl;
 	__u32 initial_tick_dma0_cycles;
 	__u32 initial_dma_tick0_en;

@@ -33,9 +33,21 @@ ordered = [
     selection.index("clk_set_parent(device->clock, device->parent_clock)"),
     selection.index("clk_is_match(clk_get_parent(device->clock), device->parent_clock)"),
     selection.index("parent_rate = clk_get_rate(device->parent_clock)"),
-    selection.index("clk_set_rate(device->clock, requested_rate)"),
+    selection.index("rp1_gpclk_clock_setup(&rp1_gpclk_setup_ops"),
 ]
 assert ordered == sorted(ordered)
+
+setup = (ROOT / "src/rp1_gpclk_clock_setup.c").read_text()
+for name in ("rp1_gpclk_clock_setup", "rp1_gpclk_clock_restore"):
+    body = setup[setup.index("int " + name):].split("\nint ", 1)[0]
+    assert body.index("ops->set_rate(context,") < body.index("ops->select_parent(context)")
+    assert "ops->parent_rate(context) != " in body
+assert "rp1_gpclk_clock_restore(&ops, device, initial_rate" in EXECUTION
+assert "clk_set_rate(device->clock, rate > 1 ? rate / 2 : 2)" in EXECUTION
+assert EXECUTION.count("return device->clock_cleanup_error;") == 2
+prepare = EXECUTION[EXECUTION.index("static int rp1_gpclk_machine_prepare"):]
+prepare = prepare[:prepare.index("static int rp1_gpclk_machine_select_active")]
+assert "rp1_gpclk_setup_parent_rate(device) != RP1_GPCLK_PARENT_RATE_HZ" in prepare
 
 finish = MACHINE[MACHINE.index("int rp1_gpclk_execution_machine_finish") :]
 cleanup = [

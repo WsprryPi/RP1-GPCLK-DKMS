@@ -106,6 +106,29 @@ Divider plans use the provider's 16-bit integer and 16-bit fractional GPCLK0
 field: integer values 1 through 65,535 are valid, while the complete Q16 word
 remains bounded by `0xffffffff`.
 
+All frequencies and execution modes share this parent-selection path. Rate
+selection can reparent GPCLK0, so checking the parent only before setting a
+rate is insufficient. While output is inactive, setup makes at most four
+attempts using the observed parent and verifies the planned integer
+divider against the provider's whole-Hz readback and Q16 divider bounds.
+An ambiguous integer boundary may move the seed request inward by one Hz.
+The operation's fractional DMA sequence remains unchanged. Setup selects the
+contracted parent after the final rate request and verifies the parent,
+200 MHz nominal rate, and integer divider before activation. Preparation
+rechecks the parent and nominal rate. No band-specific 50 MHz exception exists.
+
+Cleanup disables output and restores safe pinctrl before restoring the saved
+parent and nominal output rate. Restoration also selects the saved parent
+after rate requests and checks both identities; it is bounded to four attempts.
+When a requested rate equals the common-clock cached rate, an inactive
+intermediate rate forces a provider update before the final request, preventing
+fractional DMA's last value from surviving a cached no-op.
+Each attempt therefore makes at most two provider rate requests.
+Unverifiable restoration faults the endpoint, including when startup cleanup
+is followed by a second cleanup call. This changes neither the shared PLL's
+frequency nor other consumers' clocks. A different future parent contract must
+update the module identity and userspace divider planning together.
+
 Only GPIO4 and GPIO20 are supported. They are separate administrative routes
 with distinct overlays and qualification. The module accepts no arbitrary GPIO
 parameter, combined overlay, or automatic route substitution.

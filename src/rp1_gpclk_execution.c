@@ -14,6 +14,7 @@
 #include <linux/wait.h>
 
 #include "rp1_gpclk/device.h"
+#include "rp1_gpclk/clock_setup.h"
 #include "rp1_gpclk/execution.h"
 #include "rp1_gpclk/execution_machine.h"
 #include "rp1_gpclk/execution_policy.h"
@@ -159,13 +160,70 @@ static int rp1_gpclk_wait_dma(struct rp1_gpclk_device *device,
 	return 0;
 }
 
+static int rp1_gpclk_setup_rate(void *argument, __u64 rate)
+{
+	struct rp1_gpclk_device *device = argument;
+	int ret;
+
+	if (rate > ULONG_MAX)
+		return -ERANGE;
+	/* Fractional DMA bypasses the CCF rate cache. A same-rate request could
+	 * otherwise be a no-op and leave the last transmitted divider behind.
+	 * Output is inactive for every caller of this helper.
+	 */
+	if (clk_get_rate(device->clock) == rate) {
+		ret = clk_set_rate(device->clock, rate > 1 ? rate / 2 : 2);
+		if (ret)
+			return ret;
+		if (clk_get_rate(device->clock) == rate)
+			return -EIO;
+	}
+	return clk_set_rate(device->clock, (unsigned long)rate);
+}
+
+static __u64 rp1_gpclk_setup_parent_rate(void *argument)
+{
+	struct rp1_gpclk_device *device = argument;
+	struct clk *parent = clk_get_parent(device->clock);
+
+	return parent ? clk_get_rate(parent) : 0;
+}
+
+static __u64 rp1_gpclk_setup_output_rate(void *argument)
+{
+	struct rp1_gpclk_device *device = argument;
+
+	return clk_get_rate(device->clock);
+}
+
+static int rp1_gpclk_setup_select_parent(void *argument)
+{
+	struct rp1_gpclk_device *device = argument;
+
+	return clk_set_parent(device->clock, device->parent_clock);
+}
+
+static bool rp1_gpclk_setup_parent_matches(void *argument)
+{
+	struct rp1_gpclk_device *device = argument;
+
+	return clk_is_match(clk_get_parent(device->clock), device->parent_clock);
+}
+
+static const struct rp1_gpclk_clock_setup_ops rp1_gpclk_setup_ops = {
+	.set_rate = rp1_gpclk_setup_rate,
+	.parent_rate = rp1_gpclk_setup_parent_rate,
+	.output_rate = rp1_gpclk_setup_output_rate,
+	.select_parent = rp1_gpclk_setup_select_parent,
+	.parent_matches = rp1_gpclk_setup_parent_matches,
+};
+
 static int rp1_gpclk_machine_set_rate(void *argument)
 {
 	struct rp1_gpclk_execution_context *context = argument;
 	struct rp1_gpclk_device *device = context->device;
 	const struct rp1_gpclk_execution_plan *plan = context->plan;
 	unsigned long parent_rate;
-	unsigned long requested_rate;
 	int ret;
 
 	ret = rp1_gpclk_execution_tones_valid(plan->tones, plan->tone_count,
@@ -201,12 +259,13 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 	}
 	device->initial_rate = clk_get_rate(device->clock);
 	device->initial_parent = clk_get_parent(device->clock);
-	if (!device->initial_parent)
+	if (!device->initial_parent || !device->initial_rate)
 		return -ENODEV;
+	/* Even a failed parent request may have partially changed the provider. */
+	device->parent_selected = true;
 	ret = clk_set_parent(device->clock, device->parent_clock);
 	if (ret)
 		return ret;
-	device->parent_selected = true;
 	if (!clk_is_match(clk_get_parent(device->clock), device->parent_clock)) {
 		dev_err(device->dev,
 			"phase4d selected parent readback mismatch\n");
@@ -218,14 +277,11 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 			"phase4d selected parent rate mismatch: %lu\n", parent_rate);
 		return -ERANGE;
 	}
-	if (!parent_rate || parent_rate > (U64_MAX >> RP1_GPCLK_FRACTIONAL_BITS))
-		return -ERANGE;
-	requested_rate = DIV_ROUND_CLOSEST_ULL(
-		(__u64)parent_rate << RP1_GPCLK_FRACTIONAL_BITS,
-		plan->tones[0].lower_divider_q16);
-	if (!requested_rate)
-		return -ERANGE;
-	ret = clk_set_rate(device->clock, requested_rate);
+	ret = rp1_gpclk_clock_setup(&rp1_gpclk_setup_ops, device,
+		plan->tones[0].lower_divider_q16, parent_rate);
+	if (ret)
+		dev_err(device->dev,
+			"phase4d parent/integer-divider setup failed: %d\n", ret);
 	return ret;
 }
 
@@ -238,6 +294,9 @@ static int rp1_gpclk_machine_prepare(void *argument)
 	if (ret)
 		return ret;
 	device->clock_prepared = true;
+	if (!rp1_gpclk_setup_parent_matches(device) ||
+	    rp1_gpclk_setup_parent_rate(device) != RP1_GPCLK_PARENT_RATE_HZ)
+		return -EIO;
 	return 0;
 }
 
@@ -346,23 +405,49 @@ static int rp1_gpclk_machine_select_safe(void *argument)
 	return ret;
 }
 
+static int rp1_gpclk_restore_select_parent(void *argument)
+{
+	struct rp1_gpclk_device *device = argument;
+
+	return clk_set_parent(device->clock, device->initial_parent);
+}
+
+static bool rp1_gpclk_restore_parent_matches(void *argument)
+{
+	struct rp1_gpclk_device *device = argument;
+
+	return clk_is_match(clk_get_parent(device->clock), device->initial_parent);
+}
+
 static int rp1_gpclk_machine_restore_rate(void *argument)
 {
 	struct rp1_gpclk_device *device =
 		((struct rp1_gpclk_execution_context *)argument)->device;
 	unsigned long initial_rate = device->initial_rate;
+	const struct rp1_gpclk_clock_setup_ops ops = {
+		.set_rate = rp1_gpclk_setup_rate,
+		.parent_rate = rp1_gpclk_setup_parent_rate,
+		.output_rate = rp1_gpclk_setup_output_rate,
+		.select_parent = rp1_gpclk_restore_select_parent,
+		.parent_matches = rp1_gpclk_restore_parent_matches,
+	};
+	int ret = 0;
 
-	device->initial_rate = 0;
-	if (initial_rate) {
-		int ret = clk_set_rate(device->clock, initial_rate);
+	if (device->parent_selected && device->initial_parent && initial_rate) {
+		ret = rp1_gpclk_clock_restore(&ops, device, initial_rate,
+			clk_get_rate(device->initial_parent));
 
 		if (ret)
 			dev_err(device->dev,
 				"phase4d cleanup: clock rate restore to %lu failed: %d current=%lu\n",
 				initial_rate, ret, clk_get_rate(device->clock));
-		return ret;
 	}
-	return 0;
+	device->initial_rate = 0;
+	device->initial_parent = NULL;
+	device->parent_selected = false;
+	if (ret && !device->clock_cleanup_error)
+		device->clock_cleanup_error = ret;
+	return device->clock_cleanup_error;
 }
 
 static int rp1_gpclk_machine_restore_parent(void *argument)
@@ -372,7 +457,6 @@ static int rp1_gpclk_machine_restore_parent(void *argument)
 	struct clk *initial_parent = device->initial_parent;
 	int ret = 0;
 
-	device->initial_parent = NULL;
 	if (device->parent_selected && initial_parent) {
 		ret = clk_set_parent(device->clock, initial_parent);
 		if (!ret && !clk_is_match(clk_get_parent(device->clock),
@@ -383,8 +467,9 @@ static int rp1_gpclk_machine_restore_parent(void *argument)
 				"phase4d cleanup: clock parent restore failed: %d\n",
 				ret);
 	}
-	device->parent_selected = false;
-	return ret;
+	if (ret && !device->clock_cleanup_error)
+		device->clock_cleanup_error = ret;
+	return device->clock_cleanup_error;
 }
 
 static const struct rp1_gpclk_execution_ops rp1_gpclk_machine_ops = {

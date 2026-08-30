@@ -100,6 +100,13 @@ ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
 "$tmp_dir/execution_policy"
 
 ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
+    -DRP1_GPCLK_HOST_TEST \
+    -I"$repo_dir/tests/fixtures/linux" -I"$repo_dir/include" \
+    "$repo_dir/src/rp1_gpclk_clock_setup.c" "$repo_dir/tests/clock_setup.c" \
+    -o "$tmp_dir/clock_setup"
+"$tmp_dir/clock_setup"
+
+${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
     -I"$repo_dir/tests/fixtures/linux" -I"$repo_dir/include" \
     "$repo_dir/src/rp1_gpclk_execution_machine.c" "$repo_dir/tests/execution_machine.c" \
     -o "$tmp_dir/execution_machine"
