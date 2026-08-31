@@ -325,13 +325,15 @@ change the module gate, or authorize an operation.
 
 ## Validation
 
-The [Experimental runtime-route v2 engine](runtime-route-v2.md) is an offline
-administrative model with a blocked public entry point. It does not extend the
-module UAPI, enable source-development mutation, enroll runtime ownership, or
-provide a target adapter. Persistent administrative admission, authenticated
-runtime-overlay ownership and post-unload cleanup attestation remain explicit
-implementation gates. Snapshot observations must not be substituted for those
-mechanisms. No kernel or hardware readiness is inferred from its fixture tests.
+The [Experimental runtime-route v2 engine](runtime-route-v2.md) is explicitly an
+offline reference model with a blocked public mutation entry point. The
+[target source review](runtime-route-target-review.md) rejects its synthetic
+atomic effects as a Linux adapter contract and identifies the stock configfs
+removal path's discarded error result as a concrete recovery blocker. A bounded
+read-only collector exists, but no write adapter or deployment path is supplied.
+This work does not extend the module UAPI or enable source-development mutation.
+Snapshot observations and model tests do not establish exclusion, post-removal
+success, kernel lifetime safety, or hardware readiness.
 
 The additive ABI-v3 passive snapshot contract is specified in
 `docs/contracts/uapi-v3-passive-snapshot.md`. ABI v4 adds the operation-scoped

@@ -63,6 +63,7 @@ class Crash(BaseException):
 
 
 class Fake:
+    model_only = True
     def __init__(self, state=None):
         self.state = state or initial()
         self.effects = []
@@ -74,7 +75,7 @@ class Fake:
     def observe(self):
         return self.state
 
-    def compare_effect(self, before, after, action):
+    def model_effect(self, before, after, action):
         # Independent admission and ordering assertions, not transition().
         if action == self.race_at:
             self.state = replace(self.state, revision=self.state.revision + 1)
@@ -123,7 +124,7 @@ class RuntimeTests(unittest.TestCase):
         self.fake = Fake()
 
     def engine(self, ledger=None):
-        return rt.Engine(identity(), self.fake, ledger or rt.Ledger(self.path))
+        return rt.ModelEngine(identity(), self.fake, ledger or rt.Ledger(self.path))
 
     def test_both_directions_and_same_route(self):
         first = self.engine().execute(switch())
@@ -143,6 +144,11 @@ class RuntimeTests(unittest.TestCase):
         with self.assertRaisesRegex(rt.Rejected, "stale-completion"):
             self.engine().execute(switch())
 
+    def test_real_adapter_cannot_enter_reference_model(self):
+        self.fake.model_only = False
+        with self.assertRaisesRegex(rt.Rejected, "model-adapter-required"):
+            self.engine()
+
     def test_route_neutral_start(self):
         self.fake.state = initial(None)
         self.engine().execute(switch())
@@ -157,11 +163,11 @@ class RuntimeTests(unittest.TestCase):
                     path = Path(tmp).resolve()
                     fake = Fake()
                     fake.fail_at, fake.fail_after = action, after
-                    engine = rt.Engine(identity(), fake, rt.Ledger(path))
+                    engine = rt.ModelEngine(identity(), fake, rt.Ledger(path))
                     with self.assertRaises(Crash):
                         engine.execute(switch())
                     fake.fail_at = None
-                    completed = rt.Engine(identity(), fake, rt.Ledger(path)).execute(recover())
+                    completed = rt.ModelEngine(identity(), fake, rt.Ledger(path)).execute(recover())
                     self.assertEqual(completed["phase"], "complete")
                     self.assertEqual(fake.effects, actions)
                     self.assertEqual(fake.state.route, "gpio20")
@@ -173,12 +179,12 @@ class RuntimeTests(unittest.TestCase):
                     path = Path(tmp).resolve()
                     fake = Fake()
                     with self.assertRaises(Crash):
-                        rt.Engine(identity(), fake, FailingLedger(path, index, after)).execute(switch())
+                        rt.ModelEngine(identity(), fake, FailingLedger(path, index, after)).execute(switch())
                     ledger = rt.Ledger(path)
                     with ledger.locked():
                         last = ledger.records[-1]["record"] if ledger.records else None
                     incoming = switch() if last is None or last["phase"] == "complete" else recover()
-                    rt.Engine(identity(), fake, rt.Ledger(path)).execute(incoming)
+                    rt.ModelEngine(identity(), fake, rt.Ledger(path)).execute(incoming)
                     self.assertEqual(fake.state.route, "gpio20")
                     self.assertEqual(len(fake.effects), 7)
 
@@ -192,10 +198,10 @@ class RuntimeTests(unittest.TestCase):
                         fake = Fake(initial(source))
                         fake.fail_at, fake.fail_after = action, after
                         with self.assertRaises(Crash):
-                            rt.Engine(identity(), fake, rt.Ledger(path)).execute(switch())
+                            rt.ModelEngine(identity(), fake, rt.Ledger(path)).execute(switch())
                         prefix = (path / "events.jsonl").read_bytes()
                         fake.fail_at = None
-                        result = rt.Engine(identity(), fake, rt.Ledger(path)).execute(recover("rollback"))
+                        result = rt.ModelEngine(identity(), fake, rt.Ledger(path)).execute(recover("rollback"))
                         self.assertEqual(result["direction"], "rollback")
                         self.assertEqual(fake.state.route, source)
                         self.assertEqual(fake.state.module_route, source)
@@ -252,7 +258,7 @@ class RuntimeTests(unittest.TestCase):
                 fake = Fake()
                 setattr(fake, attribute, "apply")
                 with self.assertRaises(rt.Rejected):
-                    rt.Engine(identity(), fake, rt.Ledger(Path(tmp).resolve())).execute(switch())
+                    rt.ModelEngine(identity(), fake, rt.Ledger(Path(tmp).resolve())).execute(switch())
                 self.assertNotIn("load", fake.effects)
                 self.assertNotIn("restore-services", fake.effects)
 

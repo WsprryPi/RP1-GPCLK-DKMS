@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Offline runtime-route transaction engine; no hardware backend is provided.
+"""Reference model only; its synthetic atomic effects are not a Linux API.
 
-An adapter must implement atomic compare-and-effect with persistent admission
-exclusion. ABI v4 and dtoverlay do not currently provide that combined contract.
-The public entry point therefore cannot execute this engine or accept evidence.
+The matching kernel review rejects using this model as a hardware adapter
+contract. ModelEngine requires an explicitly model-only backend. The public
+entry point cannot execute this model or accept evidence. See the target review
+and runtime_inventory.py for actual read-only observations.
 """
 from __future__ import annotations
 
@@ -28,10 +29,8 @@ BOOT = r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}"
 MAX_INPUT = 16384
 MAX_LEDGER = 4 * 1024 * 1024
 BLOCKERS = (
-    "persistent-administrative-admission-unavailable",
-    "atomic-runtime-overlay-ownership-unavailable",
-    "post-unload-cleanup-attestation-unavailable",
-    "target-adapter-not-implemented",
+    "reviewed-configfs-removal-errors-not-propagated",
+    "runtime-switch-adapter-not-implemented",
 )
 
 
@@ -280,16 +279,16 @@ def transition(state: Observation, action: str, target: str | None,
     return result
 
 
-class Adapter(Protocol):
-    """Trusted implementation must preserve inhibit across death/unload/reload.
+class ModelAdapter(Protocol):
+    """Synthetic reference semantics, deliberately NOT implementable by shell.
 
-    compare_effect must atomically compare the full observation, guard against
-    external changes, perform ONLY the named fixed effect, and attest readback.
-    A successful process return code is not that attestation. No real adapter
-    currently implements this protocol.
+    The model assumes atomic full-state comparison and successor observations.
+    Linux only supplies narrower per-operation synchronization. Do not fabricate
+    a revision counter or echo the predicted state to adapt Linux to this type.
     """
+    model_only: bool
     def observe(self) -> Observation: ...
-    def compare_effect(self, before: Observation, after: Observation, action: str) -> None: ...
+    def model_effect(self, before: Observation, after: Observation, action: str) -> None: ...
 
 
 class Ledger:
@@ -391,9 +390,10 @@ class Ledger:
         self.records.append(json.loads(canonical(item)))
 
 
-class Engine:
-    """Only for offline adapters until the production safety contract exists."""
-    def __init__(self, identity: dict, adapter: Adapter, ledger: Ledger):
+class ModelEngine:
+    """Reference model for failure exploration, not a future Linux executor."""
+    def __init__(self, identity: dict, adapter: ModelAdapter, ledger: Ledger):
+        require(getattr(adapter, "model_only", False) is True, "model-adapter-required")
         self.identity = binding(identity)
         self.adapter = adapter
         self.ledger = ledger
@@ -542,7 +542,7 @@ class Engine:
             after = self._expected(record)
             record = {**record, "phase": "intent"}
             self.ledger.append(record)
-            self.adapter.compare_effect(before, after, record["actions"][record["position"]])
+            self.adapter.model_effect(before, after, record["actions"][record["position"]])
             require(self._state() == after, "effect-readback-mismatch")
             record = self._advance(record, after)
             self.ledger.append(record)

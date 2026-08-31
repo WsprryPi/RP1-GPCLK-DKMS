@@ -9,6 +9,15 @@ source-development deployment remains passive-query-only. V2 identity files
 are not deployment enrollment or route authorization; no v2 installer or
 automatic route startup service is provided.
 
+`python3 scripts/runtime_inventory.py` is a separate bounded read-only collector.
+It accepts no arguments, never opens the RP1 endpoint and never invokes
+dtoverlay. Unreadable files and unavailable commands remain unknown. With
+explicit read-only host authorization it can be run through SSH stdin without
+installation. Its non-atomic report and candidate boot directives never grant
+route administration. See the [target review](../contracts/runtime-route-target-review.md)
+for source-backed limitations and the distinction between matching build notes
+and a full identity of loaded bytes.
+
 This workflow builds an explicitly selected Git commit directly on a Raspberry
 Pi. It does not require or create a Debian package, release manifest, tag,
 compatibility freeze, or qualification claim. Every result is visibly

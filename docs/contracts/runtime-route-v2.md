@@ -2,6 +2,15 @@
 
 # Experimental runtime route protocol v2
 
+The [matching-kernel target review](runtime-route-target-review.md) supersedes
+this document's original proposed hardware-adapter assumptions. The engine is
+now explicitly `ModelEngine`/`ModelAdapter`; its atomic effect model is not a
+Linux interface and must not be implemented by inventing observations. The
+separate `runtime_inventory.py` collector provides actual read-only evidence.
+Target mutation remains unavailable because the reviewed configfs removal path
+does not propagate overlay errors and preserve its handle for recovery, and no
+result-preserving write adapter has been implemented.
+
 This is an **offline implementation with target execution blocked**, not a
 deployable rebootless route manager. It implements closed request validation,
 dual-route artifact identity validation, an append-only transaction engine,
@@ -80,12 +89,12 @@ records do not replace or overwrite v1 current-boot adoption records.
 
 ## Engine and storage
 
-`scripts/runtime_route.py` contains the engine and has no subprocess, shell,
-network, module, or overlay executor. The adapter's `compare_effect` operation
-must atomically verify the complete expected observation and produce an
-attested successor or fail. The test adapter models that requirement; it does
-not prove Linux implements it. In particular, read-then-execute shell commands
-cannot stand in for compare-and-effect across external administrative races.
+`scripts/runtime_route.py` contains `ModelEngine` and has no subprocess, shell,
+network, module, or overlay executor. `ModelAdapter.model_effect` assumes atomic
+comparison of the complete observation and a synthetic successor. It requires
+an explicit `model_only` marker and is only a reference experiment. A real
+executor must use the narrower kernel guarantees established in the target
+review, not emulate this interface with read-then-execute shell commands.
 
 The ordinary modeled switch is:
 
@@ -147,6 +156,12 @@ the adapter must retain administrative exclusion through process death and
 partial restoration; cleanup cannot depend on Python exception handling.
 
 ## Missing target mechanisms and next gated work
+
+The following list records the initial implementation questions. The target
+review now resolves the unload lifetime question more narrowly, rejects a
+whole-system atomic adapter requirement, and identifies loss of the configfs
+overlay-removal result as a concrete blocker. Use that review for next work;
+do not add new UAPI merely to satisfy the reference model.
 
 Code review of `rp1_gpclk_open()` and the canonical ABI-v4 header found no
 persistent administrative admission API spanning endpoint closure, unload,

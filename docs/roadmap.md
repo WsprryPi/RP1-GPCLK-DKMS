@@ -7,6 +7,13 @@ implemented capability, compatibility promise, or qualification claim.
 
 ## Rebootless route switching through runtime overlays
 
+The [wspr5 source/target review](contracts/runtime-route-target-review.md)
+records actual read-only inventory, matching kernel/tool source, and a concrete
+configfs removal-error blocker. The original synthetic atomic adapter model is
+rejected for hardware use. A read-only collector is implemented; a real write
+adapter still needs a result-preserving ownership interface. The installed
+GPIO4 overlay also differs from the current source build.
+
 An [offline v2 transaction engine](contracts/runtime-route-v2.md) now models
 switching, durable journaling, and recovery with deterministic failure tests.
 The target adapter, persistent administrative admission, runtime-overlay
