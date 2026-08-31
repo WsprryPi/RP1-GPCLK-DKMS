@@ -77,6 +77,12 @@ def safe_directory(path):
     for part in path.parts[1:]:
         current /= part
         info = current.lstat()
+        if current == Path('/lib') and stat.S_ISLNK(info.st_mode):
+            if info.st_uid != 0 or os.readlink(current) not in ('usr/lib', '/usr/lib'):
+                raise ValueError('untrusted system library alias')
+            current = Path('/usr/lib')
+            safe_directory(current)
+            continue
         if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
             raise ValueError('untrusted directory: ' + str(current))
 
@@ -102,7 +108,7 @@ def run(argv):
                     raise ValueError('command output limit')
         code = process.wait(timeout=max(0.001, deadline-time.monotonic()))
         if code:
-            raise ValueError('fixed command failed: ' + argv[0] + ' exit=' + str(code))
+            raise ValueError('fixed command failed: ' + argv[0] + ' exit=' + str(code) + ': ' + output.decode('utf-8', errors='replace')[-2048:].strip())
         return output.decode('utf-8').strip()
     finally:
         if process.poll() is None:
@@ -116,8 +122,37 @@ def run(argv):
 
 class Linux:
     def __init__(self):
+        self.lock = self.fd = None
+        try:
+            self.initialize()
+        except BaseException:
+            self.close()
+            raise
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *unused):
+        self.close()
+
+    def close(self):
+        for name in ('fd', 'lock'):
+            fd = getattr(self, name, None)
+            if fd is not None:
+                os.close(fd)
+                setattr(self, name, None)
+
+    def initialize(self):
         if os.geteuid() != 0 or os.uname().release != KERNEL:
             raise ValueError('root and exact reviewed kernel required')
+        safe_directory(STATE)
+        self.lock = os.open(STATE / 'lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+        info = os.fstat(self.lock)
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077:
+            raise ValueError('lock ownership')
+        fcntl.flock(self.lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        if (STATE / 'deployment-pending.json').exists():
+            raise ValueError('unfinished deployment; recover before route administration')
         safe_directory(BINDING.parent)
         raw = read_regular(BINDING)
         self.binding = strict_json(raw)
@@ -126,11 +161,12 @@ class Linux:
                                  'consumerNoteSha256'} or type(self.binding['schemaVersion']) is not int or self.binding['schemaVersion'] != 1 or self.binding['kernel'] != KERNEL:
             raise ValueError('binding schema')
         base = f'/lib/modules/{KERNEL}/updates/dkms/'
-        expected = {base+'rp1_route_controller.ko', base+'rp1_gpclk_dkms.ko',
-                    '/usr/lib/rp1-gpclk-dkms/runtime_controller_admin.py'}
+        from runtime_layout import INVENTORY
+        expected = set(INVENTORY)
         if not isinstance(self.binding['files'], dict) or set(self.binding['files']) != expected:
             raise ValueError('fixed artifact inventory required')
         for name, sha in self.binding['files'].items():
+            safe_directory(Path(name).parent)
             if not isinstance(sha, str) or len(sha) != 64 or digest(read_regular(name, 32*1024*1024)) != sha:
                 raise ValueError('artifact mismatch: ' + name)
         if digest(Path(__file__).read_bytes()) != self.binding['files']['/usr/lib/rp1-gpclk-dkms/runtime_controller_admin.py']:
@@ -143,12 +179,10 @@ class Linux:
         self.boot = read_regular('/proc/sys/kernel/random/boot_id').decode().strip()
         uuid.UUID(self.boot)
         self.note('rp1_route_controller', 'controllerNoteSha256')
-        safe_directory(STATE)
-        self.lock = os.open(STATE / 'lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
-        info = os.fstat(self.lock)
-        if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077:
-            raise ValueError('lock ownership')
-        fcntl.flock(self.lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        if Path('/sys/module/rp1_gpclk_dkms').exists():
+            self.note('rp1_gpclk_dkms', 'consumerNoteSha256')
+            if read_regular('/sys/module/rp1_gpclk_dkms/parameters/live_output').strip() not in (b'N', b'0'):
+                raise ValueError('loaded consumer output is not disabled')
         self.fd = os.open(ENDPOINT, os.O_RDWR | os.O_NOFOLLOW)
         info = os.fstat(self.fd)
         if not stat.S_ISCHR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077:
@@ -217,13 +251,32 @@ class Linux:
         if read_regular('/sys/module/rp1_gpclk_dkms/parameters/live_output').strip() not in (b'N', b'0'):
             raise ValueError('consumer gate mismatch')
 
-    def read_journal(self):
+    def inhibited(self):
         try:
-            return strict_json(read_regular(STATE / 'transaction.json'))
+            self.check_inhibit()
+            return True
+        except ValueError:
+            return False
+
+    def read_manager_record(self):
+        return self.read_record('manager.json')
+
+    def write_manager_record(self, value):
+        self.write_record('manager.json', value)
+
+    def read_journal(self):
+        return self.read_record('transaction.json')
+
+    def read_record(self, name):
+        try:
+            return strict_json(read_regular(STATE / name))
         except FileNotFoundError:
             return None
 
     def write_journal(self, value):
+        self.write_record('transaction.json', value)
+
+    def write_record(self, filename, value):
         data = (json.dumps(value, sort_keys=True) + '\n').encode()
         fd, name = tempfile.mkstemp(prefix='journal-', dir=STATE)
         try:
@@ -231,7 +284,7 @@ class Linux:
                 stream.write(data)
                 stream.flush()
                 os.fsync(stream.fileno())
-            os.replace(name, STATE / 'transaction.json')
+            os.replace(name, STATE / filename)
             fsync_dir(STATE)
         finally:
             if os.path.exists(name):

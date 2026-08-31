@@ -27,8 +27,9 @@ retains the OF match table for explicit binding. The default build retains its
 autoload alias. The consumer remains version
 1.1.2, with changed bytes and no inherited qualification. Output-enabled consumer
 loads are unconditionally rejected by the interlock. Default builds do not link
-the controller or change their administration interface. No DKMS or package
-installation path is added. Changing build modes requires clean isolated build
+the controller or change their administration interface. No default DKMS or package
+installation path is added; the explicit runtime bundle has its own reviewed
+filesystem deployment workflow. Changing build modes requires clean isolated build
 directories; never reuse an opt-in object as a default artifact.
 
 The controller admits only the reviewed Pi 5 Model B / aarch64 /
@@ -89,8 +90,9 @@ A userspace timeout cannot bound a blocked kernel teardown.
 `switch gpio4`, `switch gpio20`, `recover`, and `status`. STATUS reads the
 controller without a route or service effect; it still opens the admin endpoint
 and may create the private lock file. It does not claim application inhibition.
-The tool is not wired into the packaged
-manager, its socket, or WsprryPi. Provisioning must first supply the exact root-owned
+The runtime manager adapter now exposes this transaction on the existing socket
+under its own explicit profile; the packaged manager is unchanged. A companion
+WsprryPi branch provides application/browser protocol support. Provisioning must first supply the exact root-owned
 binding at `/etc/rp1-gpclk-dkms/runtime-controller.json` and a root-owned private
 state directory at `/var/lib/rp1-gpclk-dkms/runtime-admin`. The local-only
 `build_runtime_binding.py` renders a review candidate from compiled modules;
@@ -158,3 +160,14 @@ consumer exclusion, cleanup faults and response-copy failure. Userspace tests
 cover actual transaction logic, command construction, persistent inhibition and
 journal crash boundaries. These do not prove OF notification, kernel scheduling,
 pinctrl state, timing, cleanup, coexistence, rebootless switching or RF safety.
+
+## Runtime manager integration
+
+The explicit runtime profile now has an implementation on the existing manager
+socket, a bounded operator client, and journaled filesystem deployment tooling.
+See [the workflow and its remaining target gates](../operator/runtime-manager-workflow.md).
+Schema 3 is distinct from the packaged and source-development protocols. Exact
+bindings include the entire runtime software inventory; old three-file bindings
+must be regenerated and reviewed. Deployment and administration share one lock,
+and an unfinished deployment blocks administration. Neither this profile nor its
+application consumer may enable output or automatically remove the service mask.

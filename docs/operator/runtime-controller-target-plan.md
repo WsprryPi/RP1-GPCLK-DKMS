@@ -103,3 +103,7 @@ Until those tests pass, report successful target switches only as limited
 clock-disabled observations, not completed crash-recovery or production support.
 RF, transmission, product qualification, release and normal application restart
 remain outside every stage above.
+
+The later [runtime manager workflow](runtime-manager-workflow.md) supplies the
+complete software inventory and journaled deployment procedure. Use it instead of
+manual three-file provisioning; all hardware authorization gates above still apply.

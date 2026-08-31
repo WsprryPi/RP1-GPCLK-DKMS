@@ -422,3 +422,13 @@ The canonical endpoint and route identities are unchanged. The 1.0.1 freeze is
 historical; its GPIO4 positive evidence does not transfer to changed module or
 UAPI bytes. Both routes therefore fail closed until new exact-build evidence is
 issued, and GPIO20 remains unavailable.
+
+### Opt-in runtime management integration
+
+The [runtime manager workflow](../operator/runtime-manager-workflow.md) uses a
+separate schema-3 profile on the existing privileged socket. It binds the complete
+runtime inventory, serializes deployment and route effects, preserves removal
+errors and ownership, and leaves the application inhibited. This development
+profile does not change the packaged compatibility contract, transmission UAPI,
+release status, or hardware qualification. Application/browser adaptation remains
+owned and reviewed in WsprryPi.

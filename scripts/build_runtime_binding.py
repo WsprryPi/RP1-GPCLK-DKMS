@@ -7,11 +7,14 @@ from pathlib import Path
 import sys
 from runtime_inventory import module_note
 from runtime_controller_admin import KERNEL
+from runtime_layout import INVENTORY
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def build(directory):
+    from build_runtime_controller import generate
+    generate(ROOT / "build/runtime-controller")
     base = f'/lib/modules/{KERNEL}/updates/dkms/'
     values = {'schemaVersion': 1, 'kernel': KERNEL, 'files': {}}
     for module, field in (('rp1_route_controller', 'controllerNoteSha256'),
@@ -19,8 +22,9 @@ def build(directory):
         payload = (directory / (module + '.ko')).read_bytes()
         values['files'][base + module + '.ko'] = hashlib.sha256(payload).hexdigest()
         values[field] = hashlib.sha256(module_note(payload)).hexdigest()
-    values['files']['/usr/lib/rp1-gpclk-dkms/runtime_controller_admin.py'] = hashlib.sha256(
-        (ROOT / 'scripts/runtime_controller_admin.py').read_bytes()).hexdigest()
+    for destination, source in INVENTORY.items():
+        if not source.endswith('.ko'):
+            values['files'][destination] = hashlib.sha256((ROOT / source).read_bytes()).hexdigest()
     return values
 
 
