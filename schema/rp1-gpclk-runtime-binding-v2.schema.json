@@ -1,0 +1,134 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Offline runtime-route dual-artifact identity v2 (not enrollment authorization)",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 2
+    },
+    "classification": {
+      "const": "Experimental"
+    },
+    "qualification": {
+      "const": false
+    },
+    "managerCommit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}(?![\\s\\S])"
+    },
+    "managerSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "moduleCommit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}(?![\\s\\S])"
+    },
+    "moduleSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "moduleBuildSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "uapiSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "kernel": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9.+_-]{0,127}(?![\\s\\S])"
+    },
+    "kernelConfigSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "firmwareSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "routes": {
+      "type": "object",
+      "properties": {
+        "gpio4": {
+          "type": "object",
+          "properties": {
+            "overlaySha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+            },
+            "compatibilityId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "allOf": [
+                {
+                  "pattern": "^[A-Za-z0-9._+-]+(?![\\s\\S])"
+                },
+                {
+                  "pattern": "-gpio4-"
+                }
+              ]
+            }
+          },
+          "required": [
+            "overlaySha256",
+            "compatibilityId"
+          ],
+          "additionalProperties": false
+        },
+        "gpio20": {
+          "type": "object",
+          "properties": {
+            "overlaySha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+            },
+            "compatibilityId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "allOf": [
+                {
+                  "pattern": "^[A-Za-z0-9._+-]+(?![\\s\\S])"
+                },
+                {
+                  "pattern": "-gpio20-"
+                }
+              ]
+            }
+          },
+          "required": [
+            "overlaySha256",
+            "compatibilityId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "gpio4",
+        "gpio20"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "classification",
+    "qualification",
+    "managerCommit",
+    "managerSha256",
+    "moduleCommit",
+    "moduleSha256",
+    "moduleBuildSha256",
+    "uapiSha256",
+    "kernel",
+    "kernelConfigSha256",
+    "firmwareSha256",
+    "routes"
+  ],
+  "additionalProperties": false
+}

@@ -2,6 +2,13 @@
 
 # Exact-source development lifecycle
 
+The [runtime-route v2 engine](../contracts/runtime-route-v2.md) is offline-only.
+Do not install its entry point as a route-manager replacement: it reports
+implementation blockers and cannot inspect or switch a target. Existing
+source-development deployment remains passive-query-only. V2 identity files
+are not deployment enrollment or route authorization; no v2 installer or
+automatic route startup service is provided.
+
 This workflow builds an explicitly selected Git commit directly on a Raspberry
 Pi. It does not require or create a Debian package, release manifest, tag,
 compatibility freeze, or qualification claim. Every result is visibly

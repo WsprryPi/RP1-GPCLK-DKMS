@@ -7,6 +7,12 @@ implemented capability, compatibility promise, or qualification claim.
 
 ## Rebootless route switching through runtime overlays
 
+An [offline v2 transaction engine](contracts/runtime-route-v2.md) now models
+switching, durable journaling, and recovery with deterministic failure tests.
+The target adapter, persistent administrative admission, runtime-overlay
+ownership mechanism and post-unload attestation remain unimplemented; the
+separate public v2 entry point blocks every mutation. No deployment is supplied.
+
 The [feasibility review and execution plan](contracts/rebootless-route-feasibility.md)
 records current code capabilities, primary-source findings, migration needs,
 and the separate implementation and target-validation gates. Firmware-applied

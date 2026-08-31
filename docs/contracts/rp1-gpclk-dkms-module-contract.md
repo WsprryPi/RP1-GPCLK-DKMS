@@ -325,6 +325,14 @@ change the module gate, or authorize an operation.
 
 ## Validation
 
+The [Experimental runtime-route v2 engine](runtime-route-v2.md) is an offline
+administrative model with a blocked public entry point. It does not extend the
+module UAPI, enable source-development mutation, enroll runtime ownership, or
+provide a target adapter. Persistent administrative admission, authenticated
+runtime-overlay ownership and post-unload cleanup attestation remain explicit
+implementation gates. Snapshot observations must not be substituted for those
+mechanisms. No kernel or hardware readiness is inferred from its fixture tests.
+
 The additive ABI-v3 passive snapshot contract is specified in
 `docs/contracts/uapi-v3-passive-snapshot.md`. ABI v4 adds the operation-scoped
 live authorization described in `docs/contracts/uapi-v4-operation-live.md`.

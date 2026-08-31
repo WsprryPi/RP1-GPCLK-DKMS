@@ -2,6 +2,11 @@
 
 # Application route manager contract v1
 
+The separate [Experimental runtime-route v2 engine](runtime-route-v2.md) is
+offline-only and not installed or dispatched by this manager. Its public
+entry point blocks every mutation. This v1 contract and its query-only
+source-development integration remain unchanged.
+
 Beginning with 1.1.1, `/usr/sbin/rp1-gpclk-route-manager` is the stable application-facing executor. The 1.1.2 package preserves that contract. It accepts one JSON object on standard input, no command-line arguments, and writes one JSON object to standard output. Both directions use schema version 1 and `schema/rp1-gpclk-route-manager-v1.schema.json`; the contract identifier is `rp1-gpclk-route-manager-v1`.
 
 Requests contain `schemaVersion: 1` and one operation. `query` has no other fields. `preflight` requires `route` (`gpio4` or `gpio20`). `apply-and-reboot` requires `route`, `execute: true`, an 8--64-character `requestId`, and an attributable `actor`. `rollback` and `reconcile` require the same mutation fields except `route`. Unknown or operation-inappropriate fields fail closed.
