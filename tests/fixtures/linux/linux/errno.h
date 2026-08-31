@@ -6,6 +6,7 @@
  * the kernel header during portable host compilation. */
 #define EPERM 1
 #define EIO 5
+#define EBUSY 16
 #define EINVAL 22
 #define ERANGE 34
 
