@@ -80,12 +80,16 @@ controller observations for investigation; never delete them to bypass a check.
 
 ## Remaining proof
 
-Offline tests cover software behavior with injected effects. The target still
-requires coherent installation and service-sandbox validation, exact module
+Offline tests cover software behavior with injected effects. The
+[wspr5 campaign](../evidence/runtime-target-a0f2794/assessment.md) now supplies
+limited exact-artifact installation, same-boot route switching and normal cleanup
+observations. Any new target/deployment still requires coherent installation
+and service-sandbox validation, exact module
 resolution and signing checks, firmware migration assessment, clock-disabled
 GPIO4 and GPIO20 round trips, removal-error/ownership checks, crash recovery,
 consumer exclusion, and independent confirmation that clocks remain disabled.
-Subsequent rebootless switching is implemented but not yet proven on hardware.
+Rebootless switching was observed in that bounded clock-disabled campaign;
+broader reliability and injected-failure behavior remain unproven on hardware.
 No GPIO4 readiness, transmission, timing, interference, or RF qualification is
 claimed. Restoring application/output operation is a separate gate.
 
@@ -104,3 +108,9 @@ single metadata snapshot both to verify payloads and to install the binding.
 Deployment journals must fit the 32 MiB recovery-reader limit, including old and
 new bytes, before effects are permitted. A larger plan requires a separately
 reviewed format/workflow change; it cannot be forced through this installer.
+
+Runtime bundle builds require both `dtc` and `fdtput` from device-tree-compiler.
+The runtime-private DTBOs retain canonical route content and fixups but omit
+exported symbols; packaged firmware DTBOs are unchanged. This avoids the observed
+stock-kernel `/__symbols__` allocation warnings during runtime removal. Exact
+transformed bytes remain embedded in and authenticated against the controller.

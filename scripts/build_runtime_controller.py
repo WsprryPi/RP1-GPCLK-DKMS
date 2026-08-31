@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
+import subprocess
 from build_release import build_dtbo
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,14 +14,21 @@ ROOT = Path(__file__).resolve().parents[1]
 def generate(destination):
     destination.mkdir(parents=True, exist_ok=True)
     dtc = shutil.which('dtc')
-    if not dtc:
-        raise SystemExit('dtc required')
+    fdtput = shutil.which('fdtput')
+    if not dtc or not fdtput:
+        raise SystemExit('dtc and fdtput required')
     header = ['/* SPDX-License-Identifier: GPL-2.0-only OR MIT */']
     identities = {}
     for route in ('gpio4', 'gpio20'):
         source = ROOT / 'overlays' / f'rp1-gpclk-{route}.dts'
         output = destination / f'{route}.dtbo'
         build_dtbo(source, output, dtc)
+        # Runtime routes have no downstream overlay consumers. Exported labels
+        # would add properties to the base /__symbols__ node, whose property
+        # allocations the kernel warns cannot be reclaimed on removal. Keep
+        # every overlay node/phandle and both fixup tables unchanged.
+        subprocess.run([fdtput, '-r', str(output), '/__symbols__'], check=True,
+                       capture_output=True, timeout=10)
         data = output.read_bytes()
         if not 40 < len(data) < 65536:
             raise ValueError('overlay bounds')

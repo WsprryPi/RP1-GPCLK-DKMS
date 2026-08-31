@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 import runtime_controller_admin as admin
 from build_runtime_controller import generate
+from build_release import build_dtbo
+import shutil
 
 
 class Machine:
@@ -74,6 +76,32 @@ class Machine:
 
 
 class Tests(unittest.TestCase):
+    def test_runtime_overlay_only_removes_symbol_exports(self):
+        def tree(path, node='/'):
+            result = {}
+            names = subprocess.check_output(['fdtget', '-p', str(path), node], text=True).splitlines()
+            for name in names:
+                result[node+':'+name] = subprocess.check_output(
+                    ['fdtget', '-t', 'bx', str(path), node, name], text=True)
+            children = subprocess.check_output(['fdtget', '-l', str(path), node], text=True).splitlines()
+            for child in children:
+                if node == '/' and child == '__symbols__': continue
+                result.update(tree(path, node.rstrip('/')+'/'+child))
+            return result
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            generate(root)
+            for route in ('gpio4', 'gpio20'):
+                canonical = root/(route+'-canonical.dtbo')
+                build_dtbo(ROOT/'overlays'/('rp1-gpclk-'+route+'.dts'), canonical, shutil.which('dtc'))
+                runtime = root/(route+'.dtbo')
+                self.assertIn('__symbols__', subprocess.check_output(['fdtget','-l',str(canonical),'/'],text=True))
+                self.assertNotIn('__symbols__', subprocess.check_output(['fdtget','-l',str(runtime),'/'],text=True))
+                values = tree(runtime)
+                self.assertTrue(any('/__fixups__:' in name for name in values))
+                self.assertTrue(any(name.startswith('/__local_fixups__/') for name in values))
+                self.assertEqual(values, tree(canonical))
+
     def test_actual_kernel_entrypoint(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)

@@ -2,7 +2,11 @@
 
 # Separate authorization gate: runtime controller target validation
 
-**NOT AUTHORIZED / NOT EXECUTED.** This plan is the next gate after offline
+**Historical approval plan.** The user subsequently authorized and executed one
+bounded wspr5 campaign; see the
+[execution assessment](../evidence/runtime-target-a0f2794/assessment.md). That
+authorization is not transferable to other targets or output-enabled work.
+This plan records the original next gate after offline
 review of the [controller contract](../contracts/runtime-controller-v1.md).
 AGENTS.md requires separate approval for installation, service state changes,
 module/overlay operations, GPIO administration and reboot. No previous RF or

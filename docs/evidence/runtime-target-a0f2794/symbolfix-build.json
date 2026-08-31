@@ -1,0 +1,55 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "binding": {
+    "consumerNoteSha256": "1c7e23975d82939ce79dd870a2f3ed0e3ba5c774f5d33eac206874ea5ae56988",
+    "controllerNoteSha256": "dffdd6b813fa89443b3e5f9d899b48ae30f46a046fcd02868c639c04d40d398e",
+    "files": {
+      "/etc/systemd/system/rp1-gpclk-route-manager@.service.d/95-runtime-controller.conf": "7117b08f90ea9fd2d08da16be214c2c2887fffeec7f559426f4e57aac49c13b9",
+      "/lib/modules/6.18.34+rpt-rpi-2712/updates/dkms/rp1_gpclk_dkms.ko": "11bd0cdbf0d75b1d258c680e20b80deb18f88cba12124370d80949ae014ccf96",
+      "/lib/modules/6.18.34+rpt-rpi-2712/updates/dkms/rp1_route_controller.ko": "59b3ae00e8a504fe82109ea80f5753831ff92608043e8c206f7adadf4b92b4c8",
+      "/usr/lib/rp1-gpclk-dkms/runtime-overlays/gpio20.dtbo": "e1dc4b66ebcc9eb4a2c6757ca44750b01d56de685eb12f40aed024b2ae08ef98",
+      "/usr/lib/rp1-gpclk-dkms/runtime-overlays/gpio4.dtbo": "364fcdf4d6f4039c5ab24dad858d1e75b5aa9109a70bb5d607f45c53fdf2e5ba",
+      "/usr/lib/rp1-gpclk-dkms/runtime-uapi/rp1_gpclk.h": "23f0d7626fe51ef58f11bcb48bf880d885acf7abfdca5f186e044a0fb1d786e1",
+      "/usr/lib/rp1-gpclk-dkms/runtime-uapi/rp1_route_admin.h": "2f5ea16671be479c9998f300811c501769e2c11d013b04d454acc840db2f01b8",
+      "/usr/lib/rp1-gpclk-dkms/runtime_controller_admin.py": "0733ed29c00ad166c88c5ab9b002283128000b91e3ce6dc4ea8cde47c7c4e30c",
+      "/usr/lib/rp1-gpclk-dkms/runtime_deployment.py": "bd6f261777877896fa3a27ff03e2a21acf81cb2b9c7c5a93545b8dc48dcfefa8",
+      "/usr/lib/rp1-gpclk-dkms/runtime_layout.py": "792458e8114eda8ca6489090af6f56df3945a250feda261218e3087f2ebe0dc2",
+      "/usr/lib/rp1-gpclk-dkms/runtime_manager.py": "1d93571432ec06c628beb9f2dad4522651a726bb6ba7e1bb0aaeff7f5227d926",
+      "/usr/lib/rp1-gpclk-dkms/runtime_route_client.py": "7b3809a04b0cc0711c2ae949d7fade1ddc84e1716bf86cf66e1ab71d274f24a0"
+    },
+    "kernel": "6.18.34+rpt-rpi-2712",
+    "schemaVersion": 1
+  },
+  "bundleFileHashes": {
+    "42ab5759b5af780578d4d905dc2a63d4ccad6492a2f844c23d11071241128fa8.bin": "792458e8114eda8ca6489090af6f56df3945a250feda261218e3087f2ebe0dc2",
+    "43a8cb7273b2f642460dbc54f2f34ecd7c875fecffd5cc51ba1c1d4998a6054e.bin": "0733ed29c00ad166c88c5ab9b002283128000b91e3ce6dc4ea8cde47c7c4e30c",
+    "45699762074217e0f76ff1ea01e02672022e879c8a726fab00c6b53f9e372833.bin": "2f5ea16671be479c9998f300811c501769e2c11d013b04d454acc840db2f01b8",
+    "53032075d4e85cc21b2034e29b739bf15719676540f7dc3b719458f6c9c17b98.bin": "7b3809a04b0cc0711c2ae949d7fade1ddc84e1716bf86cf66e1ab71d274f24a0",
+    "6b7da38177b4cf22b7d455ea7bf8e13d6da858b41464d6529bc3831be46aa244.bin": "bd6f261777877896fa3a27ff03e2a21acf81cb2b9c7c5a93545b8dc48dcfefa8",
+    "84f39bbd5c07566c1a1d11419650d835663b0ce64c1c7a084be5e1053ed1f146.bin": "1d93571432ec06c628beb9f2dad4522651a726bb6ba7e1bb0aaeff7f5227d926",
+    "9a81db1012cd414197b5c0a64aff7638b57fc45647419ec1e9ab7c6928188c63.bin": "364fcdf4d6f4039c5ab24dad858d1e75b5aa9109a70bb5d607f45c53fdf2e5ba",
+    "ab32905b033e2a4a488b2d26acaefbe69d9ac33501582267291a999e26ec66e7.bin": "23f0d7626fe51ef58f11bcb48bf880d885acf7abfdca5f186e044a0fb1d786e1",
+    "ab64899d2f57225fd1bcf50f16860a66035ea28bae539923489281af33115bff.bin": "7117b08f90ea9fd2d08da16be214c2c2887fffeec7f559426f4e57aac49c13b9",
+    "bcc37338e840ee5468b0a6e3add0604b0364718b463bd4b2f61698a08efa7158.bin": "e1dc4b66ebcc9eb4a2c6757ca44750b01d56de685eb12f40aed024b2ae08ef98",
+    "binding.json": "66e3bda60fa91c4ec8035d9af4471f070edb8b4a48a485e5f6c2ce032548f16d",
+    "d8f3d7509b8b77350f227cdcaf0cbeed5e5d5abb6ac35a96dd2c7c173dd6d250.bin": "59b3ae00e8a504fe82109ea80f5753831ff92608043e8c206f7adadf4b92b4c8",
+    "f516a8c196fb9d75c5b3ea190f0b0b8c58a32351d7f33d855725934d4f75bbe2.bin": "11bd0cdbf0d75b1d258c680e20b80deb18f88cba12124370d80949ae014ccf96",
+    "runtime_controller_admin.py": "0733ed29c00ad166c88c5ab9b002283128000b91e3ce6dc4ea8cde47c7c4e30c",
+    "runtime_deployment.py": "bd6f261777877896fa3a27ff03e2a21acf81cb2b9c7c5a93545b8dc48dcfefa8",
+    "runtime_layout.py": "792458e8114eda8ca6489090af6f56df3945a250feda261218e3087f2ebe0dc2"
+  },
+  "classification": "symbol-export-fix-build",
+  "generatedHeaderSha256": "227c8c40cadab5544771ad773a38d68e13a2a8e6911585fbe2bbf1ff9e477ed8",
+  "sourceHashes": {
+    "Kbuild": "a836c360054325aaf75e2d5169baa76da9e272f8fb2b5d58edfc5a674c8c8472",
+    "controller/main.c": "ef846aab2d8c6da8d90ee720d3405ec01152a50cfac770af5302a572433e5d48",
+    "scripts/build_runtime_controller.py": "2222c2152afb3977b618dbdfe42e0c3bb915fa623fb88f939cfebdbb8ad25a72",
+    "tests/check_runtime_controller.py": "2f3625df37dd0dffafa75cb328952f9efec4927882b295693cc6df76c24d9110"
+  },
+  "toolVersions": {
+    "compiler": "GCC 14.2.0 Debian 14.2.0-19",
+    "dtc": "Version: DTC 1.8.1",
+    "fdtput": "Version: DTC 1.8.1",
+    "kernel": "6.18.34+rpt-rpi-2712"
+  }
+}

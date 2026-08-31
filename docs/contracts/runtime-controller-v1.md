@@ -4,10 +4,12 @@
 
 This is the implementation follow-up to PR #6, not a replacement for the
 packaged v1 route manager or the synthetic v2 model. It uses the reviewed stock
-kernel's exported OF APIs. It remains a development implementation pending
-separately authorized target testing, not supported product route switching.
+kernel's exported OF APIs. It remains a development implementation, not supported product route switching.
+Limited exact-target clock-disabled observations are recorded in the
+[wspr5 execution assessment](../evidence/runtime-target-a0f2794/assessment.md).
 The [execution prompt](runtime-controller-execution-prompt.md) defines scope;
-the [target gate](../operator/runtime-controller-target-plan.md) remains closed.
+the [target plan](../operator/runtime-controller-target-plan.md) defines the
+authorization boundary for any subsequent campaign.
 
 ## Build and identity
 
@@ -171,3 +173,15 @@ bindings include the entire runtime software inventory; old three-file bindings
 must be regenerated and reviewed. Deployment and administration share one lock,
 and an unfinished deployment blocks administration. Neither this profile nor its
 application consumer may enable output or automatically remove the service mask.
+
+### Runtime overlay export policy
+
+Target testing found that exporting the runtime overlay's local labels adds
+properties to the base `/__symbols__` node, producing stock-kernel warnings that
+those allocations will leak on removal. Runtime generation now uses `fdtput` to
+remove only the compiled `/__symbols__` subtree before embedding. The canonical
+packaged DTS/DTBO pipeline is unchanged. All route nodes, properties, phandles,
+external `__fixups__` and `__local_fixups__` remain byte-for-byte equal as decoded
+properties; deterministic regression tests compare both trees. Runtime routes do
+not support downstream overlays referencing their labels. This changes controller
+and runtime DTBO identities and requires a fresh coherent deployment binding.
