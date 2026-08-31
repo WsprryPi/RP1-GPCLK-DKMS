@@ -38,6 +38,8 @@ class Machine:
         self.event('journal-before')
         self.journal = copy.deepcopy(value)
         self.event('journal-after')
+    def archive_journal(self, value):
+        self.archived = copy.deepcopy(value)
     def inhibit(self):
         self.event('inhibit-before')
         self.mask = True
@@ -125,6 +127,24 @@ class Tests(unittest.TestCase):
             self.assertEqual(result['route'], route)
             self.assertTrue(machine.mask)
             self.assertEqual(machine.journal['phase'], 'complete-inhibited')
+
+    def test_explicit_prior_boot_recovery_preserves_journal(self):
+        machine = Machine(); admin.execute(machine, 2)
+        old = copy.deepcopy(machine.journal)
+        machine.boot = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+        machine.value = dict(session=8, generation=0, id=0, error=0, route=0, flags=0)
+        with self.assertRaises(ValueError): admin.execute(machine, 2)
+        admin.execute(machine, recover=True)
+        self.assertEqual(machine.archived, old)
+        self.assertEqual(machine.journal['boot'], machine.boot)
+        self.assertEqual(machine.journal['phase'], 'recovered-inhibited')
+        self.assertTrue(machine.mask)
+        self.assertEqual(admin.execute(machine, 2)['route'], 2)
+
+    def test_prior_boot_recovery_rejects_nonempty_controller(self):
+        machine = Machine(); admin.execute(machine, 2)
+        machine.boot = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+        with self.assertRaises(ValueError): admin.execute(machine, recover=True)
 
     def test_crash_every_boundary_requires_explicit_recovery(self):
         sample = Machine(); admin.execute(sample, 1)

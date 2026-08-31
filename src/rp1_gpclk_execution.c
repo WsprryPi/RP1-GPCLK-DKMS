@@ -29,7 +29,6 @@
 #define RP1_GPCLK_DMA_TICK0_CTRL 0x4
 #define RP1_GPCLK_DMA_TICK_REQUEST BIT(0)
 #define RP1_GPCLK_DMA_TICK_SINGLE BIT(1)
-#define RP1_GPCLK_DMA_TICK_FINISH_CLEAR BIT(0)
 #define RP1_GPCLK_DMA_TICK_DWELL (19U << 4)
 #define RP1_GPCLK_FIRMWARE_TICK_CTRL 3U
 #define RP1_GPCLK_FIRMWARE_TICK_CYCLES 50U
@@ -78,7 +77,11 @@ static void rp1_gpclk_tick_start(struct rp1_gpclk_device *device)
 {
 	writel(RP1_GPCLK_TICK_DIVIDER,
 	       device->tick_dma0 + RP1_GPCLK_TICKS_DMA0_CYCLES);
-	writel(RP1_GPCLK_DMA_TICK_FINISH_CLEAR | RP1_GPCLK_DMA_TICK_DWELL,
+	/* dma_finish can occur at an intermediate linked-list block. Keep
+	 * requests enabled until the complete DMA descriptor drains; clearing
+	 * them on the first block strands the next block waiting for DREQ.
+	 */
+	writel(RP1_GPCLK_DMA_TICK_DWELL,
 	       device->dma_tick0 + RP1_GPCLK_DMA_TICK0_CTRL);
 	dma_async_issue_pending(device->dma_chan);
 	writel(RP1_GPCLK_DMA_TICK_REQUEST | RP1_GPCLK_DMA_TICK_SINGLE,

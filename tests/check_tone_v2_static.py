@@ -18,6 +18,9 @@ assert 'dmaengine_terminate_sync(device->dma_chan);' in e
 wait = e[e.index('static int rp1_gpclk_wait_dma'):e.index('static int rp1_gpclk_setup_rate')]
 assert wait.index('if (!completed)') < wait.index('if (atomic_read(&device->stop_requested))')
 assert 'return -ETIMEDOUT;' in wait
+tick = e[e.index('static void rp1_gpclk_tick_start'):e.index('static unsigned long rp1_gpclk_timeout_jiffies')]
+assert 'writel(RP1_GPCLK_DMA_TICK_DWELL,' in tick
+assert 'FINISH_CLEAR' not in tick
 cancel = e[e.index("if (atomic_read(&device->stop_requested)) {"):]
 cancel = cancel[:cancel.index("return -ECANCELED;")]
 assert cancel.index("dmaengine_terminate_sync") < cancel.index("rp1_gpclk_tick_stop")
