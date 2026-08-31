@@ -166,6 +166,23 @@ static int rp1_gpclk_wait_dma(struct rp1_gpclk_device *device,
 	rp1_gpclk_tick_start(device);
 	completed = wait_for_completion_timeout(&device->dma_done,
 		rp1_gpclk_timeout_jiffies(duration_ns));
+	if (!completed) {
+		struct dma_tx_state state = { };
+		enum dma_status status = dmaengine_tx_status(device->dma_chan,
+			device->dma_cookie, &state);
+
+		dev_err(device->dev,
+			"DMA deadline: duration_ns=%llu status=%u residue=%u stop=%d\n",
+			duration_ns, status, state.residue,
+			atomic_read(&device->stop_requested));
+		/* A requested cancellation does not turn a failed drain into
+		 * successful cancellation. Keep pacing available during teardown.
+		 */
+		dmaengine_terminate_sync(device->dma_chan);
+		device->dma_submitted = false;
+		rp1_gpclk_tick_stop(device);
+		return -ETIMEDOUT;
+	}
 	if (atomic_read(&device->stop_requested)) {
 		dmaengine_terminate_sync(device->dma_chan);
 		device->dma_submitted = false;
@@ -173,11 +190,6 @@ static int rp1_gpclk_wait_dma(struct rp1_gpclk_device *device,
 		return -ECANCELED;
 	}
 	rp1_gpclk_tick_stop(device);
-	if (!completed) {
-		dmaengine_terminate_sync(device->dma_chan);
-		device->dma_submitted = false;
-		return -ETIMEDOUT;
-	}
 	/* RP1 DMA must reach a terminated channel state before direction change. */
 	dmaengine_terminate_sync(device->dma_chan);
 	device->dma_submitted = false;

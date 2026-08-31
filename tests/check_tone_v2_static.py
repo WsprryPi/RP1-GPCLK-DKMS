@@ -15,6 +15,9 @@ assert "expected != 0 && ret != -ECANCELED" in e
 assert "completion_done(&context->device->execution_done)" in d
 assert 'if (atomic_read(&device->stop_requested)) {' in e
 assert 'dmaengine_terminate_sync(device->dma_chan);' in e
+wait = e[e.index('static int rp1_gpclk_wait_dma'):e.index('static int rp1_gpclk_setup_rate')]
+assert wait.index('if (!completed)') < wait.index('if (atomic_read(&device->stop_requested))')
+assert 'return -ETIMEDOUT;' in wait
 cancel = e[e.index("if (atomic_read(&device->stop_requested)) {"):]
 cancel = cancel[:cancel.index("return -ECANCELED;")]
 assert cancel.index("dmaengine_terminate_sync") < cancel.index("rp1_gpclk_tick_stop")
