@@ -7,6 +7,12 @@ implemented capability, compatibility promise, or qualification claim.
 
 ## Rebootless route switching through runtime overlays
 
+PR #6 is the completed research/tooling foundation for this work, not the
+runtime-switching implementation. Its delivered scope is source-backed
+feasibility research, a bounded read-only inventory collector, curated target
+observations, and a synthetic transaction model with offline tests. Finalizing
+that scope does not establish route readiness or authorize target changes.
+
 The [wspr5 source/target review](contracts/runtime-route-target-review.md)
 records actual read-only inventory, matching kernel/tool source, and a concrete
 configfs removal-error blocker. The original synthetic atomic adapter model is
@@ -14,11 +20,17 @@ rejected for hardware use. A read-only collector is implemented; a real write
 adapter still needs a result-preserving ownership interface. The installed
 GPIO4 overlay also differs from the current source build.
 
-An [offline v2 transaction engine](contracts/runtime-route-v2.md) now models
+An [offline v2 reference model](contracts/runtime-route-v2.md) models
 switching, durable journaling, and recovery with deterministic failure tests.
-The target adapter, persistent administrative admission, runtime-overlay
-ownership mechanism and post-unload attestation remain unimplemented; the
+Its synthetic atomic effects are not a contract for a Linux adapter. The
 separate public v2 entry point blocks every mutation. No deployment is supplied.
+
+A separate implementation PR must establish a result-preserving overlay
+ownership interface, concrete route effects, coordinated application inhibition,
+and crash recovery. It must then provide coherent artifact deployment and an
+explicitly gated migration/validation plan. A module-owned controller using
+exported stock-kernel overlay APIs is only a candidate architecture for review.
+Neither that controller nor the runtime-switching feature is implemented here.
 
 The [feasibility review and execution plan](contracts/rebootless-route-feasibility.md)
 records current code capabilities, primary-source findings, migration needs,
