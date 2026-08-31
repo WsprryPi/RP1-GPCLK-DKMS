@@ -325,13 +325,23 @@ change the module gate, or authorize an operation.
 
 ## Validation
 
+The opt-in [clock-disabled runtime controller](runtime-controller-v1.md) is a
+separate development implementation using exported stock-kernel overlay APIs.
+It owns overlay IDs and error results, interlocks the consumer's module lifetime,
+rejects output-enabled loads, and supplies concrete inhibited administration and
+same-boot crash recovery. It adds a separate administrative UAPI, not transmission
+commands. It is excluded from default packaging and has no target qualification.
+Deployment and hardware tests remain separately authorized gates. It does not
+enable mutation through the packaged or source-development v1 manager.
+
 The [Experimental runtime-route v2 engine](runtime-route-v2.md) is explicitly an
 offline reference model with a blocked public mutation entry point. The
 [target source review](runtime-route-target-review.md) rejects its synthetic
 atomic effects as a Linux adapter contract and identifies the stock configfs
 removal path's discarded error result as a concrete recovery blocker. A bounded
-read-only collector exists, but no write adapter or deployment path is supplied.
-This work does not extend the module UAPI or enable source-development mutation.
+read-only collector exists; that foundation supplied no write adapter or deployment
+path. The later opt-in controller above does not reuse the synthetic adapter or
+enable source-development v1 mutation.
 Snapshot observations and model tests do not establish exclusion, post-removal
 success, kernel lifetime safety, or hardware readiness.
 

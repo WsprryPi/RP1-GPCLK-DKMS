@@ -6,6 +6,7 @@ all: modules
 
 modules:
 	@test -n "$(KERNEL_BUILD)" || { echo "KERNEL_BUILD=/path/to/kernel/build is required"; exit 2; }
+	$(if $(filter 1,$(RP1_RUNTIME_CONTROLLER)),python3 scripts/build_runtime_controller.py,@true)
 	$(MAKE) -C $(KERNEL_BUILD) M=$(CURDIR) modules
 
 check:

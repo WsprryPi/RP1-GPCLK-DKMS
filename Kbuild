@@ -15,3 +15,10 @@ rp1_gpclk_dkms-y := src/rp1_gpclk_main.o \
 	src/rp1_gpclk_uapi_dispatch.o
 
 ccflags-y += -I$(src)/include -I$(src)/include/uapi
+
+# Deliberate development-only opt-in; the default package remains unchanged.
+ifeq ($(RP1_RUNTIME_CONTROLLER),1)
+obj-m += rp1_route_controller.o
+rp1_route_controller-y := controller/main.o
+ccflags-y += -DRP1_RUNTIME_CONTROLLER -I$(src)/build/runtime-controller
+endif
