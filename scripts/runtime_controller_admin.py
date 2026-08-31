@@ -258,6 +258,21 @@ class Linux:
         except ValueError:
             return False
 
+    def output_snapshot(self):
+        from runtime_output import snapshot
+        return snapshot()
+
+    def output_resume(self):
+        self.check_inhibit()
+        mask = UNIT_DIR / 'wsprrypi.service'
+        mask.unlink()
+        fsync_dir(UNIT_DIR)
+        try:
+            run(('/usr/bin/systemctl', 'daemon-reload'))
+        except BaseException:
+            self.inhibit()
+            raise
+
     def read_manager_record(self):
         return self.read_record('manager.json')
 

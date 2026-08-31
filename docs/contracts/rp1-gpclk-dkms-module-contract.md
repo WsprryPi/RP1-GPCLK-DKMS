@@ -432,3 +432,7 @@ errors and ownership, and leaves the application inhibited. This development
 profile does not change the packaged compatibility contract, transmission UAPI,
 release status, or hardware qualification. Application/browser adaptation remains
 owned and reviewed in WsprryPi.
+
+Runtime-owned routes can use the existing ABI-v4 operation lease through the
+[application reconciliation extension](runtime-output-v1.md). Global output stays
+disabled; this does not add qualification or change the kernel ownership contract.

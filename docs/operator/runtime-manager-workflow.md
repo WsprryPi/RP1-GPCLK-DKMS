@@ -114,3 +114,9 @@ The runtime-private DTBOs retain canonical route content and fixups but omit
 exported symbols; packaged firmware DTBOs are unchanged. This avoids the observed
 stock-kernel `/__symbols__` allocation warnings during runtime removal. Exact
 transformed bytes remain embedded in and authenticated against the controller.
+
+## Resuming application operation
+
+See [runtime output reconciliation](../contracts/runtime-output-v1.md) for coherent
+updates, idle startup, explicit `resume gpio20 --execute`, and the existing
+operation-scoped output path. Route administration alone never authorizes output.

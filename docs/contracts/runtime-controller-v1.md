@@ -121,7 +121,8 @@ replaced. Failures and crashes keep the mask; it blocks ordinary systemd service
 starts, restart-on-failure and boot starts. The tool never unmasks or restarts the
 application. This covers the named service only, not arbitrary root-launched
 processes, alternate units or other applications. Operators must exclude those
-entry points. Independently, the instrumented consumer cannot enable output.
+entry points. The consumer load parameter stays disabled; ABI-v4 operation-scoped output
+is a separate existing path, as clarified in [runtime output reconciliation](runtime-output-v1.md).
 
 The tool unloads only the exact checked consumer with non-forced rmmod, checks
 absence and controller detachment, removes the owned overlay, then applies the
@@ -171,8 +172,9 @@ See [the workflow and its remaining target gates](../operator/runtime-manager-wo
 Schema 3 is distinct from the packaged and source-development protocols. Exact
 bindings include the entire runtime software inventory; old three-file bindings
 must be regenerated and reviewed. Deployment and administration share one lock,
-and an unfinished deployment blocks administration. Neither this profile nor its
-application consumer may enable output or automatically remove the service mask.
+and an unfinished deployment blocks administration. The [output reconciliation extension](runtime-output-v1.md) connects application
+startup to existing ABI-v4 operation authorization and adds explicit mask resumption.
+Route switching itself never authorizes output or automatically releases the mask.
 
 ### Runtime overlay export policy
 
