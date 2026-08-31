@@ -43,7 +43,7 @@ static bool rp1_gpclk_release_identity_allowed(
 	const struct rp1_gpclk_device *device)
 {
 	return device &&
-		rp1_gpclk_route_candidate_allowed(device->route,
+		rp1_gpclk_compatibility_allowed(device->route,
 			utsname()->release, utsname()->machine,
 			RP1_GPCLK_MODULE_VERSION,
 			of_machine_is_compatible("raspberrypi,5-model-b"),

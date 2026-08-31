@@ -30,9 +30,10 @@ assert (ROOT / 'debian/changelog').read_text().startswith('rp1-gpclk-dkms (0.9.0
 assert dev.sha256(ROOT / 'include/uapi/linux/rp1_gpclk.h') == '23f0d7626fe51ef58f11bcb48bf880d885acf7abfdca5f186e044a0fb1d786e1'
 assert json.loads((ROOT / 'uapi-identity.json').read_text())['abi'] == 4
 for route in ('gpio4', 'gpio20'):
-    identifier = f'v0.9.0-pi5-{route}-6.18.34-development'
+    identifier = f'v0.9.0-pi5-{route}'
     assert identifier in (ROOT / 'include/rp1_gpclk/compatibility.h').read_text()
     assert identifier in (ROOT / 'scripts/development_route_manager.py').read_text()
+assert 'RP1_GPCLK_ROUTE_CANDIDATE' not in (ROOT / 'include/rp1_gpclk/compatibility.h').read_text()
 
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)

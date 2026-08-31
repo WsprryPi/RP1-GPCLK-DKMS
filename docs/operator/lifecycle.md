@@ -25,9 +25,11 @@ parameter, combined overlay, hot route change, or automatic substitution.
 
 ## Compatibility and signing
 
-Before loading the module, verify the exact running kernel, hardware, firmware,
-device tree, clock provider, resource layout, selected route, module version,
-UAPI version, and signing policy against an explicit compatibility entry.
+Before loading the module, record the exact running kernel, hardware, firmware
+and device tree; verify that DKMS built the module for that kernel; and validate
+the clock provider, resource layout, selected route, module version, UAPI
+version, signing policy and current Experimental enrollment. The kernel release
+is diagnostic provenance rather than a compatibility-ID component.
 
 The device endpoint remains root-owned and mode `0600`. Signing keys and trust
 enrollment are administrator-owned and are not package content. See
@@ -41,8 +43,9 @@ endpoint does not authorize userspace to create or substitute one.
 
 Loading with live output disabled is distinct from live eligibility. A module
 that builds or loads successfully may still reject all submissions. Live use
-requires the immutable load-time output gate, exact compatibility approval,
-the selected allowlisted route, and application-level authorization.
+requires the immutable load-time output gate, a recognized route compatibility
+identity, the selected allowlisted route, current Experimental enrollment, and
+application-level authorization.
 
 One open file may hold one lease. WSPR, keyed events, and finite TONE are
 bounded; explicit continuous TONE has no hidden duration and persists only
@@ -79,6 +82,8 @@ Use `rp1-gpclk-diagnostics` for bounded read-only inspection. It does not load,
 bind, repair, select a route, edit boot configuration, or operate hardware. See
 [Read-only diagnostics](diagnostics.md).
 
-There is no custom-kernel, `/dev/mem`, raw userspace MMIO, arbitrary-route, or
+There is no `/dev/mem`, raw userspace MMIO, arbitrary-route, or
 alternate-transmitter fallback. Unknown hardware, kernel, device-tree,
-resource, signing, route, UAPI, artifact, or cleanup state remains unavailable.
+resource, signing, route, UAPI, artifact, or cleanup state remains unavailable;
+an identified operator-built stock-kernel combination may be enrolled as
+Experimental without asserting that it is supported or qualified.

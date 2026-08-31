@@ -17,11 +17,10 @@ route_manager = (ROOT / "scripts/rp1-gpclk-route-manager.py").read_text()
 
 for token in (
     '#define RP1_GPCLK_MODULE_VERSION "0.9.0"',
-    '#define RP1_GPCLK_ROUTE_CANDIDATE_KERNEL "6.18.34+rpt-rpi-2712"',
-    '#define RP1_GPCLK_ROUTE_CANDIDATE_ARCH "aarch64"',
-    '#define RP1_GPCLK_ROUTE_CANDIDATE_VERSION "0.9.0"',
-    "v0.9.0-pi5-gpio4-6.18.34-development",
-    "v0.9.0-pi5-gpio20-6.18.34-development",
+    '#define RP1_GPCLK_COMPATIBILITY_ARCH "aarch64"',
+    '#define RP1_GPCLK_COMPATIBILITY_VERSION "0.9.0"',
+    "v0.9.0-pi5-gpio4",
+    "v0.9.0-pi5-gpio20",
 ):
     assert token in version + compat
 
@@ -29,8 +28,10 @@ gpio4_case = implementation[implementation.index("case RP1_GPCLK_ROUTE_GPIO4:"):
 gpio20_case = gpio4_case[gpio4_case.index("case RP1_GPCLK_ROUTE_GPIO20:"):]
 assert gpio20_case.index("return true;") < gpio20_case.index("default:")
 assert "does not transfer predecessor" in implementation
-assert "independent 0.9.0 evidence" in implementation
-assert 'strcmp(module_version, RP1_GPCLK_ROUTE_CANDIDATE_VERSION)' in implementation
+assert "independently attributable" in implementation
+assert "kernel remains diagnostic and build provenance" in implementation
+assert "RP1_GPCLK_ROUTE_CANDIDATE" not in compat + implementation
+assert 'strcmp(module_version, RP1_GPCLK_COMPATIBILITY_VERSION)' in implementation
 assert "pi5_model_b || !resources_validated" in implementation
 for token in (
     'RP1_GPCLK_GPIO4_ENDPOINT_NAME "rp1-gpclk-dkms-gpio4"',

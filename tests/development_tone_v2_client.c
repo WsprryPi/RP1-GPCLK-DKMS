@@ -56,8 +56,8 @@ int main(int argc, char **argv)
 		return 2;
 	}
 	compatibility_id = expected_route == RP1_GPCLK_ROUTE_GPIO4 ?
-		"v0.9.0-pi5-gpio4-6.18.34-development" :
-		"v0.9.0-pi5-gpio20-6.18.34-development";
+			"v0.9.0-pi5-gpio4" :
+			"v0.9.0-pi5-gpio20";
 	if (argc != 2 || (strcmp(argv[1], "finite") && strcmp(argv[1], "continuous")))
 		return 2;
 	operation = !strcmp(argv[1], "finite") ?

@@ -92,6 +92,14 @@ sudo ./scripts/development-route rollback --development-manifest MANIFEST
 sudo ./scripts/development-overlay rollback --manifest MANIFEST
 ```
 
+Before enrolling, query the loaded module and require compatibility ID
+`v0.9.0-pi5-gpio4` or `v0.9.0-pi5-gpio20` for the selected route. If an existing
+0.9.0 installation reports another identifier, keep output inhibited, remove
+its enrollment using the removal command in that enrollment record, perform the
+guarded same-version replacement, and enroll the current installation. Do not
+edit an enrollment record or substitute an expected identifier for the value
+reported by the module.
+
 Overlay installation and route application report affected files, identities,
 ownership, removal evidence, and whether reboot is required.
 They never reboot automatically. GPIO4 and GPIO20 remain independent; a

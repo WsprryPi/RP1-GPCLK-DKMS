@@ -40,10 +40,10 @@ associated with another lease.
 `QUERY` is read/write because userspace supplies the common header and the
 kernel returns the remaining fields. It reports an administratively bound
 allowlisted route; it never selects a route. `capabilities` describes
-implemented operations. `LIVE_ELIGIBLE` may be present only when the exact
-compatibility identity permits live use; its absence overrides submission
-availability for live output. Raw physical/DMA addresses and register offsets
-are never returned.
+implemented operations. `LIVE_ELIGIBLE` may be present only when the recognized
+route compatibility identity and runtime checks permit live use; its absence
+overrides submission availability for live output. Raw physical/DMA addresses
+and register offsets are never returned.
 
 `compatibility_state` and `compatibility_reason` use their separate enums.
 `module_id`, `build_id`, and `compatibility_id` are stable, NUL-terminated,
@@ -61,7 +61,7 @@ Both submission commands point to a tone array. Each tone contains lower and
 upper unsigned Q16 divider values and dither counts. Both counts must be
 nonzero, their checked sum must not exceed `RP1_GPCLK_DITHER_PERIOD_MAX`, and
 the upper divider must equal the lower divider plus one. Divider acceptance is
-further restricted by the recognized provider/layout compatibility identity;
+further restricted by validated provider and resource state;
 the UAPI does not authorize arbitrary register values.
 
 `SUBMIT_WSPR` requires exactly four tones and 162 one-byte symbol indexes.

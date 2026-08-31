@@ -186,7 +186,7 @@ static long rp1_gpclk_query(struct rp1_gpclk_file *context, void __user *user)
 	strscpy(request.module_id, "rp1-gpclk-dkms", sizeof(request.module_id));
 	strscpy(request.build_id, RP1_GPCLK_MODULE_VERSION,
 		sizeof(request.build_id));
-	strscpy(request.compatibility_id, rp1_gpclk_route_candidate_id(route),
+	strscpy(request.compatibility_id, rp1_gpclk_compatibility_id(route),
 		sizeof(request.compatibility_id));
 	if (copy_to_user(user, &request, sizeof(request)))
 		return -EFAULT;
@@ -236,7 +236,7 @@ static long rp1_gpclk_query_v2(struct rp1_gpclk_file *context, void __user *user
 	request.max_tone_duration_ns = RP1_GPCLK_TONE_DURATION_NS_MAX;
 	strscpy(request.module_id, "rp1-gpclk-dkms", sizeof(request.module_id));
 	strscpy(request.build_id, RP1_GPCLK_MODULE_VERSION, sizeof(request.build_id));
-	strscpy(request.compatibility_id, rp1_gpclk_route_candidate_id(route),
+	strscpy(request.compatibility_id, rp1_gpclk_compatibility_id(route),
 		sizeof(request.compatibility_id));
 	if (copy_to_user(user, &request, sizeof(request)))
 		return -EFAULT;
@@ -681,7 +681,7 @@ static long rp1_gpclk_get_snapshot_v3(struct rp1_gpclk_file *context,
 	strscpy(request.build_id, RP1_GPCLK_MODULE_VERSION,
 		sizeof(request.build_id));
 	strscpy(request.compatibility_id,
-		rp1_gpclk_route_candidate_id(device->route),
+		rp1_gpclk_compatibility_id(device->route),
 		sizeof(request.compatibility_id));
 	mutex_unlock(&device->lock);
 

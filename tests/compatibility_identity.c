@@ -38,28 +38,37 @@ int main(void)
 	CHECK(!rp1_gpclk_gpio4_candidate_allowed(RP1_GPCLK_ROUTE_GPIO4,
 		kernel, arch, NULL, true, true));
 
-	version = RP1_GPCLK_ROUTE_CANDIDATE_VERSION;
-	CHECK(rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO4,
-		RP1_GPCLK_ROUTE_CANDIDATE_KERNEL,
-		RP1_GPCLK_ROUTE_CANDIDATE_ARCH, version, true, true));
-	CHECK(rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO20,
-		RP1_GPCLK_ROUTE_CANDIDATE_KERNEL,
-		RP1_GPCLK_ROUTE_CANDIDATE_ARCH, version, true, true));
-	CHECK(!strcmp(rp1_gpclk_route_candidate_id(RP1_GPCLK_ROUTE_GPIO4),
-		RP1_GPCLK_GPIO4_DEVELOPMENT_CANDIDATE_ID));
-	CHECK(!strcmp(rp1_gpclk_route_candidate_id(RP1_GPCLK_ROUTE_GPIO20),
-		RP1_GPCLK_GPIO20_DEVELOPMENT_CANDIDATE_ID));
-	CHECK(strcmp(rp1_gpclk_route_candidate_id(RP1_GPCLK_ROUTE_GPIO4),
-		rp1_gpclk_route_candidate_id(RP1_GPCLK_ROUTE_GPIO20)));
-	CHECK(!rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO4,
-		RP1_GPCLK_ROUTE_CANDIDATE_KERNEL,
-		RP1_GPCLK_ROUTE_CANDIDATE_ARCH, "1.1.1", true, true));
-	CHECK(!rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO4,
-		RP1_GPCLK_ROUTE_CANDIDATE_KERNEL,
-		RP1_GPCLK_ROUTE_CANDIDATE_ARCH, version, false, true));
-	CHECK(!rp1_gpclk_route_candidate_allowed(RP1_GPCLK_ROUTE_GPIO4,
-		RP1_GPCLK_ROUTE_CANDIDATE_KERNEL,
-		RP1_GPCLK_ROUTE_CANDIDATE_ARCH, version, true, false));
-	puts("compatibility identity: PASS (independent GPIO4/GPIO20 development candidates)");
+	version = RP1_GPCLK_COMPATIBILITY_VERSION;
+	CHECK(rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
+		"6.18.34+rpt-rpi-2712",
+		RP1_GPCLK_COMPATIBILITY_ARCH, version, true, true));
+	CHECK(rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO20,
+		"6.18.35+rpt-rpi-2712",
+		RP1_GPCLK_COMPATIBILITY_ARCH, version, true, true));
+	CHECK(rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
+		"experimental-operator-kernel",
+		RP1_GPCLK_COMPATIBILITY_ARCH, version, true, true));
+	CHECK(!strcmp(rp1_gpclk_compatibility_id(RP1_GPCLK_ROUTE_GPIO4),
+		RP1_GPCLK_GPIO4_COMPATIBILITY_ID));
+	CHECK(!strcmp(rp1_gpclk_compatibility_id(RP1_GPCLK_ROUTE_GPIO20),
+		RP1_GPCLK_GPIO20_COMPATIBILITY_ID));
+	CHECK(strcmp(rp1_gpclk_compatibility_id(RP1_GPCLK_ROUTE_GPIO4),
+		rp1_gpclk_compatibility_id(RP1_GPCLK_ROUTE_GPIO20)));
+	CHECK(!rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
+		"6.18.34+rpt-rpi-2712",
+		RP1_GPCLK_COMPATIBILITY_ARCH, "1.1.1", true, true));
+	CHECK(!rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
+		"6.18.34+rpt-rpi-2712",
+		RP1_GPCLK_COMPATIBILITY_ARCH, version, false, true));
+	CHECK(!rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
+		"6.18.34+rpt-rpi-2712",
+		RP1_GPCLK_COMPATIBILITY_ARCH, version, true, false));
+	CHECK(!rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
+		"", RP1_GPCLK_COMPATIBILITY_ARCH, version, true, true));
+	CHECK(!rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
+		NULL, RP1_GPCLK_COMPATIBILITY_ARCH, version, true, true));
+	CHECK(!rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
+		"6.18.34+rpt-rpi-2712", "armv7l", version, true, true));
+	puts("compatibility identity: PASS (kernel-independent GPIO4/GPIO20 Experimental identities)");
 	return 0;
 }

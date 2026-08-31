@@ -91,9 +91,8 @@ kernel internals, arbitrary physical addresses, or another transmitter backend.
 
 The stock `clk-rp1` provider remains authoritative for ordinary clock
 operations. Resources are derived from device tree and exported kernel APIs.
-Provider identity, resource layout, DMA translation, pinctrl state, clock
-state, and route must all match an explicit compatibility entry before live use
-can become eligible.
+Provider identity, resource layout, DMA translation, pinctrl state, clock state,
+and route must pass runtime validation before live use can become eligible.
 
 The module supplies GPCLK0 and the RP1 200 MHz `pll_sys` output as distinct
 named clock resources. An output operation explicitly selects the
@@ -207,7 +206,7 @@ SHA-256 recorded in `release/uapi-contract-freeze-v1.0.1.json`; that manifest
 also freezes ioctl identities and sizes, GPIO4/GPIO20 route identities, lease,
 submission, terminal-state, cleanup, packaging, and version relationships.
 Submission remains unavailable unless both the immutable load-time output gate
-and an exact positive compatibility entry for the selected route permit it.
+and a recognized compatibility identity for the selected route permit it.
 
 Changing the endpoint or canonical UAPI reopens the freeze and invalidates
 dependent consumer work. Final documentation freeze remains pending until
@@ -259,27 +258,36 @@ STOP was requested; cancellation cannot relabel a failed drain as success.
 
 ## Compatibility
 
-Compatibility is deny-by-default. A live-eligible entry binds the module
-release and UAPI to the relevant kernel, architecture, hardware, firmware,
-device tree, clock provider, resource layout, DMA translation, route overlay,
-and signing policy.
+Compatibility is deny-by-default for unknown product versions, architectures,
+hardware families, routes, UAPI contracts, resources, ownership and cleanup
+state. The compatibility ID binds the module version, Pi 5 family and route. It
+does not encode a kernel release or act as a per-kernel permission list.
 
-Unknown, missing, ambiguous, or mismatched identity disables live eligibility.
-A successful module build establishes build compatibility only. It does not
-qualify loading, binding, GPIO output, timing, cleanup, coexistence,
-transmission, RF behavior, or a different system.
+The exact kernel, configuration, firmware and device tree remain build,
+diagnostic and evidence observations. For Experimental use, an operator may
+explicitly enroll a 0.9.0 module built by DKMS for another stock Raspberry Pi
+kernel. Eligibility still requires the aarch64 Pi 5 Model B boundary, an
+allowlisted route, validated provider/resources, current module/UAPI/artifact
+identity, applicable signing policy, explicit operator authorization and clean
+runtime state. Unknown, missing, ambiguous, or mismatched mandatory runtime
+state disables live eligibility.
 
-The module contains independent GPIO4 and
-GPIO20 development-candidate entries for the Raspberry Pi 5 Model B / BCM2712
-/ aarch64 / 6.18.34+rpt-rpi-2712 target class. The unique active device-tree
-route selects which entry can pass; the other route is absent. Zero active
-route overlays provides no endpoint. Both overlays present is ambiguous and
+A successful module build establishes build compatibility only. Experimental
+enrollment permits an operator-controlled attempt but does not qualify loading,
+binding, GPIO output, timing, cleanup, coexistence, transmission, RF behavior,
+or a different system. Qualified claims remain tied to the exact system and
+evidence on which they were established.
+
+The module contains independent GPIO4 and GPIO20 Experimental entries for the
+Raspberry Pi 5 Model B / BCM2712 / aarch64 target class. The unique active
+device-tree route selects which entry can pass; the other route is absent. Zero
+active route overlays provides no endpoint. Both overlays present is ambiguous and
 must fail closed; overlay order never selects a route. There is no fallback,
 substitution, or evidence transfer between GPIO4 and GPIO20. These entries
 permit bounded development testing only and are reported as `Experimental`;
 they are not completed qualification or normal product live eligibility.
-Hostname is retained in target evidence and is not a kernel compatibility
-input.
+Hostname and kernel release are retained in target evidence and are not
+compatibility-ID components.
 
 ## Packaging and administration
 

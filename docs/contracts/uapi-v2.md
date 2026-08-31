@@ -34,7 +34,7 @@ chunk is not an operator-visible duration.
 publishes COMPLETE/COMPLETE after cleanup. The one-second qualification form
 uses exactly 1,000,000,000 ns. Zero and overflowed/out-of-range durations fail.
 
-Both forms require an exact positive route-specific compatibility identity and
+Both forms require a recognized route-specific compatibility identity and
 LIVE_ELIGIBLE at ACQUIRE and submission. Release 1.1.0 has no transferred
 positive entry, so output remains unavailable pending fresh target evidence.
 

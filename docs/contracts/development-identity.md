@@ -22,15 +22,26 @@ ownership, capability and cleanup contracts without a product-mode allowlist.
 | Administrative UAPI | `rp1_route_admin.h`, ABI 1, unchanged |
 | Development manifest | `rp1-gpclk-source-development-manifest-v1`, unchanged schema |
 | Route-manager protocols | packaged/source v1; runtime request schema 3, unchanged |
-| GPIO4 compatibility ID | `v0.9.0-pi5-gpio4-6.18.34-development` |
-| GPIO20 compatibility ID | `v0.9.0-pi5-gpio20-6.18.34-development` |
+| GPIO4 compatibility ID | `v0.9.0-pi5-gpio4` |
+| GPIO20 compatibility ID | `v0.9.0-pi5-gpio20` |
 | Classification | source-development / Experimental; not release-qualified |
 | Future tag convention | `vMAJOR.MINOR.PATCH`; no `v0.9.0` tag is created |
 
 Product, Debian, DKMS, UAPI and schema versions are distinct. Current
-compatibility IDs retain route and Experimental development classification;
-exact hashes identify each build. Canonical route overlay names and endpoint
-nodes are stable and carry no product-version suffix.
+compatibility IDs identify the Pi 5 product version and route. `Experimental`
+is reported separately through the UAPI and enrollment state. Kernel release is
+recorded in build manifests, diagnostics and enrollment records, but is not part
+of the compatibility ID and is not a per-release permission list. Exact hashes
+identify each build. Canonical route overlay names and endpoint nodes are stable
+and carry no product-version suffix.
+
+An operator may build 0.9.0 through DKMS for another stock Raspberry Pi kernel
+and explicitly enroll that installation for Experimental use without defining a
+new compatibility ID. The running kernel must still be identified, the module
+must be built for it, and all hardware, route, resource, ownership, signing and
+cleanup checks still apply. Such use establishes no support or qualification
+claim. A kernel change can change module bytes and therefore requires the normal
+DKMS rebuild and current-installation enrollment checks.
 
 The supported development paths are `development-*` and the opt-in runtime
 manager. Release generation and finalization are disabled until the release

@@ -25,12 +25,15 @@ Development eligibility remains `Experimental`.
 
 Installing the package does not select an overlay, edit boot configuration,
 load the module, enable a clock, change GPIO state, or authorize transmission.
-Both overlays are installed inactive. Route selection and live operation are
-separate administrative decisions that must satisfy the compatibility and
-safety policy for the exact system.
+Both overlays are installed inactive. Route selection, Experimental enrollment,
+and live operation are separate administrative decisions. Compatibility IDs are
+stable across kernel releases; the exact kernel remains visible in build and
+diagnostic records.
 
-Unknown or unsupported hardware, kernels, firmware, device trees, routes,
-resources, signing state, compatibility state, or cleanup state fail closed.
+Unknown hardware, routes, resources, signing state, compatibility state, or
+cleanup state fail closed. Operators may explicitly enroll an identified 0.9.0
+DKMS build on another stock Raspberry Pi kernel as Experimental; that does not
+make the kernel supported or qualified.
 There is no `/dev/mem`, raw userspace MMIO, custom-kernel, arbitrary-route, or
 alternate-transmitter fallback.
 
