@@ -29,6 +29,7 @@
 #define RP1_GPCLK_DMA_TICK0_CTRL 0x4
 #define RP1_GPCLK_DMA_TICK_REQUEST BIT(0)
 #define RP1_GPCLK_DMA_TICK_SINGLE BIT(1)
+#define RP1_GPCLK_DMA_TICK_DREQ BIT(12)
 #define RP1_GPCLK_DMA_TICK_DWELL (19U << 4)
 #define RP1_GPCLK_FIRMWARE_TICK_CTRL 3U
 #define RP1_GPCLK_FIRMWARE_TICK_CYCLES 50U
@@ -276,7 +277,8 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 	device->initial_dma_tick0_en =
 		readl(device->dma_tick0 + RP1_GPCLK_DMA_TICK0_EN);
 	device->initial_dma_tick0_ctrl =
-		readl(device->dma_tick0 + RP1_GPCLK_DMA_TICK0_CTRL);
+		readl(device->dma_tick0 + RP1_GPCLK_DMA_TICK0_CTRL) &
+		~RP1_GPCLK_DMA_TICK_DREQ;
 	device->tick_state_captured = true;
 	if (device->initial_dma_tick0_en || device->initial_dma_tick0_ctrl ||
 	    (device->initial_tick_dma0_ctrl &&
@@ -394,7 +396,8 @@ static int rp1_gpclk_machine_terminate_dma(void *argument)
 			observed == device->initial_dma_tick0_en, 1, 1000);
 		ret = ret ?: readl_poll_timeout(
 			device->dma_tick0 + RP1_GPCLK_DMA_TICK0_CTRL, observed,
-			observed == device->initial_dma_tick0_ctrl, 1, 1000);
+			(observed & ~RP1_GPCLK_DMA_TICK_DREQ) ==
+			device->initial_dma_tick0_ctrl, 1, 1000);
 		if (ret) {
 			dev_err(device->dev,
 				"phase4d cleanup: tick register restoration verification failed\n");

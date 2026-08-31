@@ -338,6 +338,8 @@ def execute(system, route=None, recover=False):
         uuid.UUID(previous['boot'])
         observed = previous['observation']
         validate_observation(observed)
+        if type(previous['session']) is not int or observed['session'] != previous['session']:
+            raise ValueError('journal observation session mismatch')
         if previous['boot'] != system.boot:
             if not recover or any(current[k] for k in ('generation', 'id', 'route', 'error', 'flags')):
                 raise ValueError('prior boot recovery requires an empty new controller')
