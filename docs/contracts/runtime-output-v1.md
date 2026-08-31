@@ -55,3 +55,9 @@ A failed update uses the existing deployment journal recovery while modules are
 unloaded. A failed route operation keeps its ID/error and requires explicit
 recovery. Preserve target evidence, including any failed operation, and do not
 claim output success from compilation or idle reconciliation alone.
+
+After a reboot, load the reviewed controller and use explicit `recover --execute`
+before switching. If its new state is completely empty, recovery archives the
+previous boot's journal and establishes a current neutral record. A nonempty or
+faulted controller is not adopted through this path. Recovery leaves output
+disabled and the application masked.

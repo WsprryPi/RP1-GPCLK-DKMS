@@ -251,6 +251,12 @@ temporarily stop and later restore only that exact `CTRL=3`, `CYCLES=50`,
 remain ownership conflicts. This exception does not permit takeover of an
 active DMA handshake or a different tick configuration.
 
+The read-only DMA_TICK DREQ pulse is excluded from configuration ownership and
+restoration comparisons. It is not an enable bit. Runtime DMA uses word-aligned
+scatterlist entries, keeps pacing enabled across linked blocks, and stops pacing
+when the entire descriptor completes. A DMA deadline remains a failure even when
+STOP was requested; cancellation cannot relabel a failed drain as success.
+
 ## Compatibility
 
 Compatibility is deny-by-default. A live-eligible entry binds the module
