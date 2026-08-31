@@ -56,8 +56,8 @@ int main(int argc, char **argv)
 		return 2;
 	}
 	compatibility_id = expected_route == RP1_GPCLK_ROUTE_GPIO4 ?
-		"v1.1.2-pi5-gpio4-6.18.34-development-candidate-r4" :
-		"v1.1.2-pi5-gpio20-6.18.34-development-candidate-r4";
+		"v0.9.0-pi5-gpio4-6.18.34-development" :
+		"v0.9.0-pi5-gpio20-6.18.34-development";
 	if (argc != 2 || (strcmp(argv[1], "finite") && strcmp(argv[1], "continuous")))
 		return 2;
 	operation = !strcmp(argv[1], "finite") ?
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
 	if (fd < 0) { perror("open"); return 1; }
 	header(&query.header, sizeof(query), RP1_GPCLK_UAPI_ABI_V2);
 	if (ioctl(fd, RP1_GPCLK_IOC_QUERY_V2, &query)) { perror("QUERY_V2"); return 1; }
-	if (query.route != expected_route || strcmp(query.build_id, "1.1.2") ||
+	if (query.route != expected_route || strcmp(query.build_id, "0.9.0") ||
 	    strcmp(query.compatibility_id, compatibility_id) ||
 	    !(query.capabilities & RP1_GPCLK_CAP_LIVE_ELIGIBLE))
 		return 1;

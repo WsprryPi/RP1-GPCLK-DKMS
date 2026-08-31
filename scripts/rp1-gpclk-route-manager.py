@@ -7,7 +7,7 @@ from pathlib import Path, PurePosixPath
 from typing import Callable
 
 SCHEMA_VERSION=1; CONTRACT="rp1-gpclk-route-manager-v1"; PACKAGE="rp1-gpclk-dkms"
-VERSION="1.1.2"; DEBIAN_VERSION="1.1.2-1"; MODULE="rp1_gpclk_dkms"
+VERSION="0.9.0"; DEBIAN_VERSION="0.9.0-1"; MODULE="rp1_gpclk_dkms"
 PREDECESSOR_VERSION="1.1.1"; PREDECESSOR_DEBIAN_VERSION="1.1.1-1"
 CONFIG="/boot/firmware/config.txt"; BOOT_ID="/proc/sys/kernel/random/boot_id"
 JOURNAL_DIR="/var/lib/rp1-gpclk-dkms/route-transactions"
@@ -17,7 +17,7 @@ BEGIN="# BEGIN RP1-GPCLK-DKMS OWNED ROUTE"; END="# END RP1-GPCLK-DKMS OWNED ROUT
 UAPI_SHA256="23f0d7626fe51ef58f11bcb48bf880d885acf7abfdca5f186e044a0fb1d786e1"
 SOURCE_DEVELOPMENT_BINDING_ENV="RP1_GPCLK_SOURCE_DEVELOPMENT_BINDING"
 ADOPTION_SCHEMA="rp1-gpclk-route-manager-current-boot-adoption-v1"
-OVERLAY_SHA256={"gpio4":"c3e17a685694928468bb18c24f5bb4e25454745d6989e6c9d2c2acf447b908d6","gpio20":"8eaa8afae7f88a665fc9bec6da1b013be049b2a32c909c729caeff9181bcf3aa"}
+OVERLAY_SHA256={"gpio4":"96b157b50961ebf74915f84186494f9a0d5427faa59bf9729a8bd4c95dc5f681","gpio20":"b43691796628e4675f9f8cae8aef187cc670b3f7a3713cb67e352ee585c53713"}
 ROUTE_ID={"gpio4":1,"gpio20":2}; OPERATIONS={"query","preflight","apply-and-reboot","rollback","reconcile"}
 MUTATIONS={"apply-and-reboot","rollback","reconcile"}; SERVICES=("wsprrypi.service","soapyremote-server.service")
 REQUEST_ID=re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{7,63}"); ACTOR=re.compile(r"[A-Za-z0-9][A-Za-z0-9._:@/-]{1,127}")
@@ -90,6 +90,7 @@ def parse_config(payload:bytes)->str|None:
         raise ContractError("source-development route ownership is malformed or ambiguous")
     current_line=f"# contract={CONTRACT} package={DEBIAN_VERSION} route={block_routes[0]}" if block_routes else ""
     historical_lines=({
+        f"# contract={CONTRACT} package=1.1.2-1 route={block_routes[0]}",
         f"# version={PREDECESSOR_VERSION} route={block_routes[0]}",
         f"# contract={CONTRACT} package={PREDECESSOR_DEBIAN_VERSION} route={block_routes[0]}",
     } if block_routes else set())

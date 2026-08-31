@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse, errno, fcntl, grp, hashlib, json, os, pathlib, platform, pwd, stat, struct, subprocess
 from typing import Callable
 
-PACKAGE, MODULE, VERSION = "rp1-gpclk-dkms", "rp1_gpclk_dkms", "1.1.2"
+PACKAGE, MODULE, VERSION = "rp1-gpclk-dkms", "rp1_gpclk_dkms", "0.9.0"
 DEVICE = "/dev/rp1-gpclk"
 FILE_LIMIT, LOG_LIMIT, COMMAND_LIMIT, TIMEOUT = 4096, 16384, 8192, 5
 # The UAPI uses __aligned_u64, so native C alignment is part of the ioctl size.

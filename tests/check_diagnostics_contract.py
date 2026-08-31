@@ -67,7 +67,7 @@ with tempfile.TemporaryDirectory() as temporary:
     assert set(report) >= set(contract["requiredSections"])
 
     development=root/"development.json"
-    write(root,"/development.json",{"schema":"rp1-gpclk-source-development-manifest-v1","classification":"source-development","qualification":False,"moduleName":module.MODULE,"sourceCommit":"a"*40,"renderedVersion":"1.1.2","targetKernel":kernel,"route":"gpio4"})
+    write(root,"/development.json",{"schema":"rp1-gpclk-source-development-manifest-v1","classification":"source-development","qualification":False,"moduleName":module.MODULE,"sourceCommit":"a"*40,"renderedVersion":"0.9.0","targetKernel":kernel,"route":"gpio4"})
     development_report=module.Collector(root,runner,kernel,"aarch64").collect(None,development)
     assert development_report["development"]["status"]=="ok"
     assert development_report["summary"]["compatibilityState"]=="Experimental"

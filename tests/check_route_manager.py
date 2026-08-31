@@ -34,8 +34,8 @@ class Fixture:
         target=self.root/path.lstrip("/"); target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(payload)
     def runner(self,argv):
         self.calls.append(argv)
-        if argv[:3]==["/usr/bin/dpkg-query","-W","-f=${Status}|${Version}"]: return "install ok installed|1.1.2-1\n"
-        if argv[:4]==["/usr/sbin/modinfo","-F","version",manager.MODULE]: return "1.1.2\n"
+        if argv[:3]==["/usr/bin/dpkg-query","-W","-f=${Status}|${Version}"]: return "install ok installed|0.9.0-1\n"
+        if argv[:4]==["/usr/sbin/modinfo","-F","version",manager.MODULE]: return "0.9.0\n"
         if argv[:3]==["/usr/bin/systemctl","show","--property=ActiveState"]: return self.services[argv[-1]]+"\n"
         if argv[:2]==["/usr/bin/systemctl","stop"]:
             if argv[-1]==self.fail_stop: raise OSError("injected stop failure")
@@ -135,9 +135,12 @@ predecessor=(f"{manager.BEGIN}\n# contract={manager.CONTRACT} package=1.1.1-1 ro
              f"dtoverlay=rp1-gpclk-gpio20\n{manager.END}\n").encode()
 assert manager.parse_config(predecessor)=="gpio20"
 assert manager.config_ownership(predecessor)=="historical-package-owned"
+previous_current=predecessor.replace(b"1.1.1-1",b"1.1.2-1")
+assert manager.parse_config(previous_current)=="gpio20"
+assert manager.config_ownership(previous_current)=="historical-package-owned"
 upgraded=manager.config_for_route(b"# base\n\n"+predecessor,"gpio4")
 assert manager.parse_config(upgraded)=="gpio4" and manager.config_ownership(upgraded)=="current"
-assert b"package=1.1.1-1" not in upgraded and b"package=1.1.2-1" in upgraded
+assert b"package=1.1.1-1" not in upgraded and b"package=0.9.0-1" in upgraded
 
 with tempfile.TemporaryDirectory() as temporary:
     fixture=Fixture(pathlib.Path(temporary)); env=fixture.env(); env.path(manager.CONFIG).write_bytes(b"# base\n\n"+legacy)
@@ -177,9 +180,9 @@ with tempfile.TemporaryDirectory() as temporary:
     env.path(manager.CONFIG).write_bytes(manager.config_for_route(b"# base\n","gpio4"))
     executable=env.path("/opt/development/rp1-gpclk-route-manager"); executable.parent.mkdir(parents=True); executable.write_bytes((ROOT/"scripts/rp1-gpclk-route-manager.py").read_bytes())
     manifest=env.path("/opt/development/DEVELOPMENT_MANIFEST.json")
-    manifest.write_text(json.dumps({"schema":"rp1-gpclk-source-development-manifest-v1","classification":"source-development","qualification":False,"sourceCommit":"7"*40,"renderedVersion":"1.1.2","targetKernel":"fixture-kernel","route":"gpio4","uapiIdentity":{"sha256":manager.sha256_bytes(fixture.uapi)}}))
+    manifest.write_text(json.dumps({"schema":"rp1-gpclk-source-development-manifest-v1","classification":"source-development","qualification":False,"sourceCommit":"7"*40,"renderedVersion":"0.9.0","targetKernel":"fixture-kernel","route":"gpio4","uapiIdentity":{"sha256":manager.sha256_bytes(fixture.uapi)}}))
     binding=env.path("/opt/development/binding.json")
-    value={"schema":"rp1-gpclk-route-manager-source-development-v1","classification":"Experimental/source-development","qualification":False,"sourceCommit":"8"*40,"moduleSourceCommit":"7"*40,"sourceManifest":"/opt/development/DEVELOPMENT_MANIFEST.json","sourceManifestSha256":manager.sha256(manifest),"executable":"/opt/development/rp1-gpclk-route-manager","executableSha256":manager.sha256(executable),"adoptionRecord":"/opt/development/current-boot-ownership.json","module":manager.MODULE,"moduleVersion":"1.1.2","uapiSha256":manager.sha256_bytes(fixture.uapi),"kernel":"fixture-kernel","route":"gpio4","compatibilityId":"v1.1.2-pi5-gpio4-6.18.34-development-candidate-r4"}
+    value={"schema":"rp1-gpclk-route-manager-source-development-v1","classification":"Experimental/source-development","qualification":False,"sourceCommit":"8"*40,"moduleSourceCommit":"7"*40,"sourceManifest":"/opt/development/DEVELOPMENT_MANIFEST.json","sourceManifestSha256":manager.sha256(manifest),"executable":"/opt/development/rp1-gpclk-route-manager","executableSha256":manager.sha256(executable),"adoptionRecord":"/opt/development/current-boot-ownership.json","module":manager.MODULE,"moduleVersion":"0.9.0","uapiSha256":manager.sha256_bytes(fixture.uapi),"kernel":"fixture-kernel","route":"gpio4","compatibilityId":"v0.9.0-pi5-gpio4-6.18.34-development"}
     binding.write_text(json.dumps(value)); old=os.environ.get(manager.SOURCE_DEVELOPMENT_BINDING_ENV); os.environ[manager.SOURCE_DEVELOPMENT_BINDING_ENV]="/opt/development/binding.json"
     try:
         original_passive_safety=manager.source_development_passive_safety
@@ -189,7 +192,7 @@ with tempfile.TemporaryDirectory() as temporary:
         manager.source_development_passive_safety=lambda unused:{"services":{name:"inactive" for name in manager.SERVICES},"servicesQuiesced":True,"endpointOwned":True,"endpointOpen":False,"liveOutput":True}
         assert manager.dispatch(request("query"),env)["state"]["safety"]["liveOutput"] is True
         state=result["state"]; adoption=env.path(value["adoptionRecord"])
-        adoption.write_text(json.dumps({"schema":manager.ADOPTION_SCHEMA,"classification":"Experimental/source-development","qualification":False,"adoptedAtUnix":1,"bootId":state["bootId"],"configSha256":state["configSha256"],"route":"gpio4","sourceCommit":value["sourceCommit"],"executableSha256":value["executableSha256"],"moduleSourceCommit":value["moduleSourceCommit"],"moduleManifestSha256":value["sourceManifestSha256"],"moduleVersion":"1.1.2","uapiSha256":value["uapiSha256"],"kernel":"fixture-kernel","compatibilityId":value["compatibilityId"]}))
+        adoption.write_text(json.dumps({"schema":manager.ADOPTION_SCHEMA,"classification":"Experimental/source-development","qualification":False,"adoptedAtUnix":1,"bootId":state["bootId"],"configSha256":state["configSha256"],"route":"gpio4","sourceCommit":value["sourceCommit"],"executableSha256":value["executableSha256"],"moduleSourceCommit":value["moduleSourceCommit"],"moduleManifestSha256":value["sourceManifestSha256"],"moduleVersion":"0.9.0","uapiSha256":value["uapiSha256"],"kernel":"fixture-kernel","compatibilityId":value["compatibilityId"]}))
         assert manager.dispatch(request("query"),env)["state"]["bootOwnership"]=="current"
         stale=json.loads(adoption.read_text()); stale["bootId"]="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"; adoption.write_text(json.dumps(stale)); rejected(lambda:manager.dispatch(request("query"),env),"adoption record identity differs")
         stale["bootId"]=state["bootId"]; adoption.write_text(json.dumps(stale))

@@ -11,11 +11,11 @@
 
 #define RP1_GPCLK_ROUTE_CANDIDATE_KERNEL "6.18.34+rpt-rpi-2712"
 #define RP1_GPCLK_ROUTE_CANDIDATE_ARCH "aarch64"
-#define RP1_GPCLK_ROUTE_CANDIDATE_VERSION "1.1.2"
+#define RP1_GPCLK_ROUTE_CANDIDATE_VERSION "0.9.0"
 #define RP1_GPCLK_GPIO4_DEVELOPMENT_CANDIDATE_ID \
-	"v1.1.2-pi5-gpio4-6.18.34-development-candidate-r4"
+	"v0.9.0-pi5-gpio4-6.18.34-development"
 #define RP1_GPCLK_GPIO20_DEVELOPMENT_CANDIDATE_ID \
-	"v1.1.2-pi5-gpio20-6.18.34-development-candidate-r4"
+	"v0.9.0-pi5-gpio20-6.18.34-development"
 
 bool rp1_gpclk_gpio4_candidate_allowed(__u32 route,
 				       const char *kernel_release,

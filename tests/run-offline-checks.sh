@@ -3,6 +3,7 @@
 set -eu
 
 python3 tests/check_development_workflow.py
+python3 tests/check_development_identity.py
 
 unset CDPATH
 repo_dir=$(cd -- "$(dirname -- "$0")/.." && pwd)

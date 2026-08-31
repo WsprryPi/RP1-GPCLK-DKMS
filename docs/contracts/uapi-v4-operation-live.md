@@ -27,6 +27,7 @@ the authorization digest or lease token. Intrinsic route compatibility remains
 visible while safely idle so an application can authenticate the provider
 before acquiring the exact authorized operation.
 
-This additive development ABI advances both route-specific exact-build
-identities to `development-candidate-r4`. No r3 evidence transfers to r4 or
-between GPIO4 and GPIO20.
+The current 0.9.0 development build uses route-specific
+`v0.9.0-pi5-gpio4-6.18.34-development` and
+`v0.9.0-pi5-gpio20-6.18.34-development` identifiers. No predecessor evidence
+transfers to changed bytes or between GPIO4 and GPIO20.

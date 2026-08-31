@@ -20,10 +20,10 @@ for boundary in ("fixture blockage", "semantic validator", "exactly one",
                  "immutable", "terminal-silence", "REQUIRED-BEFORE-LIVE"):
     assert boundary in contract
 for route_id in (
-    "v1.1.2-pi5-gpio4-6.18.34-development-candidate-r4",
-    "v1.1.2-pi5-gpio20-6.18.34-development-candidate-r4",
+    "v0.9.0-pi5-gpio4-6.18.34-development",
+    "v0.9.0-pi5-gpio20-6.18.34-development",
 ):
-    assert route_id in handoff
+    assert route_id in (ROOT / "docs/contracts/development-identity.md").read_text()
 for prohibited in ("/dev/mem", "automatic fallback", "continuous TONE"):
     assert prohibited in handoff or prohibited in contract
 

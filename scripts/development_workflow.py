@@ -131,6 +131,10 @@ def render(source: pathlib.Path, output: pathlib.Path, version: str, allow_dirty
     source, output = source.resolve(), output.absolute()
     if not re.fullmatch(r"[0-9A-Za-z][0-9A-Za-z._+-]*", version):
         raise Failure("invalid module version")
+    header = (source / "include/rp1_gpclk/version.h").read_text()
+    declared = re.search(r'^#define RP1_GPCLK_MODULE_VERSION "([^"]+)"$', header, re.M)
+    if not declared or declared.group(1) != version:
+        raise Failure("requested development version differs from source module version")
     if output.exists():
         raise Failure(f"destination already exists: {output}")
     commit = git(source, "rev-parse", "HEAD").strip()
@@ -250,8 +254,9 @@ def resolve_module(kernel: str, expected_version: str | None = None) -> dict[str
     matches = []
     for path in module_candidates(kernel):
         name = modinfo(path, "name")
-        if name == CANONICAL_MODULE:
-            matches.append((path, name))
+        if name != CANONICAL_MODULE:
+            raise Failure(f"foreign or unreadable module at canonical path: {path}")
+        matches.append((path, name))
     if len(matches) != 1:
         raise Failure(f"expected exactly one installed {CANONICAL_MODULE} artifact for {kernel}; found {len(matches)}")
     path, name = matches[0]
@@ -297,6 +302,75 @@ def update_manifest(path: pathlib.Path, additions: dict[str, Any]) -> dict[str, 
     return value
 
 
+def owned_source(path: pathlib.Path, version: str) -> dict[str, Any]:
+    """Prove a replaceable development tree; package/foreign trees are not ours."""
+    if path.is_symlink() or not path.is_dir():
+        raise Failure(f"foreign source path: {path}")
+    manifest_path = path / "DEVELOPMENT_MANIFEST.json"
+    if manifest_path.is_symlink():
+        raise Failure("foreign source manifest symlink")
+    value = load_manifest(manifest_path)
+    if value.get("renderedVersion") != version:
+        raise Failure("source version ownership mismatch")
+    expected = value.get("renderedInventory")
+    if not isinstance(expected, list) or not expected:
+        raise Failure("source ownership inventory missing")
+    if not all(isinstance(item, dict) and isinstance(item.get("path"), str)
+               and isinstance(item.get("size"), int) and isinstance(item.get("sha256"), str)
+               for item in expected):
+        raise Failure("source ownership inventory malformed")
+    names = [item["path"] for item in expected]
+    if any(p.is_symlink() for p in path.rglob("*")):
+        raise Failure("foreign source symlink")
+    if any(p.stat().st_uid != os.geteuid() or p.stat().st_mode & 0o022
+           for p in [path, *path.rglob("*")]):
+        raise Failure("foreign source ownership or writable permissions")
+    if any(pathlib.PurePosixPath(n).is_absolute() or ".." in pathlib.PurePosixPath(n).parts for n in names):
+        raise Failure("source inventory escapes owned tree")
+    actual = sorted(str(p.relative_to(path)) for p in path.rglob("*") if not p.is_dir())
+    if actual != sorted(names + ["DEVELOPMENT_MANIFEST.json"]) or inventory(path, names) != expected:
+        raise Failure("foreign or modified development source; retain for maintainer review")
+    return value
+
+
+def transition_preflight(version: str, kernel: str, dkms_status: list[str]) -> pathlib.Path | None:
+    """Never implicitly downgrade, take package ownership, or hide stale instances."""
+    destination = root_path(f"/usr/src/{PACKAGE}-{version}")
+    for line in dkms_status:
+        match = re.match(r"rp1-gpclk-dkms/([^,\s]+)(?:,|:)", line)
+        if not match or match.group(1) != version:
+            raise Failure("predecessor/unknown DKMS instance: explicit maintainer downgrade migration required")
+        if "," in line and line.split(",")[1].strip() != kernel:
+            raise Failure("DKMS instance for another kernel: explicit migration required")
+    for path in root_path("/usr/src").glob(f"{PACKAGE}-*"):
+        if path != destination:
+            raise Failure(f"stale predecessor source {path}: explicit maintainer downgrade migration required")
+    # Binding/enrollment restoration has its own exact-byte transaction. Never
+    # make it stale as a side effect of the source installer.
+    for path in (root_path(ENROLLMENT_BASE), root_path(STATE_BASE.parent / "runtime-admin")):
+        if path.exists() and any(path.iterdir()):
+            raise Failure(f"retained enrollment/runtime state {path}: explicit migration required")
+    for name in ("/etc/rp1-gpclk-dkms/runtime-controller.json",
+                 "/var/lib/rp1-gpclk-dkms/development/route-manager.json",
+                 "/var/lib/dpkg/info/rp1-gpclk-dkms.list"):
+        if root_path(name).exists():
+            raise Failure(f"retained package/manager ownership {name}: explicit migration required")
+    loaded = root_path(f"/sys/module/{CANONICAL_MODULE}/version")
+    if loaded.parent.exists() and not loaded.is_file():
+        raise Failure("loaded module version unavailable: explicit migration required")
+    if loaded.exists() and loaded.read_text().strip() != version:
+        raise Failure("loaded predecessor: explicit maintainer downgrade migration required")
+    candidates = module_candidates(kernel)
+    if candidates:
+        resolve_module(kernel, version)
+    if destination.exists() or destination.is_symlink():
+        owned_source(destination, version)
+        return destination
+    if dkms_status or candidates or loaded.exists():
+        raise Failure("orphan module/DKMS instance without attributable development source")
+    return None
+
+
 def install(args: argparse.Namespace) -> dict[str, Any]:
     requested = args.kernel or platform.release()
     identities, tools = kernel_identities(requested), tool_inventory()
@@ -314,12 +388,20 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
     rendered = evidence / "rendered-source"
     manifest_path = render(source, rendered, args.module_version, args.allow_dirty)
     rollback_path = evidence / "ROLLBACK.json"
-    before = {"dkmsStatus": run([tools["dkms"], "status", "-m", PACKAGE], check=False).stdout.splitlines(),
+    before = {"dkmsStatus": run([tools["dkms"], "status", "-m", PACKAGE]).stdout.splitlines(),
               "installedArtifacts": [{"path": str(p), "sha256": sha256(p)} for p in module_candidates(requested)],
               "loaded": root_path(f"/sys/module/{CANONICAL_MODULE}").exists(), "createdFiles": []}
+    predecessor = transition_preflight(args.module_version, requested, before["dkmsStatus"])
+    if predecessor is not None:
+        shutil.copytree(predecessor, evidence / "prior-source")
+    for index, item in enumerate(before["installedArtifacts"]):
+        backup = evidence / f"prior-module-{index}{''.join(pathlib.Path(item['path']).suffixes)}"
+        shutil.copyfile(item["path"], backup)
+        item["backup"] = str(backup)
     rollback = {"schema": ROLLBACK_SCHEMA, "classification": "source-development", "manifest": str(manifest_path),
                 "kernel": requested, "moduleName": CANONICAL_MODULE, "version": args.module_version,
                 "prior": before, "workflowCreatedFiles": [], "status": "prepared"}
+    rollback["priorSource"] = str(evidence / "prior-source") if predecessor else None
     atomic_write(rollback_path, canonical(rollback))
     install_requested = args.install or not args.build_only
     if args.build_only or install_requested:
@@ -331,8 +413,11 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
                 run([tools["modprobe"], "-r", CANONICAL_MODULE], log=evidence / "module-unload-for-replace.log")
             run([tools["dkms"], "remove", "-m", PACKAGE, "-v", args.module_version, "--all"], log=evidence / "dkms-remove.log")
             if destination.exists(): shutil.rmtree(destination)
-        shutil.copytree(rendered, destination)
         rollback["workflowCreatedFiles"].append(str(destination))
+        rollback["sourceManifestSha256"] = sha256(manifest_path)
+        rollback["status"] = "installing"
+        atomic_write(rollback_path, canonical(rollback))
+        shutil.copytree(rendered, destination)
         run([tools["dkms"], "add", "-m", PACKAGE, "-v", args.module_version], log=evidence / "dkms-add.log")
         run([tools["dkms"], "build", "-m", PACKAGE, "-v", args.module_version, "-k", requested], log=evidence / "dkms-build.log")
         if install_requested:
@@ -478,9 +563,30 @@ def rollback(record_path: pathlib.Path) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError) as error: raise Failure(f"rollback record unreadable: {error}") from error
     if record.get("schema") != ROLLBACK_SCHEMA: raise Failure("invalid rollback record")
     kernel, version = record["kernel"], record["version"]
+    if (record.get("moduleName") != CANONICAL_MODULE or
+            not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version)):
+        raise Failure("rollback module/version scope mismatch")
+    allowed = root_path(f"/usr/src/{PACKAGE}-{version}")
+    # Validate the entire removal scope BEFORE unloading or invoking DKMS.
+    if record.get("workflowCreatedFiles") != [str(allowed)]:
+        raise Failure("rollback record contains out-of-scope paths")
+    owned_source(allowed, version)
+    if sha256(allowed / "DEVELOPMENT_MANIFEST.json") != record.get("sourceManifestSha256"):
+        raise Failure("rollback source has been replaced by another instance")
+    loaded = root_path(f"/sys/module/{CANONICAL_MODULE}/version")
+    if loaded.exists() and loaded.read_text().strip() != version:
+        raise Failure("rollback refuses to unload a different version")
+    manifest = load_manifest(pathlib.Path(record["manifest"]))
+    if module_candidates(kernel):
+        current = resolve_module(kernel, version)
+        expected = manifest.get("installedModule")
+        if not expected or current["installedFileSha256"] != expected["installedFileSha256"]:
+            raise Failure("rollback installed artifact ownership mismatch")
+    status = run([tool("dkms") or "dkms", "status", "-m", PACKAGE]).stdout.splitlines()
+    transition_preflight(version, kernel, status)
     print_mutation_identity(kernel)
     if root_path(f"/sys/module/{CANONICAL_MODULE}").exists(): run([tool("modprobe") or "modprobe", "-r", CANONICAL_MODULE])
-    run([tool("dkms") or "dkms", "remove", "-m", PACKAGE, "-v", version, "--all"], check=False)
+    run([tool("dkms") or "dkms", "remove", "-m", PACKAGE, "-v", version, "--all"])
     for name in record.get("workflowCreatedFiles", []):
         path = pathlib.Path(name)
         allowed = root_path(f"/usr/src/{PACKAGE}-{version}")

@@ -61,6 +61,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("release_directory", type=Path)
     args = parser.parse_args()
+    raise SystemExit("historical release pipeline disabled for the 0.9.0 development baseline; see docs/contracts/development-identity.md; Step 12 review required")
     if git("status", "--porcelain", "--untracked-files=all"):
         raise SystemExit("refusing publication finalization from a dirty worktree")
     decision_commit = git("rev-parse", "HEAD")

@@ -373,7 +373,7 @@ authorization for their system effects. Output-disabled administration, live
 GPIO behavior, timing, transmission, and RF are separate evidence classes and
 must not be inferred from one another.
 
-For the 1.1.2 dual-route development identity, live compatibility also requires
+For the 0.9.0 dual-route development identity, live compatibility also requires
 the route-specific endpoint node name emitted by the corresponding current
 overlay: `rp1-gpclk-dkms-gpio4` for route 1 or
 `rp1-gpclk-dkms-gpio20` for route 2. The predecessor shared
@@ -381,16 +381,12 @@ overlay: `rp1-gpclk-dkms-gpio4` for route 1 or
 are otherwise valid. This prevents predecessor overlay bytes from satisfying
 the changed development candidate identity.
 
-The ABI-v4 operation-scoped build reports candidate IDs ending in
-`development-candidate-r4`. The r4 build does not inherit either route's r3
-target evidence. Its exact Pi 5, kernel, architecture, module-version, resource,
-and route allowlist admits each candidate only to an explicitly authorized
-development attempt; eligibility is not qualification. Each exact
-route-specific artifact must still be separately requalified before a route can
-carry an r4 qualification claim. Earlier candidate IDs remain historical
-identities and cannot satisfy the current client contract. Immutable module and
-overlay hashes remain mandatory evidence; the revision suffix is not a
-substitute for artifact hashing.
+The ABI-v4 operation-scoped build reports the route-specific 0.9.0 development
+IDs in the [development identity contract](development-identity.md). Its exact Pi 5,
+kernel, architecture, module-version, resource and route checks are unchanged.
+Earlier candidate IDs remain historical and cannot satisfy the current exact
+identity contract. Neither version normalization nor eligibility transfers
+qualification; immutable module/overlay hashes remain mandatory evidence.
 
 GPIO4 r2 and GPIO20 r2 each have completed, independently bound target-functional
 development evidence for module execution and cleanup. Hardware-free validation
@@ -407,11 +403,14 @@ compatibility, provenance, licensing, and security metadata. The source
 version, tag, Debian version, DKMS version, module version, UAPI, package, and
 release metadata must agree according to the release policy.
 
-Version 1.1.2 remains an unreleased functional-development identity. Its
-current UAPI, source, overlays, compatibility entries, package naming,
-inventories, and hashes are development inputs, not frozen final consumer or
-release identities. Packaging and immutable artifact freezing require a later
-roadmap gate and separate review.
+Version 0.9.0 is the current pre-release development baseline. Debian version
+is 0.9.0-1; UAPI ABI 4 and protocol schema versions are preserved. The
+[identity and downgrade contract](development-identity.md) defines source,
+package, diagnostics, compatibility, enrollment and recovery relationships.
+Historical release layouts and freezes remain historical; release generation
+and finalization are blocked until the release pipeline review. The existing public
+v1.0.0 collision requires separate later disposition. No final source, package
+or qualification identity is frozen by the development version.
 
 WsprryPi consumes only an explicitly compatible tagged release. Module and
 application commits, reviews, releases, and qualification claims remain

@@ -1214,6 +1214,8 @@ def main() -> None:
     parser.add_argument("--qualification-identity", type=pathlib.Path)
     parser.add_argument("--allow-development", action="store_true")
     args = parser.parse_args()
+    if args.execute:
+        raise SystemExit("historical phase administrator is read-only; use the maintained development lifecycle and explicit migration plan")
     state = pathlib.Path("/var/lib/rp1-gpclk-dkms/transaction.json")
     if args.action == "plan":
         result = plan(args.route, args.signing_required)

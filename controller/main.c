@@ -202,4 +202,4 @@ module_init(route_init);
 module_exit(route_exit);
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_DESCRIPTION("Experimental clock-disabled RP1 route administrator");
-MODULE_VERSION("0.1.0");
+MODULE_VERSION("0.9.0");

@@ -1,3 +1,12 @@
+rp1-gpclk-dkms (0.9.0-1) UNRELEASED; urgency=medium
+
+  * Normalize the mature development implementation to upstream 0.9.0.
+  * Preserve ABI v4, route ownership, runtime controller and lifecycle behavior.
+  * Treat transition from 1.x as an explicit maintainer downgrade, never an
+    automatic update. No release or final artifact freeze is established.
+
+ -- WsprryPi Project <noreply@wsprrypi.invalid>  Mon, 31 Aug 2026 12:00:00 -0500
+
 rp1-gpclk-dkms (1.1.2-1) UNRELEASED; urgency=medium
 
   * Add an exact Raspberry Pi 5 / BCM2712 / aarch64 / 6.18.34 GPIO4

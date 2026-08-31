@@ -2,6 +2,9 @@
 
 # Roadmap
 
+The current [development identity and migration contract](contracts/development-identity.md)
+is authoritative for installation transitions and version relationships.
+
 This roadmap records deferred engineering work. An item here is not an
 implemented capability, compatibility promise, or qualification claim.
 

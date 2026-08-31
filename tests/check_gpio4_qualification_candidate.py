@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Enforce the independent 1.1.2 GPIO4/GPIO20 development boundary."""
+"""Enforce the independent 0.9.0 GPIO4/GPIO20 development boundary."""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,20 +16,20 @@ rules = (ROOT / "debian/rules").read_text()
 route_manager = (ROOT / "scripts/rp1-gpclk-route-manager.py").read_text()
 
 for token in (
-    '#define RP1_GPCLK_MODULE_VERSION "1.1.2"',
+    '#define RP1_GPCLK_MODULE_VERSION "0.9.0"',
     '#define RP1_GPCLK_ROUTE_CANDIDATE_KERNEL "6.18.34+rpt-rpi-2712"',
     '#define RP1_GPCLK_ROUTE_CANDIDATE_ARCH "aarch64"',
-    '#define RP1_GPCLK_ROUTE_CANDIDATE_VERSION "1.1.2"',
-    "v1.1.2-pi5-gpio4-6.18.34-development-candidate-r4",
-    "v1.1.2-pi5-gpio20-6.18.34-development-candidate-r4",
+    '#define RP1_GPCLK_ROUTE_CANDIDATE_VERSION "0.9.0"',
+    "v0.9.0-pi5-gpio4-6.18.34-development",
+    "v0.9.0-pi5-gpio20-6.18.34-development",
 ):
     assert token in version + compat
 
 gpio4_case = implementation[implementation.index("case RP1_GPCLK_ROUTE_GPIO4:"):]
 gpio20_case = gpio4_case[gpio4_case.index("case RP1_GPCLK_ROUTE_GPIO20:"):]
 assert gpio20_case.index("return true;") < gpio20_case.index("default:")
-assert "does not transfer the r3" in implementation
-assert "independent r4 evidence" in implementation
+assert "does not transfer predecessor" in implementation
+assert "independent 0.9.0 evidence" in implementation
 assert 'strcmp(module_version, RP1_GPCLK_ROUTE_CANDIDATE_VERSION)' in implementation
 assert "pi5_model_b || !resources_validated" in implementation
 for token in (
@@ -75,7 +75,7 @@ for token in (
     "device->initial_dma_tick0_en || device->initial_dma_tick0_ctrl",
 ):
     assert token in execution
-assert "MODULE_VERSION := 1.1.2" in rules
+assert "MODULE_VERSION := 0.9.0" in rules
 for prohibited in ("live_output=1", "/dev/mem", "shell=True", "/bin/sh"):
     assert prohibited not in route_manager
 for operation in ('"query"', '"preflight"', '"apply-and-reboot"', '"rollback"', '"reconcile"'):

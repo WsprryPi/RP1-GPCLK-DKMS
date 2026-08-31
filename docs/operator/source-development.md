@@ -38,7 +38,7 @@ git checkout EXACT_COMMIT
 
 sudo ./scripts/development-install \
   --kernel "$(uname -r)" \
-  --module-version VERSION \
+  --module-version 0.9.0 \
   --route gpio4 \
   --live-output 0 \
   --load \
@@ -62,8 +62,10 @@ runs `depmod`, resolves the real module artifact, verifies version and vermagic,
 and optionally loads with an explicit `live_output` value. Detailed command
 output is retained in the evidence directory. Use `--build-only`, `--install`,
 `--load`, and `--keep-build` to select the lifecycle. A same-name, same-version
-development instance is removed and replaced automatically; it is not retained
-as a predecessor.
+development instance is replaced only after complete source-ownership validation.
+The evidence directory retains its source and installed module bytes for recovery.
+Predecessor versions, foreign/package ownership and active enrollment or manager
+state require the [explicit migration path](../contracts/development-identity.md).
 A rendered development tree deliberately replaces the production DKMS kernel
 name filter with `.*`. The requested kernel only needs a usable header tree;
 DKMS/compiler errors are returned directly. The release/package source retains
@@ -73,7 +75,7 @@ A non-running kernel may be built and installed but cannot be reported loaded.
 ## Separate operations
 
 ```sh
-./scripts/render-development-tree --source . --output /absolute/tree --module-version VERSION
+./scripts/render-development-tree --source . --output /absolute/tree --module-version 0.9.0
 
 sudo ./scripts/development-enroll --manifest MANIFEST --route gpio4 --kernel "$(uname -r)"
 sudo ./scripts/development-module load --live-output 0 --manifest MANIFEST

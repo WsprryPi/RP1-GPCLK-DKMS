@@ -29,15 +29,13 @@ does not automatically extend to a different kernel, firmware, device tree,
 route, host, or physical installation. See the
 [1.0.0 release notes](docs/releases/1.0.0-behavior.md) for the precise claim.
 
-Version 1.0.1 remains an unreleased historical corrective candidate. Version
-1.1.2 is the current interim development identity. The dual-route development
-branch preserves ABI v2 and permits the exact, uniquely selected GPIO4 or
-GPIO20 target class to enter separately authorized functional testing.
-Source/DKMS/module version `1.1.2`, Debian version `1.1.2-1`, and eventual tag
-`v1.1.2` are the intended coordinated version labels, not frozen artifact or
-consumer identities. See the
-[planned 1.1.2 behavior](docs/releases/1.1.2-behavior.md). Development
-eligibility is `Experimental`, not completed live or RF qualification.
+Version 0.9.0 is the current pre-release development baseline, preserving the
+mature ABI-v4 implementation and independent GPIO4/GPIO20 runtime routes.
+Source/DKMS/module version `0.9.0` and Debian version `0.9.0-1` are coordinated
+labels, not frozen artifacts or qualification. See the
+[development identity and migration contract](docs/contracts/development-identity.md).
+Earlier 1.x releases and candidate evidence retain their original identities.
+Development eligibility remains `Experimental`.
 
 ## Safety
 

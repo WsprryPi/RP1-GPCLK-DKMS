@@ -36,10 +36,10 @@ bool rp1_gpclk_route_candidate_allowed(__u32 route,
 		return false;
 
 	/*
-	 * Eligibility only admits an exact r4 development candidate to an
-	 * explicitly authorized live attempt.  It does not transfer the r3
+	 * Eligibility only admits an exact 0.9.0 development build to an
+	 * explicitly authorized live attempt.  It does not transfer predecessor
 	 * evidence or qualify either route; GPIO4 and GPIO20 still require
-	 * independent r4 evidence.
+	 * independent 0.9.0 evidence.
 	 */
 	switch (route) {
 	case RP1_GPCLK_ROUTE_GPIO4:
@@ -58,6 +58,6 @@ const char *rp1_gpclk_route_candidate_id(__u32 route)
 	case RP1_GPCLK_ROUTE_GPIO20:
 		return RP1_GPCLK_GPIO20_DEVELOPMENT_CANDIDATE_ID;
 	default:
-		return "v1.1.2-invalid-route";
+		return "v0.9.0-invalid-route";
 	}
 }

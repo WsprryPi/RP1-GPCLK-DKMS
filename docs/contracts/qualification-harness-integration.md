@@ -5,7 +5,7 @@
 ## Scope
 
 This contract defines the evidence boundary between an external WsprryPi
-Qualification Harness, WsprryPi, and the RP1-GPCLK-DKMS 1.1.2 development
+Qualification Harness, WsprryPi, and the RP1-GPCLK-DKMS 0.9.0 development
 module. It prepares later product integration and qualification; it does not
 authorize installation, target access, module or overlay changes, endpoint
 operation, GPIO output, receiver access, transmission, or RF activity.
@@ -15,8 +15,8 @@ script, `python -m` entry point, published schemas, maintained semantic
 validators, supported replay/fixture interfaces, and machine-readable result
 bundles. No WsprryPi or DKMS code may import undocumented Harness internals.
 
-The current module state is `Experimental`. GPIO4 r3 and GPIO20 r3 are separate
-live-ineligible targets pending exact-build requalification; identity,
+The current module state is `Experimental`. GPIO4 and GPIO20 are separate
+independently attributable targets requiring exact-build qualification; identity,
 authorization, results, and retained evidence never transfer between them.
 
 ## Identity record
@@ -37,7 +37,7 @@ ordering or implicit defaults.
   policy, and actual installed module-file hash when an artifact exists; and
 - route overlay source, compiled DTBO, and installed DTBO hashes.
 
-Unreleased 1.1.2 source labels are development inputs, not a final package,
+Unreleased 0.9.0 source labels are development inputs, not a final package,
 tag, inventory, compatibility manifest, or consumer identity. An absent future
 package identity remains an explicit blocker rather than a fabricated value.
 
@@ -119,7 +119,7 @@ For each of WSPR, Tone, QRSS, FSKCW, and DFCW, a readiness record covers:
 12. a passing hardware-free rehearsal.
 
 Harness support alone does not make a WsprryPi mode `live-plan ready`. That
-label additionally requires an exact integrated WsprryPi 1.1.2 execution path,
+label additionally requires an exact integrated WsprryPi execution path for DKMS 0.9.0,
 final artifact identities, operator window, receiver configuration, physical
 path, and cleanup contract.
 

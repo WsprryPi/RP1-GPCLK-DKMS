@@ -263,6 +263,7 @@ def main() -> None:
     parser.add_argument("output", type=pathlib.Path)
     parser.add_argument("--development", action="store_true", help="mark dirty or untagged output non-publishable")
     args = parser.parse_args()
+    raise SystemExit("historical release pipeline disabled for the 0.9.0 development baseline; see docs/contracts/development-identity.md; Step 12 review required")
     generate(args.output.resolve(), args.development)
 
 

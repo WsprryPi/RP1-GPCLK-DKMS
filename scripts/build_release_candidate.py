@@ -408,6 +408,7 @@ def main() -> None:
     parser.add_argument("--product", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
+    raise SystemExit("historical release pipeline disabled for the 0.9.0 development baseline; see docs/contracts/development-identity.md; Step 12 review required")
     product = args.product.resolve()
     output = args.output.resolve()
     if git("status", "--porcelain", "--untracked-files=all"):

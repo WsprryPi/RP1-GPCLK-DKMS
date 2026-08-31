@@ -2,17 +2,17 @@
 
 # Debian DKMS packaging
 
-The planned Version 1.1.2 package uses the standard Debian DKMS lifecycle.
+The planned Version 0.9.0 package uses the standard Debian DKMS lifecycle.
 After the later package-freeze gate, build it with `dpkg-buildpackage`; install,
 upgrade, or remove a reviewed artifact with ordinary Debian package tools.
-`dh-dkms` provides the DKMS maintainer-script integration. No 1.1.2 package or
+`dh-dkms` provides the DKMS maintainer-script integration. No 0.9.0 package or
 final package identity is frozen by the current functional-development state.
 
 The product package owns:
 
-- the module build closure under `/usr/src/rp1-gpclk-dkms-1.1.2`, including
+- the module build closure under `/usr/src/rp1-gpclk-dkms-0.9.0`, including
   the canonical UAPI at
-  `/usr/src/rp1-gpclk-dkms-1.1.2/include/uapi/linux/rp1_gpclk.h`;
+  `/usr/src/rp1-gpclk-dkms-0.9.0/include/uapi/linux/rp1_gpclk.h`;
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo`; and
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo`.
 
@@ -30,10 +30,10 @@ Both overlays remain inactive. The package does not edit `config.txt`, apply an
 overlay, select a route, load the module, enable output, or reboot. Installing
 the package therefore does not authorize or initiate GPIO activity.
 
-Version 1.1.2 additionally installs the stable application executor at
+Version 0.9.0 additionally installs the stable application executor at
 `/usr/sbin/rp1-gpclk-route-manager` (with a byte-identical package-owned copy
 at `/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager`), its closed JSON schema
-at `/usr/share/rp1-gpclk-dkms/1.1.2/rp1-gpclk-route-manager-v1.schema.json`,
+at `/usr/share/rp1-gpclk-dkms/0.9.0/rp1-gpclk-route-manager-v1.schema.json`,
 and its consumer contract at
 `/usr/share/doc/rp1-gpclk-dkms/route-manager-v1.md`. These are the only route
 manager executable/data additions. The package also installs disabled
@@ -79,11 +79,11 @@ are not WsprryPi runtime dependencies.
 
 ## Install
 
-After a reviewed 1.1.2 package is produced in the later packaging roadmap step,
+After a reviewed 0.9.0 package is produced in the later packaging roadmap step,
 install that downloaded artifact with APT so dependencies are resolved:
 
 ```sh
-sudo apt install ./rp1-gpclk-dkms_1.1.2-1_all.deb
+sudo apt install ./rp1-gpclk-dkms_0.9.0-1_all.deb
 ```
 
 After installation, inspect DKMS status and the installed files. Do not select
@@ -120,9 +120,9 @@ From a tagged source checkout:
 dpkg-buildpackage -us -uc -b
 ```
 
-For the intended source version `1.1.2`, the coordinated binary package label
-is `1.1.2-1`, the intended artifact name is
-`rp1-gpclk-dkms_1.1.2-1_all.deb`, and the eventual release tag is `v1.1.2`.
+For the intended source version `0.9.0`, the coordinated binary package label
+is `0.9.0-1`, the intended artifact name is
+`rp1-gpclk-dkms_0.9.0-1_all.deb`, and the eventual release tag is `v0.9.0`.
 These names do not freeze source, UAPI, overlay, compatibility, inventory,
 hash, artifact, or consumer identities. Do not build a release artifact from a
 moving branch.
@@ -149,14 +149,14 @@ identity, and requires GPIO4 and GPIO20 to remain unavailable and non-live.
 `validate_release.py` remains intentionally scoped to the separately generated
 published-release archive layout; the two validators are not interchangeable.
 
-This preliminary builder/validator pair predates the independent GPIO4 and
-GPIO20 r2 functional-development evidence and the current ABI-v3 r3 identities.
-It does not describe or package the current dual-route development state and
-must not be used to freeze a 1.1.2
-artifact. Reconciling that packaging implementation and its generated
-compatibility metadata is deferred to the later packaging roadmap step.
+The preliminary builder/validator pair is retained as historical 1.1.2 tooling.
+Its generation CLI is blocked on this baseline; it must not relabel its old
+qualification metadata as 0.9.0. Step 12 reconciles that release pipeline.
+A local `dpkg-buildpackage -us -uc -b` build of 0.9.0 is permitted as an
+unpublished development artifact only. See the
+[version and downgrade contract](../contracts/development-identity.md).
 
-The product package remains byte-identical when only qualification-side executor
+The historical product package remained byte-identical when only qualification-side executor
 and plan files change. Those external files are not installed by the Debian
 package. Any change to package members, module source, overlays, UAPI, or
 embedded identity instead requires a new package version.
