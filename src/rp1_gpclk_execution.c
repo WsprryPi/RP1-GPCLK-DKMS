@@ -279,7 +279,6 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 	device->initial_dma_tick0_ctrl =
 		readl(device->dma_tick0 + RP1_GPCLK_DMA_TICK0_CTRL) &
 		~RP1_GPCLK_DMA_TICK_DREQ;
-	device->tick_state_captured = true;
 	if (device->initial_dma_tick0_en || device->initial_dma_tick0_ctrl ||
 	    (device->initial_tick_dma0_ctrl &&
 	     (device->initial_tick_dma0_ctrl != RP1_GPCLK_FIRMWARE_TICK_CTRL ||
@@ -298,6 +297,7 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 			"phase4d startup conflict: common clock reports hardware enabled\n");
 		return -EBUSY;
 	}
+	device->tick_state_captured = true;
 	device->initial_rate = clk_get_rate(device->clock);
 	device->initial_parent = clk_get_parent(device->clock);
 	if (!device->initial_parent || !device->initial_rate)
@@ -360,7 +360,8 @@ static int rp1_gpclk_machine_stop_tick(void *argument)
 	struct rp1_gpclk_device *device =
 		((struct rp1_gpclk_execution_context *)argument)->device;
 
-	rp1_gpclk_tick_stop(device);
+	if (device->tick_state_captured)
+		rp1_gpclk_tick_stop(device);
 	return 0;
 }
 

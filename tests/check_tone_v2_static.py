@@ -23,6 +23,10 @@ assert 'writel(RP1_GPCLK_DMA_TICK_DWELL,' in tick
 assert 'FINISH_CLEAR' not in tick
 assert '#define RP1_GPCLK_DMA_TICK_DREQ BIT(12)' in e
 assert e.count('~RP1_GPCLK_DMA_TICK_DREQ') == 2
+setup = e[e.index('static int rp1_gpclk_machine_set_rate'):e.index('static int rp1_gpclk_machine_prepare')]
+assert setup.index('device->tick_state_captured = true') > setup.index('if (__clk_is_enabled')
+stop_tick = e[e.index('static int rp1_gpclk_machine_stop_tick'):e.index('static int rp1_gpclk_machine_terminate_dma')]
+assert 'if (device->tick_state_captured)' in stop_tick
 cancel = e[e.index("if (atomic_read(&device->stop_requested)) {"):]
 cancel = cancel[:cancel.index("return -ECANCELED;")]
 assert cancel.index("dmaengine_terminate_sync") < cancel.index("rp1_gpclk_tick_stop")
