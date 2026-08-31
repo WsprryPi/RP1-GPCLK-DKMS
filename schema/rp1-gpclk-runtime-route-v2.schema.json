@@ -1,0 +1,248 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Experimental runtime-route v2 request or blocked response",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/query"
+    },
+    {
+      "$ref": "#/$defs/preflight"
+    },
+    {
+      "$ref": "#/$defs/switch"
+    },
+    {
+      "$ref": "#/$defs/recover"
+    },
+    {
+      "$ref": "#/$defs/blocked"
+    },
+    {
+      "$ref": "#/$defs/rejected"
+    }
+  ],
+  "$defs": {
+    "query": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "integer",
+          "const": 2
+        },
+        "operation": {
+          "const": "query"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "operation"
+      ],
+      "additionalProperties": false
+    },
+    "preflight": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "integer",
+          "const": 2
+        },
+        "operation": {
+          "const": "preflight"
+        },
+        "route": {
+          "enum": [
+            "gpio4",
+            "gpio20"
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "operation",
+        "route"
+      ],
+      "additionalProperties": false
+    },
+    "switch": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "integer",
+          "const": 2
+        },
+        "operation": {
+          "const": "switch"
+        },
+        "route": {
+          "enum": [
+            "gpio4",
+            "gpio20"
+          ]
+        },
+        "execute": {
+          "const": true
+        },
+        "requestId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{7,63}(?![\\s\\S])"
+        },
+        "actor": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]{1,127}(?![\\s\\S])"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "operation",
+        "route",
+        "execute",
+        "requestId",
+        "actor"
+      ],
+      "additionalProperties": false
+    },
+    "recover": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "integer",
+          "const": 2
+        },
+        "operation": {
+          "const": "recover"
+        },
+        "execute": {
+          "const": true
+        },
+        "requestId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{7,63}(?![\\s\\S])"
+        },
+        "actor": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@/-]{1,127}(?![\\s\\S])"
+        },
+        "transactionId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{7,63}(?![\\s\\S])"
+        },
+        "strategy": {
+          "enum": [
+            "resume",
+            "rollback"
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "operation",
+        "execute",
+        "requestId",
+        "actor",
+        "transactionId",
+        "strategy"
+      ],
+      "additionalProperties": false
+    },
+    "blocked": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "integer",
+          "const": 2
+        },
+        "contract": {
+          "const": "rp1-gpclk-runtime-route-v2"
+        },
+        "classification": {
+          "const": "Experimental"
+        },
+        "qualification": {
+          "const": false
+        },
+        "mutationAvailable": {
+          "const": false
+        },
+        "operation": {
+          "enum": [
+            "query",
+            "preflight",
+            "switch",
+            "recover"
+          ]
+        },
+        "status": {
+          "const": "blocked"
+        },
+        "blockers": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "reviewed-configfs-removal-errors-not-propagated"
+            },
+            {
+              "const": "runtime-switch-adapter-not-implemented"
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "contract",
+        "classification",
+        "qualification",
+        "mutationAvailable",
+        "operation",
+        "status",
+        "blockers"
+      ],
+      "additionalProperties": false
+    },
+    "rejected": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "integer",
+          "const": 2
+        },
+        "contract": {
+          "const": "rp1-gpclk-runtime-route-v2"
+        },
+        "classification": {
+          "const": "Experimental"
+        },
+        "qualification": {
+          "const": false
+        },
+        "mutationAvailable": {
+          "const": false
+        },
+        "operation": {
+          "type": "null"
+        },
+        "status": {
+          "const": "rejected"
+        },
+        "error": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "contract",
+        "classification",
+        "qualification",
+        "mutationAvailable",
+        "operation",
+        "status",
+        "error"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
