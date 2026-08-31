@@ -2,6 +2,12 @@
 
 # Runtime manager software workflow
 
+The current schema-3 manager completes application restoration as specified in
+[Runtime application restoration](../contracts/runtime-application-restoration-v1.md). Its successful switch path
+restores a previously running application in idle mode. Descriptions below of
+unconditional manual mask release describe the earlier low-level workflow;
+`restore --execute` is now the recovery command for application completion.
+
 This is an opt-in, clock-disabled development profile, not a qualified release.
 The packaged manager and source-development profile remain unchanged. The new
 `95-runtime-controller.conf` selects the runtime manager on the same privileged

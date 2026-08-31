@@ -34,7 +34,7 @@ def bundle(modules, output):
         (output / (digest(destination.encode())+'.bin')).write_bytes(data)
     (output / 'binding.json').write_text(json.dumps(binding, sort_keys=True, indent=2)+'\n')
     # Standalone bootstrap tool, with its dependencies, for review before running.
-    for name in ('runtime_deployment.py', 'runtime_controller_admin.py', 'runtime_layout.py'):
+    for name in ('runtime_deployment.py', 'runtime_controller_admin.py', 'runtime_layout.py', 'runtime_application.py', 'runtime_output.py'):
         (output / name).write_bytes((ROOT / 'scripts' / name).read_bytes())
     return binding
 

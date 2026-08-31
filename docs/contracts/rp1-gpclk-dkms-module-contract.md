@@ -434,7 +434,9 @@ issued, and GPIO20 remains unavailable.
 The [runtime manager workflow](../operator/runtime-manager-workflow.md) uses a
 separate schema-3 profile on the existing privileged socket. It binds the complete
 runtime inventory, serializes deployment and route effects, preserves removal
-errors and ownership, and leaves the application inhibited. This development
+errors and ownership, and restores application availability after successful switching
+through the [application restoration contract](runtime-application-restoration-v1.md).
+Failed or unresolved transactions retain owned inhibition. This development
 profile does not change the packaged compatibility contract, transmission UAPI,
 release status, or hardware qualification. Application/browser adaptation remains
 owned and reviewed in WsprryPi.

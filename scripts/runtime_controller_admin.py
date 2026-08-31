@@ -121,7 +121,8 @@ def run(argv):
 
 
 class Linux:
-    def __init__(self):
+    def __init__(self, wait_for_lock=False):
+        self.wait_for_lock = wait_for_lock
         self.lock = self.fd = None
         try:
             self.initialize()
@@ -150,7 +151,15 @@ class Linux:
         info = os.fstat(self.lock)
         if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077:
             raise ValueError('lock ownership')
-        fcntl.flock(self.lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        deadline = time.monotonic() + (15 if self.wait_for_lock else 0)
+        while True:
+            try:
+                fcntl.flock(self.lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    raise
+                time.sleep(0.02)
         if (STATE / 'deployment-pending.json').exists():
             raise ValueError('unfinished deployment; recover before route administration')
         safe_directory(BINDING.parent)
@@ -210,24 +219,15 @@ class Linux:
         return result
 
     def inhibit(self):
-        # Persistent mask covers normal systemd starts/restarts and reboot. Never
-        # overwrite an existing administrator-owned service file or unmask here.
-        directory = UNIT_DIR
-        safe_directory(directory)
-        mask = directory / 'wsprrypi.service'
-        try:
-            os.symlink('/dev/null', mask)
-        except FileExistsError:
-            if not mask.is_symlink() or os.readlink(mask) != '/dev/null':
-                raise ValueError('foreign service unit; cannot inhibit safely')
-        fsync_dir(directory)
+        from runtime_application import write_owned, unit_file, DROPIN, INHIBIT
+        write_owned(unit_file(DROPIN), INHIBIT)
         run(('/usr/bin/systemctl', 'daemon-reload'))
         run(('/usr/bin/systemctl', 'stop', 'wsprrypi.service'))
         self.check_inhibit()
 
     def check_inhibit(self):
-        mask = UNIT_DIR / 'wsprrypi.service'
-        if not mask.is_symlink() or os.readlink(mask) != '/dev/null':
+        from runtime_application import unit_file, DROPIN, INHIBIT
+        if read_regular(unit_file(DROPIN)) != INHIBIT:
             raise ValueError('persistent inhibit lost')
         if run(('/usr/bin/systemctl', 'show', 'wsprrypi.service', '--property=ActiveState', '--value')) not in ('inactive', 'failed'):
             raise ValueError('application still active')
@@ -255,7 +255,7 @@ class Linux:
         try:
             self.check_inhibit()
             return True
-        except ValueError:
+        except (ValueError, OSError):
             return False
 
     def output_snapshot(self):
@@ -263,10 +263,11 @@ class Linux:
         return snapshot()
 
     def output_resume(self):
+        from runtime_application import remove_owned, unit_file, DROPIN, INHIBIT
         self.check_inhibit()
-        mask = UNIT_DIR / 'wsprrypi.service'
-        mask.unlink()
-        fsync_dir(UNIT_DIR)
+        if self.read_record('application.json'):
+            raise ValueError('use restore --execute for the application transaction')
+        remove_owned(unit_file(DROPIN), INHIBIT)
         try:
             run(('/usr/bin/systemctl', 'daemon-reload'))
         except BaseException:
@@ -428,8 +429,10 @@ def main():
     if sys.argv[1] == 'status':
         print(json.dumps({'state': system.call(), 'qualification': False}))
         return
-    result = execute(system, route={'gpio4': 1, 'gpio20': 2}.get(sys.argv[-1]),
-                     recover=sys.argv[1] == 'recover')
+    from runtime_application import mutation_lock
+    with mutation_lock():
+        result = execute(system, route={'gpio4': 1, 'gpio20': 2}.get(sys.argv[-1]),
+                         recover=sys.argv[1] == 'recover')
     print(json.dumps({'state': result, 'applicationInhibited': True, 'qualification': False}))
 
 

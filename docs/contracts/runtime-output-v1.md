@@ -2,6 +2,12 @@
 
 # Runtime route reconciliation for application output
 
+The current schema-3 manager completes application restoration as specified in
+[Runtime application restoration](runtime-application-restoration-v1.md). Its successful switch path
+restores a previously running application in idle mode. Descriptions below of
+unconditional manual mask release describe the earlier low-level workflow;
+`restore --execute` is now the recovery command for application completion.
+
 The runtime controller continues to own its overlay and exclude removal while
 the consumer is attached. Neither its UAPI nor its consumer interlock changes.
 The consumer remains loaded with `live_output=0`.

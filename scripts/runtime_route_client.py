@@ -30,10 +30,10 @@ def exchange(request):
 
 def main():
     args = sys.argv[1:]
-    if args not in (['query'], ['recover', '--execute'], ['preflight','gpio4'], ['preflight','gpio20'],
+    if args not in (['query'], ['restore', '--execute'], ['recover', '--execute'], ['preflight','gpio4'], ['preflight','gpio20'],
                     ['switch','gpio4','--execute'], ['switch','gpio20','--execute'],
                     ['idle','gpio4'], ['idle','gpio20'], ['resume','gpio4','--execute'], ['resume','gpio20','--execute']):
-        raise SystemExit('usage: runtime_route_client.py query | preflight gpio4|gpio20 | switch gpio4|gpio20 --execute | recover --execute | idle gpio4|gpio20 | resume gpio4|gpio20 --execute')
+        raise SystemExit('usage: runtime_route_client.py query | restore --execute | preflight gpio4|gpio20 | switch gpio4|gpio20 --execute | recover --execute | idle gpio4|gpio20 | resume gpio4|gpio20 --execute')
     operation = args[0]
     request = {'schemaVersion':3, 'operation':operation}
     if operation in ('switch','preflight','idle','resume'): request['route'] = args[1]
@@ -41,7 +41,7 @@ def main():
         checked = exchange({'schemaVersion':3,'operation':'preflight','route':args[1]})
         if checked['status'] != 'ok': print(json.dumps(checked)); return 2
         request['preflightToken'] = checked['state']['preflightToken']
-    if operation == 'resume': request['execute'] = True
+    if operation in ('resume', 'restore'): request['execute'] = True
     if operation in ('switch','recover'):
         request.update(execute=True, requestId=str(uuid.uuid4()), actor='runtime-route-client')
     result = exchange(request)
