@@ -88,3 +88,19 @@ consumer exclusion, and independent confirmation that clocks remain disabled.
 Subsequent rebootless switching is implemented but not yet proven on hardware.
 No GPIO4 readiness, transmission, timing, interference, or RF qualification is
 claimed. Restoring application/output operation is a separate gate.
+
+## Deployment admission and recovery bounds
+
+Installation and recovery reject known-loaded modules before writing a pending
+marker. Module absence is checked again immediately before and after stopping the
+application. Once quiescence begins, any failure retains the durable barrier;
+this ordering avoids creating a barrier for a known failed prerequisite while
+preserving evidence of uncertain effects. These checks do not isolate the process
+from independent administrator actions.
+
+Bundle reads reject symlinks and non-regular members and enforce bounds while
+reading. The installer validates the complete binding schema and uses the same
+single metadata snapshot both to verify payloads and to install the binding.
+Deployment journals must fit the 32 MiB recovery-reader limit, including old and
+new bytes, before effects are permitted. A larger plan requires a separately
+reviewed format/workflow change; it cannot be forced through this installer.
