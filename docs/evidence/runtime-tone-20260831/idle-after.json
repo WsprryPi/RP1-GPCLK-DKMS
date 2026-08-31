@@ -1,0 +1,58 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "capturedSha256": "a3f137f2f21d389ae9abc2eb4e7113b49efa73aec2209b0a083ffb662463cd22",
+  "contract": "rp1-gpclk-route-manager-runtime-v1",
+  "operation": "idle",
+  "schemaVersion": 3,
+  "state": {
+    "activeRoute": "gpio20",
+    "applicationInhibited": true,
+    "bindingSha256": "80a80c1657fc75a3c567889e4e278fad7499adbd66270f2df7fb1b50cb666adc",
+    "bootId": "bc2bec00-2966-4b94-b158-a6f0ec04d24f",
+    "configuredRoute": null,
+    "controller": {
+      "error": 0,
+      "flags": 6,
+      "generation": 1,
+      "id": 1,
+      "route": 2,
+      "session": 8496504977085319826
+    },
+    "outputEnabled": false,
+    "outputLifecycle": {
+      "bindingSha256": "80a80c1657fc75a3c567889e4e278fad7499adbd66270f2df7fb1b50cb666adc",
+      "bootId": "bc2bec00-2966-4b94-b158-a6f0ec04d24f",
+      "controller": {
+        "error": 0,
+        "flags": 6,
+        "generation": 1,
+        "id": 1,
+        "route": 2,
+        "session": 8496504977085319826
+      },
+      "executionAuthorized": false,
+      "ready": true,
+      "route": "gpio20"
+    },
+    "pendingTransaction": {
+      "binding": "80a80c1657fc75a3c567889e4e278fad7499adbd66270f2df7fb1b50cb666adc",
+      "boot": "bc2bec00-2966-4b94-b158-a6f0ec04d24f",
+      "observation": {
+        "error": 0,
+        "flags": 6,
+        "generation": 1,
+        "id": 1,
+        "route": 2,
+        "session": 8496504977085319826
+      },
+      "phase": "complete-inhibited",
+      "request": "f9516146-fb55-4ddd-bc94-fe43a167df8b",
+      "session": 8496504977085319826,
+      "target": 2,
+      "version": 1
+    },
+    "profile": "runtime",
+    "qualification": false
+  },
+  "status": "ok"
+}

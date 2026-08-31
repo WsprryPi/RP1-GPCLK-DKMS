@@ -258,6 +258,21 @@ class Linux:
         except ValueError:
             return False
 
+    def output_snapshot(self):
+        from runtime_output import snapshot
+        return snapshot()
+
+    def output_resume(self):
+        self.check_inhibit()
+        mask = UNIT_DIR / 'wsprrypi.service'
+        mask.unlink()
+        fsync_dir(UNIT_DIR)
+        try:
+            run(('/usr/bin/systemctl', 'daemon-reload'))
+        except BaseException:
+            self.inhibit()
+            raise
+
     def read_manager_record(self):
         return self.read_record('manager.json')
 
@@ -275,6 +290,10 @@ class Linux:
 
     def write_journal(self, value):
         self.write_record('transaction.json', value)
+
+    def archive_journal(self, value):
+        identity = digest(json.dumps(value, sort_keys=True).encode())
+        self.write_record('prior-boot-' + identity + '.json', value)
 
     def write_record(self, filename, value):
         data = (json.dumps(value, sort_keys=True) + '\n').encode()
@@ -311,14 +330,31 @@ def execute(system, route=None, recover=False):
         if (not isinstance(previous, dict) or set(previous) != {'version', 'boot', 'session', 'binding', 'request', 'target', 'phase', 'observation'} or
                 type(previous['version']) is not int or previous['version'] != 1 or
                 not isinstance(previous['request'], str) or type(previous['target']) is not int or
-                previous['boot'] != system.boot or
-                previous['session'] != current['session'] or previous['binding'] != system.binding_hash or
+                previous['binding'] != system.binding_hash or
                 previous['target'] not in (1, 2) or previous['phase'] not in
                 ('inhibit-intent', 'unload-intent', 'remove-intent', 'apply-intent', 'load-intent', 'complete-inhibited', 'recovered-inhibited')):
             raise ValueError('journal mismatch; preserve inhibition and investigate')
         uuid.UUID(previous['request'])
+        uuid.UUID(previous['boot'])
         observed = previous['observation']
         validate_observation(observed)
+        if type(previous['session']) is not int or observed['session'] != previous['session']:
+            raise ValueError('journal observation session mismatch')
+        if previous['boot'] != system.boot:
+            if not recover or any(current[k] for k in ('generation', 'id', 'route', 'error', 'flags')):
+                raise ValueError('prior boot recovery requires an empty new controller')
+            system.inhibit()
+            system.unload()
+            if system.call() != current:
+                raise ValueError('controller changed during prior boot recovery')
+            system.archive_journal(previous)
+            record = dict(previous, boot=system.boot, session=current['session'],
+                          request=str(uuid.uuid4()), observation=current,
+                          phase='recovered-inhibited')
+            system.write_journal(record)
+            return current
+        if previous['session'] != current['session']:
+            raise ValueError('journal session mismatch')
         if observed['session'] != current['session']:
             raise ValueError('journal observation session mismatch')
         delta = current['generation'] - observed['generation']

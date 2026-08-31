@@ -61,6 +61,15 @@ def response(system, operation, state, status='ok', error=None):
 
 
 def dispatch(value, factory=admin.Linux):
+    if isinstance(value, dict) and value.get('operation') in ('idle','reconcile-output','resume'):
+        import runtime_output
+        request = runtime_output.parse(value)
+        with factory() as system:
+            state = system.call()
+            output = runtime_output.dispatch(system, request, state)
+            result = response(system, request['operation'], state)
+            result['state']['outputLifecycle'] = output
+            return result
     request = parse(value)
     operation = request['operation']
     with factory() as system:

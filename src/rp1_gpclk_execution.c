@@ -11,9 +11,11 @@
 #include <linux/ktime.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/slab.h>
+#include <linux/scatterlist.h>
 #include <linux/wait.h>
 
 #include "rp1_gpclk/device.h"
+#include "rp1_gpclk/dma_segments.h"
 #include "rp1_gpclk/clock_setup.h"
 #include "rp1_gpclk/execution.h"
 #include "rp1_gpclk/execution_machine.h"
@@ -27,7 +29,7 @@
 #define RP1_GPCLK_DMA_TICK0_CTRL 0x4
 #define RP1_GPCLK_DMA_TICK_REQUEST BIT(0)
 #define RP1_GPCLK_DMA_TICK_SINGLE BIT(1)
-#define RP1_GPCLK_DMA_TICK_FINISH_CLEAR BIT(0)
+#define RP1_GPCLK_DMA_TICK_DREQ BIT(12)
 #define RP1_GPCLK_DMA_TICK_DWELL (19U << 4)
 #define RP1_GPCLK_FIRMWARE_TICK_CTRL 3U
 #define RP1_GPCLK_FIRMWARE_TICK_CYCLES 50U
@@ -76,7 +78,11 @@ static void rp1_gpclk_tick_start(struct rp1_gpclk_device *device)
 {
 	writel(RP1_GPCLK_TICK_DIVIDER,
 	       device->tick_dma0 + RP1_GPCLK_TICKS_DMA0_CYCLES);
-	writel(RP1_GPCLK_DMA_TICK_FINISH_CLEAR | RP1_GPCLK_DMA_TICK_DWELL,
+	/* dma_finish can occur at an intermediate linked-list block. Keep
+	 * requests enabled until the complete DMA descriptor drains; clearing
+	 * them on the first block strands the next block waiting for DREQ.
+	 */
+	writel(RP1_GPCLK_DMA_TICK_DWELL,
 	       device->dma_tick0 + RP1_GPCLK_DMA_TICK0_CTRL);
 	dma_async_issue_pending(device->dma_chan);
 	writel(RP1_GPCLK_DMA_TICK_REQUEST | RP1_GPCLK_DMA_TICK_SINGLE,
@@ -101,6 +107,10 @@ static int rp1_gpclk_configure_dma(struct rp1_gpclk_device *device,
 {
 	struct dma_async_tx_descriptor *descriptor;
 	struct dma_slave_config config = { };
+	struct sg_table table;
+	struct scatterlist *entry;
+	size_t remaining = bytes, offset = 0;
+	unsigned int count, i;
 	dma_cookie_t cookie;
 	int ret;
 
@@ -118,8 +128,26 @@ static int rp1_gpclk_configure_dma(struct rp1_gpclk_device *device,
 	if (ret)
 		return ret;
 	reinit_completion(&device->dma_done);
-	descriptor = dmaengine_prep_slave_single(device->dma_chan, buffer_dma,
-		bytes, direction, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+	if (!bytes || bytes % sizeof(__u32))
+		return -EINVAL;
+	count = DIV_ROUND_UP(bytes, RP1_GPCLK_DMA_SEGMENT_BYTES);
+	ret = sg_alloc_table(&table, count, GFP_KERNEL);
+	if (ret)
+		return ret;
+	for_each_sg(table.sgl, entry, count, i) {
+		unsigned int length = rp1_gpclk_dma_segment_bytes(remaining);
+
+		/* dma_alloc_coherent already supplied DMA addresses; do not map
+		 * them again or translate them through CPU physical addresses.
+		 */
+		sg_dma_address(entry) = buffer_dma + offset;
+		sg_dma_len(entry) = length;
+		offset += length;
+		remaining -= length;
+	}
+	descriptor = dmaengine_prep_slave_sg(device->dma_chan, table.sgl,
+		count, direction, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+	sg_free_table(&table);
 	if (!descriptor)
 		return -EIO;
 	descriptor->callback = rp1_gpclk_dma_complete;
@@ -142,6 +170,23 @@ static int rp1_gpclk_wait_dma(struct rp1_gpclk_device *device,
 	rp1_gpclk_tick_start(device);
 	completed = wait_for_completion_timeout(&device->dma_done,
 		rp1_gpclk_timeout_jiffies(duration_ns));
+	if (!completed) {
+		struct dma_tx_state state = { };
+		enum dma_status status = dmaengine_tx_status(device->dma_chan,
+			device->dma_cookie, &state);
+
+		dev_err(device->dev,
+			"DMA deadline: duration_ns=%llu status=%u residue=%u stop=%d\n",
+			duration_ns, status, state.residue,
+			atomic_read(&device->stop_requested));
+		/* A requested cancellation does not turn a failed drain into
+		 * successful cancellation. Keep pacing available during teardown.
+		 */
+		dmaengine_terminate_sync(device->dma_chan);
+		device->dma_submitted = false;
+		rp1_gpclk_tick_stop(device);
+		return -ETIMEDOUT;
+	}
 	if (atomic_read(&device->stop_requested)) {
 		dmaengine_terminate_sync(device->dma_chan);
 		device->dma_submitted = false;
@@ -149,11 +194,6 @@ static int rp1_gpclk_wait_dma(struct rp1_gpclk_device *device,
 		return -ECANCELED;
 	}
 	rp1_gpclk_tick_stop(device);
-	if (!completed) {
-		dmaengine_terminate_sync(device->dma_chan);
-		device->dma_submitted = false;
-		return -ETIMEDOUT;
-	}
 	/* RP1 DMA must reach a terminated channel state before direction change. */
 	dmaengine_terminate_sync(device->dma_chan);
 	device->dma_submitted = false;
@@ -237,8 +277,8 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 	device->initial_dma_tick0_en =
 		readl(device->dma_tick0 + RP1_GPCLK_DMA_TICK0_EN);
 	device->initial_dma_tick0_ctrl =
-		readl(device->dma_tick0 + RP1_GPCLK_DMA_TICK0_CTRL);
-	device->tick_state_captured = true;
+		readl(device->dma_tick0 + RP1_GPCLK_DMA_TICK0_CTRL) &
+		~RP1_GPCLK_DMA_TICK_DREQ;
 	if (device->initial_dma_tick0_en || device->initial_dma_tick0_ctrl ||
 	    (device->initial_tick_dma0_ctrl &&
 	     (device->initial_tick_dma0_ctrl != RP1_GPCLK_FIRMWARE_TICK_CTRL ||
@@ -257,6 +297,7 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 			"phase4d startup conflict: common clock reports hardware enabled\n");
 		return -EBUSY;
 	}
+	device->tick_state_captured = true;
 	device->initial_rate = clk_get_rate(device->clock);
 	device->initial_parent = clk_get_parent(device->clock);
 	if (!device->initial_parent || !device->initial_rate)
@@ -319,7 +360,8 @@ static int rp1_gpclk_machine_stop_tick(void *argument)
 	struct rp1_gpclk_device *device =
 		((struct rp1_gpclk_execution_context *)argument)->device;
 
-	rp1_gpclk_tick_stop(device);
+	if (device->tick_state_captured)
+		rp1_gpclk_tick_stop(device);
 	return 0;
 }
 
@@ -355,7 +397,8 @@ static int rp1_gpclk_machine_terminate_dma(void *argument)
 			observed == device->initial_dma_tick0_en, 1, 1000);
 		ret = ret ?: readl_poll_timeout(
 			device->dma_tick0 + RP1_GPCLK_DMA_TICK0_CTRL, observed,
-			observed == device->initial_dma_tick0_ctrl, 1, 1000);
+			(observed & ~RP1_GPCLK_DMA_TICK_DREQ) ==
+			device->initial_dma_tick0_ctrl, 1, 1000);
 		if (ret) {
 			dev_err(device->dev,
 				"phase4d cleanup: tick register restoration verification failed\n");
