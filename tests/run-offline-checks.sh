@@ -125,5 +125,10 @@ ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
     -o "$tmp_dir/bootstrap_policy"
 "$tmp_dir/bootstrap_policy"
 
+${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
+    -I"$repo_dir/include" "$repo_dir/tests/dma_segments.c" -o "$tmp_dir/dma_segments"
+"$tmp_dir/dma_segments"
+echo "DMA segment alignment and byte conservation: PASS"
+
 git -C "$repo_dir" diff --check
 echo "whitespace: PASS"

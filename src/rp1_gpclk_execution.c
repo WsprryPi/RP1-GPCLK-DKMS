@@ -11,9 +11,11 @@
 #include <linux/ktime.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/slab.h>
+#include <linux/scatterlist.h>
 #include <linux/wait.h>
 
 #include "rp1_gpclk/device.h"
+#include "rp1_gpclk/dma_segments.h"
 #include "rp1_gpclk/clock_setup.h"
 #include "rp1_gpclk/execution.h"
 #include "rp1_gpclk/execution_machine.h"
@@ -101,6 +103,10 @@ static int rp1_gpclk_configure_dma(struct rp1_gpclk_device *device,
 {
 	struct dma_async_tx_descriptor *descriptor;
 	struct dma_slave_config config = { };
+	struct sg_table table;
+	struct scatterlist *entry;
+	size_t remaining = bytes, offset = 0;
+	unsigned int count, i;
 	dma_cookie_t cookie;
 	int ret;
 
@@ -118,8 +124,26 @@ static int rp1_gpclk_configure_dma(struct rp1_gpclk_device *device,
 	if (ret)
 		return ret;
 	reinit_completion(&device->dma_done);
-	descriptor = dmaengine_prep_slave_single(device->dma_chan, buffer_dma,
-		bytes, direction, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+	if (!bytes || bytes % sizeof(__u32))
+		return -EINVAL;
+	count = DIV_ROUND_UP(bytes, RP1_GPCLK_DMA_SEGMENT_BYTES);
+	ret = sg_alloc_table(&table, count, GFP_KERNEL);
+	if (ret)
+		return ret;
+	for_each_sg(table.sgl, entry, count, i) {
+		unsigned int length = rp1_gpclk_dma_segment_bytes(remaining);
+
+		/* dma_alloc_coherent already supplied DMA addresses; do not map
+		 * them again or translate them through CPU physical addresses.
+		 */
+		sg_dma_address(entry) = buffer_dma + offset;
+		sg_dma_len(entry) = length;
+		offset += length;
+		remaining -= length;
+	}
+	descriptor = dmaengine_prep_slave_sg(device->dma_chan, table.sgl,
+		count, direction, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+	sg_free_table(&table);
 	if (!descriptor)
 		return -EIO;
 	descriptor->callback = rp1_gpclk_dma_complete;
