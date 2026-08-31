@@ -1,0 +1,111 @@
+<!-- SPDX-License-Identifier: MIT -->
+
+# Runtime application restoration
+
+The schema-3 manager now completes application restoration after successful
+route switching. This supersedes the manager workflow's former unconditional
+`complete-inhibited` outcome. The low-level overlay transaction still ends at
+that checkpoint; it does not itself start an application.
+
+## Ownership and sequence
+
+DKMS owns overlay/consumer lifecycle, its transaction journals, and temporary
+service inhibition. WsprryPi supplies the installed companion
+`/usr/local/lib/wsprrypi/route_application.py`, configuration semantics, idle
+startup handling, and application readiness acknowledgement. The kernel UAPI,
+compatibility checks, and release/qualification status are unchanged.
+
+The privileged manager captures prior service state and a unique startup token
+in `application.json` before stopping anything. A workflow lock excludes other
+mutating manager requests throughout restoration. The existing controller lock
+is released before starting WsprryPi so startup queries can acquire it.
+
+The owned `90-rp1-route-inhibit.conf` service drop-in adds an unsatisfiable
+`ConditionPathExists` below `/dev/null`. It prevents normal starts/restarts
+without replacing `/etc/systemd/system/wsprrypi.service`. An existing service
+unit or administrator mask is never overwritten. This is cooperative systemd
+inhibition, not isolation from privileged processes or alternative units.
+
+After normal consumer unload and controller-owned overlay removal/application,
+the consumer is loaded with `live_output=0`. A passive snapshot must confirm
+the selected route is idle. Only then does the companion atomically update
+`GPIO.Transmit Pin` and `Operation.Transmit=false`. It preserves other settings,
+including `Enable on Boot`, comments and file mode. The canonical installed
+service command/configuration is checked before effects. Missing services,
+unsupported commands and old application builds require installation repair;
+they are not silently replaced.
+
+An owned `91-rp1-route-idle.conf` supplies the startup-only
+`WSPRRYPI_ROUTE_RESTORE_IDLE` token. WsprryPi overrides automatic transmission
+for that startup, leaving its saved boot preference unchanged. The manager
+removes its inhibition, reloads systemd, closes the controller lock, then starts
+only a previously active service. Startup reconciliation and application loop
+setup, startup quiescence and network reconciliation must succeed, and any
+configured HTTP listener must be bound, before WsprryPi sends `application-ready` with the selected
+route, token, PID and `transmit=false`. The manager checks the current service
+PID, controller identity and idle snapshot before recording completion.
+
+The normal operator transmission controls remain available after restoration;
+no prior transmission or scheduler request is resumed by this workflow. Existing
+RP1 operation authorization and cleanup behavior remain unchanged.
+
+## Durable outcomes and recovery
+
+`query` includes the durable application transaction alongside the current
+controller observation. Application phases distinguish:
+
+- `restored`: the application acknowledged idle readiness, including a later
+  explicit first start of a previously stopped application.
+- `stopped`: the application was stopped and was not started.
+- `administrator-masked`: an existing administrator mask was preserved.
+- `restoration-failed`: the route transaction completed, but application
+  configuration, startup or readiness failed.
+- `route-failed`: the route transaction failed; its original errno and overlay
+  ownership remain available separately from any subsequent inhibition error.
+- `route-recovered`: explicit recovery reached a neutral route; a new switch is
+  needed before restoring application availability.
+
+Completed records describe the last transaction, not a promise that the service
+cannot subsequently stop. A stopped/masked application's idle startup override
+remains until its first later startup acknowledges readiness. This avoids an
+`Always` boot preference unexpectedly transmitting on that first start.
+
+`runtime_route_client.py restore --execute` retries only application completion
+on the same boot, deployment and successfully installed route. It does not
+repeat overlay effects. Interrupted route changes require `recover --execute`,
+then a new explicit switch. Recovery preserves the original service intent on
+the same boot. Prior-boot restoration never automatically starts an application
+or adopts stale overlay ownership; recover and explicitly select a new route.
+
+Failures retain owned inhibition where possible and report inhibition failure
+separately. Foreign drop-ins are preserved and reported. Requester disconnects
+do not kill the independently systemd-owned manager worker; durable results
+remain queryable. No successful application restoration is reported merely
+because systemd accepted a start request.
+
+## Deployment and validation boundary
+
+Install the companion and matching WsprryPi executable using the application's
+installer or `scripts/copy_exe.py`. Deploy a newly bound complete DKMS runtime
+bundle: the inventory now includes `runtime_application.py` and the manager's
+sandbox permits the canonical application configuration directory. Do not swap
+individual scripts under an old binding. The application requires the manager's
+`applicationRestorationVersion=1` before offering a successful runtime preflight.
+
+An old `/dev/null` service mask is not automatically adopted as workflow-owned.
+Restore the canonical service installation and intentionally clear that legacy
+mask during coherent deployment. The software cannot infer whether that mask
+is now an administrator's desired state.
+
+Offline tests exercise public manager dispatch, real temporary journals and
+drop-ins, fake systemd/kernel effects, interruption at durable journal boundaries,
+error retention, startup lock ordering, stale acknowledgements, configuration
+preservation and startup policy. They do not qualify systemd behavior, kernel
+overlay removal, GPIO, RF or exact-target deployment.
+
+Separately authorized target validation should start with coherent identities,
+GPIO20 and output disabled. Check running/stopped service restoration, GPIO20 to
+GPIO4 to GPIO20 switching with no output, deliberate restart failure and explicit
+restoration, service/unit preservation, and final GPIO20 idle state. Record route,
+service PID/readiness, configuration, clock/DMA quiescence and both journals.
+Do not resume transmission or infer RF qualification from these tests.

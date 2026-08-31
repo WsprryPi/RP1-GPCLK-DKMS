@@ -16,7 +16,7 @@ from runtime_layout import INVENTORY
 MAX_FILE_BYTES = 32*1024*1024
 MAX_JOURNAL_BYTES = 32*1024*1024
 BINDING = str(admin.BINDING)
-JOURNALS = {str(admin.STATE / name) for name in ('transaction.json', 'manager.json')}
+JOURNALS = {str(admin.STATE / name) for name in ('transaction.json', 'manager.json', 'application.json')}
 DESTINATIONS = set(INVENTORY) | {BINDING} | JOURNALS
 
 

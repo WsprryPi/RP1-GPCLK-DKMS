@@ -197,31 +197,25 @@ class Tests(unittest.TestCase):
                                  ('/usr/sbin/rmmod', 'rp1_gpclk_dkms')])
         self.assertFalse(any('force' in token or token in ('-f', '--force') for argv in calls for token in argv))
 
-    def test_persistent_mask_precedes_commands_and_survives_failure(self):
+    def test_persistent_dropin_preserves_foreign_service(self):
+        import runtime_application as app
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)
+            unit = directory/'wsprrypi.service'
+            unit.write_text('administrator-owned unit')
             system = object.__new__(admin.Linux)
             system.check_inhibit = lambda: None
-            events = []
             def command(argv):
-                self.assertEqual(os.readlink(directory/'wsprrypi.service'), '/dev/null')
-                self.assertEqual(events[0], 'directory-fsync')
-                events.append(argv)
+                self.assertEqual(app.unit_file(app.DROPIN).read_bytes(), app.INHIBIT)
                 if 'stop' in argv:
                     raise ValueError('stop failed')
             with patch.object(admin, 'UNIT_DIR', directory), \
-                 patch.object(admin, 'safe_directory'), \
-                 patch.object(admin, 'fsync_dir', side_effect=lambda path: events.append('directory-fsync')), \
+                 patch.object(admin, 'safe_directory'), patch.object(admin, 'fsync_dir'), \
+                 patch.object(admin, 'read_regular', side_effect=lambda path:Path(path).read_bytes()), \
                  patch.object(admin, 'run', side_effect=command):
                 with self.assertRaises(ValueError): system.inhibit()
-            self.assertTrue((directory/'wsprrypi.service').is_symlink())
-            self.assertEqual(events[1:], [('/usr/bin/systemctl', 'daemon-reload'),
-                                         ('/usr/bin/systemctl', 'stop', 'wsprrypi.service')])
-            (directory/'wsprrypi.service').unlink()
-            (directory/'wsprrypi.service').write_text('foreign unit')
-            with patch.object(admin, 'UNIT_DIR', directory), patch.object(admin, 'safe_directory'):
-                with self.assertRaises(ValueError): system.inhibit()
-            self.assertEqual((directory/'wsprrypi.service').read_text(), 'foreign unit')
+                self.assertEqual(app.unit_file(app.DROPIN).read_bytes(), app.INHIBIT)
+            self.assertEqual(unit.read_text(), 'administrator-owned unit')
 
     def test_journal_real_atomic_replace_and_failure(self):
         with tempfile.TemporaryDirectory() as tmp:

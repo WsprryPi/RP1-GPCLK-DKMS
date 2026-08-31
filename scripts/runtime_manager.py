@@ -47,24 +47,31 @@ def token(system, state, route):
 
 
 def response(system, operation, state, status='ok', error=None):
+    import runtime_application as app
     result = {'schemaVersion': 3, 'contract': CONTRACT, 'operation': operation, 'status': status,
               'state': {'profile': 'runtime', 'controller': state, 'bootId': system.boot,
                         'activeRoute': {1:'gpio4', 2:'gpio20'}.get(state['route']),
                         'configuredRoute': None, 'qualification': False,
                         'outputEnabled': False, 'applicationInhibited': system.inhibited(),
                         'pendingTransaction': system.read_journal(),
-                        'bindingSha256': system.binding_hash}}
+                        'application': app.load(system),
+                        'bindingSha256': system.binding_hash, 'applicationRestorationVersion': 1}}
     if error is not None:
         result['error'] = {'code': 'runtime-fail-closed', 'message': str(error),
                            'kernelError': state['error'], 'overlayId': state['id']}
     return result
 
 
-def dispatch(value, factory=admin.Linux):
+def _dispatch(value, factory=admin.Linux):
     if isinstance(value, dict) and value.get('operation') in ('idle','reconcile-output','resume'):
         import runtime_output
         request = runtime_output.parse(value)
         with factory() as system:
+            if request['operation'] in ('reconcile-output', 'resume'):
+                import runtime_application as app
+                pending = app.load(system)
+                if pending and pending['phase'] not in app.TERMINAL:
+                    raise ValueError('application restoration is still pending')
             state = system.call()
             output = runtime_output.dispatch(system, request, state)
             result = response(system, request['operation'], state)
@@ -118,6 +125,106 @@ def dispatch(value, factory=admin.Linux):
             result = response(system, operation, state, 'error', error)
         record.update(complete=True, controller=state, response=result)
         system.write_manager_record(record)
+        return result
+
+
+def dispatch(value, factory=admin.Linux):
+    import runtime_application as app
+    # Only admission waits; no module/overlay effect is retried. Startup queries
+    # must not latch a failure merely because a short readiness poll holds flock.
+    if factory is admin.Linux:
+        factory = lambda: admin.Linux(wait_for_lock=True)
+    operation = value.get('operation') if isinstance(value, dict) else None
+    if operation == 'application-ready':
+        if (set(value) != {'schemaVersion', 'operation', 'route', 'token', 'pid', 'transmit'} or
+                type(value['schemaVersion']) is not int or value['schemaVersion'] != 3 or
+                value['route'] not in ('gpio4', 'gpio20') or
+                not isinstance(value['token'], str) or len(value['token']) != 36 or
+                type(value['pid']) is not int or value['pid'] <= 0 or value['transmit'] is not False):
+            raise ValueError('invalid application acknowledgement')
+        with factory() as system:
+            state = system.call()
+            app.acknowledge(system, value, state)
+            return response(system, operation, state)
+    if operation not in ('switch', 'recover', 'restore'):
+        return _dispatch(value, factory)
+    if operation == 'restore':
+        if value != {'schemaVersion':3, 'operation':'restore', 'execute':True}:
+            raise ValueError('restore requires explicit execution')
+    else:
+        parse(value)
+    with app.mutation_lock():
+        with factory() as system:
+            record = app.load(system)
+            if operation == 'switch':
+                if record and record.get('requestId') == value['requestId']:
+                    if record.get('fingerprint') != admin.digest(json.dumps(value, sort_keys=True).encode()) or record['route'] != value['route'] or record['boot'] != system.boot or record['binding'] != system.binding_hash or (record.get('controller') and record['controller'] != system.call()):
+                        raise ValueError('request ID conflict')
+                    result = response(system, operation, system.call(), record['phase'] if record['phase'] in app.TERMINAL else 'error')
+                    result['state']['application'] = record
+                    return result
+                if token(system, system.call(), value['route']) != value['preflightToken']:
+                    raise ValueError('stale preflight; no mutation performed')
+                record = app.capture(system, value)
+            elif operation == 'restore':
+                if not record:
+                    raise ValueError('no application transaction to restore')
+                if record['boot'] != system.boot or record['binding'] != system.binding_hash:
+                    raise ValueError('prior boot/deployment requires recover and a new route switch; no automatic restart')
+                journal = system.read_journal()
+                state = system.call()
+                if (not journal or journal.get('phase') != 'complete-inhibited' or
+                        journal.get('observation') != state or
+                        state['route'] != {'gpio4':1, 'gpio20':2}[record['route']]):
+                    raise ValueError('route transaction is unresolved; use recover, then switch, not restore')
+                if record['phase'] in app.TERMINAL:
+                    if record['controller'] != system.call():
+                        raise ValueError('completed restoration route no longer matches')
+                    result = response(system, operation, system.call(), record['phase'])
+                    result['state']['application'] = record
+                    return result
+        if operation == 'recover':
+            with factory() as system:
+                state = system.call()
+                capture_only = (record and record['phase'] == 'captured' and
+                                system.read_journal() is None and
+                                not any(state[k] for k in ('generation', 'id', 'route', 'error', 'flags')))
+                if capture_only:
+                    system.inhibit()
+                    result = response(system, operation, state, 'recovered-inhibited')
+            if not capture_only:
+                result = _dispatch(value, factory)
+            if record and result['status'] != 'error':
+                with factory() as system:
+                    app.remove_idle(record)
+                    app.save(system, record, 'route-recovered')
+                    result['state']['application'] = record
+            return result
+        if operation == 'switch':
+            result = _dispatch(value, factory)
+            if result['status'] == 'error':
+                with factory() as system:
+                    record['routeError'] = result['error']
+                    record['error'] = result['error']['message']
+                    app.save(system, record, 'route-failed')
+                    result['state']['application'] = record
+                return result
+        try:
+            with factory() as system:
+                state = system.call()
+                if operation == 'restore':
+                    # Recovery of application completion never repeats overlay effects.
+                    system.inhibit()
+                app.prepare(system, record, state)
+            record = app.finish(factory, record)
+            with factory() as system:
+                result = response(system, operation, system.call(), record['phase'])
+        except (OSError, ValueError) as error:
+            with factory() as system:
+                app.failed(system, record, error)
+                result = response(system, operation, system.call(), 'error', error)
+                result['error']['code'] = 'application-restoration-failed'
+        result['state']['application'] = record
         return result
 
 

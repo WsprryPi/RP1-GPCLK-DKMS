@@ -2,6 +2,12 @@
 
 # Experimental clock-disabled runtime route controller
 
+The current schema-3 manager completes application restoration as specified in
+[Runtime application restoration](runtime-application-restoration-v1.md). Its successful switch path
+restores a previously running application in idle mode. Descriptions below of
+unconditional manual mask release describe the earlier low-level workflow;
+`restore --execute` is now the recovery command for application completion.
+
 This is the implementation follow-up to PR #6, not a replacement for the
 packaged v1 route manager or the synthetic v2 model. It uses the reviewed stock
 kernel's exported OF APIs. It remains a development implementation, not supported product route switching.

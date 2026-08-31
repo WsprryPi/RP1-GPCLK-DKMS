@@ -25,6 +25,7 @@ class System(Machine):
     def __enter__(self): return self
     def __exit__(self, *args): pass
     def inhibited(self): return self.mask
+    def read_record(self, name): return None
     def read_manager_record(self): return copy.deepcopy(self.record)
     def write_manager_record(self, value): self.record = copy.deepcopy(value)
 
@@ -50,7 +51,7 @@ class Files:
 
 class Tests(unittest.TestCase):
     def request(self, system, route='gpio4', ident='request-0001'):
-        reply = manager.dispatch({'schemaVersion':3, 'operation':'preflight', 'route':route}, lambda:system)
+        reply = manager._dispatch({'schemaVersion':3, 'operation':'preflight', 'route':route}, lambda:system)
         return {'schemaVersion':3, 'operation':'switch', 'route':route, 'execute':True,
                 'actor':'offline.test', 'requestId':ident,
                 'preflightToken':reply['state']['preflightToken']}
@@ -58,23 +59,23 @@ class Tests(unittest.TestCase):
     def test_complete_switch_replay_recovery(self):
         system = System()
         request = self.request(system)
-        first = manager.dispatch(request, lambda:system)
+        first = manager._dispatch(request, lambda:system)
         self.assertEqual(first['status'], 'complete-inhibited')
         count = len(system.events)
-        self.assertEqual(manager.dispatch(request, lambda:system), first)
+        self.assertEqual(manager._dispatch(request, lambda:system), first)
         self.assertEqual(len(system.events), count)
         request = self.request(system, 'gpio20', 'request-0002')
-        self.assertEqual(manager.dispatch(request, lambda:system)['state']['activeRoute'], 'gpio20')
-        result = manager.dispatch({'schemaVersion':3,'operation':'recover','execute':True,
+        self.assertEqual(manager._dispatch(request, lambda:system)['state']['activeRoute'], 'gpio20')
+        result = manager._dispatch({'schemaVersion':3,'operation':'recover','execute':True,
             'requestId':'recover-0001','actor':'offline.test'}, lambda:system)
         self.assertIsNone(result['state']['activeRoute'])
         self.assertTrue(system.mask)
 
     def test_error_ownership_preserved(self):
         system = System()
-        manager.dispatch(self.request(system), lambda:system)
+        manager._dispatch(self.request(system), lambda:system)
         system.remove_error = -16
-        result = manager.dispatch(self.request(system, 'gpio20', 'request-0002'), lambda:system)
+        result = manager._dispatch(self.request(system, 'gpio20', 'request-0002'), lambda:system)
         self.assertEqual(result['error']['kernelError'], -16)
         self.assertEqual(result['error']['overlayId'], 9)
         self.assertTrue(system.mask)
@@ -84,12 +85,12 @@ class Tests(unittest.TestCase):
         system = System()
         request = self.request(system)
         system.value['generation'] += 1
-        with self.assertRaises(ValueError): manager.dispatch(request, lambda:system)
+        with self.assertRaises(ValueError): manager._dispatch(request, lambda:system)
         self.assertFalse(system.events)
         request = self.request(system)
-        manager.dispatch(request, lambda:system)
+        manager._dispatch(request, lambda:system)
         system.boot = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
-        with self.assertRaises(ValueError): manager.dispatch(request, lambda:system)
+        with self.assertRaises(ValueError): manager._dispatch(request, lambda:system)
 
     def test_legacy_effect_and_extra_fields_rejected(self):
         for operation in ('switch', 'apply-and-reboot', 'reconcile', 'recover'):
@@ -153,9 +154,9 @@ class Tests(unittest.TestCase):
     def test_replay_does_not_claim_lost_inhibition(self):
         system = System()
         request = self.request(system)
-        manager.dispatch(request, lambda:system)
+        manager._dispatch(request, lambda:system)
         system.mask = False
-        with self.assertRaises(ValueError): manager.dispatch(request, lambda:system)
+        with self.assertRaises(ValueError): manager._dispatch(request, lambda:system)
 
     def test_loaded_module_refusal_has_no_pending_marker(self):
         files = Files()
