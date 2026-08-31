@@ -7,6 +7,13 @@ implemented capability, compatibility promise, or qualification claim.
 
 ## Rebootless route switching through runtime overlays
 
+The [feasibility review and execution plan](contracts/rebootless-route-feasibility.md)
+records current code capabilities, primary-source findings, migration needs,
+and the separate implementation and target-validation gates. Firmware-applied
+routes cannot be removed by the runtime overlay utility; the proposed runtime
+overlay design requires migration to a route-neutral boot first when such a
+route is present. No runtime switch operation is implemented by that review.
+
 Backlog safe application and removal of the GPIO4 and GPIO20 device-tree
 overlays at runtime so an administrator may change the active RP1 GPCLK0 route
 without rebooting. The current supported route-manager contract continues to
