@@ -1,0 +1,10 @@
+--- config.txt.before
++++ config.txt.neutral
+@@ -53,7 +53,3 @@
+ initramfs initramfs_2712_step5_6.18.34.img followkernel
+ # END ROADMAP STEP5 KERNEL PIN
+ 
+-# BEGIN RP1-GPCLK-DKMS OWNED ROUTE
+-# contract=rp1-gpclk-route-manager-v1 package=1.1.1-1 route=gpio20
+-dtoverlay=rp1-gpclk-gpio20
+-# END RP1-GPCLK-DKMS OWNED ROUTE

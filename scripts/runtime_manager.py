@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+"""Explicit runtime profile on the existing privileged route-manager socket."""
+import json
+import re
+import sys
+import runtime_controller_admin as admin
+
+CONTRACT = 'rp1-gpclk-route-manager-runtime-v1'
+MAX_INPUT = 16384
+
+
+def parse(value):
+    if not isinstance(value, dict) or type(value.get('schemaVersion')) is not int:
+        raise ValueError('request object/version required')
+    # Discovery only: never reinterpret a legacy reboot/reconcile as switching.
+    if value == {'schemaVersion': 1, 'operation': 'query'}:
+        return {'schemaVersion': 3, 'operation': 'query'}
+    operation = value.get('operation')
+    fields = {'schemaVersion', 'operation'}
+    if value['schemaVersion'] != 3 or operation not in ('query', 'preflight', 'switch', 'recover'):
+        raise ValueError('runtime profile requires schemaVersion=3 and an explicit runtime operation')
+    if operation in ('preflight', 'switch'):
+        fields.add('route')
+        if value.get('route') not in ('gpio4', 'gpio20'):
+            raise ValueError('unsupported route')
+    if operation in ('switch', 'recover'):
+        fields |= {'execute', 'requestId', 'actor'}
+        if value.get('execute') is not True:
+            raise ValueError('explicit execution required')
+        for name, pattern in (('requestId', r'[A-Za-z0-9][A-Za-z0-9._-]{7,63}'),
+                              ('actor', r'[A-Za-z0-9][A-Za-z0-9._:@/-]{1,127}')):
+            if not isinstance(value.get(name), str) or not re.fullmatch(pattern, value[name]):
+                raise ValueError('invalid '+name)
+    if operation == 'switch':
+        fields.add('preflightToken')
+        if not isinstance(value.get('preflightToken'), str) or not re.fullmatch('[0-9a-f]{64}', value['preflightToken']):
+            raise ValueError('preflight token required')
+    if set(value) != fields:
+        raise ValueError('unexpected request fields')
+    return value
+
+
+def token(system, state, route):
+    return admin.digest(json.dumps({'boot': system.boot, 'binding': system.binding_hash,
+        'controller': state, 'route': route}, sort_keys=True, separators=(',', ':')).encode())
+
+
+def response(system, operation, state, status='ok', error=None):
+    result = {'schemaVersion': 3, 'contract': CONTRACT, 'operation': operation, 'status': status,
+              'state': {'profile': 'runtime', 'controller': state, 'bootId': system.boot,
+                        'activeRoute': {1:'gpio4', 2:'gpio20'}.get(state['route']),
+                        'configuredRoute': None, 'qualification': False,
+                        'outputEnabled': False, 'applicationInhibited': system.inhibited(),
+                        'pendingTransaction': system.read_journal(),
+                        'bindingSha256': system.binding_hash}}
+    if error is not None:
+        result['error'] = {'code': 'runtime-fail-closed', 'message': str(error),
+                           'kernelError': state['error'], 'overlayId': state['id']}
+    return result
+
+
+def dispatch(value, factory=admin.Linux):
+    request = parse(value)
+    operation = request['operation']
+    with factory() as system:
+        state = system.call()
+        admin.validate_observation(state)
+        if operation == 'query':
+            return response(system, operation, state)
+        if operation == 'preflight':
+            if state['flags'] & admin.FAULT:
+                raise ValueError('controller fault requires recovery, not a successor')
+            previous = system.read_journal()
+            if previous is not None and not isinstance(previous, dict):
+                raise ValueError('invalid transaction journal')
+            if previous and (previous.get('boot') != system.boot or previous.get('binding') != system.binding_hash or previous.get('session') != state['session']):
+                raise ValueError('journal identity mismatch')
+            if previous is None and (state['id'] or state['flags']):
+                raise ValueError('unowned controller state')
+            if previous and previous.get('phase') not in ('complete-inhibited', 'recovered-inhibited'):
+                raise ValueError('pending transaction requires recovery')
+            result = response(system, operation, state)
+            result['state']['preflightToken'] = token(system, state, request['route'])
+            return result
+        fingerprint = admin.digest(json.dumps(request, sort_keys=True).encode())
+        previous = system.read_manager_record()
+        if previous is not None and not isinstance(previous, dict):
+            raise ValueError('invalid request journal')
+        if previous and previous.get('requestId') == request['requestId']:
+            if previous.get('fingerprint') != fingerprint:
+                raise ValueError('request ID conflict')
+            if previous.get('complete') and previous.get('controller') == state and previous.get('boot') == system.boot and previous.get('binding') == system.binding_hash and system.inhibited():
+                return previous['response']
+            raise ValueError('request is pending or stale; inspect and explicitly recover')
+        if operation == 'switch' and token(system, state, request['route']) != request['preflightToken']:
+            raise ValueError('stale preflight; no mutation performed')
+        record = {'requestId': request['requestId'], 'actor': request['actor'],
+                  'fingerprint': fingerprint, 'complete': False, 'controller': state,
+                  'boot': system.boot, 'binding': system.binding_hash}
+        system.write_manager_record(record)
+        try:
+            state = admin.execute(system, route={'gpio4':1,'gpio20':2}.get(request.get('route')),
+                                  recover=operation == 'recover')
+            result = response(system, operation, state, 'complete-inhibited')
+        except (OSError, ValueError) as error:
+            # Do not retry effects. A busy/unknown status is itself a blocker.
+            state = system.call()
+            result = response(system, operation, state, 'error', error)
+        record.update(complete=True, controller=state, response=result)
+        system.write_manager_record(record)
+        return result
+
+
+def main():
+    operation = None
+    try:
+        if len(sys.argv) != 1:
+            raise ValueError('JSON on stdin only')
+        data = sys.stdin.buffer.read(MAX_INPUT+1)
+        if len(data) > MAX_INPUT:
+            raise ValueError('request too large')
+        value = admin.strict_json(data)
+        operation = value.get('operation') if isinstance(value, dict) else None
+        result = dispatch(value)
+    except (OSError, ValueError, TypeError, KeyError, RecursionError) as error:
+        result = {'schemaVersion':3, 'contract':CONTRACT, 'operation':operation,
+                  'status':'error', 'error':{'code':'fail-closed', 'message':str(error)}}
+    print(json.dumps(result, sort_keys=True))
+    return 0 if result['status'] != 'error' else 2
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

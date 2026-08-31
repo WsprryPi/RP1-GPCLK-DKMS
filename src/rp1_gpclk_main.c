@@ -19,6 +19,11 @@
 #include "rp1_gpclk/uapi_dispatch.h"
 #include "rp1_gpclk/version.h"
 
+#ifdef RP1_RUNTIME_CONTROLLER
+#include "../controller/consumer.h"
+static bool route_cleanup_failed;
+#endif
+
 static bool live_output;
 module_param(live_output, bool, 0444);
 MODULE_PARM_DESC(live_output,
@@ -254,6 +259,14 @@ static void rp1_gpclk_remove(struct platform_device *pdev)
 	rp1_gpclk_execution_quiesce(device,
 				    RP1_GPCLK_REASON_PROVIDER_REMOVED);
 	rp1_gpclk_quiesce(device);
+#ifdef RP1_RUNTIME_CONTROLLER
+	if (device->core.value.cleanup_fault || device->clock_cleanup_error ||
+	    device->dma_submitted || device->clock_enabled ||
+	    device->clock_prepared || device->parent_selected ||
+	    device->tick_state_captured || device->pins_active_selected ||
+	    READ_ONCE(device->worker))
+		route_cleanup_failed = true;
+#endif
 	rp1_gpclk_resources_release(device);
 	rp1_gpclk_endpoint_release(device);
 	platform_set_drvdata(pdev, NULL);
@@ -264,7 +277,12 @@ static const struct of_device_id rp1_gpclk_of_match[] = {
 	{ .compatible = "wsprrypi,rp1-gpclk-dkms-v1" },
 	{ }
 };
+#ifndef RP1_RUNTIME_CONTROLLER
+/* Runtime administration explicitly loads the checked consumer after APPLY.
+ * Do not race that step with OF-modalias autoload on the new endpoint.
+ */
 MODULE_DEVICE_TABLE(of, rp1_gpclk_of_match);
+#endif
 
 static DEFINE_MUTEX(rp1_gpclk_bootstrap_lock);
 static struct platform_device *rp1_gpclk_created_pdev;
@@ -497,13 +515,18 @@ static int __init rp1_gpclk_init(void)
 {
 	int ret;
 
-	ret = rp1_gpclk_validate_endpoint_topology();
+#ifdef RP1_RUNTIME_CONTROLLER
+	ret = rp1_route_consumer_attach(live_output);
 	if (ret)
 		return ret;
+#endif
+	ret = rp1_gpclk_validate_endpoint_topology();
+	if (ret)
+		goto detach_controller;
 	ret = bus_register_notifier(&platform_bus_type,
 				    &rp1_gpclk_platform_bus_notifier);
 	if (ret)
-		return ret;
+		goto detach_controller;
 	ret = platform_driver_register(&rp1_gpclk_driver);
 	if (ret)
 		goto unregister_notifier;
@@ -517,6 +540,10 @@ unregister_driver:
 unregister_notifier:
 	bus_unregister_notifier(&platform_bus_type,
 				&rp1_gpclk_platform_bus_notifier);
+detach_controller:
+#ifdef RP1_RUNTIME_CONTROLLER
+	rp1_route_consumer_detach(true);
+#endif
 	return ret;
 }
 
@@ -534,6 +561,9 @@ static void __exit rp1_gpclk_exit(void)
 	platform_driver_unregister(&rp1_gpclk_driver);
 	bus_unregister_notifier(&platform_bus_type,
 				&rp1_gpclk_platform_bus_notifier);
+#ifdef RP1_RUNTIME_CONTROLLER
+	rp1_route_consumer_detach(route_cleanup_failed);
+#endif
 }
 
 module_init(rp1_gpclk_init);
@@ -543,3 +573,6 @@ MODULE_AUTHOR("Lee Bussy");
 MODULE_DESCRIPTION("Experimental RP1 GPCLK controlled-output provider");
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_VERSION(RP1_GPCLK_MODULE_VERSION);
+#ifdef RP1_RUNTIME_CONTROLLER
+MODULE_INFO(rp1_runtime_controller, "1");
+#endif

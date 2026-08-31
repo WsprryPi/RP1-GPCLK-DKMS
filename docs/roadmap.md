@@ -7,6 +7,12 @@ implemented capability, compatibility promise, or qualification claim.
 
 ## Rebootless route switching through runtime overlays
 
+An opt-in [clock-disabled controller implementation](contracts/runtime-controller-v1.md)
+now provides kernel-owned overlay results, consumer exclusion, persistent service
+inhibition and same-boot recovery. It is separate from the PR #6 foundation and
+default packaging. The [deployment and target test gate](operator/runtime-controller-target-plan.md)
+is still closed; actual rebootless switching and cleanup remain unproven.
+
 PR #6 is the completed research/tooling foundation for this work, not the
 runtime-switching implementation. Its delivered scope is source-backed
 feasibility research, a bounded read-only inventory collector, curated target
@@ -25,12 +31,10 @@ switching, durable journaling, and recovery with deterministic failure tests.
 Its synthetic atomic effects are not a contract for a Linux adapter. The
 separate public v2 entry point blocks every mutation. No deployment is supplied.
 
-A separate implementation PR must establish a result-preserving overlay
-ownership interface, concrete route effects, coordinated application inhibition,
-and crash recovery. It must then provide coherent artifact deployment and an
-explicitly gated migration/validation plan. A module-owned controller using
-exported stock-kernel overlay APIs is only a candidate architecture for review.
-Neither that controller nor the runtime-switching feature is implemented here.
+PR #6 did not implement a result-preserving overlay ownership interface, concrete
+route effects, application inhibition or crash recovery. Those are delivered by
+the later opt-in controller above; they still require coherent deployment and
+independent target evidence before the runtime-switching feature is usable.
 
 The [feasibility review and execution plan](contracts/rebootless-route-feasibility.md)
 records current code capabilities, primary-source findings, migration needs,
