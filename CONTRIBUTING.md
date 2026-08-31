@@ -27,3 +27,17 @@ license.
 A pull request should describe the behavior changed, tests run, skipped checks,
 hardware or system effects, compatibility implications, documentation impact,
 and remaining validation.
+
+## Current-state documentation
+
+Describe current capabilities, interfaces, prerequisites, limitations and operating
+procedures. Keep durable technical contracts and necessary source provenance.
+Do not add phase histories, completed handoff prompts, task completion reports,
+recorded test output or qualification campaigns to the repository. Report task
+results and validation in the execution chat. Do not create replacement archives.
+
+Keep maintained tests and compact deterministic fixtures. Build, package, runtime,
+update and integrity metadata must remain when consumed by current workflows.
+Generated run artifacts belong outside the checkout; test output is temporary.
+A passing test supports only the behavior it exercises and grants no target or
+RF authorization. Keep WsprryPi mode and product policy outside this module.

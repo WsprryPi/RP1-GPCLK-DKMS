@@ -1,9 +1,0 @@
-[   61.216032] wspr5 kernel: rp1_route_controller: loading out-of-tree module taints kernel.
-[   89.890873] wspr5 kernel: rp1-gpclk-dkms 1f00174024.rp1-gpclk-dkms-gpio4: probe complete; /dev/rp1-gpclk registered
-[   89.891395] wspr5 kernel: rp1-gpclk-dkms 1f00174024.rp1-gpclk-dkms-gpio4: using kernel-created RP1 GPCLK platform device
-[   91.287315] wspr5 kernel: rp1-gpclk-dkms 1f00174024.rp1-gpclk-dkms-gpio20: probe complete; /dev/rp1-gpclk registered
-[   91.287648] wspr5 kernel: rp1-gpclk-dkms 1f00174024.rp1-gpclk-dkms-gpio20: using kernel-created RP1 GPCLK platform device
-[   92.602041] wspr5 kernel: rp1-gpclk-dkms 1f00174024.rp1-gpclk-dkms-gpio4: probe complete; /dev/rp1-gpclk registered
-[   92.602339] wspr5 kernel: rp1-gpclk-dkms 1f00174024.rp1-gpclk-dkms-gpio4: using kernel-created RP1 GPCLK platform device
-[   94.051189] wspr5 kernel: rp1-gpclk-dkms 1f00174024.rp1-gpclk-dkms-gpio20: probe complete; /dev/rp1-gpclk registered
-[   94.051522] wspr5 kernel: rp1-gpclk-dkms 1f00174024.rp1-gpclk-dkms-gpio20: using kernel-created RP1 GPCLK platform device

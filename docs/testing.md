@@ -42,11 +42,11 @@ ideal pair straddles an integer-divider boundary, the renderer selects the
 nearest legal same-integer pair and clamps its weighting instead of rejecting
 the requested frequency.
 
-Render the wspr5 plan twice without touching hardware:
+Render a plan without touching hardware:
 
 ```sh
 ./build/development-frequency-sweep --render-only --points 16 --repeats 2 \
-  --source-rate-ppm 0 --receiver-ppm 1.078468 \
+  --source-rate-ppm 0 --receiver-ppm 0 \
   --output /tmp/rp1-gpclk-plan.csv
 ```
 
@@ -54,15 +54,15 @@ Run the same vector live only in an authorized GPIO20/SDRplay window:
 
 ```sh
 ./build/development-frequency-sweep --live --points 16 --repeats 3 \
-  --source-rate-ppm 0 --receiver-ppm 1.078468 \
+  --source-rate-ppm 0 --receiver-ppm 0 \
   --output /tmp/rp1-gpclk-live.csv
 ```
 
 The transmitter PPM describes the selected source (`negative` means slow) and
 changes divider planning through `corrected_parent = 200 MHz * (1 + ppm/1e6)`.
 The receiver PPM corrects the SDR estimate by division by `(1 + ppm/1e6)`.
-The wspr5 values are development measurements for that device and receiver,
-not defaults for other systems.
+Replace the example zero corrections only with values calibrated for the
+actual source and receiver. They are not interchangeable.
 
 ## Historical compatibility checks
 
@@ -72,8 +72,14 @@ that those versions are the current module or package. Route-manager tests
 likewise retain explicit 1.1.1 fixtures solely to verify bounded migration to
 the current owned-block format.
 
-Obsolete Phase 2 through Phase 4 target campaigns, retired Gate-D evidence
-machinery, and tests requiring deleted release evidence are not maintained in
-this repository. Target waveform and mode qualification belongs in the
-WsprryPi Qualification Harness. No ordinary repository test authorizes module
-installation, loading, GPIO operation, transmission, SDR capture, or RF work.
+Generated test output belongs in temporary directories. Qualification captures,
+run results and deployment inventories belong outside this source checkout.
+The retained version-specific archive layouts, four archive contract inputs in
+`docs/releases/`, and their helpers are consumed by package/integrity regressions.
+Their generation CLIs are blocked; they do not describe current release eligibility.
+The ABI snapshots protect command layouts and the migration fixtures protect
+ownership and rollback. They are functional test inputs, not retained runs.
+
+Target waveform and mode qualification belongs in the external WsprryPi Harness.
+No ordinary repository test authorizes installation, loading, GPIO, transmission,
+SDR capture or RF operation.

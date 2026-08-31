@@ -4,18 +4,14 @@
 
 The current schema-3 manager completes application restoration as specified in
 [Runtime application restoration](runtime-application-restoration-v1.md). Its successful switch path
-restores a previously running application in idle mode. Descriptions below of
-unconditional manual mask release describe the earlier low-level workflow;
-`restore --execute` is now the recovery command for application completion.
+restores a previously running application in idle mode. The low-level controller
+transaction ends inhibited; the schema-3 manager performs the application
+handshake afterward. `restore --execute` retries that application completion.
 
-This is the implementation follow-up to PR #6, not a replacement for the
-packaged v1 route manager or the synthetic v2 model. It uses the reviewed stock
-kernel's exported OF APIs. It remains a development implementation, not supported product route switching.
-Limited exact-target clock-disabled observations are recorded in the
-[wspr5 execution assessment](../evidence/runtime-target-a0f2794/assessment.md).
-The [execution prompt](runtime-controller-execution-prompt.md) defines scope;
-the [target plan](../operator/runtime-controller-target-plan.md) defines the
-authorization boundary for any subsequent campaign.
+This opt-in development implementation uses exported stock-kernel OF APIs.
+It is separate from the packaged v1 route manager and synthetic v2 model.
+Deployment, binding and hardware validation require explicit authorization;
+software tests do not establish product or RF qualification.
 
 ## Build and identity
 
@@ -26,14 +22,14 @@ identity JSON under `build/runtime-controller` come only from the two canonical
 DTS files, through the existing deterministic overlay builder. Neither controller
 ioctl nor userspace administration accepts an arbitrary overlay or path.
 
-The opt-in build produces `rp1_route_controller.ko` (experimental admin version
-0.1.0) plus `rp1_gpclk_dkms.ko` with the `rp1_runtime_controller=1` modinfo marker
+The opt-in build produces `rp1_route_controller.ko` (version specified in the
+[development identity contract](development-identity.md)) plus `rp1_gpclk_dkms.ko` with the `rp1_runtime_controller=1` modinfo marker
 and a link-time dependency on the controller. There is no OF autoload alias in
 this opt-in build: the administrator explicitly
 loads it after APPLY, avoiding an automatic load racing that step. Its driver
 retains the OF match table for explicit binding. The default build retains its
-autoload alias. The consumer remains version
-1.1.2, with changed bytes and no inherited qualification. Output-enabled consumer
+autoload alias. The consumer version follows the same development identity contract;
+changed bytes do not inherit qualification. Output-enabled consumer
 loads are unconditionally rejected by the interlock. Default builds do not link
 the controller or change their administration interface. No default DKMS or package
 installation path is added; the explicit runtime bundle has its own reviewed
@@ -99,8 +95,7 @@ A userspace timeout cannot bound a blocked kernel teardown.
 controller without a route or service effect; it still opens the admin endpoint
 and may create the private lock file. It does not claim application inhibition.
 The runtime manager adapter now exposes this transaction on the existing socket
-under its own explicit profile; the packaged manager is unchanged. A companion
-WsprryPi branch provides application/browser protocol support. Provisioning must first supply the exact root-owned
+under its own explicit profile; the packaged manager is unchanged. WsprryPi supplies the companion application/browser protocol support. Provisioning must first supply the exact root-owned
 binding at `/etc/rp1-gpclk-dkms/runtime-controller.json` and a root-owned private
 state directory at `/var/lib/rp1-gpclk-dkms/runtime-admin`. The local-only
 `build_runtime_binding.py` renders a review candidate from compiled modules;
@@ -120,12 +115,13 @@ target route, phase and observed state. A malformed, foreign, stale-session or
 cross-boot journal stops administration. Existing controller ownership without a
 journal is not silently adopted. Recovery never authorizes a successor.
 
-Before route or consumer effects, the tool creates and fsyncs the persistent
-`/etc/systemd/system/wsprrypi.service -> /dev/null` mask, reloads systemd, stops
-the service and verifies inactivity. A foreign existing unit file is not
-replaced. Failures and crashes keep the mask; it blocks ordinary systemd service
-starts, restart-on-failure and boot starts. The tool never unmasks or restarts the
-application. This covers the named service only, not arbitrary root-launched
+Before route or consumer effects, the tool persists owned service inhibition,
+reloads systemd, stops the service and verifies inactivity. The current owned
+`90-rp1-route-inhibit.conf` drop-in and idle restoration handshake are specified
+in the [application restoration contract](runtime-application-restoration-v1.md).
+Foreign unit files and administrator masks are preserved. Failures and crashes
+retain inhibition. The low-level transaction never starts the application; the
+schema-3 manager restores it only after successful route completion. This covers the named service only, not arbitrary root-launched
 processes, alternate units or other applications. Operators must exclude those
 entry points. The consumer load parameter stays disabled; ABI-v4 operation-scoped output
 is a separate existing path, as clarified in [runtime output reconciliation](runtime-output-v1.md).
@@ -180,13 +176,13 @@ bindings include the entire runtime software inventory; old three-file bindings
 must be regenerated and reviewed. Deployment and administration share one lock,
 and an unfinished deployment blocks administration. The [output reconciliation extension](runtime-output-v1.md) connects application
 startup to existing ABI-v4 operation authorization and adds explicit mask resumption.
-Route switching itself never authorizes output or automatically releases the mask.
+Route switching never authorizes output. Application restoration releases only
+owned inhibition after the required idle-state checks.
 
 ### Runtime overlay export policy
 
-Target testing found that exporting the runtime overlay's local labels adds
-properties to the base `/__symbols__` node, producing stock-kernel warnings that
-those allocations will leak on removal. Runtime generation now uses `fdtput` to
+Exporting runtime overlay labels adds properties to the base `/__symbols__`
+node, whose allocations can leak on removal. Runtime generation uses `fdtput` to
 remove only the compiled `/__symbols__` subtree before embedding. The canonical
 packaged DTS/DTBO pipeline is unchanged. All route nodes, properties, phandles,
 external `__fixups__` and `__local_fixups__` remain byte-for-byte equal as decoded

@@ -269,7 +269,7 @@ A successful module build establishes build compatibility only. It does not
 qualify loading, binding, GPIO output, timing, cleanup, coexistence,
 transmission, RF behavior, or a different system.
 
-The dual-route functional-development branch contains independent GPIO4 and
+The module contains independent GPIO4 and
 GPIO20 development-candidate entries for the Raspberry Pi 5 Model B / BCM2712
 / aarch64 / 6.18.34+rpt-rpi-2712 target class. The unique active device-tree
 route selects which entry can pass; the other route is absent. Zero active
@@ -288,7 +288,7 @@ files. Standard `dpkg`, `dh-dkms`, and DKMS mechanisms own package lifecycle.
 Installation refuses to overwrite foreign files. Removal deletes only files
 whose identity and ownership remain attributable to the package.
 
-Beginning with 1.1.1, the package also owns a versioned application-facing
+The package also owns a versioned application-facing
 route executor, its JSON schema, and consumer documentation. The executor owns
 only the delimited RP1-GPCLK-DKMS route block and attributable journals below
 `/var/lib/rp1-gpclk-dkms/route-transactions`. It keeps saved/configured and
@@ -341,10 +341,10 @@ Deployment and hardware tests remain separately authorized gates. It does not
 enable mutation through the packaged or source-development v1 manager.
 
 The [Experimental runtime-route v2 engine](runtime-route-v2.md) is explicitly an
-offline reference model with a blocked public mutation entry point. The
-[target source review](runtime-route-target-review.md) rejects its synthetic
-atomic effects as a Linux adapter contract and identifies the stock configfs
-removal path's discarded error result as a concrete recovery blocker. A bounded
+offline reference model with a blocked public mutation entry point. Its synthetic
+atomic effects are not a Linux adapter contract. The stock configfs removal
+path discards overlay-removal errors, so it is not a recoverable controller
+interface; use the separate runtime controller contract. A bounded
 read-only collector exists; that foundation supplied no write adapter or deployment
 path. The later opt-in controller above does not reuse the synthetic adapter or
 enable source-development v1 mutation.
@@ -388,10 +388,8 @@ Earlier candidate IDs remain historical and cannot satisfy the current exact
 identity contract. Neither version normalization nor eligibility transfers
 qualification; immutable module/overlay hashes remain mandatory evidence.
 
-GPIO4 r2 and GPIO20 r2 each have completed, independently bound target-functional
-development evidence for module execution and cleanup. Hardware-free validation
-and successful build, binding, or functional output are separate evidence
-classes. None establishes waveform or spectral integrity, timing or frequency
+Hardware-free validation and successful build, binding, or functional output
+are separate evidence classes. None establishes waveform or spectral integrity, timing or frequency
 accuracy, receiver capture or decode, WsprryPi product-path behavior, product
 eligibility, transmitter-system qualification, SDR qualification, RF
 qualification, packaging evidence, or release qualification.

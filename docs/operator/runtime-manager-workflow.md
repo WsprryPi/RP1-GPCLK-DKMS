@@ -2,26 +2,19 @@
 
 # Runtime manager software workflow
 
-The current schema-3 manager completes application restoration as specified in
-[Runtime application restoration](../contracts/runtime-application-restoration-v1.md). Its successful switch path
-restores a previously running application in idle mode. Descriptions below of
-unconditional manual mask release describe the earlier low-level workflow;
-`restore --execute` is now the recovery command for application completion.
+The opt-in runtime manager uses schema 3 and contract
+`rp1-gpclk-route-manager-runtime-v1` on the existing privileged Unix socket.
+It supports rebootless GPIO4/GPIO20 switching and explicit recovery to `none`.
+Successful switching restores a previously running WsprryPi in idle state through
+[application restoration](../contracts/runtime-application-restoration-v1.md).
+It never resumes transmission. This is an Experimental development profile;
+the packaged v1 manager and passive source-development profile are separate.
 
-This is an opt-in, clock-disabled development profile, not a qualified release.
-The packaged manager and source-development profile remain unchanged. The new
-`95-runtime-controller.conf` selects the runtime manager on the same privileged
-socket; schema 3 and contract `rp1-gpclk-route-manager-runtime-v1` distinguish it
-from both existing profiles. Only legacy **query** is accepted for discovery.
-Legacy reboot and reconciliation requests are never translated into switching.
-
-The companion WsprryPi branch `codex/runtime-route-workflow` discovers this
-profile, sends explicit runtime preflight/switch/recover requests, and keeps its
-transmission inhibit asserted. The browser warns that switching stops and masks
-WsprryPi. A disconnected HTTP request means **completion unknown**, not success.
-Use the operator client for subsequent administration while the app is stopped.
-No tool here restarts or unmasks the application. This is deliberately not a
-continuously available browser-only workflow.
+Only legacy query is accepted for profile discovery; legacy reboot and
+reconciliation requests are not translated into switching. WsprryPi owns browser
+integration and operator confirmation. A disconnected request means completion
+unknown: query the durable result with the operator client instead of repeating
+an uncertain effect.
 
 ## Build and review offline
 
@@ -43,8 +36,7 @@ transferring or executing it with privilege.
 
 ## Separately authorized deployment window
 
-These steps describe future target operations; they were not executed during
-software validation. Explicit authorization must name the target, exact bundle,
+Explicit authorization must name the target, exact bundle,
 module/UAPI/kernel identities, intended route, application downtime and recovery
 plan. Keep clocks and transmission disabled throughout.
 
@@ -84,20 +76,46 @@ block the entire restoration. The application remains masked. This does not undo
 kernel effects or clear a controller fault. Preserve deployment records and failed
 controller observations for investigation; never delete them to bypass a check.
 
-## Remaining proof
+## Operator commands and recovery
 
-Offline tests cover software behavior with injected effects. The
-[wspr5 campaign](../evidence/runtime-target-a0f2794/assessment.md) now supplies
-limited exact-artifact installation, same-boot route switching and normal cleanup
-observations. Any new target/deployment still requires coherent installation
-and service-sandbox validation, exact module
-resolution and signing checks, firmware migration assessment, clock-disabled
-GPIO4 and GPIO20 round trips, removal-error/ownership checks, crash recovery,
-consumer exclusion, and independent confirmation that clocks remain disabled.
-Rebootless switching was observed in that bounded clock-disabled campaign;
-broader reliability and injected-failure behavior remain unproven on hardware.
-No GPIO4 readiness, transmission, timing, interference, or RF qualification is
-claimed. Restoring application/output operation is a separate gate.
+Use the installed client after the runtime profile and its socket are deployed:
+
+```sh
+python3 /usr/lib/rp1-gpclk-dkms/runtime_route_client.py query
+python3 /usr/lib/rp1-gpclk-dkms/runtime_route_client.py preflight gpio4
+python3 /usr/lib/rp1-gpclk-dkms/runtime_route_client.py idle gpio4
+```
+
+The following commands mutate target state and require the authorized window:
+
+```sh
+python3 /usr/lib/rp1-gpclk-dkms/runtime_route_client.py switch gpio4 --execute
+python3 /usr/lib/rp1-gpclk-dkms/runtime_route_client.py switch gpio20 --execute
+python3 /usr/lib/rp1-gpclk-dkms/runtime_route_client.py recover --execute
+python3 /usr/lib/rp1-gpclk-dkms/runtime_route_client.py restore --execute
+```
+
+`switch` performs preflight, selects one route, and attempts application
+restoration. `recover` reaches `none` with application inhibition retained;
+there is no `switch none` command. Use recovery for an interrupted route change,
+then explicitly switch. `restore` retries only application completion for a
+successfully selected current route; it does not repeat overlay effects.
+Previously stopped services remain stopped and administrator masks are preserved.
+
+After reboot, load the reviewed controller and explicitly recover before
+switching. A completely empty new controller can establish a current neutral
+record; nonempty or faulted state is not silently adopted. Unknown completion,
+removal errors, owner/lease presence, stale identities or cleanup faults are
+stop conditions. Preserve the journals and investigate; never force unload,
+delete a pending record or add a second overlay to hide uncertainty.
+
+## Validation boundary
+
+Offline tests use injected system effects. Exact-target validation separately
+checks coherent module resolution and signing, neutral firmware migration,
+both route round trips, removal errors, ownership, consumer exclusion, service
+restoration, crash recovery and GPIO/clock/DMA quiescence. Tests of administration
+do not establish waveform, timing, interference, product or RF qualification.
 
 ## Deployment admission and recovery bounds
 
@@ -117,12 +135,15 @@ reviewed format/workflow change; it cannot be forced through this installer.
 
 Runtime bundle builds require both `dtc` and `fdtput` from device-tree-compiler.
 The runtime-private DTBOs retain canonical route content and fixups but omit
-exported symbols; packaged firmware DTBOs are unchanged. This avoids the observed
+exported symbols; packaged firmware DTBOs are unchanged. This avoids
 stock-kernel `/__symbols__` allocation warnings during runtime removal. Exact
 transformed bytes remain embedded in and authenticated against the controller.
 
-## Resuming application operation
+## Application output
 
-See [runtime output reconciliation](../contracts/runtime-output-v1.md) for coherent
-updates, idle startup, explicit `resume gpio20 --execute`, and the existing
-operation-scoped output path. Route administration alone never authorizes output.
+Successful schema-3 switching uses the application-restoration contract above.
+If only application readiness fails, use `restore --execute`. The low-level
+`resume` operation is not a substitute for that configuration/startup handshake.
+[Output reconciliation](../contracts/runtime-output-v1.md) is observational;
+ABI-v4 acquisition and WsprryPi operator authorization remain separate gates.
+The global load-time output gate stays disabled.

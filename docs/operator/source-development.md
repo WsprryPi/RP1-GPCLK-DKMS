@@ -14,9 +14,9 @@ It accepts no arguments, never opens the RP1 endpoint and never invokes
 dtoverlay. Unreadable files and unavailable commands remain unknown. With
 explicit read-only host authorization it can be run through SSH stdin without
 installation. Its non-atomic report and candidate boot directives never grant
-route administration. See the [target review](../contracts/runtime-route-target-review.md)
-for source-backed limitations and the distinction between matching build notes
-and a full identity of loaded bytes.
+route administration. Matching build notes corroborate artifact identity but do not establish a
+full hash of executing module memory. See [diagnostics](diagnostics.md) for
+observation limits.
 
 This workflow builds an explicitly selected Git commit directly on a Raspberry
 Pi. It does not require or create a Debian package, release manifest, tag,

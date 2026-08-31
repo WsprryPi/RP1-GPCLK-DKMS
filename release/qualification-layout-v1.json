@@ -43,7 +43,6 @@
     {"id":"gate-d-busy-injector","kind":"installed-build","path":"gate-d-busy-injector","destination":"/usr/libexec/rp1-gpclk-dkms/gate-d-busy-injector","owner":"root","group":"root","mode":"0755","replacement":"built-from-exact-source","removalOwner":"package-if-identical"},
     {"id":"gate-d-uapi-probe-source","kind":"archive","path":"tools/gate_d_uapi_probe.c","destination":"/usr/src/rp1-gpclk-dkms-1.0.1/tools/gate_d_uapi_probe.c","owner":"root","group":"root","mode":"0644","replacement":"exact-version-checksum","removalOwner":"package"},
     {"id":"gate-d-uapi-probe","kind":"installed-build","path":"gate-d-uapi-probe","destination":"/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe","owner":"root","group":"root","mode":"0755","replacement":"built-from-exact-source","removalOwner":"package-if-identical"},
-    {"id":"release-integration-gates","kind":"archive","path":"release/release-integration-gates-v1.json","destination":"/usr/share/rp1-gpclk-dkms/1.0.1/release-integration-gates-v1.json","owner":"root","group":"root","mode":"0644","replacement":"exact-version-checksum","removalOwner":"package"},
     {"id":"calibrated-review-release-policy","kind":"archive","path":"release/calibrated-review-release-policy-v1.json","destination":"/usr/share/rp1-gpclk-dkms/1.0.1/calibrated-review-release-policy-v1.json","owner":"root","group":"root","mode":"0644","replacement":"exact-version-checksum","removalOwner":"package"}
   ]
 }

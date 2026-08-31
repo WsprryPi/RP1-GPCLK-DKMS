@@ -2,14 +2,11 @@
 
 # Experimental runtime route protocol v2
 
-The [matching-kernel target review](runtime-route-target-review.md) supersedes
-this document's original proposed hardware-adapter assumptions. The engine is
-now explicitly `ModelEngine`/`ModelAdapter`; its atomic effect model is not a
-Linux interface and must not be implemented by inventing observations. The
-separate `runtime_inventory.py` collector provides actual read-only evidence.
-Target mutation remains unavailable because the reviewed configfs removal path
-does not propagate overlay errors and preserve its handle for recovery, and no
-result-preserving write adapter has been implemented.
+The engine is explicitly `ModelEngine`/`ModelAdapter`; its atomic effects are
+synthetic and must not be implemented by inventing Linux observations.
+`runtime_inventory.py` is a separate read-only collector. This model has no
+result-preserving write adapter. Real runtime administration is defined by the
+separate [runtime controller](runtime-controller-v1.md).
 
 This is an **offline implementation with target execution blocked**, not a
 deployable rebootless route manager. It implements closed request validation,
@@ -18,8 +15,7 @@ same-boot reconciliation, and explicit resume/rollback against an injected
 offline adapter. It does not implement a Linux hardware adapter or claim that
 the required atomic hardware operations already exist.
 
-The [feasibility review](rebootless-route-feasibility.md) remains the research
-basis. Existing [v1 package operations](route-manager-v1.md) and query-only
+Existing [v1 package operations](route-manager-v1.md) and query-only
 development integration are unchanged. Neither their socket nor their
 deployment command routes requests to v2. The module, canonical UAPI, and
 release identities are unchanged. No kernel lifetime safety is inferred from
@@ -93,8 +89,7 @@ records do not replace or overwrite v1 current-boot adoption records.
 network, module, or overlay executor. `ModelAdapter.model_effect` assumes atomic
 comparison of the complete observation and a synthetic successor. It requires
 an explicit `model_only` marker and is only a reference experiment. A real
-executor must use the narrower kernel guarantees established in the target
-review, not emulate this interface with read-then-execute shell commands.
+executor must use actual operation-specific kernel guarantees, not emulate this interface with read-then-execute shell commands.
 
 The ordinary modeled switch is:
 
@@ -157,11 +152,10 @@ partial restoration; cleanup cannot depend on Python exception handling.
 
 ## Missing target mechanisms and next gated work
 
-The following list records the initial implementation questions. The target
-review now resolves the unload lifetime question more narrowly, rejects a
-whole-system atomic adapter requirement, and identifies loss of the configfs
-overlay-removal result as a concrete blocker. Use that review for next work;
-do not add new UAPI merely to satisfy the reference model.
+The following limitations apply to this offline model, not the separate
+runtime controller. Do not add UAPI merely to satisfy a synthetic atomic
+adapter. The configfs removal interface discards overlay-removal errors;
+it cannot provide the model's required result and retained recovery handle.
 
 Code review of `rp1_gpclk_open()` and the canonical ABI-v4 header found no
 persistent administrative admission API spanning endpoint closure, unload,

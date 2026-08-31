@@ -9,7 +9,7 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parents[1]
 pattern = re.compile(r"\[[^]]*\]\(([^)]+)\)")
 failures = []
-for document in [ROOT / "README.md", *(ROOT / "docs").rglob("*.md")]:
+for document in [*ROOT.glob("*.md"), *(ROOT / "docs").rglob("*.md")]:
     for target in pattern.findall(document.read_text(encoding="utf-8")):
         target = target.split("#", 1)[0]
         if not target or "://" in target or target.startswith("mailto:"):

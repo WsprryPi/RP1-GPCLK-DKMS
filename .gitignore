@@ -61,3 +61,8 @@ stage/
 *.log
 *.tmp
 *.bak
+
+# Generated campaign and target evidence (not regression fixtures)
+/docs/evidence/
+/runs/
+/local/evidence/

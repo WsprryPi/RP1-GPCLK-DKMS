@@ -1,5 +1,0 @@
-Aug 31 10:04:20 wspr5 kernel: rp1-gpclk-dkms 1f00174024.rp1-gpclk-dkms-gpio20: probe complete; /dev/rp1-gpclk registered
-Aug 31 10:04:26 wspr5 kernel: rp1-gpclk-dkms 1f00174024.rp1-gpclk-dkms-gpio20: phase4d startup conflict: tick=00000003/00000032/00000000/00001000
-Aug 31 10:06:15 wspr5 kernel: rp1-gpclk-dkms 1f00174024.rp1-gpclk-dkms-gpio20: probe complete; /dev/rp1-gpclk registered
-Aug 31 10:06:42 wspr5 kernel: rp1-gpclk-dkms 1f00174024.rp1-gpclk-dkms-gpio20: phase4d generation=1 mode=5 start_ns=171343180675 finish_ns=181344989771 expected_div_frac=0x00000000 observed_div_frac=0x00000000 tick_initial=00000000/00000032/00000000/00000000 tick_final=00000000/00000032/00000000/00000000 cleanup=0 result=-125
-Aug 31 10:07:10 wspr5 kernel: rp1-gpclk-dkms 1f00174024.rp1-gpclk-dkms-gpio20: phase4d generation=1 mode=5 start_ns=198978434203 finish_ns=208980206764 expected_div_frac=0x2fc90000 observed_div_frac=0x2fc90000 tick_initial=00000000/00000032/00000000/00000000 tick_final=00000000/00000032/00000000/00000000 cleanup=0 result=0

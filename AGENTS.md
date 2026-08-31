@@ -142,3 +142,17 @@ Lead with the outcome and include:
 - licensing and documentation impact;
 - unresolved validation and the next gated step; and
 - Git state and whether anything was staged, committed, pushed, or published.
+
+## Current-state documentation
+
+Describe current capabilities, interfaces, prerequisites, limitations and operating
+procedures. Keep durable technical contracts and necessary source provenance.
+Do not add phase histories, completed handoff prompts, task completion reports,
+recorded test output or qualification campaigns to the repository. Report task
+results and validation in the execution chat. Do not create replacement archives.
+
+Keep maintained tests and compact deterministic fixtures. Build, package, runtime,
+update and integrity metadata must remain when consumed by current workflows.
+Generated run artifacts belong outside the checkout; test output is temporary.
+A passing test supports only the behavior it exercises and grants no target or
+RF authorization. Keep WsprryPi mode and product policy outside this module.

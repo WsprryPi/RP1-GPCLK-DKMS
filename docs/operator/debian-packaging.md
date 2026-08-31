@@ -151,7 +151,7 @@ published-release archive layout; the two validators are not interchangeable.
 
 The preliminary builder/validator pair is retained as historical 1.1.2 tooling.
 Its generation CLI is blocked on this baseline; it must not relabel its old
-qualification metadata as 0.9.0. Step 12 reconciles that release pipeline.
+qualification metadata as 0.9.0. That release pipeline requires a separate current-contract review.
 A local `dpkg-buildpackage -us -uc -b` build of 0.9.0 is permitted as an
 unpublished development artifact only. See the
 [version and downgrade contract](../contracts/development-identity.md).

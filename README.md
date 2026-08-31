@@ -13,22 +13,6 @@ MMIO, DMA channels, register writes, or GPIO routes to userspace.
 
 ## Release status
 
-Version 1.0.0 is published. It provides:
-
-- a conventional Debian DKMS source package;
-- separately allowlisted GPIO4 and GPIO20 device-tree overlays;
-- a bounded, versioned userspace API;
-- fail-closed hardware, kernel, route, resource, and compatibility checks;
-- exclusive ownership, finite work, cancellation, and cleanup handling; and
-- read-only diagnostics plus package lifecycle tooling.
-
-The release was validated on the recorded Raspberry Pi 5 stock-kernel
-configuration for inactive installation, output-disabled administration on
-both routes, removal, and reinstall. Qualification
-does not automatically extend to a different kernel, firmware, device tree,
-route, host, or physical installation. See the
-[1.0.0 release notes](docs/releases/1.0.0-behavior.md) for the precise claim.
-
 Version 0.9.0 is the current pre-release development baseline, preserving the
 mature ABI-v4 implementation and independent GPIO4/GPIO20 runtime routes.
 Source/DKMS/module version `0.9.0` and Debian version `0.9.0-1` are coordinated
@@ -52,20 +36,19 @@ alternate-transmitter fallback.
 
 ## Installation
 
-Download the Debian package from the
-[v1.0.0 release](https://github.com/WsprryPi/RP1-GPCLK-DKMS/releases/tag/v1.0.0)
-and install it with the normal Debian package tools:
-
-```sh
-sudo apt install ./rp1-gpclk-dkms_1.0.0-1_all.deb
-```
+For exact-commit development installation, follow the
+[source-development guide](docs/operator/source-development.md). The current
+0.9.0 package is an unpublished development artifact; the public 1.0.0 release
+is not this development build. Review the
+[identity and migration contract](docs/contracts/development-identity.md)
+before installing over an existing version.
 
 DKMS builds the module for eligible installed Raspberry Pi kernel headers. The
 package installs the GPIO4 and GPIO20 overlays but leaves both inactive. Review
 the [package lifecycle guide](docs/operator/debian-packaging.md) before making
 any route, boot, module, or signing changes.
 
-To build the Debian package from a tagged source checkout:
+To build an unpublished development package from the reviewed source checkout:
 
 ```sh
 dpkg-buildpackage -us -uc -b
@@ -124,12 +107,8 @@ The maintained test inventory and the distinction between automatic,
 parameterized build, and explicitly authorized hardware checks are documented
 in [Testing](docs/testing.md).
 
-Build and validate an unreleased development candidate without publishing it:
-
-```sh
-make release-unit DEVELOPMENT=1 OUTPUT_DIR=/absolute/output/directory
-make validate-release DEVELOPMENT=1 OUTPUT_DIR=/absolute/output/directory
-```
+Release generation and publication are disabled pending a reviewed current
+release pipeline. Use the development installer or local Debian build above.
 
 Build the module against an explicitly selected local kernel build tree:
 
@@ -142,14 +121,29 @@ loading, GPIO behavior, timing, coexistence, cleanup, transmission, RF, or an
 operator installation.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md), the
-[module contract](docs/contracts/rp1-gpclk-dkms-module-contract.md), and
-[roadmap](docs/roadmap.md) before contributing. See [LICENSE.md](LICENSE.md)
+[module contract](docs/contracts/rp1-gpclk-dkms-module-contract.md) before contributing. See [LICENSE.md](LICENSE.md)
 for licensing terms.
 
-The external Harness evidence boundary and the next consumer-integration step
-are defined by the
-[Qualification Harness integration contract](docs/contracts/qualification-harness-integration.md)
-and [Roadmap Step 4 WsprryPi handoff](docs/contracts/roadmap-step4-wsprrypi-handoff.md).
+The external qualification boundary is defined by the
+[Harness integration contract](docs/contracts/qualification-harness-integration.md).
+
+## Route workflows
+
+GPIO4 and GPIO20 are separate routes. With neither overlay active, the route is
+`none` and there is no endpoint; two active overlays are ambiguous and rejected.
+
+| Administration profile | Workflow |
+| --- | --- |
+| Packaged v1 manager | [Configure a route, reboot and reconcile](docs/contracts/route-manager-v1.md) |
+| Source-development v1 manager | [Passive query and current-boot adoption](docs/operator/source-development.md) |
+| Opt-in runtime manager, schema 3 | [Rebootless GPIO4/GPIO20 switching and recovery to none](docs/operator/runtime-manager-workflow.md) |
+
+The runtime profile uses the [runtime controller](docs/contracts/runtime-controller-v1.md)
+and [application restoration](docs/contracts/runtime-application-restoration-v1.md).
+For diagnosis and removal, see [diagnostics](docs/operator/diagnostics.md) and
+[module lifecycle](docs/operator/lifecycle.md). Passive observations and
+[ABI-v4 operation authorization](docs/contracts/uapi-v4-operation-live.md)
+are distinct; route selection never authorizes transmission.
 
 ## Project boundary
 
