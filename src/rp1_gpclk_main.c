@@ -277,7 +277,12 @@ static const struct of_device_id rp1_gpclk_of_match[] = {
 	{ .compatible = "wsprrypi,rp1-gpclk-dkms-v1" },
 	{ }
 };
+#ifndef RP1_RUNTIME_CONTROLLER
+/* Runtime administration explicitly loads the checked consumer after APPLY.
+ * Do not race that step with OF-modalias autoload on the new endpoint.
+ */
 MODULE_DEVICE_TABLE(of, rp1_gpclk_of_match);
+#endif
 
 static DEFINE_MUTEX(rp1_gpclk_bootstrap_lock);
 static struct platform_device *rp1_gpclk_created_pdev;

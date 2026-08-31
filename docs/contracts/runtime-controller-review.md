@@ -34,6 +34,12 @@ PR #6's finalized research foundation. No target operation was performed.
   zero-ID removal failures and lost response delivery. A STATUS command exposes
   the actual controller record after failed commands without claiming inhibition
   or electrical state. Faults remain latched even after retained-ID cleanup.
+- **OF autoload race:** the final integration assessment identified that a new
+  endpoint's uevent could autoload the consumer before the administrator's fixed
+  insmod step. Removed only the opt-in build's autoload alias while retaining its
+  explicit driver match table and the default build's aliases. Rebuilt both
+  variants and asserted the distinction in their actual compiled modinfo; reran
+  the full offline suite. No automatic consumer start is part of this interface.
 
 ## Reassessment
 
@@ -44,6 +50,9 @@ reboot and identity substitution paths. No remaining actionable finding was
 identified within this offline development scope. Unrestricted root interference,
 unknown external overlay consumers and timing/electrical behavior remain explicit
 operational exclusions or unvalidated target properties, not passed assertions.
+An additional assessment after the autoload correction found no further actionable
+finding in the delivered scope. The refreshed evidence supersedes the initial
+implementation commit's module hashes.
 
 The full offline suite passed after repairs: 36 registered Python checks, one
 parameterized utility classification and nine host C tests. The new controller

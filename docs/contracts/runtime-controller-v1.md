@@ -20,7 +20,11 @@ ioctl nor userspace administration accepts an arbitrary overlay or path.
 
 The opt-in build produces `rp1_route_controller.ko` (experimental admin version
 0.1.0) plus `rp1_gpclk_dkms.ko` with the `rp1_runtime_controller=1` modinfo marker
-and a link-time dependency on the controller. The consumer remains version
+and a link-time dependency on the controller. There is no OF autoload alias in
+this opt-in build: the administrator explicitly
+loads it after APPLY, avoiding an automatic load racing that step. Its driver
+retains the OF match table for explicit binding. The default build retains its
+autoload alias. The consumer remains version
 1.1.2, with changed bytes and no inherited qualification. Output-enabled consumer
 loads are unconditionally rejected by the interlock. Default builds do not link
 the controller or change their administration interface. No DKMS or package

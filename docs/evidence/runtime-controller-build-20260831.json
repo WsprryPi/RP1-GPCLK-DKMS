@@ -4,12 +4,12 @@
   "architecture": "aarch64",
   "artifacts": {
     "default/rp1_gpclk_dkms.ko": {
-      "buildNoteSha256": "65bc4d1ae93944bdcf8bbda9b5169d2ecd80e084e98138faf79bee6aedbe0ad7",
-      "sha256": "ffe529f0ba57ae48b8beb4fb521c8531935fc0d4f0b4e1a70a73c1ddb9b50cc4"
+      "buildNoteSha256": "55e751df3ddebb838c5566ed4e9d7c4e5747364e0e9a174cdc3f6f73f268e767",
+      "sha256": "cc9fe7dda4d879d7ba2e90eb84042e023a28922474659144b4371f42d017190a"
     },
     "opt-in/rp1_gpclk_dkms.ko": {
-      "buildNoteSha256": "4eaa0fbff2878a638a9cd3d2b5d2d8c397fda85dacb7a425d385ab9012cbab2a",
-      "sha256": "8d5b56b1ad56c77347d734f8030001ed909b27b3d30f0d74ec83e84508aa01f2"
+      "buildNoteSha256": "1c7e23975d82939ce79dd870a2f3ed0e3ba5c774f5d33eac206874ea5ae56988",
+      "sha256": "11bd0cdbf0d75b1d258c680e20b80deb18f88cba12124370d80949ae014ccf96"
     },
     "opt-in/rp1_route_controller.ko": {
       "buildNoteSha256": "b9d290ce7601d931b9d77783e389403f2a09702df116a24ee691bcfc65cddc55",
@@ -18,14 +18,15 @@
   },
   "buildImageId": "sha256:6ceba8b34e64696c607f233b4050e4052d8a7ed48d4c8e41cddc95f66b72e7c8",
   "classification": "offline-build-only",
+  "compiledAutoloadMetadata": "PASS: opt-in has interlock dependency and no OF alias; default retains OF alias and no interlock marker",
   "compiler": "gcc (Debian 14.2.0-19) 14.2.0",
   "controllerVersion": "0.1.0",
   "date": "2026-08-31",
   "deploymentBinding": {
-    "consumerNoteSha256": "4eaa0fbff2878a638a9cd3d2b5d2d8c397fda85dacb7a425d385ab9012cbab2a",
+    "consumerNoteSha256": "1c7e23975d82939ce79dd870a2f3ed0e3ba5c774f5d33eac206874ea5ae56988",
     "controllerNoteSha256": "b9d290ce7601d931b9d77783e389403f2a09702df116a24ee691bcfc65cddc55",
     "files": {
-      "/lib/modules/6.18.34+rpt-rpi-2712/updates/dkms/rp1_gpclk_dkms.ko": "8d5b56b1ad56c77347d734f8030001ed909b27b3d30f0d74ec83e84508aa01f2",
+      "/lib/modules/6.18.34+rpt-rpi-2712/updates/dkms/rp1_gpclk_dkms.ko": "11bd0cdbf0d75b1d258c680e20b80deb18f88cba12124370d80949ae014ccf96",
       "/lib/modules/6.18.34+rpt-rpi-2712/updates/dkms/rp1_route_controller.ko": "bf73b32861b9bc7de3f44b1da23d6247e55bc57a68b4671865ff8d82b772472d",
       "/usr/lib/rp1-gpclk-dkms/runtime_controller_admin.py": "191943626e66a16f0d28546477c99eec825a9bf60c752b1d1dc1a09a4df392a6"
     },
@@ -89,7 +90,7 @@
     "src/rp1_gpclk_execution_policy.c": "9f47979d2d43d1e4ce59e445af13f819202deaa7925b6e0a6204fc278515c78d",
     "src/rp1_gpclk_kernel_api.c": "f71ef514597ef42b3735c06ec23cd8beed8b703190296473a2c53dab406798a6",
     "src/rp1_gpclk_lifetime.c": "25cd5994b60d0949f00dd53e3280a0f7379480090852d7deef360bd6e6021e20",
-    "src/rp1_gpclk_main.c": "cd76d71b8a930b7224041f18a761ac03e5a92fa53c85edc23adf85bd95ccd4b7",
+    "src/rp1_gpclk_main.c": "aaf234ad92a2832a1b39950d97cb91af642c33abc81a6310f5c91f75d9f9df70",
     "src/rp1_gpclk_resource_policy.c": "c89348a80453563a60b56ca16b4f6b61e1e7560d106ef7c891bfc6418cb12ff9",
     "src/rp1_gpclk_uapi_dispatch.c": "6c6352602a3c40f29e2bf5e5a59aac8217455a3c5c69942cf5faa7ec0963cf08"
   },
