@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import runtime_application as app
 import runtime_controller_admin as admin
 import runtime_manager as manager
+import runtime_activation
 from check_runtime_controller import Machine
 
 
@@ -88,6 +89,24 @@ class Tests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
         self.system = System(root)
+        capture = {'version': 1, 'wasActive': True,
+            'administratorMasked': False,
+            'service': {'LoadState': 'loaded', 'ActiveState': 'active',
+                'UnitFileState': 'enabled', 'MainPID': str(self.system.pid)},
+            'companion': {'contract': 'wsprrypi-route-application-v1',
+                'route': 'gpio4', 'transmit': False,
+                'config': '/usr/local/etc/wsprrypi.ini'}}
+        plan = {'version': 1, 'operation': 'neutral-activation',
+            'bindingSha256': self.system.binding_hash, 'artifactSetSha256': 'b' * 64,
+            'bootId': self.system.boot, 'lastDeploymentSha256': 'c' * 64,
+            'application': capture, 'socketWasActive': False,
+            'alreadyReady': False, 'previousActivationSha256': None}
+        activation_record = {'version': 1, 'plan': plan,
+            'planSha256': runtime_activation.plan_digest(plan),
+            'requestId': '00000000-0000-0000-0000-000000000001',
+            'phase': 'complete-neutral', 'controller': self.system.call(),
+            'manager': {}, 'application': {'phase': 'restored'}, 'error': None}
+        (root / 'activation.json').write_text(json.dumps(activation_record))
         self.stack = contextlib.ExitStack()
         for obj, name, value in (
             (admin,'STATE',root), (admin,'UNIT_DIR',root),

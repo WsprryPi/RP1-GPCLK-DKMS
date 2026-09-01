@@ -95,6 +95,15 @@ def _dispatch(value, factory=admin.Linux):
                 raise ValueError('journal identity mismatch')
             if previous is None and (state['id'] or state['flags']):
                 raise ValueError('unowned controller state')
+            if previous is None:
+                import runtime_activation as activation
+                activated = system.read_record('activation.json')
+                activation.validate_journal(activated)
+                if (activated['phase'] != 'complete-neutral' or
+                        activated['plan']['bootId'] != system.boot or
+                        activated['plan']['bindingSha256'] != system.binding_hash or
+                        activated['controller'] != state):
+                    raise ValueError('neutral activation identity mismatch')
             if previous and previous.get('phase') not in ('complete-inhibited', 'recovered-inhibited'):
                 raise ValueError('pending transaction requires recovery')
             result = response(system, operation, state)
@@ -133,9 +142,10 @@ def dispatch(value, factory=admin.Linux):
     import runtime_application as app
     # Only admission waits; no module/overlay effect is retried. Startup queries
     # must not latch a failure merely because a short readiness poll holds flock.
-    if factory is admin.Linux:
-        factory = lambda: admin.Linux(wait_for_lock=True)
     operation = value.get('operation') if isinstance(value, dict) else None
+    if factory is admin.Linux:
+        factory = lambda: admin.Linux(wait_for_lock=True,
+            allow_activation_query=operation == 'query')
     if operation == 'application-ready':
         if (set(value) != {'schemaVersion', 'operation', 'route', 'token', 'pid', 'transmit'} or
                 type(value['schemaVersion']) is not int or value['schemaVersion'] != 3 or

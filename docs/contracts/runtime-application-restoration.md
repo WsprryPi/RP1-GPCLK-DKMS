@@ -19,6 +19,23 @@ in `application.json` before stopping anything. A workflow lock excludes other
 mutating manager requests throughout restoration. The existing controller lock
 is released before starting WsprryPi so startup queries can acquire it.
 
+Filesystem deployment also captures the pre-inhibition service state and exact
+companion observation in its reviewed version-2 deployment plan. The neutral
+activation transaction reuses the same owned inhibitor, service observation,
+companion validation and administrator-mask rules. It never calls the
+route-specific configuration operation, creates an idle-route token or invents
+GPIO4/GPIO20. Neutral restoration is admitted only when `Operation.Transmit` was
+already false. A previously active service is started and must be active with a
+nonzero PID; a stopped service remains stopped, and an administrator mask remains
+masked. The companion is rechecked and must still report `transmit=false`.
+
+The route-specific `application-ready` acknowledgement is intentionally not
+forged for neutral activation: there is no consumer or selected route to
+reconcile. Neutral readiness instead proves controller route zero, consumer and
+endpoint absence, exact service intent, and the companion's disabled application
+configuration. A later explicit route transaction creates the existing
+route-specific token and acknowledgement.
+
 The owned `90-rp1-route-inhibit.conf` service drop-in adds an unsatisfiable
 `ConditionPathExists` below `/dev/null`. It prevents normal starts/restarts
 without replacing `/etc/systemd/system/wsprrypi.service`. An existing service
@@ -81,6 +98,12 @@ separately. Foreign drop-ins are preserved and reported. Requester disconnects
 do not kill the independently systemd-owned manager worker; durable results
 remain queryable. No successful application restoration is reported merely
 because systemd accepted a start request.
+
+Neutral activation failures retain `activation.json` and re-establish the same
+owned inhibitor. Recovery requires its reviewed journal digest. A recovered
+transaction remains inhibited but retains the original application intent for a
+subsequent reviewed activation or coherent deployment. Prior activation evidence
+is archived before a recovered transaction is restarted.
 
 The installer-facing runtime-provider contract classifies a failed restoration
 as `recovery_required` and directs the caller to `restore --execute`; it never

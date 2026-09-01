@@ -16,6 +16,7 @@ import runtime_manager as manager
 import runtime_deployment as deploy
 import runtime_controller_admin as admin
 import runtime_binding
+import runtime_activation
 from check_runtime_controller import Machine
 
 
@@ -26,7 +27,25 @@ class System(Machine):
     def __enter__(self): return self
     def __exit__(self, *args): pass
     def inhibited(self): return self.mask
-    def read_record(self, name): return None
+    def read_record(self, name):
+        if name != 'activation.json': return None
+        application = {'version': 1, 'wasActive': True,
+            'administratorMasked': False,
+            'service': {'LoadState': 'loaded', 'ActiveState': 'active',
+                'UnitFileState': 'enabled', 'MainPID': '42'},
+            'companion': {'contract': 'wsprrypi-route-application-v1',
+                'route': 'gpio4', 'transmit': False,
+                'config': '/usr/local/etc/wsprrypi.ini'}}
+        plan = {'version': 1, 'operation': 'neutral-activation',
+            'bindingSha256': self.binding_hash, 'artifactSetSha256': 'b' * 64,
+            'bootId': self.boot, 'lastDeploymentSha256': 'c' * 64,
+            'application': application, 'socketWasActive': False,
+            'alreadyReady': False, 'previousActivationSha256': None}
+        return {'version': 1, 'plan': plan,
+            'planSha256': runtime_activation.plan_digest(plan),
+            'requestId': '00000000-0000-0000-0000-000000000001',
+            'phase': 'complete-neutral', 'controller': self.call(),
+            'manager': {}, 'application': {'phase': 'restored'}, 'error': None}
     def read_manager_record(self): return copy.deepcopy(self.record)
     def write_manager_record(self, value): self.record = copy.deepcopy(value)
 
@@ -39,6 +58,13 @@ class Files:
         self.mask = False
         self.loaded = False
         self.external_valid = True
+        self.application = {'version': 1, 'wasActive': True,
+            'administratorMasked': False,
+            'service': {'LoadState': 'loaded', 'ActiveState': 'active',
+                'UnitFileState': 'enabled', 'MainPID': '42'},
+            'companion': {'contract': 'wsprrypi-route-application-v1',
+                'route': 'gpio4', 'transmit': False,
+                'config': '/usr/local/etc/wsprrypi.ini'}}
     def read(self, path): return self.values.get(path)
     def write(self, path, data):
         self.values[path] = data
@@ -49,6 +75,9 @@ class Files:
         if self.loaded: raise ValueError('loaded module')
     def verify_external(self, unused):
         if not self.external_valid: raise ValueError('external prerequisite mismatch')
+    def application_state(self): return copy.deepcopy(self.application)
+    def verify_application(self, expected):
+        if expected != self.application: raise ValueError('application changed')
     def quiesce(self): self.mask = True
     def refresh(self): pass
 

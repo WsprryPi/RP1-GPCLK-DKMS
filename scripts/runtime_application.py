@@ -25,6 +25,90 @@ INHIBIT = b'# Owned by rp1-gpclk runtime administration\n[Unit]\nConditionPathEx
 TERMINAL = ('restored', 'stopped', 'administrator-masked')
 
 
+def neutral_capture():
+    """Capture installer restoration intent without selecting a GPIO route."""
+    observed = service()
+    if observed['ActiveState'] not in ('active', 'inactive', 'failed'):
+        raise ValueError('service is transitioning')
+    masked = observed['LoadState'] == 'masked' or observed['UnitFileState'] in (
+        'masked', 'masked-runtime')
+    if observed['LoadState'] not in ('loaded', 'masked'):
+        raise ValueError('service is not installed; repair installation before deployment')
+    if masked and observed['ActiveState'] == 'active':
+        raise ValueError('active administrator-masked service cannot be restored automatically')
+    companion = helper('inspect-stopped' if masked else 'inspect')
+    if companion.get('transmit') is not False:
+        raise ValueError('neutral deployment requires Operation.Transmit=false')
+    return {'version': 1, 'wasActive': observed['ActiveState'] == 'active',
+            'administratorMasked': masked,
+            'service': observed, 'companion': companion}
+
+
+def validate_neutral_capture(record):
+    required = {'version', 'wasActive', 'administratorMasked', 'service', 'companion'}
+    if (not isinstance(record, dict) or set(record) != required or
+            type(record.get('version')) is not int or record['version'] != 1 or
+            type(record.get('wasActive')) is not bool or
+            type(record.get('administratorMasked')) is not bool or
+            not isinstance(record.get('service'), dict) or
+            set(record['service']) != {'LoadState', 'ActiveState', 'UnitFileState', 'MainPID'} or
+            not isinstance(record.get('companion'), dict) or
+            set(record['companion']) != {'contract', 'route', 'transmit', 'config'} or
+            record['companion'].get('contract') != 'wsprrypi-route-application-v1' or
+            record['companion'].get('route') not in ('gpio4', 'gpio20') or
+            record['companion'].get('config') != '/usr/local/etc/wsprrypi.ini' or
+            record['companion'].get('transmit') is not False):
+        raise ValueError('invalid neutral application capture')
+    service = record['service']
+    masked = service['LoadState'] == 'masked' or service['UnitFileState'] in (
+        'masked', 'masked-runtime')
+    if (service['LoadState'] not in ('loaded', 'masked') or
+            service['ActiveState'] not in ('active', 'inactive', 'failed') or
+            not isinstance(service['MainPID'], str) or not service['MainPID'].isdigit() or
+            record['wasActive'] != (service['ActiveState'] == 'active') or
+            record['administratorMasked'] != masked or
+            (record['wasActive'] and service['MainPID'] == '0') or
+            (not record['wasActive'] and service['MainPID'] != '0')):
+        raise ValueError('inconsistent neutral application capture')
+    return record
+
+
+def neutral_restore(record):
+    """Release only the owned inhibitor and restore the captured service intent."""
+    validate_neutral_capture(record)
+    remove_owned(unit_file(DROPIN), INHIBIT)
+    admin.run(('/usr/bin/systemctl', 'daemon-reload'))
+    if record['wasActive']:
+        admin.run(('/usr/bin/systemctl', 'start', 'wsprrypi.service'))
+    observed = service()
+    masked = observed['LoadState'] == 'masked' or observed['UnitFileState'] in (
+        'masked', 'masked-runtime')
+    if masked != record['administratorMasked']:
+        raise ValueError('administrator service mask changed during neutral restoration')
+    if record['wasActive']:
+        if observed['ActiveState'] != 'active' or observed['MainPID'] == '0':
+            raise ValueError('previously active application did not restart')
+        phase = 'restored'
+    else:
+        if observed['ActiveState'] not in ('inactive', 'failed'):
+            raise ValueError('previously stopped application unexpectedly started')
+        phase = 'administrator-masked' if record['administratorMasked'] else 'stopped'
+    companion = helper('inspect-stopped' if masked else 'inspect')
+    if companion.get('transmit') is not False:
+        raise ValueError('application is not neutral after restoration')
+    return {'phase': phase, 'service': observed, 'companion': companion}
+
+
+def neutral_inhibit():
+    """Re-establish the owned safety barrier after a neutral restoration fault."""
+    write_owned(unit_file(DROPIN), INHIBIT)
+    admin.run(('/usr/bin/systemctl', 'daemon-reload'))
+    admin.run(('/usr/bin/systemctl', 'stop', 'wsprrypi.service'))
+    observed = service()
+    if observed['ActiveState'] not in ('inactive', 'failed'):
+        raise ValueError('application still active after neutral inhibition')
+
+
 def load(system):
     record = system.read_record('application.json')
     if record is None:

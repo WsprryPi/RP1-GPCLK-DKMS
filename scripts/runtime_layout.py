@@ -9,7 +9,8 @@ INVENTORY = {
 INVENTORY.update({LIB+name: 'scripts/'+name for name in (
     'runtime_controller_admin.py', 'runtime_manager.py', 'runtime_route_client.py',
     'runtime_layout.py', 'runtime_deployment.py', 'runtime_output.py',
-    'runtime_application.py', 'runtime_provider.py', 'runtime_binding.py')})
+    'runtime_application.py', 'runtime_activation.py', 'runtime_provider.py',
+    'runtime_binding.py')})
 INVENTORY['/etc/systemd/system/rp1-gpclk-route-manager@.service.d/95-runtime-controller.conf'] = 'systemd/95-runtime-controller.conf'
 INVENTORY[LIB+'schema/rp1-gpclk-runtime-readiness-v1.schema.json'] = 'schema/rp1-gpclk-runtime-readiness-v1.schema.json'
 

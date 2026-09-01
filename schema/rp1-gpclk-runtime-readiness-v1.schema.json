@@ -9,10 +9,14 @@
     "schemaVersion": {"const": 1},
     "contract": {"const": "rp1-gpclk-runtime-readiness"},
     "profile": {"const": "runtime"},
-    "result": {"enum": ["absent", "deployment_required", "exact_ready", "recovery_required", "conflict"]},
-    "state": {"enum": ["absent", "deployment_required", "exact_ready", "recovery_required", "conflict"]},
+    "result": {"enum": ["absent", "deployment_required", "activation_required", "neutral_ready", "exact_ready", "recovery_required", "conflict"]},
+    "state": {"enum": ["absent", "deployment_required", "activation_required", "neutral_ready", "exact_ready", "recovery_required", "conflict"]},
     "compatible": {"type": "boolean"},
     "eligible": {"type": "boolean"},
+    "administrationCompatible": {"type": "boolean"},
+    "administrationEligible": {"type": "boolean"},
+    "routeSelected": {"type": "boolean"},
+    "transmissionEligible": {"type": "boolean"},
     "identities": {"type": "object"},
     "artifacts": {"type": "object"},
     "deployment": {"type": "object"},
@@ -23,17 +27,23 @@
     "modules": {"type": "object", "required": ["rp1_route_controller", "rp1_gpclk_dkms"]},
     "journals": {"type": "object"},
     "manager": {"type": "object"},
+    "activation": {"type": "object"},
+    "reboot": {"type": "object", "required": ["occurred", "required"]},
     "safety": {"type": "object"},
     "conflicts": {"type": "array", "items": {"type": "string"}},
     "remediation": {"type": "array", "items": {"type": "string"}}
   },
   "oneOf": [
     {
-      "required": ["profile", "result", "state", "compatible", "eligible", "identities", "artifacts", "deployment", "routes", "endpoints", "managerSocket", "services", "modules", "journals", "manager", "safety", "conflicts", "remediation"]
+      "required": ["profile", "result", "state", "compatible", "eligible", "administrationCompatible", "administrationEligible", "routeSelected", "transmissionEligible", "identities", "artifacts", "deployment", "routes", "endpoints", "managerSocket", "services", "modules", "journals", "manager", "activation", "reboot", "safety", "conflicts", "remediation"]
     },
     {
       "required": ["operation", "planSha256", "response"],
-      "properties": {"operation": {"const": "route-ensure"}}
+      "properties": {"operation": {"enum": ["route-ensure", "activation-ensure", "activation-recover"]}}
+    },
+    {
+      "required": ["operation", "planSha256", "plan"],
+      "properties": {"operation": {"const": "activation-recover-plan"}}
     },
     {
       "required": ["result", "state", "compatible", "eligible", "error"],

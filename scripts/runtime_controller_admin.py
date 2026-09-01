@@ -122,8 +122,9 @@ def run(argv):
 
 
 class Linux:
-    def __init__(self, wait_for_lock=False):
+    def __init__(self, wait_for_lock=False, allow_activation_query=False):
         self.wait_for_lock = wait_for_lock
+        self.allow_activation_query = allow_activation_query
         self.lock = self.fd = None
         try:
             self.initialize()
@@ -168,6 +169,14 @@ class Linux:
         self.binding = strict_json(raw)
         self.binding_hash = digest(raw)
         validate_binding(self.binding)
+        activation = self.read_record('activation.json')
+        if activation is not None:
+            from runtime_activation import validate_journal
+            validate_journal(activation)
+            if (activation['phase'] != 'complete-neutral' and
+                    not (self.allow_activation_query and
+                         activation['phase'] == 'manager-query-intent')):
+                raise ValueError('neutral activation requires completion or recovery')
         base = f'/lib/modules/{KERNEL}/updates/dkms/'
         from runtime_layout import INVENTORY
         expected = set(INVENTORY)

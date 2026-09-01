@@ -42,6 +42,7 @@ RUNTIME_ARTIFACTS = (
     "/usr/lib/rp1-gpclk-dkms/runtime-uapi",
     "/usr/lib/rp1-gpclk-dkms/runtime-overlays",
     "/usr/lib/rp1-gpclk-dkms/runtime_application.py",
+    "/usr/lib/rp1-gpclk-dkms/runtime_activation.py",
     "/usr/lib/rp1-gpclk-dkms/runtime_binding.py",
     "/usr/lib/rp1-gpclk-dkms/runtime_controller_admin.py",
     "/usr/lib/rp1-gpclk-dkms/runtime_deployment.py",

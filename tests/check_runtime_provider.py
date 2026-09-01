@@ -75,7 +75,8 @@ class Host:
             'actualSha256': sha} for path, sha in
             {**self.value['files'], **self.value['externalFiles']}.items()}
         self._journals = {name: {'status': 'absent'} for name in
-            ('deployment-pending.json', 'transaction.json', 'manager.json', 'application.json')}
+            ('deployment-pending.json', 'transaction.json', 'manager.json',
+             'application.json', 'activation.json')}
         self._modules = {
             'rp1_route_controller': {'status': 'loaded', 'version': '0.9.0',
                 'buildNoteSha256': self.value['controllerNoteSha256']},
@@ -86,6 +87,7 @@ class Host:
                            for name in ('/dev/rp1-gpclk', '/dev/rp1-route-admin')}
         self._socket = {'status': 'owned'}
         self._manager = manager_ready()
+        self._activation = {'status': 'absent'}
         self.files = None
         if not ready:
             self.make_absent()
@@ -107,8 +109,12 @@ class Host:
     def socket(self): return copy.deepcopy(self._socket)
     def services(self): return {'rp1-gpclk-route-manager.socket': {
         'load': 'loaded', 'active': 'active', 'enabled': 'enabled',
-        'fragment': '/usr/lib/systemd/system/rp1-gpclk-route-manager.socket'}}
+        'fragment': '/usr/lib/systemd/system/rp1-gpclk-route-manager.socket'},
+        'rp1-gpclk-route-manager@.service': {'load': 'loaded', 'active': 'inactive',
+        'enabled': 'static',
+        'fragment': '/usr/lib/systemd/system/rp1-gpclk-route-manager@.service'}}
     def manager(self): return copy.deepcopy(self._manager)
+    def activation_observation(self): return copy.deepcopy(self._activation)
     def deployment_plan(self, unused):
         return {'version': 1, 'files': {provider.deployment.BINDING: {
             'before': None, 'after': provider.deployment.encode(
@@ -137,9 +143,31 @@ class Tests(unittest.TestCase):
 
     def test_activation_required_after_complete_deployment(self):
         host = Host()
+        host._modules['rp1_route_controller'] = {'status': 'absent'}
+        host._modules['rp1_gpclk_dkms'] = {'status': 'absent'}
+        host._endpoints['/dev/rp1-route-admin'] = {'status': 'absent', 'open': False}
+        host._endpoints['/dev/rp1-gpclk'] = {'status': 'absent', 'open': False}
+        host._socket = {'status': 'absent'}
+        host._manager = {'status': 'absent'}
+        self.assertEqual(self.inspect(host)['result'], 'activation_required')
+
+    def test_neutral_ready_is_administration_only(self):
+        host = Host()
         host._modules['rp1_gpclk_dkms'] = {'status': 'absent'}
         host._endpoints['/dev/rp1-gpclk'] = {'status': 'absent', 'open': False}
-        self.assertEqual(self.inspect(host)['result'], 'deployment_required')
+        host._manager['query']['state'].update(activeRoute=None,
+            controller=controller(0, 0), pendingTransaction=None, application=None)
+        host._manager.pop('idle')
+        host._journals['activation.json'] = {'status': 'present',
+            'value': {'phase': 'complete-neutral'}}
+        host._activation = {'status': 'observed', 'value': {'neutral': True}}
+        with patch.object(provider.activation, 'neutral_ready', return_value=True):
+            result = self.inspect(host)
+        self.assertEqual(result['result'], 'neutral_ready')
+        self.assertTrue(result['administrationCompatible'])
+        self.assertTrue(result['administrationEligible'])
+        self.assertFalse(result['compatible'] or result['eligible'])
+        self.assertFalse(result['routeSelected'] or result['transmissionEligible'])
 
     def test_partial_file_publication_requires_recovery(self):
         host = Host()
@@ -304,9 +332,11 @@ class Tests(unittest.TestCase):
         schema = json.loads((Path(__file__).resolve().parents[1] /
             'schema/rp1-gpclk-runtime-readiness-v1.schema.json').read_text())
         self.assertEqual(schema['properties']['result']['enum'],
-            ['absent', 'deployment_required', 'exact_ready', 'recovery_required', 'conflict'])
-        self.assertEqual(provider.EXIT, {'exact_ready': 0, 'absent': 10,
-            'deployment_required': 11, 'recovery_required': 12, 'conflict': 13})
+            ['absent', 'deployment_required', 'activation_required', 'neutral_ready',
+             'exact_ready', 'recovery_required', 'conflict'])
+        self.assertEqual(provider.EXIT, {'exact_ready': 0, 'neutral_ready': 0,
+            'absent': 10, 'deployment_required': 11, 'recovery_required': 12,
+            'conflict': 13, 'activation_required': 14})
 
 
 if __name__ == '__main__':

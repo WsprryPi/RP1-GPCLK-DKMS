@@ -11,6 +11,12 @@ The runtime controller continues to own its overlay and exclude removal while
 the consumer is attached. Neither its UAPI nor its consumer interlock changes.
 The consumer remains loaded with `live_output=0`.
 
+In the separate neutral-administration state, only the controller is loaded.
+There is no overlay, consumer endpoint, lease, owner, authorization, clock, GPIO
+or DMA execution state to resume. `neutral_ready` therefore means administration
+is available for a later explicit route plan; it does not mean the transmission
+consumer is compatible or eligible.
+
 The canonical UAPI supports operation-scoped live acquisition on this consumer.
 The load parameter blocks the global output path;
 it does not disable operation-scoped authorization. No new permit, duration cap, or mode

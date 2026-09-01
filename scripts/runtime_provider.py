@@ -18,14 +18,16 @@ import sys
 import uuid
 
 import runtime_binding
+import runtime_activation as activation
 import runtime_controller_admin as admin
 import runtime_deployment as deployment
 import runtime_route_client as client
 
 CONTRACT = 'rp1-gpclk-runtime-readiness'
 SCHEMA_VERSION = 1
-EXIT = {'exact_ready': 0, 'absent': 10, 'deployment_required': 11,
-        'recovery_required': 12, 'conflict': 13}
+EXIT = {'exact_ready': 0, 'neutral_ready': 0, 'absent': 10,
+        'deployment_required': 11, 'recovery_required': 12, 'conflict': 13,
+        'activation_required': 14}
 ROUTES = ('gpio4', 'gpio20')
 ENDPOINTS = {'consumer': '/dev/rp1-gpclk', 'controller': '/dev/rp1-route-admin'}
 SOCKET = '/run/rp1-gpclk-dkms/route-manager.sock'
@@ -157,7 +159,8 @@ class Host:
 
     def services(self):
         result = {}
-        for name in ('rp1-gpclk-route-manager.socket', 'wsprrypi.service'):
+        for name in ('rp1-gpclk-route-manager.socket',
+                     'rp1-gpclk-route-manager@.service', 'wsprrypi.service'):
             try:
                 text = admin.run(('/usr/bin/systemctl', 'show', name,
                     '--property=LoadState,ActiveState,UnitFileState,FragmentPath', '--value'))
@@ -193,6 +196,27 @@ class Host:
         observed = self.artifacts({'status': 'valid', 'value': expected})
         return {path: observed[path] for path in expected['externalFiles']}
 
+    def activation_observation(self):
+        try:
+            return {'status': 'observed', 'value': activation.observe(activation.Linux())}
+        except FileNotFoundError:
+            return ({'status': 'absent'} if self.binding().get('status') == 'absent'
+                    else record_error('activation provenance or prerequisite is absent'))
+        except (OSError, ValueError, TypeError, KeyError) as error:
+            return record_error(error)
+
+    def activation_plan(self):
+        return activation.activation_plan(activation.Linux())
+
+    def activation_ensure(self, value, approved):
+        return activation.ensure(activation.Linux(), value, approved)
+
+    def activation_recovery_plan(self):
+        return activation.recovery_plan(activation.Linux())
+
+    def activation_recover(self, value, approved):
+        return activation.ensure_recovery(activation.Linux(), value, approved)
+
 
 def inspect(host, bundle=None, requested=None, configured=None, persisted=None):
     binding = host.binding()
@@ -209,15 +233,20 @@ def inspect(host, bundle=None, requested=None, configured=None, persisted=None):
     expected_external = (host.expected_external(expected)
                          if isinstance(expected, dict) and 'externalFiles' in expected else {})
     journals = {name: host.journal(name) for name in
-        ('deployment-pending.json', 'transaction.json', 'manager.json', 'application.json')}
+        ('deployment-pending.json', 'transaction.json', 'manager.json',
+         'application.json', 'activation.json')}
     modules = {name: host.module(name) for name in ('rp1_route_controller', 'rp1_gpclk_dkms')}
     endpoints = {name: host.endpoint(path) for name, path in ENDPOINTS.items()}
     socket = host.socket()
     services = host.services()
     manager = host.manager() if socket.get('status') == 'owned' else {'status': 'absent'}
+    activation_observation = (host.activation_observation()
+        if hasattr(host, 'activation_observation') else {'status': 'absent'})
     result = {'schemaVersion': SCHEMA_VERSION, 'contract': CONTRACT,
         'profile': 'runtime', 'result': None, 'state': None,
         'compatible': False, 'eligible': False,
+        'administrationCompatible': False, 'administrationEligible': False,
+        'routeSelected': False, 'transmissionEligible': False,
         'identities': {'installedBinding': binding, 'expectedBinding': expected,
             'expectedExternal': expected_external},
         'artifacts': artifacts, 'deployment': {'journal': journals['deployment-pending.json'],
@@ -226,6 +255,8 @@ def inspect(host, bundle=None, requested=None, configured=None, persisted=None):
             'persisted': persisted, 'active': None},
         'endpoints': endpoints, 'managerSocket': socket, 'services': services,
         'modules': modules, 'journals': journals, 'manager': manager,
+        'activation': activation_observation,
+        'reboot': {'occurred': 'unknown', 'required': False},
         'safety': {'liveOutput': 'unknown', 'owner': 'unknown', 'lease': 'unknown',
             'authorization': False, 'clock': 'unknown', 'gpio': 'unknown',
             'dma': 'unknown', 'endpointOpen': endpoints['consumer'].get('open', 'unknown')},
@@ -242,6 +273,7 @@ def classify(result):
     artifacts = result['artifacts']
     modules = result['modules']
     manager = result['manager']
+    activation_observation = result['activation']
 
     if binding.get('status') == 'error':
         conflicts.append('installed-binding-invalid')
@@ -266,6 +298,8 @@ def classify(result):
         conflicts.append('manager-socket-unsafe')
     if any(value.get('status') == 'error' for value in journals.values()):
         conflicts.append('deployment-or-runtime-journal-invalid')
+    if activation_observation.get('status') == 'error':
+        conflicts.append('activation-evidence-invalid')
     for name, value in modules.items():
         if value.get('status') == 'loaded' and value.get('version') != runtime_binding.PRODUCT_VERSION:
             conflicts.append('mixed-module-version:'+name)
@@ -277,6 +311,7 @@ def classify(result):
         conflicts.append('live-output-not-disabled')
 
     pending = journals['deployment-pending.json'].get('status') == 'present'
+    activation_journal = journals['activation.json']
     query = manager.get('query', {}) if manager.get('status') == 'observed' else {}
     state = query.get('state', {}) if isinstance(query, dict) else {}
     controller = state.get('controller', {}) if isinstance(state, dict) else {}
@@ -306,8 +341,11 @@ def classify(result):
         conflicts.append('runtime-transaction-identity-invalid')
     partial = (binding.get('status') == 'valid' and
                any(value.get('status') == 'absent' for value in artifacts.values()))
-    unresolved = (pending or partial or fault or query.get('status') == 'error' or
-        (binding.get('status') == 'valid' and manager.get('status') == 'error') or
+    activation_pending = (activation_journal.get('status') == 'present' and
+        activation_journal.get('value', {}).get('phase') not in activation.TERMINAL)
+    unresolved = (pending or activation_pending or partial or fault or query.get('status') == 'error' or
+        (binding.get('status') == 'valid' and manager.get('status') == 'error' and
+         modules['rp1_route_controller'].get('status') == 'loaded') or
         (isinstance(route_journal, dict) and route_journal.get('phase') not in
          ('complete-inhibited', 'recovered-inhibited')) or
         phase in ('restoration-failed', 'route-failed') or
@@ -344,6 +382,17 @@ def classify(result):
         all(snapshot.get(key) == 2 for key in ('eligible', 'gpio', 'clock', 'dma', 'stable')))
     controller_ready = (controller.get('flags') == admin.CONSUMER | admin.PINNED and
                         controller.get('error') == 0 and controller.get('route') in (1, 2))
+    neutral = (activation_observation.get('status') == 'observed' and
+        activation.neutral_ready(activation_observation['value']))
+    if neutral:
+        result['safety'].update({'liveOutput': False, 'owner': False,
+            'lease': False, 'authorization': False, 'clock': 'quiescent',
+            'gpio': 'quiescent', 'dma': 'quiescent', 'endpointOpen': False})
+        result['reboot']['occurred'] = False
+    if (modules['rp1_route_controller'].get('status') == 'loaded' and
+            modules['rp1_gpclk_dkms'].get('status') == 'absent' and not neutral and
+            not activation_pending):
+        conflicts.append('loaded-controller-without-completed-activation')
 
     residue = (binding.get('status') != 'absent' or artifacts or
         any(value.get('status') == 'loaded' for value in modules.values()) or
@@ -359,20 +408,30 @@ def classify(result):
     elif (artifacts_ready and modules_ready and endpoints_ready and closed and socket_ready and services_ready and
           controller_ready and application_ready and aligned and output_ready):
         classification = 'exact_ready'
+    elif neutral:
+        classification = 'neutral_ready'
     elif not residue:
         classification = 'absent'
         result['remediation'].append('Build and review an exact runtime bundle, then approve its deployment plan digest.')
+    elif artifacts_ready and modules['rp1_route_controller'].get('status') == 'absent' and modules['rp1_gpclk_dkms'].get('status') == 'absent':
+        classification = 'activation_required'
+        result['remediation'].append('Review and execute neutral activation before any explicit route selection.')
     else:
         classification = 'deployment_required'
-        result['remediation'].append('Complete the explicit deployment and route-selection steps; installation alone does not select a route.')
+        result['remediation'].append('Complete the explicit deployment step; installation alone does not activate administration or select a route.')
     result['result'] = classification
     result['state'] = classification
     result['compatible'] = classification == 'exact_ready'
     result['eligible'] = classification == 'exact_ready'
+    result['administrationCompatible'] = classification in ('neutral_ready', 'exact_ready')
+    result['administrationEligible'] = classification in ('neutral_ready', 'exact_ready')
+    result['routeSelected'] = classification == 'exact_ready'
+    result['transmissionEligible'] = classification == 'exact_ready'
 
 
 def route_plan(result, route):
-    if result['result'] in ('conflict', 'recovery_required', 'absent'):
+    if result['result'] in ('conflict', 'recovery_required', 'absent',
+                            'activation_required'):
         raise ValueError('runtime state is not eligible for route planning')
     manager = result['manager']
     binding = result['identities']['installedBinding']
@@ -405,7 +464,9 @@ def emit(value):
 
 def main(host=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('operation', choices=('inspect', 'plan', 'ensure', 'route-plan', 'route-ensure'))
+    parser.add_argument('operation', choices=('inspect', 'plan', 'ensure',
+        'activation-plan', 'activation-ensure', 'activation-recover-plan',
+        'activation-recover', 'route-plan', 'route-ensure'))
     parser.add_argument('--bundle', type=Path)
     parser.add_argument('--plan-sha256')
     parser.add_argument('--route', choices=ROUTES)
@@ -418,6 +479,11 @@ def main(host=None):
         raise ValueError('--bundle is required')
     if args.operation in ('route-plan', 'route-ensure') and args.route is None:
         raise ValueError('--route is required')
+    if args.operation.startswith('activation-') and any(
+            value is not None for value in
+            (args.route, args.requested_route, args.configured_route,
+             args.persisted_route)):
+        raise ValueError('neutral activation accepts no GPIO route')
     result, plan = inspect(host, args.bundle, args.requested_route,
         args.configured_route, args.persisted_route)
     if args.operation == 'inspect':
@@ -440,13 +506,47 @@ def main(host=None):
             digest = canonical_digest(plan)
             if args.plan_sha256 != digest:
                 raise ValueError('reviewed deployment plan digest required')
+            attributable = [record for path, record in plan['files'].items()
+                if path not in deployment.JOURNALS]
             if all(deployment.decode(record['before']) == deployment.decode(record['after'])
-                   for record in plan['files'].values()):
+                   for record in attributable):
                 result['deployment']['execution'] = 'idempotent-no-change'
             else:
                 deployment.apply(host.files, plan, digest)
                 result['deployment']['execution'] = 'deployed-inhibited'
         emit(result)
+        return 0
+    if args.operation in ('activation-plan', 'activation-ensure'):
+        if result['result'] not in ('activation_required', 'neutral_ready'):
+            emit(result)
+            return EXIT[result['result']]
+        selected = host.activation_plan()
+        digest = activation.plan_digest(selected)
+        if args.operation == 'activation-plan':
+            result['activationPlan'] = {'planSha256': digest, **selected}
+            emit(result)
+            return EXIT[result['result']]
+        if args.plan_sha256 != digest:
+            raise ValueError('reviewed neutral activation plan digest required')
+        reply = host.activation_ensure(selected, digest)
+        emit({'schemaVersion': SCHEMA_VERSION, 'contract': CONTRACT,
+              'operation': 'activation-ensure', 'planSha256': digest,
+              'response': reply})
+        return 0
+    if args.operation in ('activation-recover-plan', 'activation-recover'):
+        selected = host.activation_recovery_plan()
+        digest = activation.plan_digest(selected)
+        if args.operation == 'activation-recover-plan':
+            emit({'schemaVersion': SCHEMA_VERSION, 'contract': CONTRACT,
+                  'operation': args.operation, 'planSha256': digest,
+                  'plan': selected})
+            return 0
+        if args.plan_sha256 != digest:
+            raise ValueError('reviewed neutral recovery plan digest required')
+        reply = host.activation_recover(selected, digest)
+        emit({'schemaVersion': SCHEMA_VERSION, 'contract': CONTRACT,
+              'operation': args.operation, 'planSha256': digest,
+              'response': reply})
         return 0
     selected = route_plan(result, args.route)
     route_digest = canonical_digest(selected)

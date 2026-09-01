@@ -188,9 +188,23 @@ owned inhibition after the required idle-state checks.
 read-only `inspect` operation aggregates binding, deployment, controller, route,
 application, service, endpoint and passive-output evidence. Its `plan`/`ensure`
 and `route-plan`/`route-ensure` pairs require unchanged SHA-256 plan digests.
+The intervening `activation-plan`/`activation-ensure` pair loads only the exact
+bound controller, activates the exact manager socket, confirms controller route
+zero through the manager and restores the captured application service intent.
+The controller has no OF autoload alias, and activation verifies that loading it
+did not load the consumer. The consumer endpoint must remain absent.
 The latter delegates to the existing preflight-token transaction; it does not
 add another overlay or module mutation path. Stable output and exit statuses are
 defined in the operator workflow.
+
+Neutral activation owns `activation.json`, its exact controller load, and a
+socket start only when the socket was previously inactive. The DKMS deployment
+owns its installed files and inhibitor. Systemd owns unit runtime state;
+WsprryPi owns its service, configuration and companion; administrator masks are
+preserved. `activation-recover-plan`/`activation-recover` restore the provable
+post-deployment inhibited state without removing foreign objects. A non-neutral
+controller, changed boot, substituted endpoint or failed unload remains a durable
+recovery fault.
 
 ### Runtime overlay export policy
 

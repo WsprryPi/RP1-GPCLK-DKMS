@@ -62,8 +62,24 @@ plan. Keep clocks and transmission disabled throughout.
    The tool journals old/new bytes, masks/stops WsprryPi, writes files atomically,
    refreshes depmod/systemd, and leaves the application masked. It never activates
    a module. A pending deployment blocks all runtime-manager requests.
-5. Separately authorize controller activation from the bound module path, only
-   with a neutral firmware tree. After activation, inspect and plan the exact route:
+5. Review and execute neutral activation. This loads only the bound controller,
+   starts the exact manager socket infrastructure, verifies route zero and
+   restores WsprryPi according to the service state captured before deployment:
+
+   ```sh
+   python3 /usr/lib/rp1-gpclk-dkms/runtime_provider.py activation-plan
+   python3 /usr/lib/rp1-gpclk-dkms/runtime_provider.py activation-ensure \
+     --plan-sha256 REVIEWED_ACTIVATION_PLAN_SHA256
+   python3 /usr/lib/rp1-gpclk-dkms/runtime_provider.py inspect
+   ```
+
+   A reviewed bundle may also be supplied to `activation-plan` and
+   `activation-ensure`; it must match the installed binding exactly. Successful
+   inspection reports `neutral_ready`, `administrationCompatible=true`,
+   `administrationEligible=true`, `routeSelected=false`, and
+   `transmissionEligible=false`. The consumer stays unloaded, its endpoint stays
+   absent, no overlay is applied and no reboot or output authorization occurs.
+6. Only after a separate operator route decision, inspect and plan the exact route:
 
    ```sh
    python3 /usr/lib/rp1-gpclk-dkms/runtime_provider.py inspect \
@@ -78,11 +94,26 @@ plan. Keep clocks and transmission disabled throughout.
    `route-ensure` re-runs preflight and delegates the exact switch to the existing
    runtime manager. It neither authorizes output nor creates a parallel route path.
 
-Before an update, use explicit controller recovery to reach no route, then
-separately unload the neutral modules. Only a `recovered-inhibited` journal with
-zero overlay ID is eligible for update. The deployment journal retains prior
-route/manager journals while clearing them for the new binding. It never adopts
-an old session into a new controller session.
+Before an update, use explicit controller recovery to reach no route, then use
+neutral activation recovery to unload the exact controller and restore the
+post-deployment inhibited state. Only recovered journals with zero overlay ID are
+eligible for update. The deployment journal retains prior evidence while
+clearing current route/manager/activation journals for the new binding. It never
+adopts an old session into a new controller session.
+
+For an interrupted or deliberately reversed neutral activation, retain the
+inhibitor and journal, then run:
+
+```sh
+python3 /usr/lib/rp1-gpclk-dkms/runtime_provider.py activation-recover-plan
+python3 /usr/lib/rp1-gpclk-dkms/runtime_provider.py activation-recover \
+  --plan-sha256 REVIEWED_ACTIVATION_RECOVERY_SHA256
+```
+
+Recovery unloads only an exact neutral controller and stops the socket only when
+the activation transaction started it. It does not remove an overlay, consumer,
+foreign socket or administrator state. Boot change, a nonzero controller route,
+fault, consumer presence or uncertain unload retains `recovery_required`.
 
 For an interrupted filesystem deployment, first run
 `python3 runtime_deployment.py recover` to obtain the recovery digest, then repeat
@@ -103,9 +134,11 @@ Stable classifications and exit statuses are:
 | --- | ---: | --- |
 | `exact_ready` | 0 | Exact owned profile, one aligned route, restored or known-idle application, closed endpoint, disabled output and quiescent passive state |
 | `absent` | 10 | No runtime binding, artifact, journal, module, endpoint or socket residue |
-| `deployment_required` | 11 | Non-conflicting work remains, including deployment, activation or explicit route selection |
+| `deployment_required` | 11 | The exact filesystem deployment is incomplete |
 | `recovery_required` | 12 | A retained deployment, controller, route or restoration record requires its explicit recovery verb |
 | `conflict` | 13 | Foreign, changed, mixed, unsafe, open, ambiguous or contradictory state requires reviewed remediation |
+| `activation_required` | 14 | Exact runtime files are deployed and inhibited; explicit neutral activation remains |
+| `neutral_ready` | 0 | Exact controller and manager administration are ready at route zero; no consumer or transmission eligibility exists |
 
 The result includes installed and requested binding identities, source commit,
 product/compatibility/kernel/UAPI/artifact hashes, deployment digest and journal,
@@ -113,11 +146,43 @@ requested/configured/persisted/active routes, module and endpoint observations,
 socket and service state, application restoration, and passive live-output,
 owner, lease, GPIO, clock and DMA state. Omitted consumer route inputs remain
 `null`; callers should supply all three when deciding application eligibility.
-An exact repeated `ensure` or `route-ensure` reports idempotent readiness without
-repeating effects. Any identity drift is not the same installation.
+An exact repeated `ensure`, `activation-ensure`, or `route-ensure` reports
+idempotent readiness without repeating effects. Neutral idempotency does not
+reload the controller, restart systemd, rewrite a journal, change the application
+or allocate a new request/generation. Any identity drift is not the same
+installation.
 
 The low-level `runtime_deployment.py` and `runtime_route_client.py` commands remain
 supported recovery/operator tools. Existing verbs are not renamed or removed.
+
+## Application-installer integration
+
+An application installer resolves the exact DKMS source or release and proves
+its own ownership before recording runtime ownership. It then builds or selects
+the bound bundle, calls `inspect`, reviews and executes `plan`/`ensure`, reviews
+and executes `activation-plan`/`activation-ensure`, and requires a final
+`neutral_ready` response. Installation can then finish with WsprryPi and its web
+service available while no GPIO route or consumer exists. The route API should
+render the DKMS readiness evidence directly and wait for a later operator choice;
+only that confirmation permits `route-plan` and `route-ensure` for one route.
+
+WsprryPi should extend its ownership record only after its successful calls with
+a nested runtime identity containing the readiness contract, binding SHA-256,
+artifact-set SHA-256, source commit, product version, target kernel,
+compatibility identities, reviewed deployment and activation plan digests,
+activation request ID, controller session/generation, neutral state, null route,
+and disabled-output state. These fields record WsprryPi orchestration; they do
+not transfer ownership of DKMS files, journals, modules, units or systemd state.
+
+Runtime residue accounting must include `runtime_activation.py`, both character
+devices, both loaded-module paths, the manager socket, both application drop-ins,
+the complete `/var/lib/rp1-gpclk-dkms/runtime-admin` directory (including current
+and prior activation journals and `last-deployment.json`), the binding, runtime
+UAPIs/overlays/schema/scripts, runtime controller module artifact, manager unit
+drop-in, and the package-owned socket/service units. Removal first uses exact
+route recovery when applicable, then activation recovery, then the existing
+binding-aware deployment/removal workflow. It never deletes the state directory
+or a journal merely to bypass recovery.
 
 ## Operator commands and recovery
 

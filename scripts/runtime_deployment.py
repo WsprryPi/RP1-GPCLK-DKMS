@@ -17,7 +17,9 @@ from runtime_layout import INVENTORY
 MAX_FILE_BYTES = 32*1024*1024
 MAX_JOURNAL_BYTES = 32*1024*1024
 BINDING = str(admin.BINDING)
-JOURNALS = {str(admin.STATE / name) for name in ('transaction.json', 'manager.json', 'application.json')}
+LAST_DEPLOYMENT = str(admin.STATE / 'last-deployment.json')
+JOURNALS = {str(admin.STATE / name) for name in
+            ('transaction.json', 'manager.json', 'application.json', 'activation.json')}
 DESTINATIONS = set(INVENTORY) | {BINDING} | JOURNALS
 
 
@@ -144,6 +146,25 @@ class Files:
         shell.inhibit()
         self.preflight()
 
+    def application_state(self):
+        import runtime_application as application
+        try:
+            from runtime_activation import validate_journal
+            activation = admin.strict_json(admin.read_regular(
+                admin.STATE / 'activation.json', MAX_JOURNAL_BYTES))
+            validate_journal(activation)
+            if activation['phase'] == 'recovered-inhibited':
+                if admin.read_regular(application.unit_file(application.DROPIN)) != application.INHIBIT:
+                    raise ValueError('recovered activation inhibition is absent')
+                return activation['plan']['application']
+        except FileNotFoundError:
+            pass
+        return application.neutral_capture()
+
+    def verify_application(self, expected):
+        if self.application_state() != expected:
+            raise ValueError('application state changed since deployment review')
+
     def refresh(self):
         admin.run(('/usr/sbin/depmod', '-a', admin.KERNEL))
         admin.run(('/usr/bin/systemctl', 'daemon-reload'))
@@ -152,7 +173,10 @@ class Files:
 def plan(files, values):
     if set(values) != DESTINATIONS:
         raise ValueError('fixed deployment inventory required')
-    return {'version': 1, 'files': {path: {'before': encode(files.read(path)),
+    application = files.application_state()
+    return {'version': 2, 'application': application,
+        'previousDeployment': encode(files.read(LAST_DEPLOYMENT)),
+        'files': {path: {'before': encode(files.read(path)),
         'after': encode(values[path])} for path in sorted(values)}}
 
 
@@ -161,10 +185,14 @@ def plan_hash(value):
 
 
 def journal_bytes(value):
-    if (not isinstance(value, dict) or set(value) != {'version', 'files'} or
-            type(value['version']) is not int or value['version'] != 1 or
+    if (not isinstance(value, dict) or
+            set(value) != {'version', 'application', 'previousDeployment', 'files'} or
+            type(value['version']) is not int or value['version'] != 2 or
             not isinstance(value['files'], dict) or set(value['files']) != DESTINATIONS):
         raise ValueError('fixed deployment plan schema required')
+    import runtime_application as application
+    application.validate_neutral_capture(value['application'])
+    decode(value['previousDeployment'])
     serialized = (json.dumps(value, sort_keys=True)+'\n').encode()
     if len(serialized) > MAX_JOURNAL_BYTES:
         raise ValueError('deployment journal exceeds recovery read bound')
@@ -180,7 +208,7 @@ def journal_bytes(value):
 
 def apply(files, value, approved, recover=False):
     encoded = journal_bytes(value)
-    if plan_hash(value) != approved or value.get('version') != 1 or set(value['files']) != DESTINATIONS:
+    if plan_hash(value) != approved or value.get('version') != 2 or set(value['files']) != DESTINATIONS:
         raise ValueError('reviewed plan digest/inventory required')
     # Check ALL ownership before any restoration; preserve foreign changes.
     for path, record in value['files'].items():
@@ -189,7 +217,14 @@ def apply(files, value, approved, recover=False):
         if current not in allowed:
             raise ValueError('destination changed since review: '+path)
     binding = validate_binding(admin.strict_json(decode(value['files'][BINDING]['after'])))
+    current_deployment = files.read(LAST_DEPLOYMENT)
+    allowed_deployments = ((decode(value['previousDeployment']), encoded)
+                           if recover else (decode(value['previousDeployment']),))
+    if current_deployment not in allowed_deployments:
+        raise ValueError('last deployment record changed since review')
     files.verify_external(binding)
+    if not recover:
+        files.verify_application(value['application'])
     pending = str(admin.STATE / 'deployment-pending.json')
     existing = files.read(pending)
     if existing is not None and admin.strict_json(existing) != value:
@@ -212,7 +247,8 @@ def apply(files, value, approved, recover=False):
     for path in paths:
         files.write(path, decode(value['files'][path]['before' if recover else 'after']))
     files.refresh()
-    files.write(str(admin.STATE / 'last-deployment.json'), encoded)
+    files.write(LAST_DEPLOYMENT,
+                decode(value['previousDeployment']) if recover else encoded)
     files.write(pending, None)
 
 
