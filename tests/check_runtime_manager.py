@@ -292,6 +292,58 @@ class Tests(unittest.TestCase):
                 with self.assertRaises(BlockingIOError):
                     with deploy.mutation_lock(): pass
 
+    def test_approved_mutation_provisions_fixed_state_idempotently(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root/'var/lib'; base.mkdir(parents=True)
+            state = base/'rp1-gpclk-dkms/runtime-admin'
+            def validate(path):
+                info = Path(path).lstat()
+                if (not stat.S_ISDIR(info.st_mode) or
+                        stat.S_IMODE(info.st_mode) & 0o022):
+                    raise ValueError('untrusted directory')
+            with patch.object(admin, 'STATE', state), \
+                 patch.object(admin, 'safe_directory', side_effect=validate), \
+                 patch.object(admin, 'fsync_dir') as sync:
+                deploy.provision_state()
+                deploy.provision_state()
+            self.assertEqual(stat.S_IMODE(state.stat().st_mode), 0o700)
+            self.assertEqual(stat.S_IMODE(state.parent.stat().st_mode), 0o755)
+            self.assertEqual(sync.call_count, 2)
+
+    def test_state_provisioning_rejects_unsafe_existing_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root/'var/lib'; base.mkdir(parents=True)
+            parent = base/'rp1-gpclk-dkms'; parent.mkdir(mode=0o777)
+            parent.chmod(0o777)
+            state = parent/'runtime-admin'
+            def validate(path):
+                info = Path(path).lstat()
+                if (not stat.S_ISDIR(info.st_mode) or
+                        stat.S_IMODE(info.st_mode) & 0o022):
+                    raise ValueError('untrusted directory')
+            with patch.object(admin, 'STATE', state), \
+                 patch.object(admin, 'safe_directory', side_effect=validate):
+                with self.assertRaisesRegex(ValueError, 'untrusted'):
+                    deploy.provision_state()
+
+    def test_state_provisioning_rejects_symlinked_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root/'var/lib'; base.mkdir(parents=True)
+            parent = base/'rp1-gpclk-dkms'; parent.mkdir()
+            target = root/'foreign'; target.mkdir()
+            state = parent/'runtime-admin'; state.symlink_to(target)
+            def validate(path):
+                info = Path(path).lstat()
+                if not stat.S_ISDIR(info.st_mode):
+                    raise ValueError('untrusted directory')
+            with patch.object(admin, 'STATE', state), \
+                 patch.object(admin, 'safe_directory', side_effect=validate):
+                with self.assertRaisesRegex(ValueError, 'untrusted'):
+                    deploy.provision_state()
+
     def test_neutrality_rechecked_after_application_stop(self):
         loaded = False
         def stop(shell):

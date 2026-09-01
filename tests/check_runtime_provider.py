@@ -142,6 +142,37 @@ class Tests(unittest.TestCase):
         self.assertEqual(absent['result'], 'absent')
         self.assertEqual(provider.EXIT['absent'], 10)
 
+    def test_bad_ensure_digest_cannot_provision_state(self):
+        host = Host(False)
+        with patch.object(sys, 'argv', ['runtime_provider.py', 'ensure',
+                '--bundle', '/reviewed', '--plan-sha256', '0'*64]), \
+             patch.object(provider.deployment, 'provision_state') as provision, \
+             contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaisesRegex(ValueError, 'reviewed deployment plan digest'):
+                provider.main(host)
+        provision.assert_not_called()
+
+    def test_plan_is_nonmutating_and_approved_ensure_provisions_before_apply(self):
+        host = Host(False)
+        plan = host.deployment_plan(Path('/reviewed'))
+        digest = provider.canonical_digest(plan)
+        with patch.object(sys, 'argv', ['runtime_provider.py', 'plan',
+                '--bundle', '/reviewed']), \
+             patch.object(provider.deployment, 'provision_state') as provision, \
+             contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(provider.main(host), provider.EXIT['absent'])
+        provision.assert_not_called()
+        with patch.object(sys, 'argv', ['runtime_provider.py', 'ensure',
+                '--bundle', '/reviewed', '--plan-sha256', digest]), \
+             patch.object(provider.deployment, 'provision_state') as provision, \
+             patch.object(provider.deployment, 'mutation_lock',
+                          return_value=contextlib.nullcontext()), \
+             patch.object(provider.deployment, 'apply') as apply, \
+             contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(provider.main(host), 0)
+        provision.assert_called_once_with()
+        apply.assert_called_once()
+
     def test_activation_required_after_complete_deployment(self):
         host = Host()
         host._modules['rp1_route_controller'] = {'status': 'absent'}

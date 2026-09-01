@@ -23,6 +23,29 @@ JOURNALS = {str(admin.STATE / name) for name in
 DESTINATIONS = set(INVENTORY) | {BINDING} | JOURNALS
 
 
+def provision_state():
+    """Create only the fixed runtime state hierarchy for an approved mutation."""
+    parent = admin.STATE.parent
+    admin.safe_directory(parent.parent)
+    for path, mode in ((parent, 0o755), (admin.STATE, 0o700)):
+        try:
+            path.mkdir(mode=mode)
+            admin.fsync_dir(path.parent)
+        except FileExistsError:
+            pass
+        admin.safe_directory(path)
+
+
+def existing_deployment_state(files):
+    journal = files.read(str(admin.STATE / 'transaction.json'))
+    if journal is not None:
+        record = admin.strict_json(journal)
+        if (record.get('phase') != 'recovered-inhibited' or
+                record.get('observation', {}).get('id') != 0):
+            raise ValueError('runtime journal is not recovered to no route; preserve and investigate')
+    return files.read(str(admin.STATE / 'deployment-pending.json'))
+
+
 def encode(data):
     return None if data is None else base64.b64encode(data).decode('ascii')
 
@@ -274,33 +297,41 @@ def main():
     parser.add_argument('--bundle', type=Path)
     parser.add_argument('--plan-sha256')
     args = parser.parse_args()
-    # Provisioning STATE is a separately visible filesystem action. Other
-    # directories are created only by an approved deployment.
+    files = Files()
+    if args.operation == 'recover':
+        admin.safe_directory(admin.STATE)
+        pending = existing_deployment_state(files)
+        if pending is None:
+            raise ValueError('no pending deployment')
+        value = admin.strict_json(pending)
+    else:
+        if args.bundle is None:
+            raise ValueError('bundle required')
+        if existing_deployment_state(files) is not None:
+            raise ValueError('pending deployment requires recovery')
+        value = plan(files, payloads(args.bundle))
+    journal_bytes(value)
+    reviewed = plan_hash(value)
+    if args.operation == 'plan' or not args.plan_sha256:
+        print(json.dumps({'planSha256':reviewed, 'destinations':{path:{side:None if data is None else admin.digest(decode(data)) for side,data in record.items()} for path,record in value['files'].items()},
+                          'applicationRemainsInhibited':True}, indent=2))
+        return
+    if args.plan_sha256 != reviewed:
+        raise ValueError('reviewed plan digest required')
+    if args.operation != 'recover':
+        provision_state()
     with mutation_lock():
-        files = Files()
-        journal = files.read(str(admin.STATE / 'transaction.json'))
-        if journal is not None:
-            record = admin.strict_json(journal)
-            if record.get('phase') != 'recovered-inhibited' or record.get('observation', {}).get('id') != 0:
-                raise ValueError('runtime journal is not recovered to no route; preserve and investigate')
-        pending = files.read(str(admin.STATE / 'deployment-pending.json'))
+        pending = existing_deployment_state(files)
         if args.operation == 'recover':
-            if pending is None:
-                raise ValueError('no pending deployment')
-            value = admin.strict_json(pending)
+            value = admin.strict_json(pending) if pending is not None else None
         else:
             if pending is not None:
                 raise ValueError('pending deployment requires recovery')
-            if args.bundle is None:
-                raise ValueError('bundle required')
             value = plan(files, payloads(args.bundle))
-        journal_bytes(value)
-        if args.operation == 'plan' or not args.plan_sha256:
-            print(json.dumps({'planSha256':plan_hash(value), 'destinations':{path:{side:None if data is None else admin.digest(decode(data)) for side,data in record.items()} for path,record in value['files'].items()},
-                              'applicationRemainsInhibited':True}, indent=2))
-            return
-        apply(files, value, args.plan_sha256, args.operation == 'recover')
-        print('Files deployed/recovered; application remains masked. No module activated.')
+        if value is None or plan_hash(value) != reviewed:
+            raise ValueError('reviewed deployment plan changed before mutation')
+        apply(files, value, reviewed, args.operation == 'recover')
+    print('Files deployed/recovered; application remains masked. No module activated.')
 
 
 if __name__ == '__main__':

@@ -209,12 +209,7 @@ class Linux:
         return {'status': 'owned', 'open': opened}
 
     def service(self, name):
-        text = admin.run(('/usr/bin/systemctl', 'show', name,
-            '--property=LoadState,ActiveState,UnitFileState,FragmentPath,MainPID', '--value'))
-        lines = text.splitlines()
-        if len(lines) != 5:
-            raise ValueError('service observation schema: ' + name)
-        return dict(zip(('load', 'active', 'enabled', 'fragment', 'MainPID'), lines))
+        return admin.systemd_unit(name, include_main_pid=True)
 
     def manager_socket(self):
         try:

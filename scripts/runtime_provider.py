@@ -162,12 +162,7 @@ class Host:
         for name in ('rp1-gpclk-route-manager.socket',
                      'rp1-gpclk-route-manager@.service', 'wsprrypi.service'):
             try:
-                text = admin.run(('/usr/bin/systemctl', 'show', name,
-                    '--property=LoadState,ActiveState,UnitFileState,FragmentPath', '--value'))
-                lines = text.splitlines()
-                if len(lines) != 4:
-                    raise ValueError('service observation schema')
-                result[name] = dict(zip(('load', 'active', 'enabled', 'fragment'), lines))
+                result[name] = admin.systemd_unit(name)
             except (OSError, ValueError) as error:
                 result[name] = record_error(error)
         return result
@@ -499,13 +494,17 @@ def main(host=None):
         if result['result'] in ('conflict', 'recovery_required'):
             emit(result)
             return EXIT[result['result']]
+        reviewed_digest = canonical_digest(plan)
+        if args.plan_sha256 != reviewed_digest:
+            raise ValueError('reviewed deployment plan digest required')
+        deployment.provision_state()
         with deployment.mutation_lock():
             # Recreate the complete plan while holding the shared deployment/
             # route lock. Only the originally reviewed digest is accepted.
             plan = host.deployment_plan(args.bundle)
             digest = canonical_digest(plan)
-            if args.plan_sha256 != digest:
-                raise ValueError('reviewed deployment plan digest required')
+            if reviewed_digest != digest:
+                raise ValueError('reviewed deployment plan changed before mutation')
             attributable = [record for path, record in plan['files'].items()
                 if path not in deployment.JOURNALS]
             if all(deployment.decode(record['before']) == deployment.decode(record['after'])

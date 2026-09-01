@@ -25,6 +25,8 @@ STATE = Path('/var/lib/rp1-gpclk-dkms/runtime-admin')
 BINDING = Path('/etc/rp1-gpclk-dkms/runtime-controller.json')
 ENDPOINT = '/dev/rp1-route-admin'
 UNIT_DIR = Path('/etc/systemd/system')
+ROUTE_MANAGER_TEMPLATE = 'rp1-gpclk-route-manager@.service'
+ROUTE_MANAGER_TEMPLATE_PROBE = 'rp1-gpclk-route-manager@runtime-inspect.service'
 FORMAT = struct.Struct('=IIIIQQiiIIQQ')
 IOCTL = 0xc040b801
 STATUS, APPLY, REMOVE = 0, 1, 2
@@ -119,6 +121,32 @@ def run(argv):
             except subprocess.TimeoutExpired:
                 pass  # Never turn a userspace timeout into a kernel completion claim.
         process.stdout.close()
+
+
+def systemd_unit(name, include_main_pid=False):
+    """Observe fixed unit properties without relying on output order."""
+    observed = (ROUTE_MANAGER_TEMPLATE_PROBE
+                if name == ROUTE_MANAGER_TEMPLATE else name)
+    properties = ['LoadState', 'ActiveState', 'UnitFileState', 'FragmentPath']
+    if include_main_pid:
+        properties.append('MainPID')
+    text = run(('/usr/bin/systemctl', 'show', observed,
+        '--property=' + ','.join(properties)))
+    values = {}
+    for line in text.splitlines():
+        if '=' not in line:
+            raise ValueError('service observation schema: ' + name)
+        key, value = line.split('=', 1)
+        if key in values:
+            raise ValueError('duplicate service observation: ' + name)
+        values[key] = value
+    if set(values) != set(properties):
+        raise ValueError('service observation schema: ' + name)
+    result = {'load': values['LoadState'], 'active': values['ActiveState'],
+        'enabled': values['UnitFileState'], 'fragment': values['FragmentPath']}
+    if include_main_pid:
+        result['MainPID'] = values['MainPID']
+    return result
 
 
 class Linux:

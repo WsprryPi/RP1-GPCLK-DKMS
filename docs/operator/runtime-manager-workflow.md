@@ -51,9 +51,7 @@ plan. Keep clocks and transmission disabled throughout.
    not unload modules, modify firmware configuration, or reboot. A firmware route
    may require one separately reviewed migration reboot before controller
    activation. Do not equate current-boot adoption with removable ownership.
-2. Provision root-owned, non-group/world-writable
-   `/var/lib/rp1-gpclk-dkms/runtime-admin` and its ancestors. Review the existing
-   socket/service installation. The reviewed filesystem plan installs or updates
+2. Review the existing socket/service installation. The reviewed filesystem plan installs or updates
    the exact bound socket/service unit bytes, preserves conflicting packaged
    executables and the source-development drop-in, and does not enable or start
    the socket before neutral activation.
@@ -64,7 +62,11 @@ plan. Keep clocks and transmission disabled throughout.
    replaced. Resolve such a conflict through a separately reviewed migration.
 4. Execute that exact plan with
    `python3 runtime_provider.py ensure --bundle . --plan-sha256 DIGEST`.
-   The tool journals old/new bytes, masks/stops WsprryPi, writes files atomically,
+   Only after the supplied digest matches the reviewed plan, the tool creates
+   missing fixed root-owned state ancestors and private mode-0700
+   `/var/lib/rp1-gpclk-dkms/runtime-admin`. Existing symlinks, unsafe ownership,
+   or group/world-writable directories fail closed. Planning never creates this
+   hierarchy. The tool then journals old/new bytes, masks/stops WsprryPi, writes files atomically,
    refreshes depmod/systemd, and leaves the application masked. It never activates
    a module. A pending deployment blocks all runtime-manager requests.
 5. Review and execute neutral activation. This loads only the bound controller,
@@ -158,6 +160,11 @@ idempotent readiness without repeating effects. Neutral idempotency does not
 reload the controller, restart systemd, rewrite a journal, change the application
 or allocate a new request/generation. Any identity drift is not the same
 installation.
+
+Systemd observations parse named `key=value` properties rather than depending
+on output order. The manager service template is inspected through the fixed
+inactive `rp1-gpclk-route-manager@runtime-inspect.service` instance name; this
+does not start or enable an instance.
 
 The low-level `runtime_deployment.py` and `runtime_route_client.py` commands remain
 supported recovery/operator tools. Existing verbs are not renamed or removed.

@@ -95,9 +95,11 @@ A userspace timeout cannot bound a blocked kernel teardown.
 controller without a route or service effect; it still opens the admin endpoint
 and may create the private lock file. It does not claim application inhibition.
 The runtime manager adapter now exposes this transaction on the existing socket
-under its own explicit profile; the packaged manager is unchanged. WsprryPi supplies the companion application/browser protocol support. Provisioning must first supply the exact root-owned
-binding at `/etc/rp1-gpclk-dkms/runtime-controller.json` and a root-owned private
-state directory at `/var/lib/rp1-gpclk-dkms/runtime-admin`. The local-only
+under its own explicit profile; the packaged manager is unchanged. WsprryPi supplies the companion application/browser protocol support. The digest-approved
+deployment supplies the exact root-owned binding at
+`/etc/rp1-gpclk-dkms/runtime-controller.json` and creates the fixed root-owned
+private state directory at `/var/lib/rp1-gpclk-dkms/runtime-admin` only when
+execution begins. Read-only inspection and planning do not create it. The local-only
 `build_runtime_binding.py` renders a review candidate from compiled modules and
 the exact installed WsprryPi application companion;
 it is not an installer or a claim about loaded target memory.

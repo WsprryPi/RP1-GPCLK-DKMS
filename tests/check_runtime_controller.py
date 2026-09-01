@@ -268,6 +268,29 @@ class Tests(unittest.TestCase):
 
     def test_actual_bounded_command_runner(self):
         self.assertEqual(admin.run((sys.executable, '-c', 'print("ok")')), 'ok')
+
+    def test_systemd_observation_is_keyed_and_uses_inert_template_instance(self):
+        output = ('MainPID=0\nFragmentPath=/usr/lib/systemd/system/'
+                  'rp1-gpclk-route-manager@.service\nActiveState=inactive\n'
+                  'UnitFileState=static\nLoadState=loaded\n')
+        with patch.object(admin, 'run', return_value=output) as command:
+            observed = admin.systemd_unit(
+                'rp1-gpclk-route-manager@.service', include_main_pid=True)
+        self.assertEqual(observed, {'load': 'loaded', 'active': 'inactive',
+            'enabled': 'static',
+            'fragment': '/usr/lib/systemd/system/rp1-gpclk-route-manager@.service',
+            'MainPID': '0'})
+        argv = command.call_args.args[0]
+        self.assertEqual(argv[2], admin.ROUTE_MANAGER_TEMPLATE_PROBE)
+        self.assertNotIn('--value', argv)
+
+    def test_systemd_observation_rejects_missing_duplicate_or_unkeyed_fields(self):
+        for output in ('LoadState=loaded\n',
+                       'LoadState=loaded\nLoadState=loaded\n',
+                       'loaded\ninactive\nstatic\n/unit\n'):
+            with self.subTest(output=output), patch.object(admin, 'run', return_value=output):
+                with self.assertRaisesRegex(ValueError, 'service observation'):
+                    admin.systemd_unit('wsprrypi.service')
         with self.assertRaises(ValueError): admin.run((sys.executable, '-c', 'print("x"*70000)'))
         with self.assertRaises(ValueError): admin.run((sys.executable, '-c', 'raise SystemExit(7)'))
 
