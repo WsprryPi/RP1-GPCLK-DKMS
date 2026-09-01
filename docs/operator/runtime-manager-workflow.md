@@ -200,6 +200,15 @@ route recovery when applicable, then activation recovery, then the existing
 binding-aware deployment/removal workflow. It never deletes the state directory
 or a journal merely to bypass recovery.
 
+For an exact deployment that stopped before neutral activation created any
+activation journal, `runtime_provider.py remove-plan` returns the digest and
+fixed destination inventory for the retained `last-deployment.json` inverse.
+`remove --plan-sha256 DIGEST` is admitted only with absent modules, endpoints,
+manager socket, route, and pending transaction. It restores every reviewed
+predeployment byte and the captured application state, then removes only empty
+fixed runtime directories. Digest drift, stacked deployment, active or foreign
+state, and unexpected residue fail closed.
+
 ## Operator commands and recovery
 
 Use the installed client after the runtime profile and its socket are deployed:

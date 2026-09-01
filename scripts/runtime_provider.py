@@ -187,6 +187,15 @@ class Host:
         value = deployment.plan(self.files, values)
         return value
 
+    def deployment_removal_plan(self):
+        return deployment.removal_plan(self.files)
+
+    def deployment_remove(self, value, approved):
+        with deployment.mutation_lock():
+            deployment.remove(self.files, value, approved)
+        self.files.prune_removed_directories()
+        return {'status': 'removed-exact-deployment'}
+
     def expected_external(self, expected):
         observed = self.artifacts({'status': 'valid', 'value': expected})
         return {path: observed[path] for path in expected['externalFiles']}
@@ -460,6 +469,7 @@ def emit(value):
 def main(host=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('operation', choices=('inspect', 'plan', 'ensure',
+        'remove-plan', 'remove',
         'activation-plan', 'activation-ensure', 'activation-recover-plan',
         'activation-recover', 'route-plan', 'route-ensure'))
     parser.add_argument('--bundle', type=Path)
@@ -514,6 +524,30 @@ def main(host=None):
                 deployment.apply(host.files, plan, digest)
                 result['deployment']['execution'] = 'deployed-inhibited'
         emit(result)
+        return 0
+    if args.operation in ('remove-plan', 'remove'):
+        if (result['result'] not in ('activation_required', 'recovery_required') or
+                result['routeSelected'] or
+                any(value.get('status') != 'absent'
+                    for value in result['modules'].values()) or
+                any(value.get('status') != 'absent'
+                    for value in result['endpoints'].values()) or
+                result['managerSocket'].get('status') != 'absent'):
+            emit(result)
+            return EXIT[result['result']]
+        selected = host.deployment_removal_plan()
+        digest = deployment.plan_hash(selected)
+        if args.operation == 'remove-plan':
+            emit({'schemaVersion': SCHEMA_VERSION, 'contract': CONTRACT,
+                  'operation': args.operation, 'planSha256': digest,
+                  'destinations': sorted(selected['files'])})
+            return 0
+        if args.plan_sha256 != digest:
+            raise ValueError('reviewed deployment removal plan digest required')
+        reply = host.deployment_remove(selected, digest)
+        emit({'schemaVersion': SCHEMA_VERSION, 'contract': CONTRACT,
+              'operation': args.operation, 'planSha256': digest,
+              'response': reply})
         return 0
     if args.operation in ('activation-plan', 'activation-ensure'):
         if result['result'] not in ('activation_required', 'neutral_ready'):

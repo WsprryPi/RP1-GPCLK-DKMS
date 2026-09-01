@@ -58,6 +58,9 @@ class Files:
         self.mask = False
         self.loaded = False
         self.external_valid = True
+        self.removal_safe = True
+        self.restored = None
+        self.restore_fails = False
         self.application = {'version': 1, 'wasActive': True,
             'administratorMasked': False,
             'service': {'LoadState': 'loaded', 'ActiveState': 'active',
@@ -80,6 +83,11 @@ class Files:
         if expected != self.application: raise ValueError('application changed')
     def quiesce(self): self.mask = True
     def refresh(self): pass
+    def preflight_removal(self):
+        if not self.removal_safe: raise ValueError('active runtime')
+    def restore_application(self, capture):
+        if self.restore_fails: raise ValueError('restore failed')
+        self.restored = copy.deepcopy(capture)
 
 
 def deployment_values(journals_none=False):
@@ -344,6 +352,36 @@ class Tests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'untrusted'):
                     deploy.provision_state()
 
+    def test_removed_directory_pruning_accepts_only_bounded_runtime_bytecode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state = root/'state'; state.mkdir(); lock = state/'lock'
+            lock.write_bytes(b''); lock.chmod(0o600)
+            library = root/'runtime'; cache = library/'__pycache__'
+            cache.mkdir(parents=True)
+            (cache/'runtime_provider.cpython-313.pyc').write_bytes(b'derived')
+            files = deploy.Files()
+            with patch.object(admin, 'STATE', state), \
+                 patch.object(deploy, 'RUNTIME_LIBRARY', library), \
+                 patch.object(admin, 'safe_directory'), \
+                 patch.object(admin, 'fsync_dir'):
+                files.prune_removed_directories(expected_uid=os.geteuid())
+            self.assertFalse(state.exists() or library.exists())
+
+    def test_removed_directory_pruning_rejects_unexpected_bytecode_residue(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state = root/'state'; state.mkdir(); lock = state/'lock'
+            lock.write_bytes(b''); lock.chmod(0o600)
+            library = root/'runtime'; cache = library/'__pycache__'
+            cache.mkdir(parents=True); (cache/'foreign.pyc').write_bytes(b'x')
+            with patch.object(admin, 'STATE', state), \
+                 patch.object(deploy, 'RUNTIME_LIBRARY', library), \
+                 patch.object(admin, 'safe_directory'), \
+                 patch.object(admin, 'fsync_dir'):
+                with self.assertRaisesRegex(ValueError, 'unexpected runtime bytecode'):
+                    deploy.Files().prune_removed_directories(expected_uid=os.geteuid())
+
     def test_neutrality_rechecked_after_application_stop(self):
         loaded = False
         def stop(shell):
@@ -354,6 +392,23 @@ class Tests(unittest.TestCase):
              patch.object(admin.Linux, 'inhibit', stop):
             with self.assertRaisesRegex(ValueError, 'loaded module'):
                 deploy.Files().quiesce()
+
+    def test_removal_preflight_requires_inactive_exact_units(self):
+        exact = {
+            'load': 'loaded', 'active': 'inactive', 'enabled': 'disabled',
+            'fragment': '/usr/lib/systemd/system/rp1-gpclk-route-manager.socket'}
+        template = dict(exact, enabled='static',
+            fragment='/usr/lib/systemd/system/rp1-gpclk-route-manager@.service')
+        with patch.object(deploy.Files, 'preflight'), \
+             patch.object(Path, 'exists', return_value=False), \
+             patch.object(admin, 'systemd_unit', side_effect=[exact, template]):
+            deploy.Files().preflight_removal()
+        changed = dict(exact, fragment='/tmp/foreign.socket')
+        with patch.object(deploy.Files, 'preflight'), \
+             patch.object(Path, 'exists', return_value=False), \
+             patch.object(admin, 'systemd_unit', return_value=changed):
+            with self.assertRaisesRegex(ValueError, 'substituted runtime unit'):
+                deploy.Files().preflight_removal()
 
     def test_quiescence_failure_preserves_barrier(self):
         files = Files()
@@ -399,6 +454,47 @@ class Tests(unittest.TestCase):
         with self.assertRaises(ValueError): deploy.apply(files, plan, deploy.plan_hash(plan), recover=True)
         self.assertEqual(files.count, 0)
         with self.assertRaises(ValueError): deploy.apply(files, plan, '0'*64)
+
+    def test_reviewed_removal_restores_exact_predeployment_bytes_and_application(self):
+        files = Files()
+        value = deploy.plan(files, deployment_values(journals_none=True))
+        digest = deploy.plan_hash(value)
+        deploy.apply(files, value, digest)
+        self.assertEqual(deploy.removal_plan(files), value)
+        deploy.remove(files, value, digest)
+        self.assertTrue(all(files.read(path) is None for path in deploy.DESTINATIONS))
+        self.assertIsNone(files.read(deploy.LAST_DEPLOYMENT))
+        self.assertEqual(files.restored, files.application)
+
+    def test_removal_rejects_digest_drift_active_runtime_and_foreign_bytes(self):
+        for failure in ('digest', 'active', 'foreign'):
+            with self.subTest(failure=failure):
+                files = Files()
+                value = deploy.plan(files, deployment_values(journals_none=True))
+                digest = deploy.plan_hash(value)
+                deploy.apply(files, value, digest)
+                if failure == 'active': files.removal_safe = False
+                if failure == 'foreign': files.values[sorted(deploy.INVENTORY)[0]] = b'foreign'
+                with self.assertRaises(ValueError):
+                    deploy.remove(files, value, '0'*64 if failure == 'digest' else digest)
+                self.assertIsNone(files.restored)
+
+    def test_removal_retains_barrier_through_application_restore_and_can_retry(self):
+        files = Files()
+        value = deploy.plan(files, deployment_values(journals_none=True))
+        digest = deploy.plan_hash(value)
+        deploy.apply(files, value, digest)
+        files.restore_fails = True
+        with self.assertRaisesRegex(ValueError, 'restore failed'):
+            deploy.remove(files, value, digest)
+        pending = str(admin.STATE/'deployment-pending.json')
+        self.assertIsNotNone(files.read(pending))
+        self.assertIsNone(files.read(deploy.LAST_DEPLOYMENT))
+        self.assertEqual(deploy.removal_plan(files), value)
+        files.restore_fails = False
+        deploy.remove(files, value, digest)
+        self.assertIsNone(files.read(pending))
+        self.assertEqual(files.restored, files.application)
 
 
 if __name__ == '__main__':

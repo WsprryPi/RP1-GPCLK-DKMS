@@ -8,6 +8,7 @@ import fcntl
 import json
 import os
 from pathlib import Path
+import re
 import stat
 import tempfile
 import runtime_controller_admin as admin
@@ -21,6 +22,7 @@ LAST_DEPLOYMENT = str(admin.STATE / 'last-deployment.json')
 JOURNALS = {str(admin.STATE / name) for name in
             ('transaction.json', 'manager.json', 'application.json', 'activation.json')}
 DESTINATIONS = set(INVENTORY) | {BINDING} | JOURNALS
+RUNTIME_LIBRARY = Path('/usr/lib/rp1-gpclk-dkms')
 
 
 def provision_state():
@@ -44,6 +46,23 @@ def existing_deployment_state(files):
                 record.get('observation', {}).get('id') != 0):
             raise ValueError('runtime journal is not recovered to no route; preserve and investigate')
     return files.read(str(admin.STATE / 'deployment-pending.json'))
+
+
+def removal_plan(files):
+    """Return the exact retained deployment for a reviewed inverse mutation."""
+    pending = existing_deployment_state(files)
+    raw = files.read(LAST_DEPLOYMENT)
+    if pending is not None and raw is not None:
+        raise ValueError('pending deployment requires recovery')
+    if pending is not None:
+        raw = pending
+    if raw is None:
+        raise ValueError('no retained deployment to remove')
+    value = admin.strict_json(raw)
+    journal_bytes(value)
+    if value['previousDeployment'] is not None:
+        raise ValueError('stacked deployment requires its owning removal workflow')
+    return value
 
 
 def encode(data):
@@ -192,6 +211,69 @@ class Files:
         admin.run(('/usr/sbin/depmod', '-a', admin.KERNEL))
         admin.run(('/usr/bin/systemctl', 'daemon-reload'))
 
+    def preflight_removal(self):
+        self.preflight()
+        for path in ('/dev/rp1-route-admin', '/dev/rp1-gpclk',
+                     '/run/rp1-gpclk-dkms/route-manager.sock'):
+            if Path(path).exists():
+                raise ValueError('active runtime endpoint blocks deployment removal: '+path)
+        units = {
+            'rp1-gpclk-route-manager.socket':
+                '/usr/lib/systemd/system/rp1-gpclk-route-manager.socket',
+            admin.ROUTE_MANAGER_TEMPLATE:
+                '/usr/lib/systemd/system/rp1-gpclk-route-manager@.service',
+        }
+        for unit, fragment in units.items():
+            observed = admin.systemd_unit(unit)
+            if (observed['load'] != 'loaded' or
+                    observed['active'] not in ('inactive', 'failed') or
+                    observed['enabled'] not in ('disabled', 'static') or
+                    observed['fragment'] != fragment):
+                raise ValueError('active or substituted runtime unit blocks deployment removal: '+unit)
+
+    def restore_application(self, capture):
+        import runtime_application as application
+        return application.neutral_restore(capture)
+
+    def prune_removed_directories(self, expected_uid=0):
+        lock = admin.STATE / 'lock'
+        try:
+            info = lock.lstat()
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid != expected_uid or
+                    stat.S_IMODE(info.st_mode) != 0o600):
+                raise ValueError('deployment lock identity changed during removal')
+            lock.unlink()
+            admin.fsync_dir(admin.STATE)
+        except FileNotFoundError:
+            pass
+        cache = RUNTIME_LIBRARY / '__pycache__'
+        try:
+            admin.safe_directory(cache)
+            for path in cache.iterdir():
+                info = path.lstat()
+                if (not re.fullmatch(r'runtime_[A-Za-z0-9_]+\.cpython-[0-9]+\.pyc',
+                                     path.name) or
+                        not stat.S_ISREG(info.st_mode) or info.st_uid != expected_uid or
+                        stat.S_IMODE(info.st_mode) & 0o022 or info.st_nlink != 1):
+                    raise ValueError('unexpected runtime bytecode residue: '+str(path))
+                path.unlink()
+                admin.fsync_dir(cache)
+            cache.rmdir()
+            admin.fsync_dir(cache.parent)
+        except FileNotFoundError:
+            pass
+        for path in (admin.STATE, Path('/usr/lib/rp1-gpclk-dkms/schema'),
+                     Path('/usr/lib/rp1-gpclk-dkms/runtime-uapi'),
+                     Path('/usr/lib/rp1-gpclk-dkms/runtime-overlays'),
+                     RUNTIME_LIBRARY):
+            try:
+                path.rmdir()
+                admin.fsync_dir(path.parent)
+            except FileNotFoundError:
+                pass
+            except OSError as error:
+                raise ValueError('unexpected residue blocks directory removal: '+str(path)) from error
+
 
 def plan(files, values):
     if set(values) != DESTINATIONS:
@@ -229,7 +311,7 @@ def journal_bytes(value):
     return serialized
 
 
-def apply(files, value, approved, recover=False):
+def apply(files, value, approved, recover=False, retain_barrier=False):
     encoded = journal_bytes(value)
     if plan_hash(value) != approved or value.get('version') != 2 or set(value['files']) != DESTINATIONS:
         raise ValueError('reviewed plan digest/inventory required')
@@ -272,7 +354,17 @@ def apply(files, value, approved, recover=False):
     files.refresh()
     files.write(LAST_DEPLOYMENT,
                 decode(value['previousDeployment']) if recover else encoded)
-    files.write(pending, None)
+    if not retain_barrier:
+        files.write(pending, None)
+
+
+def remove(files, value, approved):
+    if plan_hash(value) != approved or removal_plan(files) != value:
+        raise ValueError('reviewed deployment removal plan changed before mutation')
+    files.preflight_removal()
+    apply(files, value, approved, recover=True, retain_barrier=True)
+    files.restore_application(value['application'])
+    files.write(str(admin.STATE / 'deployment-pending.json'), None)
 
 
 @contextlib.contextmanager
@@ -293,12 +385,15 @@ def mutation_lock():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('operation', choices=('plan', 'install', 'recover'))
+    parser.add_argument('operation', choices=('plan', 'install', 'recover',
+                                              'remove-plan', 'remove'))
     parser.add_argument('--bundle', type=Path)
     parser.add_argument('--plan-sha256')
     args = parser.parse_args()
     files = Files()
-    if args.operation == 'recover':
+    if args.operation in ('remove-plan', 'remove'):
+        value = removal_plan(files)
+    elif args.operation == 'recover':
         admin.safe_directory(admin.STATE)
         pending = existing_deployment_state(files)
         if pending is None:
@@ -312,17 +407,19 @@ def main():
         value = plan(files, payloads(args.bundle))
     journal_bytes(value)
     reviewed = plan_hash(value)
-    if args.operation == 'plan' or not args.plan_sha256:
+    if args.operation in ('plan', 'remove-plan') or not args.plan_sha256:
         print(json.dumps({'planSha256':reviewed, 'destinations':{path:{side:None if data is None else admin.digest(decode(data)) for side,data in record.items()} for path,record in value['files'].items()},
                           'applicationRemainsInhibited':True}, indent=2))
         return
     if args.plan_sha256 != reviewed:
         raise ValueError('reviewed plan digest required')
-    if args.operation != 'recover':
+    if args.operation not in ('recover', 'remove'):
         provision_state()
     with mutation_lock():
         pending = existing_deployment_state(files)
-        if args.operation == 'recover':
+        if args.operation == 'remove':
+            value = removal_plan(files)
+        elif args.operation == 'recover':
             value = admin.strict_json(pending) if pending is not None else None
         else:
             if pending is not None:
@@ -330,8 +427,15 @@ def main():
             value = plan(files, payloads(args.bundle))
         if value is None or plan_hash(value) != reviewed:
             raise ValueError('reviewed deployment plan changed before mutation')
-        apply(files, value, reviewed, args.operation == 'recover')
-    print('Files deployed/recovered; application remains masked. No module activated.')
+        if args.operation == 'remove':
+            remove(files, value, reviewed)
+        else:
+            apply(files, value, reviewed, args.operation == 'recover')
+    if args.operation == 'remove':
+        files.prune_removed_directories()
+        print('Exact runtime deployment removed; application state restored.')
+    else:
+        print('Files deployed/recovered; application remains masked. No module activated.')
 
 
 if __name__ == '__main__':

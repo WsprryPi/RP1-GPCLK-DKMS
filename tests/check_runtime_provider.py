@@ -90,6 +90,9 @@ class Host:
         self._manager = manager_ready()
         self._activation = {'status': 'absent'}
         self.files = None
+        self.removal = {'version': 2, 'files': {'/fixed': {
+            'before': None, 'after': provider.deployment.encode(b'exact')}}}
+        self.removed = False
         if not ready:
             self.make_absent()
 
@@ -123,6 +126,12 @@ class Host:
     def expected_external(self, expected):
         return {path: {'status': 'exact', 'expectedSha256': sha,
             'actualSha256': sha} for path, sha in expected['externalFiles'].items()}
+    def deployment_removal_plan(self): return copy.deepcopy(self.removal)
+    def deployment_remove(self, value, approved):
+        if value != self.removal or approved != provider.deployment.plan_hash(value):
+            raise ValueError('removal identity')
+        self.removed = True
+        return {'status': 'removed-exact-deployment'}
 
 
 class Tests(unittest.TestCase):
@@ -182,6 +191,27 @@ class Tests(unittest.TestCase):
         host._socket = {'status': 'absent'}
         host._manager = {'status': 'absent'}
         self.assertEqual(self.inspect(host)['result'], 'activation_required')
+
+    def test_reviewed_removal_is_limited_to_inactive_activation_required_state(self):
+        host = Host()
+        host._modules = {name: {'status': 'absent'} for name in host._modules}
+        host._endpoints = {name: {'status': 'absent', 'open': False}
+                           for name in host._endpoints}
+        host._socket = {'status': 'absent'}
+        host._manager = {'status': 'absent'}
+        digest = provider.deployment.plan_hash(host.removal)
+        with patch.object(sys, 'argv', ['runtime_provider.py', 'remove-plan']), \
+             contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(provider.main(host), 0)
+        with patch.object(sys, 'argv', ['runtime_provider.py', 'remove',
+                '--plan-sha256', '0'*64]), contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaisesRegex(ValueError, 'reviewed deployment removal'):
+                provider.main(host)
+        self.assertFalse(host.removed)
+        with patch.object(sys, 'argv', ['runtime_provider.py', 'remove',
+                '--plan-sha256', digest]), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(provider.main(host), 0)
+        self.assertTrue(host.removed)
 
     def test_neutral_ready_is_administration_only(self):
         host = Host()
