@@ -72,6 +72,8 @@ def test_false_qualification_and_cli() -> None:
                    "development-status", "development-endpoint", "development-route", "development-overlay", "development-rollback"):
         result = command(str(ROOT / "scripts" / script), "--help")
         assert result.returncode == 0, (script, result.stderr)
+        if script == "development-install":
+            assert "--route-neutral" in result.stdout
 
 
 def executable(path: pathlib.Path, body: str) -> None:
@@ -103,6 +105,85 @@ case "$2" in live_output=1) echo Y;; *) echo N;; esac >"$RP1_GPCLK_DEVELOPMENT_R
         environment={**os.environ,"RP1_GPCLK_DEVELOPMENT_ROOT":str(fake_root),"RP1_GPCLK_DEVELOPMENT_TEST_ROOT":"1","RP1_TEST_KERNEL":kernel,
             "RP1_GPCLK_TOOL_DKMS":str(tools/"dkms"),"RP1_GPCLK_TOOL_MODINFO":str(tools/"modinfo"),
             "RP1_GPCLK_TOOL_DEPMOD":str(tools/"depmod"),"RP1_GPCLK_TOOL_MODPROBE":str(tools/"modprobe")}
+
+        def neutral(name, *extra):
+            return command(str(source/"scripts/development-install"), "--source", str(source), "--kernel", kernel,
+                "--module-version", "0.9.0", "--route-neutral", "--live-output", "0", "--install",
+                "--evidence-directory", str(base/name), *extra, cwd=source, env=environment)
+
+        live = command(str(source/"scripts/development-install"), "--source", str(source), "--kernel", kernel,
+            "--module-version", "0.9.0", "--route-neutral", "--live-output", "1", "--install",
+            "--evidence-directory", str(base/"neutral-live"), cwd=source, env=environment)
+        assert live.returncode == 2 and "live_output=0" in live.stderr and not (base/"neutral-live").exists()
+        loaded = neutral("neutral-load", "--load")
+        assert loaded.returncode == 2 and "cannot load" in loaded.stderr and not (base/"neutral-load").exists()
+        both = command(str(source/"scripts/development-install"), "--source", str(source), "--kernel", kernel,
+            "--module-version", "0.9.0", "--route-neutral", "--route", "gpio4", "--live-output", "0",
+            "--evidence-directory", str(base/"neutral-both"), cwd=source, env=environment)
+        assert both.returncode == 2 and not (base/"neutral-both").exists()
+
+        config = fake_root/"boot/firmware/config.txt"; config.parent.mkdir(parents=True); config.write_text("dtoverlay=rp1-gpclk-gpio4\n")
+        blocked = neutral("neutral-configured")
+        assert blocked.returncode == 2 and "configuredRoutes" in blocked.stderr and not (base/"neutral-configured").exists()
+        config.unlink()
+        overlay = fake_root/"boot/firmware/overlays/rp1-gpclk-gpio20.dtbo"; overlay.parent.mkdir(parents=True); overlay.write_bytes(b"overlay")
+        blocked = neutral("neutral-overlay")
+        assert blocked.returncode == 2 and "routeOverlayFiles" in blocked.stderr and not (base/"neutral-overlay").exists()
+        overlay.unlink()
+        installed_overlay = fake_root/"usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo"
+        installed_overlay.parent.mkdir(parents=True); installed_overlay.write_bytes(b"overlay")
+        blocked = neutral("neutral-installed-overlay")
+        assert blocked.returncode == 2 and "routeOverlayFiles" in blocked.stderr and not (base/"neutral-installed-overlay").exists()
+        installed_overlay.unlink()
+        node = fake_root/"sys/firmware/devicetree/base/rp1-gpclk-dkms-gpio4"; node.mkdir(parents=True)
+        blocked = neutral("neutral-active")
+        assert blocked.returncode == 2 and "activeRoutes" in blocked.stderr and not (base/"neutral-active").exists()
+        node.rmdir()
+        endpoint = fake_root/"dev/rp1-gpclk"; endpoint.parent.mkdir(parents=True); endpoint.write_text("")
+        blocked = neutral("neutral-endpoint")
+        assert blocked.returncode == 2 and "endpointPresent" in blocked.stderr and not (base/"neutral-endpoint").exists()
+        endpoint.unlink()
+        loaded_path = fake_root/"sys/module/rp1_gpclk_dkms"; loaded_path.mkdir(parents=True)
+        blocked = neutral("neutral-loaded")
+        assert blocked.returncode == 2 and "loadedModule" in blocked.stderr and not (base/"neutral-loaded").exists()
+        loaded_path.rmdir()
+        controller = fake_root/"sys/module/rp1_route_controller"; controller.mkdir(parents=True)
+        blocked = neutral("neutral-controller")
+        assert blocked.returncode == 2 and "loadedRouteController" in blocked.stderr and not (base/"neutral-controller").exists()
+        controller.rmdir()
+        legacy_endpoint = fake_root/"dev/rp1-gpclk0"; legacy_endpoint.write_text("")
+        blocked = neutral("neutral-legacy-endpoint")
+        assert blocked.returncode == 2 and "historicalEndpointPresent" in blocked.stderr and not (base/"neutral-legacy-endpoint").exists()
+        legacy_endpoint.unlink()
+        controller_endpoint = fake_root/"dev/rp1-route-admin"; controller_endpoint.write_text("")
+        blocked = neutral("neutral-controller-endpoint")
+        assert blocked.returncode == 2 and "routeControllerEndpointPresent" in blocked.stderr and not (base/"neutral-controller-endpoint").exists()
+        controller_endpoint.unlink()
+        predecessor_node = fake_root/"sys/firmware/devicetree/base/rp1-gpclk-dkms"; predecessor_node.mkdir(parents=True)
+        blocked = neutral("neutral-predecessor-node")
+        assert blocked.returncode == 2 and "activeRoutes" in blocked.stderr and not (base/"neutral-predecessor-node").exists()
+        predecessor_node.rmdir()
+
+        neutral_evidence = base/"neutral-evidence"
+        neutral_result = neutral("neutral-evidence")
+        assert neutral_result.returncode == 0, neutral_result.stderr
+        neutral_manifest = json.loads((neutral_evidence/"rendered-source/DEVELOPMENT_MANIFEST.json").read_text())
+        assert neutral_manifest["route"] is None and neutral_manifest["installationMode"] == "route-neutral"
+        assert neutral_manifest["parameters"]["live_output"] == 0
+        assert neutral_manifest["installedModule"]["kernel"] == kernel
+        assert neutral_manifest["routeNeutralSafety"] == {
+            "before": {"activeRoutes": [], "configuredRoutes": [], "endpointPresent": False,
+                       "historicalEndpointPresent": False, "loadedModule": False,
+                       "loadedRouteController": False, "routeControllerEndpointPresent": False,
+                       "routeOverlayFiles": []},
+            "after": {"activeRoutes": [], "configuredRoutes": [], "endpointPresent": False,
+                      "historicalEndpointPresent": False, "loadedModule": False,
+                      "loadedRouteController": False, "routeControllerEndpointPresent": False,
+                      "routeOverlayFiles": []},
+        }
+        assert json.loads((neutral_evidence/"RESULT.json").read_text())["state"] == "development-installed"
+        assert not (fake_root/"sys/module/rp1_gpclk_dkms").exists()
+
         evidence=base/"evidence"
         result=command(str(source/"scripts/development-install"),"--source",str(source),"--kernel",kernel,"--module-version","0.9.0","--route","gpio4","--live-output","0","--load","--evidence-directory",str(evidence),cwd=source,env=environment)
         assert result.returncode==0,result.stderr

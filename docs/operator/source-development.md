@@ -31,6 +31,37 @@ installed-file and decompressed-ELF hashes.
 
 ## Primary path
 
+For a clean route-neutral installation suitable for external installer
+orchestration, use:
+
+```sh
+git checkout EXACT_COMMIT
+
+./scripts/development-preflight --kernel "$(uname -r)"
+
+sudo ./scripts/development-install \
+  --kernel "$(uname -r)" \
+  --module-version 0.9.0 \
+  --route-neutral \
+  --live-output 0 \
+  --install \
+  --evidence-directory /absolute/evidence/path
+```
+
+This mode requires no configured or active RP1 GPCLK route, installed route
+overlay, loaded consumer, or endpoint before and after installation. It requires
+a clean source commit and rejects `--load`, `live_output=1`, and a simultaneous
+GPIO route. The resulting `DEVELOPMENT_MANIFEST.json` records `route: null`, the
+target kernel, installed and decompressed module hashes, UAPI hash,
+output-disabled parameters, and pre/post route-neutral observations.
+`RESULT.json` points to that manifest and its rollback record. Neither file
+authorizes route selection, module loading, output, or qualification.
+
+Route-specific development remains separate. Use the maintained overlay,
+route, enrollment, and module commands only under their own reviewed
+authorization. The combined workflow below remains available when one explicit
+route and load operation are already within the authorized scope.
+
 ```sh
 git checkout EXACT_COMMIT
 
@@ -71,6 +102,8 @@ name filter with `.*`. The requested kernel only needs a usable header tree;
 DKMS/compiler errors are returned directly. The release/package source retains
 its stock Raspberry Pi kernel filter unchanged.
 A non-running kernel may be built and installed but cannot be reported loaded.
+Route-neutral mode never unloads a running instance for replacement; any loaded
+module, route, endpoint, or installed route overlay is a preflight refusal.
 
 ## Separate operations
 

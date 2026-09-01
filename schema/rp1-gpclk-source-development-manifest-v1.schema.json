@@ -15,7 +15,8 @@
     "renderedVersion": {"type": "string", "pattern": "^[0-9A-Za-z][0-9A-Za-z._+-]*$"},
     "dkmsName": {"const": "rp1-gpclk-dkms"},
     "moduleName": {"const": "rp1_gpclk_dkms"},
-    "route": {"enum": ["gpio4", "gpio20"]},
+    "route": {"enum": ["gpio4", "gpio20", null]},
+    "installationMode": {"enum": ["route-neutral", "route-specific"]},
     "rawInventory": {"$ref": "#/$defs/inventory"},
     "renderedInventory": {"$ref": "#/$defs/inventory"},
     "transformations": {"type": "array", "items": {"type": "object", "required": ["path", "beforeSha256", "afterSha256", "operation"]}}

@@ -105,6 +105,9 @@ For a maintainer-facing build/install/load workflow from an exact unreleased
 Git commit, see [Exact-source development lifecycle](docs/operator/source-development.md).
 That path is package-independent and remains explicitly Experimental; it does
 not create release or qualification identity.
+Its route-neutral mode installs the exact DKMS source and module without
+selecting a GPIO route, installing an overlay, loading the module, or enabling
+output. Route administration and loading remain later explicit operations.
 
 The maintained test inventory and the distinction between automatic,
 parameterized build, and explicitly authorized hardware checks are documented

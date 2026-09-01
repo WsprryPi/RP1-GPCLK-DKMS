@@ -50,7 +50,13 @@ unpublished development artifacts, not release qualification.
 
 ## Maintainer transition policy
 
-1. **Clean install:** render the exact 0.9.0 checkout with
+1. **Clean install:** external orchestration uses
+   `development-install --route-neutral --live-output 0 --install` from a clean
+   exact commit. It installs the DKMS source and module for the named kernel but
+   does not select a route, install or apply an overlay, enroll, load, edit boot
+   configuration, operate a service, or enable output. Its manifest records
+   `route: null` and exact installed identities. A route-specific maintainer may
+   instead render the exact 0.9.0 checkout with
    `scripts/render-development-tree --source SOURCE --output NEW_TREE --module-version 0.9.0`.
    The renderer rejects a requested version different from the source header;
    it changes only the DKMS placeholder and explicit development kernel filter.

@@ -19,6 +19,13 @@ allowlisted overlays as inactive files. It does not:
 - enable GPCLK or change GPIO state; or
 - authorize transmission.
 
+Exact-source development installation also provides a route-neutral mode. It
+installs the selected commit through DKMS but installs no route overlay and
+requires the module, endpoint, configured route, and active route to remain
+absent. It emits exact module, kernel, UAPI, and rollback identities for an
+external orchestrator. Later overlay, route, enrollment, and load operations
+are separate lifecycle steps.
+
 Route selection is an administrative configuration decision. Exactly one of
 the GPIO4 or GPIO20 overlays may be selected. There is no arbitrary GPIO
 parameter, combined overlay, hot route change, or automatic substitution.

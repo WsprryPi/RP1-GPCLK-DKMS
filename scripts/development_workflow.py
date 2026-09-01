@@ -268,6 +268,7 @@ def resolve_module(kernel: str, expected_version: str | None = None) -> dict[str
         raise Failure("installed module does not decompress to ELF")
     return {"installedPath": str(path), "installedFileSha256": sha256(path), "compression": compression(path),
             "decompressedElfSha256": sha256_bytes(elf), "moduleName": name, "moduleVersion": version,
+            "kernel": kernel,
             "vermagic": modinfo(path, "vermagic"), "signer": modinfo(path, "signer"),
             "signatureKey": modinfo(path, "sig_key"), "signatureHashAlgorithm": modinfo(path, "sig_hashalgo"),
             "signatureState": "signed" if modinfo(path, "signer") else "unsigned"}
@@ -371,8 +372,77 @@ def transition_preflight(version: str, kernel: str, dkms_status: list[str]) -> p
     return None
 
 
+def route_neutral_observation() -> dict[str, Any]:
+    configured: list[dict[str, str]] = []
+    for name in ("/boot/firmware/config.txt", "/boot/config.txt"):
+        config = root_path(name)
+        if config.is_symlink():
+            configured.append({"path": str(config), "route": "unsafe-symlink"})
+        elif config.is_file():
+            text = config.read_text(errors="replace")
+            for route in re.findall(
+                    r"(?m)^\s*dtoverlay\s*=\s*rp1-gpclk-(gpio4|gpio20)(?:\s|,|$)", text):
+                configured.append({"path": str(config), "route": route})
+
+    active: list[str] = []
+    tree = root_path("/sys/firmware/devicetree/base")
+    if tree.is_dir():
+        for route in ROUTES:
+            if any(path.name == f"rp1-gpclk-dkms-{route}"
+                   for path in tree.rglob(f"rp1-gpclk-dkms-{route}")):
+                active.append(route)
+        if any(path.name == "rp1-gpclk-dkms"
+               for path in tree.rglob("rp1-gpclk-dkms")):
+            active.append("predecessor-shared-node")
+
+    overlay_files = []
+    for base in ("/boot/firmware/overlays", "/boot/overlays",
+                 "/usr/lib/rp1-gpclk-dkms/overlays"):
+        for route in ROUTES:
+            path = root_path(f"{base}/rp1-gpclk-{route}.dtbo")
+            if path.exists() or path.is_symlink():
+                overlay_files.append(str(path))
+    for route in ROUTES:
+        path = root_path(f"/usr/lib/rp1-gpclk-dkms/runtime-overlays/{route}.dtbo")
+        if path.exists() or path.is_symlink():
+            overlay_files.append(str(path))
+
+    return {
+        "configuredRoutes": configured,
+        "activeRoutes": sorted(active),
+        "loadedModule": root_path(f"/sys/module/{CANONICAL_MODULE}").exists(),
+        "loadedRouteController": root_path("/sys/module/rp1_route_controller").exists(),
+        "endpointPresent": root_path(ENDPOINT).exists(),
+        "routeControllerEndpointPresent": root_path("/dev/rp1-route-admin").exists(),
+        "historicalEndpointPresent": root_path("/dev/rp1-gpclk0").exists(),
+        "routeOverlayFiles": sorted(overlay_files),
+    }
+
+
+def require_route_neutral(observation: dict[str, Any], stage: str) -> None:
+    blockers = [name for name, value in observation.items() if value]
+    if blockers:
+        raise Failure(
+            f"route-neutral {stage} requires no configured/active route, loaded consumer/controller, "
+            f"RP1 endpoint, or installed route overlay; blockers: {', '.join(blockers)}")
+
+
 def install(args: argparse.Namespace) -> dict[str, Any]:
     requested = args.kernel or platform.release()
+    route_neutral = bool(getattr(args, "route_neutral", False))
+    if route_neutral:
+        if args.route is not None:
+            raise Failure("route-neutral installation cannot select a GPIO route")
+        if args.load:
+            raise Failure("route-neutral installation cannot load the module")
+        if args.live_output != 0:
+            raise Failure("route-neutral installation requires live_output=0")
+        if args.allow_dirty:
+            raise Failure("route-neutral installation requires a clean exact source commit")
+        neutral_before = route_neutral_observation()
+        require_route_neutral(neutral_before, "preflight")
+    else:
+        neutral_before = None
     identities, tools = kernel_identities(requested), tool_inventory()
     print(json.dumps({"kernels": identities, "tools": tools}, indent=2, sort_keys=True), file=sys.stderr)
     for required in ("make", "dkms", "depmod", "modinfo", "sha256sum"):
@@ -425,6 +495,9 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
             run([tools["depmod"], "-a", requested], log=evidence / "depmod.log")
     module = resolve_module(requested, args.module_version) if install_requested else None
     if module: print_mutation_identity(requested, module["installedPath"])
+    neutral_after = route_neutral_observation() if route_neutral else None
+    if neutral_after is not None:
+        require_route_neutral(neutral_after, "verification")
     compiler = tools["cc"] or tools["gcc"]
     version_safe = {"dkms","modinfo","depmod","make","cc","gcc","sha256sum","xz","zstd","dtc","cpp"}
     tool_versions = {name:(run([path,"--version"],check=False).stdout or "").splitlines()[:1]
@@ -432,6 +505,8 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
     manifest = update_manifest(manifest_path, {"targetKernel": requested, "kernelIdentities": kernel_identities(requested),
         "architecture": platform.machine(), "headersPath":str(root_path(f"/lib/modules/{requested}/build")),
         "compiler":compiler, "toolVersions":tool_versions, "tools": tools, "installedModule": module, "route": args.route,
+        "installationMode": "route-neutral" if route_neutral else "route-specific",
+        "routeNeutralSafety": {"before": neutral_before, "after": neutral_after} if route_neutral else None,
         "parameters": {"live_output": args.live_output}, "buildLogs": sorted(str(p) for p in evidence.glob("*.log")),
         "dkmsStatus":run([tools["dkms"],"status","-m",PACKAGE,"-v",args.module_version],check=False).stdout.splitlines(),
         "rollbackRecord": str(rollback_path), "developmentState": "development-installed" if module else "development-built"})
@@ -713,7 +788,10 @@ def parser_for(command: str) -> argparse.ArgumentParser:
     elif command == "development-preflight": parser.add_argument("--kernel", default=platform.release())
     elif command == "development-install":
         parser.add_argument("--source", default="."); parser.add_argument("--kernel", default=platform.release())
-        parser.add_argument("--module-version", required=True); parser.add_argument("--route", choices=ROUTES, required=True)
+        parser.add_argument("--module-version", required=True)
+        route = parser.add_mutually_exclusive_group(required=True)
+        route.add_argument("--route", choices=ROUTES)
+        route.add_argument("--route-neutral", action="store_true")
         parser.add_argument("--live-output", type=int, choices=(0,1), required=True); parser.add_argument("--evidence-directory", required=True)
         parser.add_argument("--build-only", action="store_true"); parser.add_argument("--install", action="store_true")
         parser.add_argument("--load", action="store_true")
