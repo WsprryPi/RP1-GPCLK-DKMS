@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import runtime_activation as activation
@@ -149,6 +150,46 @@ def lock():
 
 
 class Tests(unittest.TestCase):
+    def test_linux_observes_main_pid_only_for_application_service(self):
+        outputs = {
+            activation.SOCKET_UNIT:
+                'LoadState=loaded\nActiveState=inactive\nUnitFileState=disabled\n'
+                'FragmentPath=/usr/lib/systemd/system/'
+                'rp1-gpclk-route-manager.socket\n',
+            admin.ROUTE_MANAGER_TEMPLATE_PROBE:
+                'LoadState=loaded\nActiveState=inactive\nUnitFileState=static\n'
+                'FragmentPath=/usr/lib/systemd/system/'
+                'rp1-gpclk-route-manager@.service\n',
+            activation.APPLICATION_UNIT:
+                'MainPID=0\nLoadState=loaded\nActiveState=inactive\n'
+                'UnitFileState=enabled\n'
+                'FragmentPath=/etc/systemd/system/wsprrypi.service\n',
+        }
+        commands = []
+        def observe(argv):
+            commands.append(argv)
+            return outputs[argv[2]]
+        system = object.__new__(activation.Linux)
+        with patch.object(admin, 'run', side_effect=observe):
+            socket = system.service(activation.SOCKET_UNIT)
+            manager = system.service(activation.SERVICE_UNIT)
+            application = system.service(activation.APPLICATION_UNIT)
+        self.assertNotIn('MainPID', socket)
+        self.assertNotIn('MainPID', manager)
+        self.assertEqual(application['MainPID'], '0')
+        self.assertNotIn('MainPID', commands[0][-1])
+        self.assertNotIn('MainPID', commands[1][-1])
+        self.assertIn('MainPID', commands[2][-1])
+        outputs[activation.APPLICATION_UNIT] = outputs[
+            activation.APPLICATION_UNIT].replace('MainPID=0\n', '')
+        with patch.object(admin, 'run', side_effect=observe):
+            with self.assertRaisesRegex(ValueError, 'service observation'):
+                system.service(activation.APPLICATION_UNIT)
+        with patch.object(admin, 'run') as command:
+            with self.assertRaisesRegex(ValueError, 'unsupported activation service'):
+                system.service('foreign.service')
+        command.assert_not_called()
+
     def test_plan_and_successful_neutral_activation(self):
         system = System()
         plan = activation.activation_plan(system)

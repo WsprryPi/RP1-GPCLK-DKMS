@@ -164,7 +164,9 @@ installation.
 Systemd observations parse named `key=value` properties rather than depending
 on output order. The manager service template is inspected through the fixed
 inactive `rp1-gpclk-route-manager@runtime-inspect.service` instance name; this
-does not start or enable an instance.
+does not start or enable an instance. Process identity is requested only for
+the WsprryPi application service, whose restoration proof requires `MainPID`;
+socket and template units are not required to expose a process identifier.
 
 The low-level `runtime_deployment.py` and `runtime_route_client.py` commands remain
 supported recovery/operator tools. Existing verbs are not renamed or removed.

@@ -24,6 +24,7 @@ LAST_DEPLOYMENT = admin.STATE / 'last-deployment.json'
 CONTROLLER = f'/lib/modules/{admin.KERNEL}/updates/dkms/rp1_route_controller.ko'
 SOCKET_UNIT = 'rp1-gpclk-route-manager.socket'
 SERVICE_UNIT = 'rp1-gpclk-route-manager@.service'
+APPLICATION_UNIT = 'wsprrypi.service'
 SOCKET_PATH = Path('/run/rp1-gpclk-dkms/route-manager.sock')
 MAX_RECORD = 4 * 1024 * 1024
 PENDING = ('activation-intent', 'controller-load-intent', 'socket-start-intent',
@@ -209,7 +210,10 @@ class Linux:
         return {'status': 'owned', 'open': opened}
 
     def service(self, name):
-        return admin.systemd_unit(name, include_main_pid=True)
+        if name not in {SOCKET_UNIT, SERVICE_UNIT, APPLICATION_UNIT}:
+            raise ValueError('unsupported activation service: ' + name)
+        return admin.systemd_unit(
+            name, include_main_pid=(name == APPLICATION_UNIT))
 
     def manager_socket(self):
         try:
@@ -284,7 +288,7 @@ def observe(system):
         '/sys/class/misc/rp1-gpclk/dev')
     socket_service = system.service(SOCKET_UNIT)
     manager_service = system.service(SERVICE_UNIT)
-    application_service = system.service('wsprrypi.service')
+    application_service = system.service(APPLICATION_UNIT)
     manager_socket = system.manager_socket()
     controller_state = system.controller_state() if controller['status'] == 'loaded' else None
     transactions = {}
