@@ -340,25 +340,18 @@ change the module gate, or authorize an operation.
 
 ## Validation
 
-The opt-in [clock-disabled runtime controller](runtime-controller-v1.md) is a
+The opt-in [clock-disabled runtime controller](runtime-controller.md) is a
 separate development implementation using exported stock-kernel overlay APIs.
 It owns overlay IDs and error results, interlocks the consumer's module lifetime,
 rejects output-enabled loads, and supplies concrete inhibited administration and
 same-boot crash recovery. It adds a separate administrative UAPI, not transmission
 commands. It is excluded from default packaging and has no target qualification.
 Deployment and hardware tests remain separately authorized gates. It does not
-enable mutation through the packaged or `source-development` format `1` manager.
+enable mutation through the packaged or `source-development` manager.
 
-The [Experimental runtime-route engine](runtime-route-v2.md) is explicitly an
-offline reference model with a blocked public mutation entry point. Its synthetic
-atomic effects are not a Linux adapter contract. The stock configfs removal
-path discards overlay-removal errors, so it is not a recoverable controller
-interface; use the separate runtime controller contract. A bounded
-read-only collector exists; that foundation supplied no write adapter or deployment
-path. The later opt-in controller above does not reuse the synthetic adapter or
-enable `source-development` format `1` mutation.
-Snapshot observations and model tests do not establish exclusion, post-removal
-success, kernel lifetime safety, or hardware readiness.
+A bounded read-only inventory collector does not provide a write adapter or
+deployment path. Snapshot observations and offline tests do not establish
+exclusion, post-removal success, kernel lifetime safety, or hardware readiness.
 
 The canonical [userspace interface](uapi.md) includes passive snapshots and
 operation-scoped live authorization. The passive snapshot exposes presence and tri-state
@@ -421,15 +414,15 @@ qualification scope.
 ### Opt-in runtime management integration
 
 The [runtime manager workflow](../operator/runtime-manager-workflow.md) uses a
-separate schema-3 profile on the existing privileged socket. It binds the complete
+separate runtime profile on the existing privileged socket. It binds the complete
 runtime inventory, serializes deployment and route effects, preserves removal
 errors and ownership, and restores application availability after successful switching
-through the [application restoration contract](runtime-application-restoration-v1.md).
+through the [application restoration contract](runtime-application-restoration.md).
 Failed or unresolved transactions retain owned inhibition. This development
 profile does not change the packaged compatibility contract, transmission UAPI,
 release status, or hardware qualification. Application/browser adaptation remains
 owned and reviewed in WsprryPi.
 
 Runtime-owned routes can use the canonical operation lease through the
-[application reconciliation extension](runtime-output-v1.md). Global output stays
+[application reconciliation extension](runtime-output.md). Global output stays
 disabled; this does not add qualification or change the kernel ownership contract.

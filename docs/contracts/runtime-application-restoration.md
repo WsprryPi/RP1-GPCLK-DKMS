@@ -2,7 +2,7 @@
 
 # Runtime application restoration
 
-The schema-3 manager completes application restoration after successful route
+The runtime manager completes application restoration after successful route
 switching. The low-level overlay transaction ends at `complete-inhibited`;
 it does not itself start an application.
 
@@ -88,8 +88,9 @@ Install the companion and matching WsprryPi executable using the application's
 installer or `scripts/copy_exe.py`. Deploy a newly bound complete DKMS runtime
 bundle: the inventory includes `runtime_application.py` and the manager's
 sandbox permits the canonical application configuration directory. Do not swap
-individual scripts under an old binding. The application requires the manager's
-`applicationRestorationVersion=1` before offering a successful runtime preflight.
+individual scripts under an incomplete binding. The application requires
+`applicationRestoration: true` from the manager before offering a successful
+runtime preflight.
 
 An old `/dev/null` service mask is not automatically adopted as workflow-owned.
 Restore the canonical service installation and intentionally clear that legacy

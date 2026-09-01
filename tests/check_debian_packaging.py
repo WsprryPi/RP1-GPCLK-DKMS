@@ -40,12 +40,12 @@ assert "config.txt" not in rules and "dtoverlay" not in rules and "modprobe" not
 assert "qualification" not in rules.lower()
 assert "scripts/rp1-gpclk-route-manager.py" in rules
 assert "usr/sbin/rp1-gpclk-route-manager" in rules
-assert "rp1-gpclk-route-manager-v1.schema.json" in rules
-assert "route-manager-v1.md" in rules
+assert "rp1-gpclk-route-manager.schema.json" in rules
+assert "route-manager.md" in rules
 assert "rp1-gpclk-route-manager.socket" in rules
 assert "rp1-gpclk-route-manager@.service" in rules
 assert "dh_installsystemd --no-enable --no-start" in rules
-assert "dh_compress -Xroute-manager-v1.md" in rules
+assert "dh_compress -Xroute-manager.md" in rules
 assert "addgroup --system rp1-gpclk-route" in postinst
 
 socket = (ROOT / "systemd/rp1-gpclk-route-manager.socket").read_text()

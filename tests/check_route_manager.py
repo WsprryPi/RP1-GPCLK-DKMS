@@ -14,7 +14,7 @@ def rejected(action,contains=None):
     else: raise AssertionError("unsafe fixture was accepted")
 
 def request(operation,route=None,number=1):
-    value={"schemaVersion":1,"operation":operation}
+    value={"operation":operation}
     if route is not None: value["route"]=route
     if operation in manager.MUTATIONS: value.update(execute=True,requestId=f"wsprrypi-{number:08d}",actor="wsprrypi.service")
     return value
@@ -138,10 +138,10 @@ with tempfile.TemporaryDirectory() as temporary:
     assert result["status"]=="mismatch" and result["state"]["configuredRoute"]=="gpio20" and result["state"]["activeRoute"] is None
 
 for bad in (
-    {"schemaVersion":1,"operation":"query","route":"gpio4"},
-    {"schemaVersion":1,"operation":"preflight","route":"gpio5"},
-    {"schemaVersion":1,"operation":"apply-and-reboot","route":"gpio4","execute":False,"requestId":"wsprrypi-00000001","actor":"app"},
-    {"schemaVersion":1,"operation":"rollback","execute":True,"requestId":"short","actor":"app"},
+    {"operation":"query","route":"gpio4"},
+    {"operation":"preflight","route":"gpio5"},
+    {"operation":"apply-and-reboot","route":"gpio4","execute":False,"requestId":"wsprrypi-00000001","actor":"app"},
+    {"operation":"rollback","execute":True,"requestId":"short","actor":"app"},
 ): rejected(lambda bad=bad:manager.parse_request(bad))
 
 with tempfile.TemporaryDirectory() as temporary:
@@ -149,7 +149,7 @@ with tempfile.TemporaryDirectory() as temporary:
     env.path(manager.CONFIG).write_bytes(manager.config_for_route(b"# base\n","gpio4"))
     executable=env.path("/opt/development/rp1-gpclk-route-manager"); executable.parent.mkdir(parents=True); executable.write_bytes((ROOT/"scripts/rp1-gpclk-route-manager.py").read_bytes())
     manifest=env.path("/opt/development/DEVELOPMENT_MANIFEST.json")
-    manifest.write_text(json.dumps({"schema":"rp1-gpclk-source-development-manifest-v1","classification":"source-development","qualification":False,"sourceCommit":"7"*40,"renderedVersion":"0.9.0","targetKernel":"fixture-kernel","route":"gpio4","uapiIdentity":{"sha256":manager.sha256_bytes(fixture.uapi)}}))
+    manifest.write_text(json.dumps({"schema":"rp1-gpclk-source-development-manifest","classification":"source-development","qualification":False,"sourceCommit":"7"*40,"renderedVersion":"0.9.0","targetKernel":"fixture-kernel","route":"gpio4","uapiIdentity":{"sha256":manager.sha256_bytes(fixture.uapi)}}))
     binding=env.path("/opt/development/binding.json")
     value={"schema":"rp1-gpclk-route-manager-source-development-v1","classification":"Experimental/source-development","qualification":False,"sourceCommit":"8"*40,"moduleSourceCommit":"7"*40,"sourceManifest":"/opt/development/DEVELOPMENT_MANIFEST.json","sourceManifestSha256":manager.sha256(manifest),"executable":"/opt/development/rp1-gpclk-route-manager","executableSha256":manager.sha256(executable),"adoptionRecord":"/opt/development/current-boot-ownership.json","module":manager.MODULE,"moduleVersion":"0.9.0","uapiSha256":manager.sha256_bytes(fixture.uapi),"kernel":"fixture-kernel","route":"gpio4","compatibilityId":"v0.9.0-pi5-gpio4"}
     binding.write_text(json.dumps(value)); old=os.environ.get(manager.SOURCE_DEVELOPMENT_BINDING_ENV); os.environ[manager.SOURCE_DEVELOPMENT_BINDING_ENV]="/opt/development/binding.json"

@@ -96,7 +96,7 @@ class Tests(unittest.TestCase):
         for operation in ('switch', 'apply-and-reboot', 'reconcile', 'recover'):
             with self.assertRaises(ValueError): manager.parse({'schemaVersion':1,'operation':operation})
         with self.assertRaises(ValueError): manager.parse({'schemaVersion':3,'operation':'query','execute':True})
-        self.assertEqual(manager.parse({'schemaVersion':1,'operation':'query'})['schemaVersion'], 3)
+        self.assertEqual(manager.parse({'operation':'query'})['schemaVersion'], 3)
 
     def test_every_deployment_crash_recovers_exact_old_bytes(self):
         values = {path:(None if path in deploy.JOURNALS else b'new') for path in deploy.DESTINATIONS}

@@ -186,7 +186,7 @@ class Collector:
         if supplied is None: return {"status":"not-supplied"}
         try:
             path=pathlib.Path(supplied); value=json.loads(path.read_text())
-            if (value.get("schema")!="rp1-gpclk-source-development-manifest-v1" or
+            if (value.get("schema")!="rp1-gpclk-source-development-manifest" or
                     value.get("classification")!="source-development" or value.get("qualification") is not False or
                     value.get("moduleName")!=MODULE): return {"status":"rejected","reason":"invalid-development-manifest","path":str(path)}
             return {"status":"ok","path":str(path),"sha256":sha256(path),"classification":"Experimental",

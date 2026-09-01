@@ -7,7 +7,7 @@ import sys
 import uuid
 
 SOCKET = '/run/rp1-gpclk-dkms/route-manager.sock'
-CONTRACT = 'rp1-gpclk-route-manager-runtime-v1'
+CONTRACT = 'rp1-gpclk-route-manager-runtime'
 
 
 def exchange(request):

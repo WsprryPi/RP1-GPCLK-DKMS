@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse, hashlib, json, os, pathlib, re, shutil, socket, stat, subprocess, sys, time
 
 SCHEMA="rp1-gpclk-route-manager-source-development-v1"
-ADOPTION_SCHEMA="rp1-gpclk-route-manager-current-boot-adoption-v1"
-MANIFEST_SCHEMA="rp1-gpclk-source-development-manifest-v1"
+ADOPTION_SCHEMA="rp1-gpclk-route-manager-current-boot-adoption"
+MANIFEST_SCHEMA="rp1-gpclk-source-development-manifest"
 BASE="/opt/rp1-gpclk-dkms-development"
 DROPIN="/etc/systemd/system/rp1-gpclk-route-manager@.service.d/90-source-development.conf"
 UNIT="rp1-gpclk-route-manager@source-development-status.service"
@@ -100,7 +100,7 @@ def clean_source(path:pathlib.Path)->tuple[str,pathlib.Path]:
 def passive_query()->dict:
     client=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM); client.settimeout(5)
     try:
-        client.connect("/run/rp1-gpclk-dkms/route-manager.sock"); client.sendall(b'{"schemaVersion":1,"operation":"query"}\n'); client.shutdown(socket.SHUT_WR)
+        client.connect("/run/rp1-gpclk-dkms/route-manager.sock"); client.sendall(b'{"operation":"query"}\n'); client.shutdown(socket.SHUT_WR)
         return json.loads(client.makefile("rb").readline())
     finally: client.close()
 def install(args:argparse.Namespace)->dict:

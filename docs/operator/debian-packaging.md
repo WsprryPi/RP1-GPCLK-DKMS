@@ -32,9 +32,9 @@ the package therefore does not authorize or initiate GPIO activity.
 Version `0.9.0` additionally installs the stable application executor at
 `/usr/sbin/rp1-gpclk-route-manager` (with a byte-identical package-owned copy
 at `/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager`), its closed JSON schema
-at `/usr/share/rp1-gpclk-dkms/0.9.0/rp1-gpclk-route-manager-v1.schema.json`,
+at `/usr/share/rp1-gpclk-dkms/0.9.0/rp1-gpclk-route-manager.schema.json`,
 and its consumer contract at
-`/usr/share/doc/rp1-gpclk-dkms/route-manager-v1.md`. These are the only route
+`/usr/share/doc/rp1-gpclk-dkms/route-manager.md`. These are the only route
 manager executable/data additions. The package also installs disabled
 `rp1-gpclk-route-manager.socket` and `rp1-gpclk-route-manager@.service` units,
 creates the restricted `rp1-gpclk-route` group, and creates only the empty

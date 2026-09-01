@@ -6,16 +6,17 @@ import re
 import sys
 import runtime_controller_admin as admin
 
-CONTRACT = 'rp1-gpclk-route-manager-runtime-v1'
+CONTRACT = 'rp1-gpclk-route-manager-runtime'
 MAX_INPUT = 16384
 
 
 def parse(value):
+    # Profile discovery is the only unversioned request accepted by this
+    # runtime-only endpoint.
+    if value == {'operation': 'query'}:
+        return {'schemaVersion': 3, 'operation': 'query'}
     if not isinstance(value, dict) or type(value.get('schemaVersion')) is not int:
         raise ValueError('request object/version required')
-    # Discovery only: never reinterpret a legacy reboot/reconcile as switching.
-    if value == {'schemaVersion': 1, 'operation': 'query'}:
-        return {'schemaVersion': 3, 'operation': 'query'}
     operation = value.get('operation')
     fields = {'schemaVersion', 'operation'}
     if value['schemaVersion'] != 3 or operation not in ('query', 'preflight', 'switch', 'recover'):
@@ -55,7 +56,7 @@ def response(system, operation, state, status='ok', error=None):
                         'outputEnabled': False, 'applicationInhibited': system.inhibited(),
                         'pendingTransaction': system.read_journal(),
                         'application': app.load(system),
-                        'bindingSha256': system.binding_hash, 'applicationRestorationVersion': 1}}
+                        'bindingSha256': system.binding_hash, 'applicationRestoration': True}}
     if error is not None:
         result['error'] = {'code': 'runtime-fail-closed', 'message': str(error),
                            'kernelError': state['error'], 'overlayId': state['id']}

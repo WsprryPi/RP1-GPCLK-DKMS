@@ -2,14 +2,14 @@
 
 # Experimental clock-disabled runtime route controller
 
-The current schema-3 manager completes application restoration as specified in
-[Runtime application restoration](runtime-application-restoration-v1.md). Its successful switch path
+The runtime manager completes application restoration as specified in
+[Runtime application restoration](runtime-application-restoration.md). Its successful switch path
 restores a previously running application in idle mode. The low-level controller
-transaction ends inhibited; the schema-3 manager performs the application
+transaction ends inhibited; the runtime manager performs the application
 handshake afterward. `restore --execute` retries that application completion.
 
 This opt-in development implementation uses exported stock-kernel OF APIs.
-It is separate from the packaged v1 route manager and synthetic v2 model.
+It is separate from the packaged route manager.
 Deployment, binding and hardware validation require explicit authorization;
 software tests do not establish product or RF qualification.
 
@@ -118,13 +118,13 @@ journal is not silently adopted. Recovery never authorizes a successor.
 Before route or consumer effects, the tool persists owned service inhibition,
 reloads systemd, stops the service and verifies inactivity. The current owned
 `90-rp1-route-inhibit.conf` drop-in and idle restoration handshake are specified
-in the [application restoration contract](runtime-application-restoration-v1.md).
+in the [application restoration contract](runtime-application-restoration.md).
 Foreign unit files and administrator masks are preserved. Failures and crashes
 retain inhibition. The low-level transaction never starts the application; the
-schema-3 manager restores it only after successful route completion. This covers the named service only, not arbitrary root-launched
+runtime manager restores it only after successful route completion. This covers the named service only, not arbitrary root-launched
 processes, alternate units or other applications. Operators must exclude those
 entry points. The consumer load parameter stays disabled; operation-scoped output
-is a separate existing path, as clarified in [runtime output reconciliation](runtime-output-v1.md).
+is a separate existing path, as clarified in [runtime output reconciliation](runtime-output.md).
 
 The tool unloads only the exact checked consumer with non-forced rmmod, checks
 absence and controller detachment, removes the owned overlay, then applies the
@@ -151,8 +151,8 @@ this design does not isolate itself from unrestricted root. Do not operate
 configfs/dtoverlay, install alternate modules, bind other drivers or load dependent
 overlays during a transaction. Such interference invalidates the campaign.
 
-The public v2 model entry point remains blocked. The source-development v1 manager
-remains query-only. No existing compatibility or release identity is promoted.
+The source-development manager remains query-only. No compatibility or release
+identity is promoted.
 Kernel/controller code uses `GPL-2.0-only OR MIT`, declares Dual MIT/GPL, and uses
 exported GPL-compatible APIs. Independent tooling and tests use MIT; the separate
 administrative UAPI uses the project's syscall-note dual license. No upstream
@@ -171,10 +171,11 @@ pinctrl state, timing, cleanup, coexistence, rebootless switching or RF safety.
 The explicit runtime profile now has an implementation on the existing manager
 socket, a bounded operator client, and journaled filesystem deployment tooling.
 See [the workflow and its remaining target gates](../operator/runtime-manager-workflow.md).
-Schema 3 is distinct from the packaged and source-development protocols. Exact
-bindings include the entire runtime software inventory; old three-file bindings
-must be regenerated and reviewed. Deployment and administration share one lock,
-and an unfinished deployment blocks administration. The [output reconciliation extension](runtime-output-v1.md) connects application
+The runtime profile is distinct from the packaged and source-development
+protocols. Exact bindings include the entire runtime software inventory;
+incomplete bindings must be regenerated and reviewed. Deployment and
+administration share one lock,
+and an unfinished deployment blocks administration. The [output reconciliation extension](runtime-output.md) connects application
 startup to existing UAPI operation authorization and adds explicit mask resumption.
 Route switching never authorizes output. Application restoration releases only
 owned inhibition after the required idle-state checks.

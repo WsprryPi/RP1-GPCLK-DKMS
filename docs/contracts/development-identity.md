@@ -20,8 +20,8 @@ ownership, capability and cleanup contracts without a product-mode allowlist.
 | Package schema directory | `/usr/share/rp1-gpclk-dkms/0.9.0` |
 | Transmission UAPI | exact `include/uapi/linux/rp1_gpclk.h` bytes and SHA-256 |
 | Administrative UAPI | exact `include/uapi/linux/rp1_route_admin.h` bytes |
-| Development manifest | `rp1-gpclk-source-development-manifest-v1` |
-| Route-manager protocols | packaged/source format `1`; runtime request schema `3` |
+| Development manifest | `rp1-gpclk-source-development-manifest` |
+| Route-manager protocols | packaged/source and runtime profiles |
 | `GPIO4` compatibility ID | `v0.9.0-pi5-gpio4` |
 | `GPIO20` compatibility ID | `v0.9.0-pi5-gpio20` |
 | Classification | `source-development` / `Experimental`; not release-qualified |

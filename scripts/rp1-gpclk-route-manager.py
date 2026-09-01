@@ -6,7 +6,7 @@ import hashlib, json, os, re, stat, subprocess, sys, tempfile, uuid
 from pathlib import Path, PurePosixPath
 from typing import Callable
 
-SCHEMA_VERSION=1; CONTRACT="rp1-gpclk-route-manager-v1"; PACKAGE="rp1-gpclk-dkms"
+CONTRACT="rp1-gpclk-route-manager"; PACKAGE="rp1-gpclk-dkms"
 VERSION="0.9.0"; DEBIAN_VERSION="0.9.0-1"; MODULE="rp1_gpclk_dkms"
 CONFIG="/boot/firmware/config.txt"; BOOT_ID="/proc/sys/kernel/random/boot_id"
 JOURNAL_DIR="/var/lib/rp1-gpclk-dkms/route-transactions"
@@ -15,7 +15,7 @@ OVERLAY_DIR="/boot/firmware/overlays"
 BEGIN="# BEGIN RP1-GPCLK-DKMS OWNED ROUTE"; END="# END RP1-GPCLK-DKMS OWNED ROUTE"
 UAPI_SHA256="d40b48c817bdcb0b72d0fca624e1fe43e37cd924dd799c82dc6e94244614d082"
 SOURCE_DEVELOPMENT_BINDING_ENV="RP1_GPCLK_SOURCE_DEVELOPMENT_BINDING"
-ADOPTION_SCHEMA="rp1-gpclk-route-manager-current-boot-adoption-v1"
+ADOPTION_SCHEMA="rp1-gpclk-route-manager-current-boot-adoption"
 OVERLAY_SHA256={"gpio4":"96b157b50961ebf74915f84186494f9a0d5427faa59bf9729a8bd4c95dc5f681","gpio20":"b43691796628e4675f9f8cae8aef187cc670b3f7a3713cb67e352ee585c53713"}
 ROUTE_ID={"gpio4":1,"gpio20":2}; OPERATIONS={"query","preflight","apply-and-reboot","rollback","reconcile"}
 MUTATIONS={"apply-and-reboot","rollback","reconcile"}; SERVICES=("wsprrypi.service","soapyremote-server.service")
@@ -55,10 +55,10 @@ def atomic_write(path:Path,payload:bytes,mode:int)->None:
 
 def parse_request(value:object)->dict:
     if not isinstance(value,dict): raise ContractError("request must be an object")
-    allowed={"schemaVersion","operation","route","execute","requestId","actor"}
+    allowed={"operation","route","execute","requestId","actor"}
     if set(value)-allowed: raise ContractError("request contains unknown fields")
-    if value.get("schemaVersion")!=1 or value.get("operation") not in OPERATIONS: raise ContractError("request schema or operation is unsupported")
-    operation=value["operation"]; expected={"schemaVersion","operation"}
+    if value.get("operation") not in OPERATIONS: raise ContractError("request operation is unsupported")
+    operation=value["operation"]; expected={"operation"}
     if operation in {"preflight","apply-and-reboot"}:
         expected.add("route")
         if value.get("route") not in ROUTE_ID: raise ContractError("route must be gpio4 or gpio20")
@@ -121,7 +121,7 @@ def source_development_identity(env:Environment,binding_name:str)->dict:
     if manifest.is_symlink() or not manifest.is_file() or sha256(manifest)!=binding["sourceManifestSha256"]: raise ContractError("source-development manifest identity differs")
     try: manifest_value=json.loads(manifest.read_text())
     except (OSError,json.JSONDecodeError) as error: raise ContractError("source-development manifest is malformed") from error
-    if (manifest_value.get("schema")!="rp1-gpclk-source-development-manifest-v1" or
+    if (manifest_value.get("schema")!="rp1-gpclk-source-development-manifest" or
             manifest_value.get("classification")!="source-development" or manifest_value.get("qualification") is not False or
             manifest_value.get("sourceCommit")!=binding["moduleSourceCommit"] or manifest_value.get("renderedVersion")!=VERSION or
             manifest_value.get("targetKernel")!=binding["kernel"] or manifest_value.get("route")!=binding["route"] or
@@ -275,7 +275,7 @@ def inspect(env:Environment,observe_safety:bool=False,require_quiesced:bool=Fals
     result["bootOwnership"]=source_development_ownership(env,payload,result)
     if observe_safety: result["safety"]=service_safety(env,require_quiesced)
     return result
-def response(operation:str,status:str,state:dict)->dict: return {"schemaVersion":1,"contract":CONTRACT,"operation":operation,"status":status,"state":state}
+def response(operation:str,status:str,state:dict)->dict: return {"contract":CONTRACT,"operation":operation,"status":status,"state":state}
 def journal_write(path:Path,value:dict)->None: atomic_write(path,json.dumps(value,indent=2,sort_keys=True).encode()+b"\n",0o600)
 
 def set_service_activity(env:Environment,service_before:dict,stop:bool)->None:
@@ -390,5 +390,5 @@ def main()->int:
         if len(sys.argv)!=1: raise ContractError("the executor accepts JSON on stdin and no arguments")
         sys.stdout.buffer.write(canonical(dispatch(json.load(sys.stdin)))); return 0
     except (ContractError,OSError,subprocess.CalledProcessError,json.JSONDecodeError) as error:
-        sys.stdout.buffer.write(canonical({"schemaVersion":1,"contract":CONTRACT,"operation":None,"status":"error","error":{"code":"fail-closed","message":str(error)}})); return 2
+        sys.stdout.buffer.write(canonical({"contract":CONTRACT,"operation":None,"status":"error","error":{"code":"fail-closed","message":str(error)}})); return 2
 if __name__=="__main__": raise SystemExit(main())

@@ -2,12 +2,9 @@
 
 # Exact-source development lifecycle
 
-The [runtime-route v2 engine](../contracts/runtime-route-v2.md) is offline-only.
-Do not install its entry point as a route-manager replacement: it reports
-implementation blockers and cannot inspect or switch a target. Existing
-`source-development` deployment remains passive-query-only. V2 identity files
-are not deployment enrollment or route authorization; no V2 installer or
-automatic route startup service is provided.
+`source-development` deployment remains passive-query-only. It is not deployment
+enrollment or route authorization, and no automatic route startup service is
+provided.
 
 `python3 scripts/runtime_inventory.py` is a separate bounded read-only collector.
 It accepts no arguments, never opens the RP1 endpoint and never invokes

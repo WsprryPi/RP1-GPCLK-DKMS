@@ -2,8 +2,8 @@
 
 # Runtime route reconciliation for application output
 
-The current schema-3 manager completes application restoration as specified in
-[Runtime application restoration](runtime-application-restoration-v1.md). Its successful switch path
+The runtime manager completes application restoration as specified in
+[Runtime application restoration](runtime-application-restoration.md). Its successful switch path
 restores a previously running application in idle mode. `restore --execute`
 retries application completion after a successful route transaction.
 
@@ -16,7 +16,7 @@ The load parameter blocks the global output path;
 it does not disable operation-scoped authorization. No new permit, duration cap, or mode
 restriction is introduced here.
 
-Schema 3 supports `idle` and `reconcile-output`, each with an explicit gpio4 or gpio20
+The runtime manager supports `idle` and `reconcile-output`, each with an explicit `gpio4` or `gpio20`
 route. Both are observational and return `executionAuthorized=false`. They require
 a current boot/session/binding, a completed route journal agreeing with controller
 readback, and a passive module snapshot reporting the selected route, eligible
@@ -33,7 +33,7 @@ not itself output authorization or RF qualification.
 
 The low-level `resume gpio4|gpio20 --execute` checks the idle route and releases
 owned inhibition without starting the service or authorizing output. It is not
-the application-restoration handshake. Normal schema-3 switching performs that
+the application-restoration handshake. Normal runtime switching performs that
 handshake itself; use `restore --execute` if application completion fails.
 An open consumer file blocks unload. Removal errors and unresolved transactions
 remain visible, and no previous transmission is resumed automatically.
@@ -43,7 +43,7 @@ remain visible, and no previous transmission is resumed automatically.
 Use the [runtime deployment workflow](../operator/runtime-manager-workflow.md)
 with a complete newly bound bundle and matching WsprryPi companion. Keep module,
 manager, UAPI, overlay and application identities coherent; do not swap scripts
-under an old binding. The [application restoration contract](runtime-application-restoration-v1.md)
+under an old binding. The [application restoration contract](runtime-application-restoration.md)
 defines startup readiness and preservation of service/configuration state.
 
 A failed update uses the existing deployment journal recovery while modules are

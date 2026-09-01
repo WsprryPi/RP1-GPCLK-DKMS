@@ -32,15 +32,15 @@ override_dh_auto_install:
 	mkdir -p $(EXEC_DEST) debian/$(PACKAGE)/usr/sbin $(SCHEMA_DEST) $(DOC_DEST) $(UNIT_DEST)
 	install -m 0755 scripts/rp1-gpclk-route-manager.py $(EXEC_DEST)/rp1-gpclk-route-manager
 	install -m 0755 scripts/rp1-gpclk-route-manager.py debian/$(PACKAGE)/usr/sbin/rp1-gpclk-route-manager
-	install -m 0644 schema/rp1-gpclk-route-manager-v1.schema.json $(SCHEMA_DEST)/
-	install -m 0644 docs/contracts/route-manager-v1.md $(DOC_DEST)/route-manager-v1.md
+	install -m 0644 schema/rp1-gpclk-route-manager.schema.json $(SCHEMA_DEST)/
+	install -m 0644 docs/contracts/route-manager.md $(DOC_DEST)/route-manager.md
 	install -m 0644 systemd/rp1-gpclk-route-manager.socket systemd/rp1-gpclk-route-manager@.service $(UNIT_DEST)/
 
 override_dh_installsystemd:
 	dh_installsystemd --no-enable --no-start rp1-gpclk-route-manager.socket
 
 override_dh_compress:
-	dh_compress -Xroute-manager-v1.md
+	dh_compress -Xroute-manager.md
 
 override_dh_dkms:
 	dh_dkms -V $(MODULE_VERSION)

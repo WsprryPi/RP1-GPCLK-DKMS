@@ -29,7 +29,7 @@ from typing import Any
 PACKAGE = "rp1-gpclk-dkms"
 CANONICAL_MODULE = "rp1_gpclk_dkms"
 ENDPOINT = "/dev/rp1-gpclk"
-SCHEMA = "rp1-gpclk-source-development-manifest-v1"
+SCHEMA = "rp1-gpclk-source-development-manifest"
 ENROLLMENT_SCHEMA = "rp1-gpclk-development-enrollment-v1"
 ROLLBACK_SCHEMA = "rp1-gpclk-development-rollback-v1"
 STATE_BASE = pathlib.Path("/var/lib/rp1-gpclk-dkms/development")

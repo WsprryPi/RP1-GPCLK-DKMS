@@ -19,4 +19,22 @@ for document in [*ROOT.glob("*.md"), *(ROOT / "docs").rglob("*.md")]:
             failures.append(f"{document.relative_to(ROOT)} -> {target}")
 if failures:
     raise SystemExit("broken documentation links:\n" + "\n".join(failures))
+versioned_contracts = sorted(
+    path.name for path in (ROOT / "docs" / "contracts").glob("*-v[0-9]*.md")
+)
+if versioned_contracts:
+    raise SystemExit(
+        "versioned development contract documents remain: " +
+        ", ".join(versioned_contracts)
+    )
+for obsolete in (
+    "docs/contracts/runtime-route-v2.md",
+    "schema/rp1-gpclk-runtime-binding-v2.schema.json",
+    "schema/rp1-gpclk-runtime-route-v2.schema.json",
+    "scripts/rp1-gpclk-runtime-route.py",
+    "scripts/runtime_route.py",
+    "tests/check_runtime_route.py",
+):
+    if (ROOT / obsolete).exists():
+        raise SystemExit(f"obsolete synthetic runtime-route artifact remains: {obsolete}")
 print("documentation links: PASS")

@@ -144,12 +144,12 @@ The external qualification boundary is defined by the
 
 | Administration profile | Workflow |
 | --- | --- |
-| Packaged manager, format `1` | [Configure a route, reboot and reconcile](docs/contracts/route-manager-v1.md) |
-| Source-development manager, format `1` | [Passive query and current-boot adoption](docs/operator/source-development.md) |
-| Opt-in runtime manager, schema `3` | [Rebootless `GPIO4`/`GPIO20` switching and recovery to `none`](docs/operator/runtime-manager-workflow.md) |
+| Packaged manager | [Configure a route, reboot and reconcile](docs/contracts/route-manager.md) |
+| Source-development manager | [Passive query and current-boot adoption](docs/operator/source-development.md) |
+| Opt-in runtime manager | [Rebootless `GPIO4`/`GPIO20` switching and recovery to `none`](docs/operator/runtime-manager-workflow.md) |
 
-The runtime profile uses the [runtime controller](docs/contracts/runtime-controller-v1.md)
-and [application restoration](docs/contracts/runtime-application-restoration-v1.md).
+The runtime profile uses the [runtime controller](docs/contracts/runtime-controller.md)
+and [application restoration](docs/contracts/runtime-application-restoration.md).
 For diagnosis and removal, see [diagnostics](docs/operator/diagnostics.md) and
 [module lifecycle](docs/operator/lifecycle.md). Passive observations and
 operation authorization are distinct parts of the

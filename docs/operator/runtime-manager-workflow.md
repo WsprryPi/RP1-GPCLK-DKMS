@@ -2,13 +2,13 @@
 
 # Runtime manager software workflow
 
-The opt-in runtime manager uses schema 3 and contract
-`rp1-gpclk-route-manager-runtime-v1` on the existing privileged Unix socket.
+The opt-in runtime manager uses contract
+`rp1-gpclk-route-manager-runtime` on the existing privileged Unix socket.
 It supports rebootless `GPIO4`/`GPIO20` switching and explicit recovery to `none`.
 Successful switching restores a previously running WsprryPi in idle state through
-[application restoration](../contracts/runtime-application-restoration-v1.md).
+[application restoration](../contracts/runtime-application-restoration.md).
 It never resumes transmission. This is an `Experimental` development profile;
-the packaged v1 manager and passive source-development profile are separate.
+the packaged manager and passive source-development profile are separate.
 
 Profile discovery accepts only `query`; reboot and reconciliation requests from
 other manager profiles are not translated into switching. WsprryPi owns browser
@@ -141,9 +141,9 @@ transformed bytes remain embedded in and authenticated against the controller.
 
 ## Application output
 
-Successful schema-3 switching uses the application-restoration contract above.
+Successful runtime switching uses the application-restoration contract above.
 If only application readiness fails, use `restore --execute`. The low-level
 `resume` operation is not a substitute for that configuration/startup handshake.
-[Output reconciliation](../contracts/runtime-output-v1.md) is observational;
+[Output reconciliation](../contracts/runtime-output.md) is observational;
 UAPI acquisition and WsprryPi operator authorization remain separate gates.
 The global load-time output gate stays disabled.
