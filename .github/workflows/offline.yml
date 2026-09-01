@@ -15,7 +15,7 @@ jobs:
       - name: Validate exact development manifest schema
         run: |
           ./scripts/render-development-tree --source . --output /tmp/rp1-development-render
-          python3 -c 'import json,jsonschema; jsonschema.Draft202012Validator(json.load(open("schema/rp1-gpclk-source-development-manifest-v1.schema.json"))).validate(json.load(open("/tmp/rp1-development-render/DEVELOPMENT_MANIFEST.json")))'
+          python3 -c 'import json,jsonschema; jsonschema.Draft202012Validator(json.load(open("schema/rp1-gpclk-source-development-manifest.schema.json"))).validate(json.load(open("/tmp/rp1-development-render/DEVELOPMENT_MANIFEST.json")))'
       - name: Reject silent Debian downgrade
         run: |
           if sh debian/rp1-gpclk-dkms.preinst upgrade 9.9.9-1 > /tmp/downgrade-result 2>&1; then exit 1; fi

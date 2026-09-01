@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Hardware-free source-development workflow contract tests."""
 
-import bz2, gzip, importlib.util, json, lzma, os, pathlib, platform, shutil, subprocess, tempfile
+import bz2, gzip, importlib.util, json, lzma, os, pathlib, platform, re, shutil, subprocess, tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("development_workflow", ROOT / "scripts/development_workflow.py")
@@ -27,6 +27,14 @@ def test_render() -> None:
         result = command(str(source / "scripts/render-development-tree"), "--source", str(source), "--output", str(output), cwd=source)
         assert result.returncode == 0, result.stderr
         manifest = json.loads((output / "DEVELOPMENT_MANIFEST.json").read_text())
+        assert manifest["schema"] == DEV.SCHEMA == "rp1-gpclk-source-development-manifest"
+        workflow = (source / ".github/workflows/offline.yml").read_text()
+        schema_references = set(re.findall(r"\bschema/[A-Za-z0-9_.-]+\.schema\.json\b", workflow))
+        expected_schema = f"schema/{manifest['schema']}.schema.json"
+        tracked = set(command("git", "ls-files", cwd=source).stdout.splitlines())
+        assert expected_schema in schema_references
+        assert all((source / reference).is_file() and reference in tracked
+                   for reference in schema_references)
         assert manifest["classification"] == "source-development" and manifest["qualification"] is False
         assert manifest["moduleName"] == "rp1_gpclk_dkms"
         assert manifest["versionIdentity"]["moduleVersion"] == "0.9.0"
