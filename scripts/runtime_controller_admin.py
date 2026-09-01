@@ -246,11 +246,11 @@ class Linux:
 
     def call(self, operation=STATUS, route=0, before=None):
         before = before or {'session': 0, 'generation': 0}
-        data = bytearray(FORMAT.pack(1, operation, route, 0, before['session'],
+        data = bytearray(FORMAT.pack(0, operation, route, 0, before['session'],
                                     before['generation'], 0, 0, 0, 0, 0, 0))
         fcntl.ioctl(self.fd, IOCTL, data, True)
-        abi, op, route, reserved, session, generation, oid, error, active, flags, r1, r2 = FORMAT.unpack(data)
-        if abi != 1 or op or route or reserved or r1 or r2 or not session or active not in (0, 1, 2) or flags & ~7:
+        reserved0, op, route, reserved, session, generation, oid, error, active, flags, r1, r2 = FORMAT.unpack(data)
+        if reserved0 or op or route or reserved or r1 or r2 or not session or active not in (0, 1, 2) or flags & ~7:
             raise ValueError('controller response schema')
         result = dict(session=session, generation=generation, id=oid, error=error, route=active, flags=flags)
         validate_observation(result)

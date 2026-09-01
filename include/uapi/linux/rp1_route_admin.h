@@ -9,7 +9,8 @@
 #define RP1_ROUTE_FAULT 1U
 #define RP1_ROUTE_CONSUMER 2U
 #define RP1_ROUTE_PINNED 4U
-/* Input output fields must be zero. STATUS requires zero session/generation. */
+/* Reserved fields are zero on input and output; output fields are zero on input. */
+/* STATUS also requires zero session/generation. */
 struct rp1_route_admin {
 	__u32 reserved0;
 	__u32 operation;

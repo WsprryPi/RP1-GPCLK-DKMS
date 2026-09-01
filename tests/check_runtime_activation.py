@@ -5,7 +5,9 @@ import contextlib
 import copy
 import json
 from pathlib import Path
+import stat
 import sys
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -150,6 +152,34 @@ def lock():
 
 
 class Tests(unittest.TestCase):
+    def test_linux_controller_status_uses_and_requires_reserved0_zero(self):
+        system = activation.Linux()
+        def ioctl(fd, command, data, mutate):
+            self.assertEqual((fd, command, mutate), (99, admin.IOCTL, True))
+            self.assertEqual(admin.FORMAT.unpack(data),
+                (0, admin.STATUS, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+            data[:] = admin.FORMAT.pack(0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0)
+        device = SimpleNamespace(st_mode=stat.S_IFCHR | 0o600, st_uid=0, st_gid=0)
+        with patch.object(activation.os, 'open', return_value=99), \
+             patch.object(activation.os, 'fstat', return_value=device), \
+             patch.object(activation.os, 'close'), \
+             patch.object(activation.fcntl, 'ioctl', side_effect=ioctl):
+            self.assertEqual(system.controller_state(),
+                {'session': 7, 'generation': 0, 'id': 0,
+                 'error': 0, 'route': 0, 'flags': 0})
+
+    def test_linux_controller_status_rejects_nonzero_reserved0_response(self):
+        system = activation.Linux()
+        def ioctl(unused_fd, unused_command, data, unused_mutate):
+            data[:] = admin.FORMAT.pack(1, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0)
+        device = SimpleNamespace(st_mode=stat.S_IFCHR | 0o600, st_uid=0, st_gid=0)
+        with patch.object(activation.os, 'open', return_value=99), \
+             patch.object(activation.os, 'fstat', return_value=device), \
+             patch.object(activation.os, 'close'), \
+             patch.object(activation.fcntl, 'ioctl', side_effect=ioctl):
+            with self.assertRaisesRegex(ValueError, 'response schema'):
+                system.controller_state()
+
     def test_linux_observes_main_pid_only_for_application_service(self):
         outputs = {
             activation.SOCKET_UNIT:
@@ -261,6 +291,23 @@ class Tests(unittest.TestCase):
             activation.plan_digest(reviewed), lock)
         self.assertEqual(result['status'], 'recovered-inhibited')
         self.assertFalse(system.controller or system.socket_active)
+        self.assertTrue(system.inhibited)
+
+    def test_recovery_handles_loaded_controller_when_initial_status_failed(self):
+        system = System()
+        plan = activation.activation_plan(system)
+        system.controller = True
+        system.journal = {'version': 1, 'plan': plan,
+            'planSha256': activation.plan_digest(plan),
+            'requestId': '00000000-0000-0000-0000-000000000002',
+            'phase': 'activation-failed', 'controller': None, 'manager': None,
+            'application': None, 'error': '[Errno 22] Invalid argument'}
+        activation.validate_journal(system.journal)
+        reviewed = activation.recovery_plan(system)
+        result = activation.ensure_recovery(
+            system, reviewed, activation.plan_digest(reviewed), lock)
+        self.assertEqual(result['status'], 'recovered-inhibited')
+        self.assertFalse(system.controller)
         self.assertTrue(system.inhibited)
 
     def test_recovery_rejects_active_route_and_boot_change(self):

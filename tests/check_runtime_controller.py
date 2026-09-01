@@ -307,12 +307,44 @@ class Tests(unittest.TestCase):
         system = object.__new__(admin.Linux); system.fd = 99
         def ioctl(fd, command, data, mutate):
             self.assertEqual((fd, command, mutate), (99, 0xc040b801, True))
-            self.assertEqual(admin.FORMAT.unpack(data)[:6], (1, 2, 0, 0, 7, 8))
-            data[:] = admin.FORMAT.pack(1, 0, 0, 0, 7, 9, 12, -16, 1, 5, 0, 0)
+            self.assertEqual(admin.FORMAT.unpack(data)[:6], (0, 2, 0, 0, 7, 8))
+            data[:] = admin.FORMAT.pack(0, 0, 0, 0, 7, 9, 12, -16, 1, 5, 0, 0)
         with patch.object(admin.fcntl, 'ioctl', side_effect=ioctl):
             result = system.call(admin.REMOVE, before={'session': 7, 'generation': 8})
         self.assertEqual(result['error'], -16)
         self.assertEqual(result['id'], 12)
+
+    def test_every_ioctl_operation_sends_reserved0_zero(self):
+        system = object.__new__(admin.Linux); system.fd = 99
+        cases = ((admin.STATUS, 0, {'session': 0, 'generation': 0}),
+                 (admin.APPLY, 2, {'session': 7, 'generation': 8}),
+                 (admin.REMOVE, 0, {'session': 7, 'generation': 8}))
+        for operation, route, before in cases:
+            with self.subTest(operation=operation):
+                def ioctl(unused_fd, unused_command, data, unused_mutate):
+                    fields = admin.FORMAT.unpack(data)
+                    self.assertEqual(fields[:6],
+                        (0, operation, route, 0, before['session'], before['generation']))
+                    generation = before['generation'] + (operation != admin.STATUS)
+                    data[:] = admin.FORMAT.pack(
+                        0, 0, 0, 0, 7, generation, 0, 0, 0, 0, 0, 0)
+                with patch.object(admin.fcntl, 'ioctl', side_effect=ioctl):
+                    system.call(operation, route, before)
+
+    def test_nonzero_reserved0_response_is_rejected(self):
+        system = object.__new__(admin.Linux); system.fd = 99
+        def ioctl(unused_fd, unused_command, data, unused_mutate):
+            data[:] = admin.FORMAT.pack(1, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0)
+        with patch.object(admin.fcntl, 'ioctl', side_effect=ioctl):
+            with self.assertRaisesRegex(ValueError, 'response schema'):
+                system.call()
+
+    def test_admin_uapi_source_contract_names_zero_only_reserved0(self):
+        header = (ROOT / 'include/uapi/linux/rp1_route_admin.h').read_text()
+        controller = (ROOT / 'controller/main.c').read_text()
+        self.assertNotIn('RP1_ROUTE_ADMIN_ABI', header)
+        self.assertRegex(header, r'struct rp1_route_admin\s*\{\s*__u32 reserved0;')
+        self.assertIn('if (request.reserved0 || request.reserved ||', controller)
 
 
 if __name__ == '__main__':

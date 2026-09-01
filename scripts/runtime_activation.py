@@ -240,10 +240,10 @@ class Linux:
             info = os.fstat(fd)
             if not stat.S_ISCHR(info.st_mode) or info.st_uid or info.st_gid or info.st_mode & 0o077:
                 raise ValueError('controller endpoint ownership')
-            data = bytearray(admin.FORMAT.pack(1, admin.STATUS, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+            data = bytearray(admin.FORMAT.pack(0, admin.STATUS, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
             fcntl.ioctl(fd, admin.IOCTL, data, True)
-            abi, op, route, reserved, session, generation, oid, error, active, flags, r1, r2 = admin.FORMAT.unpack(data)
-            if abi != 1 or op or route or reserved or r1 or r2:
+            reserved0, op, route, reserved, session, generation, oid, error, active, flags, r1, r2 = admin.FORMAT.unpack(data)
+            if reserved0 or op or route or reserved or r1 or r2:
                 raise ValueError('controller response schema')
             value = {'session': session, 'generation': generation, 'id': oid,
                      'error': error, 'route': active, 'flags': flags}

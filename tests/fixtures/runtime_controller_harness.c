@@ -28,7 +28,10 @@ int main(void)
  reset(); assert(route_init() == 0); route_exit();
  reset(); foreign = true; assert(route_init() == -EOPNOTSUPP);
  reset(); value = request(1, 1); allowed = false; assert(call(&value) == -EPERM);
- allowed = true; value.reserved2[1] = 1; assert(call(&value) == -EINVAL);
+ allowed = true;
+ value = request(0, 0); value.reserved0 = 1; assert(call(&value) == -EINVAL);
+ value = request(1, 1);
+ value.reserved2[1] = 1; assert(call(&value) == -EINVAL);
  value = request(1, 3); assert(call(&value) == -EINVAL);
  value = request(0, 0); value.session = 1; assert(call(&value) == -EINVAL);
  value = request(1, 1); value.session++; assert(call(&value) == -ESTALE);
@@ -38,13 +41,15 @@ int main(void)
  assert(apply_calls == 0);
  for (i = 1; i <= 2; i++) {
   value = request(1, i); assert(call(&value) == 0);
-  assert(value.active_route == i && value.overlay_id == 9 && references == 1);
+  assert(value.reserved0 == 0 && value.active_route == i &&
+         value.overlay_id == 9 && references == 1);
   assert(rp1_route_consumer_attach(true) == -EPERM);
   assert(rp1_route_consumer_attach(false) == 0);
   value = request(2, 0); assert(call(&value) == -EBUSY && remove_calls == (int)i-1);
   rp1_route_consumer_detach(false);
   value = request(2, 0); assert(call(&value) == 0);
-  assert(value.overlay_id == 0 && value.flags == 0 && references == 0);
+  assert(value.reserved0 == 0 && value.overlay_id == 0 &&
+         value.flags == 0 && references == 0);
  }
  for (i = 0; i < sizeof(errors)/sizeof(errors[0]); i++) {
   reset(); apply_error = errors[i]; value = request(1, 1); assert(call(&value) == 0);
