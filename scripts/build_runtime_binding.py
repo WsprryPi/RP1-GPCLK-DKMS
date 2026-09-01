@@ -11,7 +11,7 @@ import subprocess
 import sys
 from runtime_inventory import module_note
 from runtime_layout import INVENTORY, KERNEL
-from runtime_binding import (APPLICATION, COMPATIBILITY, CONTRACT, EXTERNAL_SOURCES, PRODUCT_VERSION,
+from runtime_binding import (APPLICATION, COMPATIBILITY, CONTRACT, PRODUCT_VERSION,
                              canonical_digest, validate)
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,9 +56,7 @@ def build(directory, application_companion):
               'productVersion': PRODUCT_VERSION,
               'compatibilityIdentities': COMPATIBILITY,
               'sourceCommit': source_commit(), 'kernel': KERNEL, 'files': {},
-              'externalFiles': {APPLICATION: hashlib.sha256(companion).hexdigest(),
-                  **{destination: hashlib.sha256((ROOT/source).read_bytes()).hexdigest()
-                     for destination, source in EXTERNAL_SOURCES.items()}},
+              'externalFiles': {APPLICATION: hashlib.sha256(companion).hexdigest()},
               'uapiSha256': {}}
     for module, field in (('rp1_route_controller', 'controllerNoteSha256'),
                           ('rp1_gpclk_dkms', 'consumerNoteSha256')):

@@ -23,7 +23,7 @@ import runtime_controller_admin as admin
 import runtime_deployment as deployment
 import runtime_route_client as client
 
-CONTRACT = 'rp1-gpclk-runtime-readiness'
+CONTRACT = 'rp1-gpclk-runtime-readiness-v1'
 SCHEMA_VERSION = 1
 EXIT = {'exact_ready': 0, 'neutral_ready': 0, 'absent': 10,
         'deployment_required': 11, 'recovery_required': 12, 'conflict': 13,

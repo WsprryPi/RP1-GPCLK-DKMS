@@ -11,11 +11,7 @@ CONTRACT = 'rp1-gpclk-runtime-binding-v2'
 PRODUCT_VERSION = '0.9.0'
 COMPATIBILITY = {'gpio4': 'v0.9.0-pi5-gpio4', 'gpio20': 'v0.9.0-pi5-gpio20'}
 APPLICATION = '/usr/local/lib/wsprrypi/route_application.py'
-EXTERNAL_SOURCES = {
-    '/usr/lib/systemd/system/rp1-gpclk-route-manager.socket': 'systemd/rp1-gpclk-route-manager.socket',
-    '/usr/lib/systemd/system/rp1-gpclk-route-manager@.service': 'systemd/rp1-gpclk-route-manager@.service',
-}
-EXTERNAL_PATHS = {APPLICATION, *EXTERNAL_SOURCES}
+EXTERNAL_PATHS = {APPLICATION}
 
 
 def canonical_digest(value):

@@ -34,9 +34,12 @@ all manager/admin/client/deployment/layout/readiness Python files, the readiness
 schema, the socket/service units, runtime drop-in, and exact WsprryPi companion.
 Private copies do not replace the package's canonical UAPI or overlays, and the
 DKMS deployment does not install the application-owned companion.
-The bundle is a local review artifact, not a signed or published release. Review
-and checksum the entire bundle, including its bootstrap Python files, before
-transferring or executing it with privilege.
+The socket/service units are deployment payloads rather than unbound host
+prerequisites. The application-owned companion is the only external file and is
+bound by digest. The bundle is a local review artifact, not a signed or
+published release. Review and checksum the entire bundle, including its
+self-contained bootstrap Python import closure, before transferring or executing
+it with privilege.
 
 ## Separately authorized deployment window
 
@@ -50,8 +53,10 @@ plan. Keep clocks and transmission disabled throughout.
    activation. Do not equate current-boot adoption with removable ownership.
 2. Provision root-owned, non-group/world-writable
    `/var/lib/rp1-gpclk-dkms/runtime-admin` and its ancestors. Review the existing
-   socket/service installation. The installer preserves packaged executables and
-   the source-development drop-in, and does not create or enable the socket.
+   socket/service installation. The reviewed filesystem plan installs or updates
+   the exact bound socket/service unit bytes, preserves conflicting packaged
+   executables and the source-development drop-in, and does not enable or start
+   the socket before neutral activation.
 3. From the reviewed bundle, run `python3 runtime_provider.py plan --bundle .`.
    Review the classification, old/new hashes, destinations and `planSha256`.
    Existing files must be ordinary,
@@ -128,6 +133,8 @@ controller observations for investigation; never delete them to bypass a check.
 `runtime_provider.py inspect` reserves stdout for one JSON document and sends
 diagnostic failures to stderr. The schema is installed at
 `/usr/lib/rp1-gpclk-dkms/schema/rp1-gpclk-runtime-readiness-v1.schema.json`.
+The JSON document identifies the contract as
+`rp1-gpclk-runtime-readiness-v1`.
 Stable classifications and exit statuses are:
 
 | Result | Exit | Meaning |

@@ -7,7 +7,7 @@
   "required": ["schemaVersion", "contract"],
   "properties": {
     "schemaVersion": {"const": 1},
-    "contract": {"const": "rp1-gpclk-runtime-readiness"},
+    "contract": {"const": "rp1-gpclk-runtime-readiness-v1"},
     "profile": {"const": "runtime"},
     "result": {"enum": ["absent", "deployment_required", "activation_required", "neutral_ready", "exact_ready", "recovery_required", "conflict"]},
     "state": {"enum": ["absent", "deployment_required", "activation_required", "neutral_ready", "exact_ready", "recovery_required", "conflict"]},

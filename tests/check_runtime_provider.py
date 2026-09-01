@@ -5,6 +5,7 @@ import copy
 import json
 from pathlib import Path
 import stat
+import subprocess
 import sys
 import unittest
 from unittest.mock import patch
@@ -218,7 +219,7 @@ class Tests(unittest.TestCase):
         host._manager['query']['state']['pendingTransaction']['foreign'] = True
         self.assertEqual(self.inspect(host)['result'], 'conflict')
 
-    def test_missing_application_or_unit_prerequisite_blocks_plan(self):
+    def test_missing_application_prerequisite_blocks_plan(self):
         host = Host(False)
         host.expected_external = lambda expected: {path: {'status': 'absent'}
             for path in expected['externalFiles']}
@@ -288,6 +289,25 @@ class Tests(unittest.TestCase):
             second_files = {path.name: path.read_bytes() for path in second.iterdir()}
             self.assertEqual(first_files, second_files)
             self.assertEqual(stat.S_IMODE(first.stat().st_mode), 0o700)
+            bootstrap = {
+                'runtime_deployment.py', 'runtime_controller_admin.py',
+                'runtime_layout.py', 'runtime_application.py',
+                'runtime_output.py', 'runtime_provider.py', 'runtime_binding.py',
+                'runtime_activation.py', 'runtime_route_client.py',
+            }
+            self.assertTrue(bootstrap <= set(first_files))
+            subprocess.run([sys.executable, '-c',
+                'import sys; sys.path.insert(0, sys.argv[1]); import runtime_provider, runtime_activation',
+                str(first)], check=True)
+
+    def test_binding_deploys_manager_units_and_only_externalizes_application(self):
+        self.assertEqual(binding.EXTERNAL_PATHS, {binding.APPLICATION})
+        self.assertEqual(INVENTORY[
+            '/usr/lib/systemd/system/rp1-gpclk-route-manager.socket'],
+            'systemd/rp1-gpclk-route-manager.socket')
+        self.assertEqual(INVENTORY[
+            '/usr/lib/systemd/system/rp1-gpclk-route-manager@.service'],
+            'systemd/rp1-gpclk-route-manager@.service')
 
     def test_route_plan_binds_preflight_and_is_idempotent_when_ready(self):
         result = self.inspect(Host())
@@ -331,12 +351,14 @@ class Tests(unittest.TestCase):
     def test_schema_and_exit_status_contract(self):
         schema = json.loads((Path(__file__).resolve().parents[1] /
             'schema/rp1-gpclk-runtime-readiness-v1.schema.json').read_text())
+        self.assertEqual(schema['properties']['contract']['const'], provider.CONTRACT)
         self.assertEqual(schema['properties']['result']['enum'],
             ['absent', 'deployment_required', 'activation_required', 'neutral_ready',
              'exact_ready', 'recovery_required', 'conflict'])
         self.assertEqual(provider.EXIT, {'exact_ready': 0, 'neutral_ready': 0,
             'absent': 10, 'deployment_required': 11, 'recovery_required': 12,
             'conflict': 13, 'activation_required': 14})
+        self.assertEqual(provider.CONTRACT, 'rp1-gpclk-runtime-readiness-v1')
 
 
 if __name__ == '__main__':
