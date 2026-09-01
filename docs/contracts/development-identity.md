@@ -57,9 +57,9 @@ unpublished development artifacts, not release qualification.
    configuration, operate a service, or enable output. Its manifest records
    `route: null` and exact installed identities. A route-specific maintainer may
    instead render the exact 0.9.0 checkout with
-   `scripts/render-development-tree --source SOURCE --output NEW_TREE --module-version 0.9.0`.
-   The renderer rejects a requested version different from the source header;
-   it changes only the DKMS placeholder and explicit development kernel filter.
+   `scripts/render-development-tree --source SOURCE --output NEW_TREE`.
+   The renderer derives the version from the canonical source header and changes
+   only the DKMS placeholder and explicit development kernel filter.
    `development-install` needs no release package or tag.
 2. **Same-version replacement:** the source installer requires the complete
    recorded inventory to match the existing development tree. Foreign files,
@@ -67,15 +67,13 @@ unpublished development artifacts, not release qualification.
    enrollment/manager/runtime state block replacement. It retains `prior-source`
    and original installed/compressed module files in the new evidence directory,
    with hashes and DKMS status in `ROLLBACK.json`, before removing the instance.
-3. **1.x to 0.9.0:** this is a downgrade. No epoch, force flag, version-ordering
+3. **Greater version to 0.9.0:** this is a downgrade. No epoch, force flag, version-ordering
    trick or automatic updater handles it. Source installation rejects predecessor
    DKMS/source/module state. Debian `preinst` rejects a greater installed version
    before unpacking. A maintainer must execute the separately reviewed removal
    and recovery plan below, then use the clean-install path.
 4. **0.9.0 to future 1.0.0:** Debian ordering is strictly increasing. Version
    ordering does not establish package lifecycle or real upgrade validation.
-5. **Old public 1.0.0:** it is not the future mature 1.0.0. Preserve the public
-   identity until separately authorized publication disposition.
 
 ### Required explicit migration and recovery plan
 
@@ -135,14 +133,7 @@ There is intentionally no general `--force-downgrade` switch.
 The maintained runtime filesystem transaction already saves exact old bytes,
 serializes changes and checks unchanged preconditions before apply/recover.
 Its opt-in explicit plan is a maintainer migration path, not a normal package
-updater. It must be reviewed as a downgrade when old module metadata says 1.x.
+updater. It must be reviewed as a downgrade when installed module metadata is
+greater than 0.9.0.
 Actual-host validation must exercise this migration/rollback policy; offline
 fixtures do not establish actual-host package or DKMS success.
-
-## Release identity collision
-
-The public `v1.0.0` tag/release already exists. A future mature 1.0.0 must not
-reuse its artifacts, notes, hashes or consumer pins. Release preparation must
-stop on that collision until a separate publication disposition is authorized.
-Neither downgrade migration nor this contract authorizes tag/release deletion,
-replacement, history rewriting, artifact freezing or publication.

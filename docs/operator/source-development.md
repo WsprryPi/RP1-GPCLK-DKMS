@@ -41,7 +41,6 @@ git checkout EXACT_COMMIT
 
 sudo ./scripts/development-install \
   --kernel "$(uname -r)" \
-  --module-version 0.9.0 \
   --route-neutral \
   --live-output 0 \
   --install \
@@ -54,6 +53,9 @@ a clean source commit and rejects `--load`, `live_output=1`, and a simultaneous
 GPIO route. The resulting `DEVELOPMENT_MANIFEST.json` records `route: null`, the
 target kernel, installed and decompressed module hashes, UAPI hash,
 output-disabled parameters, and pre/post route-neutral observations.
+The preflight and installer derive the module version from the exact source
+checkout's canonical `include/rp1_gpclk/version.h`; callers cannot substitute a
+different development version.
 `RESULT.json` points to that manifest and its rollback record. Neither file
 authorizes route selection, module loading, output, or qualification.
 
@@ -69,7 +71,6 @@ git checkout EXACT_COMMIT
 
 sudo ./scripts/development-install \
   --kernel "$(uname -r)" \
-  --module-version 0.9.0 \
   --route gpio4 \
   --live-output 0 \
   --load \
@@ -108,7 +109,7 @@ module, route, endpoint, or installed route overlay is a preflight refusal.
 ## Separate operations
 
 ```sh
-./scripts/render-development-tree --source . --output /absolute/tree --module-version 0.9.0
+./scripts/render-development-tree --source . --output /absolute/tree
 
 sudo ./scripts/development-enroll --manifest MANIFEST --route gpio4 --kernel "$(uname -r)"
 sudo ./scripts/development-module load --live-output 0 --manifest MANIFEST

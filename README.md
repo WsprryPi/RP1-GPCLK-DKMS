@@ -41,8 +41,7 @@ alternate-transmitter fallback.
 
 For exact-commit development installation, follow the
 [source-development guide](docs/operator/source-development.md). The current
-0.9.0 package is an unpublished development artifact; the public 1.0.0 release
-is not this development build. Review the
+0.9.0 package is an unpublished development artifact. Review the
 [identity and migration contract](docs/contracts/development-identity.md)
 before installing over an existing version.
 

@@ -1,10 +1,9 @@
 <!-- SPDX-License-Identifier: MIT -->
 # RP1 GPCLK UAPI ABI v2 contract
 
-ABI v2 is the normative interface for release 1.1.0. ABI v1 remains supported
-unchanged and its byte identity is archived at
-`release/uapi/rp1_gpclk-v1.0.1.h`. The canonical endpoint remains
-`/dev/rp1-gpclk`.
+ABI v2 extends ABI v1, which remains supported unchanged. The
+byte-authoritative current header is `include/uapi/linux/rp1_gpclk.h`, and the
+canonical endpoint remains `/dev/rp1-gpclk`.
 
 ## Negotiation
 
@@ -35,8 +34,8 @@ publishes COMPLETE/COMPLETE after cleanup. The one-second qualification form
 uses exactly 1,000,000,000 ns. Zero and overflowed/out-of-range durations fail.
 
 Both forms require a recognized route-specific compatibility identity and
-LIVE_ELIGIBLE at ACQUIRE and submission. Release 1.1.0 has no transferred
-positive entry, so output remains unavailable pending fresh target evidence.
+LIVE_ELIGIBLE at ACQUIRE and submission. No compatibility or qualification
+evidence transfers between source identities, routes, or targets.
 
 STOP moves RUNNING to DRAINING, wakes the DMA wait, terminates callbacks and DMA,
 stops the tick source, disables and unprepares the clock, selects the safe GPIO

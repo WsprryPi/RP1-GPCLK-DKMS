@@ -199,18 +199,19 @@ successor and uses a bounded drain. Stale callbacks are rejected. Terminal
 outcomes are stable and specific. A cleanup fault remains latched and cannot be
 cleared by releasing a lease.
 
-### Version 1.0.1 normative UAPI and endpoint freeze
+### Stable UAPI and endpoint identity
 
-The canonical endpoint is `/dev/rp1-gpclk`. ABI v1 is byte-identified by the
-SHA-256 recorded in `release/uapi-contract-freeze-v1.0.1.json`; that manifest
-also freezes ioctl identities and sizes, GPIO4/GPIO20 route identities, lease,
-submission, terminal-state, cleanup, packaging, and version relationships.
+The canonical endpoint is `/dev/rp1-gpclk`. The byte-authoritative current
+interface is `include/uapi/linux/rp1_gpclk.h`; `uapi-identity.json` records its
+current ABI and SHA-256. Existing ioctl identities and sizes, GPIO4/GPIO20
+route identities, lease, submission, terminal-state, and cleanup meanings stay
+stable as the interface evolves additively.
 Submission remains unavailable unless both the immutable load-time output gate
 and a recognized compatibility identity for the selected route permit it.
 
-Changing the endpoint or canonical UAPI reopens the freeze and invalidates
-dependent consumer work. Final documentation freeze remains pending until
-target evidence and release claims are complete.
+Changing the endpoint or an existing canonical UAPI meaning requires explicit
+consumer coordination. Release metadata is generated only for a reviewed
+release candidate.
 
 ## Lifetime and cleanup
 
@@ -413,9 +414,8 @@ Version 0.9.0 is the current pre-release development baseline. Debian version
 is 0.9.0-1; UAPI ABI 4 and protocol schema versions are preserved. The
 [identity and downgrade contract](development-identity.md) defines source,
 package, diagnostics, compatibility, enrollment and recovery relationships.
-Historical release layouts and freezes remain historical; release generation
-and finalization are blocked until the release pipeline review. The existing public
-v1.0.0 collision requires separate later disposition. No final source, package
+Release metadata is absent from the development baseline and will be generated
+only when the canonical release pipeline is reviewed. No final source, package,
 or qualification identity is frozen by the development version.
 
 WsprryPi consumes only an explicitly compatible tagged release. Module and
@@ -424,15 +424,12 @@ separate. A clean test run or published artifact never broadens the stated
 qualification scope.
 
 
-### Version 1.1.0 ABI v2 TONE freeze
+### ABI v2 TONE compatibility
 
-Release 1.1.0 supersedes ABI v1 for new consumers while preserving all v1
-ioctls unchanged. ABI v2 adds explicit continuous and kernel-bounded finite
+ABI v2 preserves all ABI v1 ioctls unchanged and adds explicit continuous and kernel-bounded finite
 TONE operations and v2 negotiation as specified in `docs/contracts/uapi-v2.md`.
-The canonical endpoint and route identities are unchanged. The 1.0.1 freeze is
-historical; its GPIO4 positive evidence does not transfer to changed module or
-UAPI bytes. Both routes therefore fail closed until new exact-build evidence is
-issued, and GPIO20 remains unavailable.
+The canonical endpoint and route identities are unchanged. Compatibility and
+qualification remain bound to the current exact module, UAPI, route, and target.
 
 ### Opt-in runtime management integration
 

@@ -2,9 +2,9 @@
 
 # Security policy
 
-Version 1.0.0 is the current published release. Its qualification is limited to
-the systems and behaviors stated in the release notes; publication does not
-make every Raspberry Pi kernel or physical installation supported.
+No current release is published. Development builds are unqualified and remain
+limited to the exact systems, routes, and behaviors explicitly authorized by
+their operator; installation does not qualify a kernel or physical setup.
 
 Report a suspected vulnerability privately through GitHub's security advisory
 feature for `WsprryPi/RP1-GPCLK-DKMS`. Do not include sensitive details in a

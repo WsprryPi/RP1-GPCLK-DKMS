@@ -1,71 +1,10 @@
 rp1-gpclk-dkms (0.9.0-1) UNRELEASED; urgency=medium
 
-  * Normalize the mature development implementation to upstream 0.9.0.
-  * Preserve ABI v4, route ownership, runtime controller and lifecycle behavior.
-  * Treat transition from 1.x as an explicit maintainer downgrade, never an
-    automatic update. No release or final artifact freeze is established.
+  * Provide the current source-development DKMS module and route-neutral
+    installation workflow for Raspberry Pi 5.
+  * Preserve ABI v4, explicit GPIO4 and GPIO20 administration, output-disabled
+    installation, rollback records, and operator-controlled compatibility.
+  * Defer release metadata and publication until the canonical release is
+    prepared from the reviewed development source.
 
  -- WsprryPi Project <noreply@wsprrypi.invalid>  Mon, 31 Aug 2026 12:00:00 -0500
-
-rp1-gpclk-dkms (1.1.2-1) UNRELEASED; urgency=medium
-
-  * Add an exact Raspberry Pi 5 / BCM2712 / aarch64 / 6.18.34 GPIO4
-    qualification-candidate entry without claiming completed qualification.
-  * Keep GPIO20 unavailable and preserve the immutable default-off live-output
-    gate, finite ABI-v2 TONE bounds, and package-install neutrality.
-  * Preserve the stable route-manager v1 contract across the 1.1.1 upgrade.
-
- -- WsprryPi Project <noreply@wsprrypi.invalid>  Sat, 22 Aug 2026 19:00:00 -0500
-
-rp1-gpclk-dkms (1.1.1-1) UNRELEASED; urgency=medium
-
-  * Recycle the ABI v2 candidate with route-specific, reboot-based,
-    output-inhibited target-validation controls for GPIO4 and GPIO20.
-  * Preserve the ABI v2 UAPI byte-for-byte and keep both routes unavailable
-    until exact-build evidence is returned.
-  * Install the versioned, route-neutral application route manager, JSON
-    schema, and consumer contract without installing qualification controls.
-  * Add disabled, group-restricted systemd socket activation so a running
-    application can request a separately owned service-quiesce transaction.
-  * Reject qualification archive generation for package bytes without an
-    exact output-inhibited validation identity.
-  * Preserve and report strictly validated completed historical journals and
-    migrate the earlier package-owned route block only during a transaction.
-  * Permit the fixed executor to create its same-directory atomic boot-file
-    temporary while retaining a read-only system sandbox elsewhere.
-
- -- Lee Bussy <lee@bussy.org>  Sat, 22 Aug 2026 00:00:00 -0500
-
-rp1-gpclk-dkms (1.1.0-1) UNRELEASED; urgency=medium
-
-  * Add ABI v2 negotiation and explicit continuous and kernel-bounded finite
-    TONE operations while retaining every ABI v1 ioctl unchanged.
-  * Invalidate prior positive compatibility evidence for the changed module.
-
- -- Lee Bussy <lee@bussy.org>  Sat, 22 Aug 2026 00:00:00 -0500
-
-rp1-gpclk-dkms (1.0.1-1) UNRELEASED; urgency=medium
-
-  * Create and own the exact RP1 endpoint platform device when the stock
-    boot-time population path leaves the validated overlay node uninstantiated.
-  * Fail closed for missing, duplicate, disabled, unbound, or ambiguous
-    endpoint nodes and preserve kernel-created device ownership.
-
- -- Lee Bussy <lee@bussy.org>  Thu, 21 Aug 2026 20:00:00 -0500
-
-rp1-gpclk-dkms (1.0.0-1) unstable; urgency=medium
-
-  * Initial semantic release candidate.
-  * Provide the stock-kernel RP1 GPCLK DKMS source and inactive GPIO4 and
-    GPIO20 overlays through conventional Debian packaging.
-
- -- Lee Bussy <lee@bussy.org>  Thu, 20 Aug 2026 13:55:00 -0500
-
-rp1-gpclk-dkms (0.0.0~phase5.54-2) experimental; urgency=medium
-
-  * Restrict automatic builds to stock Raspberry Pi kernel package names so
-    unrelated historical custom kernel trees are skipped by DKMS.
-  * Stage overlays below /usr/lib and copy them with guarded maintainer
-    scripts, avoiding dpkg hard-link backups on /boot/firmware filesystems.
-
- -- Lee Bussy <lee@bussy.org>  Thu, 20 Aug 2026 00:00:00 -0500

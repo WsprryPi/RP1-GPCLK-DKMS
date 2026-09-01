@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Offline overlay identity and route-transition checks."""
+"""Offline overlay identity and deterministic-build checks."""
 from __future__ import annotations
 import hashlib
 import importlib.util
@@ -19,14 +19,12 @@ def load(name: str, path: pathlib.Path):
     spec.loader.exec_module(value)
     return value
 
-admin = load("rp1_admin_overlay", ROOT / "scripts/rp1-gpclk-admin.py")
-builder = load("rp1_builder_overlay", ROOT / "scripts/build_release.py")
+builder = load("rp1_builder_overlay", ROOT / "scripts/overlay_builder.py")
 contract = json.loads((ROOT / "release/overlay-contract-v1.json").read_text())
 assert contract["selection"] == {"exactlyOne": True, "arbitraryGpioParameter": False,
                                   "automaticSubstitution": False, "hotMutation": False}
-assert contract["routeChange"] == admin.ROUTE_CHANGE_STEPS
 assert all(contract["evidenceIndependence"].values())
-assert set(contract["routes"]) == set(admin.ROUTES) == {"gpio4", "gpio20"}
+assert set(contract["routes"]) == {"gpio4", "gpio20"}
 dtc = shutil.which("dtc")
 if not dtc:
     raise SystemExit("dtc is required for deterministic overlay validation")
@@ -90,44 +88,4 @@ combined = "\n".join((ROOT / contract["routes"][route]["source"]).read_text()
                      for route in ("gpio4", "gpio20"))
 assert combined.count('compatible = "wsprrypi,rp1-gpclk-dkms-v1"') == 2
 
-snapshot = {field: False for field in ("moduleLoaded", "endpointBound", "endpointOpen",
-            "ownerPresent", "generationActive", "callbackPending", "dmaActive",
-            "clockPrepared", "clockEnabled", "cleanupFault", "routeConflict",
-            "persistentConflict", "duplicateMarker", "runtimeOverlayConflict", "endpointBusy")}
-snapshot.update({field: True for field in ("liveEligibilityDisabled", "gpio4Safe",
-                "gpio20Safe", "oldBindingCleanupProven", "artifactIdentityValid",
-                "compatibilityIdentityValid", "enrollmentPolicyRequiresRenewal")})
-snapshot["configurationOwnershipKnown"] = True
-snapshot["currentRoute"] = "gpio4"
-plan = admin.route_change_plan(snapshot, "gpio20")
-assert plan["steps"] == contract["routeChange"]
-assert plan["liveOutput"] is plan["persistentMutation"] is plan["automaticSubstitution"] is False
-assert plan["renewedEnrollmentRequired"] is True
-for field in tuple(snapshot):
-    broken = dict(snapshot)
-    broken[field] = "gpio17" if field == "currentRoute" else not broken[field]
-    try:
-        admin.route_change_plan(broken, "gpio20")
-    except ValueError:
-        pass
-    else:
-        raise AssertionError(f"route transition accepted invalid {field}")
-for route in ("gpio4", "gpio17"):
-    try:
-        admin.route_change_plan(snapshot, route)
-    except ValueError:
-        pass
-    else:
-        raise AssertionError(f"invalid transition accepted: {route}")
-for malformed in ({**snapshot, "unknown": False},
-                  {key: value for key, value in snapshot.items() if key != "gpio20Safe"}):
-    try:
-        admin.route_change_plan(malformed, "gpio20")
-    except ValueError:
-        pass
-    else:
-        raise AssertionError("malformed snapshot accepted")
-source = (ROOT / "scripts/rp1-gpclk-admin.py").read_text()
-for prohibited in ("dtoverlay", "config.txt", "modprobe", "live_output=1", "/dev/mem"):
-    assert prohibited not in source
-print("overlay administration contract: PASS")
+print("overlay contract: PASS")

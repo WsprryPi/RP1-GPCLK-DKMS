@@ -16,10 +16,9 @@ The product package owns:
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo`; and
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo`.
 
-The Debian package does not install a system header under `/usr/include`, the
-qualification harness, or the optional administration and diagnostic tooling
-described by the separate source-release installation model. Those artifacts
-have distinct ownership and are not part of the binary package file list.
+The Debian package does not install a system header under `/usr/include` or the
+qualification harness. Those artifacts have distinct ownership and are not
+part of the binary package file list.
 
 The maintainer scripts copy the canonical overlays into
 `/boot/firmware/overlays` without creating hard-link backups on the boot
@@ -42,16 +41,6 @@ creates the restricted `rp1-gpclk-route` group, and creates only the empty
 `/var/lib/rp1-gpclk-dkms` state parent. It does not enroll WsprryPi, enable or
 start the socket, create the owned boot block, or create a transaction journal.
 Journals are created only by an explicitly executed root mutation.
-Qualification plans, archives, and
-`release_candidate_transaction.py` are not installed runtime dependencies.
-
-An upgrade preserves completed historical qualification journals in place.
-The route manager reports their exact hashes after strict terminal-schema
-validation and rejects altered, unknown, incomplete, or pending records. It
-also recognizes the exact earlier 1.1.1 package-owned route block as historical
-ownership; conversion to the current marker metadata occurs only as part of a
-subsequent attributable route mutation. No maintainer script migrates or
-normalizes retained evidence.
 
 The supported interactive transport is the fixed group-restricted Unix socket
 at `/run/rp1-gpclk-dkms/route-manager.sock`. WsprryPi installation policy may
@@ -128,60 +117,8 @@ hash, artifact, or consumer identities. Do not build a release artifact from a
 moving branch.
 
 The resulting package is a new artifact. Building it successfully establishes
-only build compatibility and does not inherit qualification from the published
-package.
-
-
-## Preliminary candidate validation
-
-`build_release_candidate.py` and `validate_release_candidate.py` are a strict
-pair for the preliminary Debian/DKMS candidate set. Validate a generated set
-with:
-
-```sh
-make validate-release-candidate OUTPUT_DIR=/path/to/release-set \
-    SOURCE_COMMIT=EXACT_40_HEX_COMMIT
-```
-
-The validator independently parses the Debian archive, recomputes its member
-inventory and all sidecar/archive hashes, verifies source/version/UAPI/overlay
-identity, and requires GPIO4 and GPIO20 to remain unavailable and non-live.
-`validate_release.py` remains intentionally scoped to the separately generated
-published-release archive layout; the two validators are not interchangeable.
-
-The preliminary builder/validator pair is retained as historical 1.1.2 tooling.
-Its generation CLI is blocked on this baseline; it must not relabel its old
-qualification metadata as 0.9.0. That release pipeline requires a separate current-contract review.
-A local `dpkg-buildpackage -us -uc -b` build of 0.9.0 is permitted as an
-unpublished development artifact only. See the
-[version and downgrade contract](../contracts/development-identity.md).
-
-The historical product package remained byte-identical when only qualification-side executor
-and plan files change. Those external files are not installed by the Debian
-package. Any change to package members, module source, overlays, UAPI, or
-embedded identity instead requires a new package version.
-
-For output-inhibited route validation, extract the exact qualification archive
-and invoke its archived `release_candidate_controls.py` renderer. Every plan
-step must resolve to an archived executable plus a checksum-covered transaction
-plan sidecar; prose-only mutation steps are invalid. The executor's package,
-service quiescence/restoration, boot, reboot, reconciliation, rollback, and
-residue commands remain separately authorized operations and are never run by
-candidate generation or validation.
-
-Before the first boot transaction, the executor journals each allowlisted
-service's exact activity and enablement state, disables and stops the services,
-and verifies that they remain inactive and disabled across every reboot. After
-the final route inspection it restores the journaled states exactly, and the
-closing residue audit independently compares the live states with that journal.
-Partial quiescence attempts restore the captured state; partial restoration is
-retained as an explicit recovery-required journal and is never treated as a
-successful closeout.
-
-Operation IDs include the exact source-commit prefix. Completed journals from
-an earlier candidate are retained as historical evidence and cannot satisfy a
-successor's closeout. A successor must present its own complete journal set.
-If a previously authorized run already completed predecessor deactivation, the
-successor may journal and accept that exact inactive, module-absent,
-endpoint-absent state without forcing a redundant reboot; route selections are
-never made idempotent this way.
+only build compatibility and does not establish qualification or release
+eligibility. Fresh release metadata, validators, checksums, and publication
+controls will be added when the canonical release candidate is prepared. A
+local `dpkg-buildpackage -us -uc -b` build remains an unpublished development
+artifact. See the [version and downgrade contract](../contracts/development-identity.md).

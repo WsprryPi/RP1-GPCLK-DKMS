@@ -42,7 +42,6 @@ assert "scripts/rp1-gpclk-route-manager.py" in rules
 assert "usr/sbin/rp1-gpclk-route-manager" in rules
 assert "rp1-gpclk-route-manager-v1.schema.json" in rules
 assert "route-manager-v1.md" in rules
-assert "release_candidate_transaction.py" not in rules
 assert "rp1-gpclk-route-manager.socket" in rules
 assert "rp1-gpclk-route-manager@.service" in rules
 assert "dh_installsystemd --no-enable --no-start" in rules

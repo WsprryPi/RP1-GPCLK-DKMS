@@ -127,14 +127,23 @@ def inventory(base: pathlib.Path, relative_paths: list[str]) -> list[dict[str, A
     return result
 
 
-def render(source: pathlib.Path, output: pathlib.Path, version: str, allow_dirty: bool) -> pathlib.Path:
+def canonical_module_version(source: pathlib.Path) -> str:
+    path = source / "include/rp1_gpclk/version.h"
+    if path.is_symlink() or not path.is_file():
+        raise Failure("canonical source module version header is missing or substituted")
+    declared = re.findall(
+        r'^#define RP1_GPCLK_MODULE_VERSION "([^"]+)"$',
+        path.read_text(),
+        re.M,
+    )
+    if len(declared) != 1 or not re.fullmatch(r"[0-9A-Za-z][0-9A-Za-z._+-]*", declared[0]):
+        raise Failure("canonical source module version is missing, ambiguous, or invalid")
+    return declared[0]
+
+
+def render(source: pathlib.Path, output: pathlib.Path, allow_dirty: bool) -> pathlib.Path:
     source, output = source.resolve(), output.absolute()
-    if not re.fullmatch(r"[0-9A-Za-z][0-9A-Za-z._+-]*", version):
-        raise Failure("invalid module version")
-    header = (source / "include/rp1_gpclk/version.h").read_text()
-    declared = re.search(r'^#define RP1_GPCLK_MODULE_VERSION "([^"]+)"$', header, re.M)
-    if not declared or declared.group(1) != version:
-        raise Failure("requested development version differs from source module version")
+    version = canonical_module_version(source)
     if output.exists():
         raise Failure(f"destination already exists: {output}")
     commit = git(source, "rev-parse", "HEAD").strip()
@@ -193,6 +202,9 @@ def render(source: pathlib.Path, output: pathlib.Path, version: str, allow_dirty
             "sourceState": "dirty-explicitly-allowed" if dirty else "clean", "sourceStatus": status.splitlines(),
             "renderedVersion": version, "packageName": PACKAGE, "dkmsName": PACKAGE,
             "moduleName": CANONICAL_MODULE, "renderedTree": str(output),
+            "versionIdentity": {"path":"include/rp1_gpclk/version.h",
+                                "sha256":sha256(output/"include/rp1_gpclk/version.h"),
+                                "moduleVersion":version},
             "rawInventory": raw, "renderedInventory": rendered, "transformations": transformations,
             "changedFiles":["dkms.conf"],
             "uapiIdentity": {"path":"include/uapi/linux/rp1_gpclk.h", "sha256":sha256(output/"include/uapi/linux/rp1_gpclk.h")},
@@ -429,6 +441,8 @@ def require_route_neutral(observation: dict[str, Any], stage: str) -> None:
 
 def install(args: argparse.Namespace) -> dict[str, Any]:
     requested = args.kernel or platform.release()
+    source = pathlib.Path(args.source).resolve()
+    version = canonical_module_version(source)
     route_neutral = bool(getattr(args, "route_neutral", False))
     if route_neutral:
         if args.route is not None:
@@ -451,17 +465,16 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
         raise Failure("required tool unavailable: modprobe")
     if identities["headersKernel"] is None:
         raise Failure(f"missing headers for requested kernel: /lib/modules/{requested}/build")
-    source = pathlib.Path(args.source).resolve()
     evidence = pathlib.Path(args.evidence_directory).absolute()
     if evidence.exists(): raise Failure(f"evidence directory already exists: {evidence}")
     evidence.mkdir(parents=True, mode=0o755)
     rendered = evidence / "rendered-source"
-    manifest_path = render(source, rendered, args.module_version, args.allow_dirty)
+    manifest_path = render(source, rendered, args.allow_dirty)
     rollback_path = evidence / "ROLLBACK.json"
     before = {"dkmsStatus": run([tools["dkms"], "status", "-m", PACKAGE]).stdout.splitlines(),
               "installedArtifacts": [{"path": str(p), "sha256": sha256(p)} for p in module_candidates(requested)],
               "loaded": root_path(f"/sys/module/{CANONICAL_MODULE}").exists(), "createdFiles": []}
-    predecessor = transition_preflight(args.module_version, requested, before["dkmsStatus"])
+    predecessor = transition_preflight(version, requested, before["dkmsStatus"])
     if predecessor is not None:
         shutil.copytree(predecessor, evidence / "prior-source")
     for index, item in enumerate(before["installedArtifacts"]):
@@ -469,7 +482,7 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
         shutil.copyfile(item["path"], backup)
         item["backup"] = str(backup)
     rollback = {"schema": ROLLBACK_SCHEMA, "classification": "source-development", "manifest": str(manifest_path),
-                "kernel": requested, "moduleName": CANONICAL_MODULE, "version": args.module_version,
+                "kernel": requested, "moduleName": CANONICAL_MODULE, "version": version,
                 "prior": before, "workflowCreatedFiles": [], "status": "prepared"}
     rollback["priorSource"] = str(evidence / "prior-source") if predecessor else None
     atomic_write(rollback_path, canonical(rollback))
@@ -477,23 +490,23 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
     if args.build_only or install_requested:
         require_root()
         print_mutation_identity(requested)
-        destination = root_path(f"/usr/src/{PACKAGE}-{args.module_version}")
+        destination = root_path(f"/usr/src/{PACKAGE}-{version}")
         if destination.exists():
             if root_path(f"/sys/module/{CANONICAL_MODULE}").exists():
                 run([tools["modprobe"], "-r", CANONICAL_MODULE], log=evidence / "module-unload-for-replace.log")
-            run([tools["dkms"], "remove", "-m", PACKAGE, "-v", args.module_version, "--all"], log=evidence / "dkms-remove.log")
+            run([tools["dkms"], "remove", "-m", PACKAGE, "-v", version, "--all"], log=evidence / "dkms-remove.log")
             if destination.exists(): shutil.rmtree(destination)
         rollback["workflowCreatedFiles"].append(str(destination))
         rollback["sourceManifestSha256"] = sha256(manifest_path)
         rollback["status"] = "installing"
         atomic_write(rollback_path, canonical(rollback))
         shutil.copytree(rendered, destination)
-        run([tools["dkms"], "add", "-m", PACKAGE, "-v", args.module_version], log=evidence / "dkms-add.log")
-        run([tools["dkms"], "build", "-m", PACKAGE, "-v", args.module_version, "-k", requested], log=evidence / "dkms-build.log")
+        run([tools["dkms"], "add", "-m", PACKAGE, "-v", version], log=evidence / "dkms-add.log")
+        run([tools["dkms"], "build", "-m", PACKAGE, "-v", version, "-k", requested], log=evidence / "dkms-build.log")
         if install_requested:
-            run([tools["dkms"], "install", "-m", PACKAGE, "-v", args.module_version, "-k", requested], log=evidence / "dkms-install.log")
+            run([tools["dkms"], "install", "-m", PACKAGE, "-v", version, "-k", requested], log=evidence / "dkms-install.log")
             run([tools["depmod"], "-a", requested], log=evidence / "depmod.log")
-    module = resolve_module(requested, args.module_version) if install_requested else None
+    module = resolve_module(requested, version) if install_requested else None
     if module: print_mutation_identity(requested, module["installedPath"])
     neutral_after = route_neutral_observation() if route_neutral else None
     if neutral_after is not None:
@@ -508,7 +521,7 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
         "installationMode": "route-neutral" if route_neutral else "route-specific",
         "routeNeutralSafety": {"before": neutral_before, "after": neutral_after} if route_neutral else None,
         "parameters": {"live_output": args.live_output}, "buildLogs": sorted(str(p) for p in evidence.glob("*.log")),
-        "dkmsStatus":run([tools["dkms"],"status","-m",PACKAGE,"-v",args.module_version],check=False).stdout.splitlines(),
+        "dkmsStatus":run([tools["dkms"],"status","-m",PACKAGE,"-v",version],check=False).stdout.splitlines(),
         "rollbackRecord": str(rollback_path), "developmentState": "development-installed" if module else "development-built"})
     if args.load:
         if requested != platform.release(): raise Failure("cannot load a module built for a non-running kernel")
@@ -784,11 +797,11 @@ def parser_for(command: str) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog=f"scripts/{command}")
     if command == "render-development-tree":
         parser.add_argument("--source", required=True); parser.add_argument("--output", required=True)
-        parser.add_argument("--module-version", required=True); parser.add_argument("--allow-dirty", action="store_true")
-    elif command == "development-preflight": parser.add_argument("--kernel", default=platform.release())
+        parser.add_argument("--allow-dirty", action="store_true")
+    elif command == "development-preflight":
+        parser.add_argument("--source", default="."); parser.add_argument("--kernel", default=platform.release())
     elif command == "development-install":
         parser.add_argument("--source", default="."); parser.add_argument("--kernel", default=platform.release())
-        parser.add_argument("--module-version", required=True)
         route = parser.add_mutually_exclusive_group(required=True)
         route.add_argument("--route", choices=ROUTES)
         route.add_argument("--route-neutral", action="store_true")
@@ -820,9 +833,14 @@ def main() -> int:
         if len(sys.argv) < 2: raise Failure("development command required")
         command, sys.argv = sys.argv[1], [sys.argv[0], *sys.argv[2:]]
     args = parser_for(command).parse_args()
-    if command == "render-development-tree": result = {"manifest": str(render(pathlib.Path(args.source), pathlib.Path(args.output), args.module_version, args.allow_dirty))}
+    if command == "render-development-tree": result = {"manifest": str(render(pathlib.Path(args.source), pathlib.Path(args.output), args.allow_dirty))}
     elif command == "development-preflight":
-        result = {"classification":"source-development", "kernels":kernel_identities(args.kernel), "tools":tool_inventory(), "moduleName":CANONICAL_MODULE}
+        source = pathlib.Path(args.source).resolve()
+        result = {"classification":"source-development", "kernels":kernel_identities(args.kernel),
+                  "tools":tool_inventory(), "moduleName":CANONICAL_MODULE,
+                  "moduleVersion":canonical_module_version(source),
+                  "versionSource":"include/rp1_gpclk/version.h",
+                  "versionSourceSha256":sha256(source / "include/rp1_gpclk/version.h")}
     elif command == "development-install": result = install(args)
     elif command == "development-enroll": result = enroll(args.manifest, args.route, args.kernel, args.remove)
     elif command == "development-module": result = lifecycle_action(args.action, args.manifest, args.live_output)

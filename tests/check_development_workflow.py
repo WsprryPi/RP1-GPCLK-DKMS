@@ -24,23 +24,26 @@ def fixture_repo(base: pathlib.Path) -> pathlib.Path:
 def test_render() -> None:
     with tempfile.TemporaryDirectory() as temporary:
         base = pathlib.Path(temporary); source = fixture_repo(base); output = base / "rendered"
-        result = command(str(source / "scripts/render-development-tree"), "--source", str(source), "--output", str(output), "--module-version", "0.9.0", cwd=source)
+        result = command(str(source / "scripts/render-development-tree"), "--source", str(source), "--output", str(output), cwd=source)
         assert result.returncode == 0, result.stderr
         manifest = json.loads((output / "DEVELOPMENT_MANIFEST.json").read_text())
         assert manifest["classification"] == "source-development" and manifest["qualification"] is False
         assert manifest["moduleName"] == "rp1_gpclk_dkms"
+        assert manifest["versionIdentity"]["moduleVersion"] == "0.9.0"
+        assert manifest["versionIdentity"]["path"] == "include/rp1_gpclk/version.h"
+        assert manifest["versionIdentity"]["sha256"] == DEV.sha256(output / "include/rp1_gpclk/version.h")
         assert [item["operation"] for item in manifest["transformations"]] == ["replace-module-version-placeholder","relax-development-kernel-name-filter"]
         assert manifest["changedFiles"] == ["dkms.conf"]
         assert 'PACKAGE_VERSION="0.9.0"' in (output / "dkms.conf").read_text()
         assert 'BUILD_EXCLUSIVE_KERNEL=".*"' in (output / "dkms.conf").read_text()
         assert 'PACKAGE_VERSION="#MODULE_VERSION#"' not in (output / "dkms.conf").read_text()
         assert not (source / "DEVELOPMENT_MANIFEST.json").exists()
-        again = command(str(source / "scripts/render-development-tree"), "--source", str(source), "--output", str(output), "--module-version", "0.9.0", cwd=source)
+        again = command(str(source / "scripts/render-development-tree"), "--source", str(source), "--output", str(output), cwd=source)
         assert again.returncode == 2 and "already exists" in again.stderr
         (source / "README.md").write_text((source / "README.md").read_text() + "\ndirty\n")
-        rejected = command(str(source / "scripts/render-development-tree"), "--source", str(source), "--output", str(base / "dirty"), "--module-version", "0.9.0", cwd=source)
+        rejected = command(str(source / "scripts/render-development-tree"), "--source", str(source), "--output", str(base / "dirty"), cwd=source)
         assert rejected.returncode == 2 and "dirty" in rejected.stderr
-        allowed = command(str(source / "scripts/render-development-tree"), "--source", str(source), "--output", str(base / "allowed"), "--module-version", "0.9.0", "--allow-dirty", cwd=source)
+        allowed = command(str(source / "scripts/render-development-tree"), "--source", str(source), "--output", str(base / "allowed"), "--allow-dirty", cwd=source)
         assert allowed.returncode == 0 and json.loads((base / "allowed/DEVELOPMENT_MANIFEST.json").read_text())["sourceState"] == "dirty-explicitly-allowed"
 
 
@@ -49,7 +52,7 @@ def test_forbidden_transform() -> None:
         base = pathlib.Path(temporary); source = fixture_repo(base)
         (source / "README.md").write_text((source / "README.md").read_text() + '\nPACKAGE_VERSION="#OTHER_VERSION#"\n')
         command("git", "add", "README.md", cwd=source); command("git", "commit", "-qm", "forbidden", cwd=source)
-        result = command(str(source / "scripts/render-development-tree"), "--source", str(source), "--output", str(base / "output"), "--module-version", "0.9.0", cwd=source)
+        result = command(str(source / "scripts/render-development-tree"), "--source", str(source), "--output", str(base / "output"), cwd=source)
         assert result.returncode == 2 and "unresolved" in result.stderr and not (base / "output").exists()
 
 
@@ -68,6 +71,11 @@ def test_compression() -> None:
 def test_false_qualification_and_cli() -> None:
     source = (ROOT / "scripts/development_workflow.py").read_text()
     assert '"releaseQualified": False' in source and '"classification": "Experimental"' in source
+    preflight = command(str(ROOT / "scripts/development-preflight"), "--source", str(ROOT))
+    identity = json.loads(preflight.stdout)
+    assert identity["moduleVersion"] == "0.9.0"
+    assert identity["versionSource"] == "include/rp1_gpclk/version.h"
+    assert identity["versionSourceSha256"] == DEV.sha256(ROOT / identity["versionSource"])
     for script in ("development-preflight", "development-install", "development-enroll", "development-module",
                    "development-status", "development-endpoint", "development-route", "development-overlay", "development-rollback"):
         result = command(str(ROOT / "scripts" / script), "--help")
@@ -108,17 +116,17 @@ case "$2" in live_output=1) echo Y;; *) echo N;; esac >"$RP1_GPCLK_DEVELOPMENT_R
 
         def neutral(name, *extra):
             return command(str(source/"scripts/development-install"), "--source", str(source), "--kernel", kernel,
-                "--module-version", "0.9.0", "--route-neutral", "--live-output", "0", "--install",
+                "--route-neutral", "--live-output", "0", "--install",
                 "--evidence-directory", str(base/name), *extra, cwd=source, env=environment)
 
         live = command(str(source/"scripts/development-install"), "--source", str(source), "--kernel", kernel,
-            "--module-version", "0.9.0", "--route-neutral", "--live-output", "1", "--install",
+            "--route-neutral", "--live-output", "1", "--install",
             "--evidence-directory", str(base/"neutral-live"), cwd=source, env=environment)
         assert live.returncode == 2 and "live_output=0" in live.stderr and not (base/"neutral-live").exists()
         loaded = neutral("neutral-load", "--load")
         assert loaded.returncode == 2 and "cannot load" in loaded.stderr and not (base/"neutral-load").exists()
         both = command(str(source/"scripts/development-install"), "--source", str(source), "--kernel", kernel,
-            "--module-version", "0.9.0", "--route-neutral", "--route", "gpio4", "--live-output", "0",
+            "--route-neutral", "--route", "gpio4", "--live-output", "0",
             "--evidence-directory", str(base/"neutral-both"), cwd=source, env=environment)
         assert both.returncode == 2 and not (base/"neutral-both").exists()
 
@@ -185,12 +193,12 @@ case "$2" in live_output=1) echo Y;; *) echo N;; esac >"$RP1_GPCLK_DEVELOPMENT_R
         assert not (fake_root/"sys/module/rp1_gpclk_dkms").exists()
 
         evidence=base/"evidence"
-        result=command(str(source/"scripts/development-install"),"--source",str(source),"--kernel",kernel,"--module-version","0.9.0","--route","gpio4","--live-output","0","--load","--evidence-directory",str(evidence),cwd=source,env=environment)
+        result=command(str(source/"scripts/development-install"),"--source",str(source),"--kernel",kernel,"--route","gpio4","--live-output","0","--load","--evidence-directory",str(evidence),cwd=source,env=environment)
         assert result.returncode==0,result.stderr
         manifest=evidence/"rendered-source/DEVELOPMENT_MANIFEST.json"; value=json.loads(manifest.read_text())
         assert value["developmentState"]=="development-loaded" and value["installedModule"]["moduleName"]=="rp1_gpclk_dkms"
         replacement=base/"replacement-evidence"
-        replaced=command(str(source/"scripts/development-install"),"--source",str(source),"--kernel",kernel,"--module-version","0.9.0","--route","gpio4","--live-output","0","--load","--evidence-directory",str(replacement),cwd=source,env=environment)
+        replaced=command(str(source/"scripts/development-install"),"--source",str(source),"--kernel",kernel,"--route","gpio4","--live-output","0","--load","--evidence-directory",str(replacement),cwd=source,env=environment)
         assert replaced.returncode==0,replaced.stderr
         assert (replacement/"dkms-remove.log").is_file() and (replacement/"module-unload-for-replace.log").is_file()
         backup = json.loads((replacement/"ROLLBACK.json").read_text())

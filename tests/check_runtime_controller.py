@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 import runtime_controller_admin as admin
 from build_runtime_controller import generate
-from build_release import build_dtbo
+from overlay_builder import build_dtbo
 import shutil
 
 

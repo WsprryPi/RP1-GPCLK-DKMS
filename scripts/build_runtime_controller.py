@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
-from build_release import build_dtbo
+from overlay_builder import build_dtbo
 
 ROOT = Path(__file__).resolve().parents[1]
 

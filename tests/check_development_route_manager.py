@@ -48,7 +48,7 @@ esac
         else: raise AssertionError("deployment without adoption reported ready")
         binding=DEV.load(DEV.root(f"{DEV.BASE}/{commit}/binding.json"))
         safety={"endpointOwned":True,"endpointOpen":False,"liveOutput":False,"services":{}}
-        DEV.passive_query=lambda:{"status":"ok","state":{"bootOwnership":"historical-package-owned","configuredRoute":"gpio4","activeRoute":"gpio4","pendingTransaction":None,"bootId":boot.read_text().strip(),"configSha256":DEV.digest(config),"safety":safety}}
+        DEV.passive_query=lambda:{"status":"ok","state":{"bootOwnership":"unadopted-source-development","configuredRoute":"gpio4","activeRoute":"gpio4","pendingTransaction":None,"bootId":boot.read_text().strip(),"configSha256":DEV.digest(config),"safety":safety}}
         adopted=DEV.adopt(status_args); assert adopted["status"]=="ok" and adopted["passiveQuery"] is None
         assert DEV.status(status_args)==adopted
         altered=dict(binding); altered["route"]="gpio20"

@@ -37,16 +37,15 @@ assert 'RP1_GPCLK_ROUTE_CANDIDATE' not in (ROOT / 'include/rp1_gpclk/compatibili
 
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
-    rejected(lambda: dev.render(ROOT, root/'wrong-version', '1.1.2', True), 'differs from source')
-    assert not (root/'wrong-version').exists()
+    rejected(lambda: dev.canonical_module_version(root), 'missing or substituted')
     with patch.dict(os.environ, {'RP1_GPCLK_DEVELOPMENT_ROOT': str(root)}):
         assert dev.transition_preflight('0.9.0', 'test-kernel', []) is None
-        for version in ('1.0.0', '1.1.2', 'unknown'):
+        for version in ('9.9.9', 'unknown'):
             rejected(lambda: dev.transition_preflight('0.9.0', 'test-kernel',
                 [f'rp1-gpclk-dkms/{version}, test-kernel, installed']), 'explicit maintainer')
         rejected(lambda: dev.transition_preflight('0.9.0', 'test-kernel',
             ['rp1-gpclk-dkms/0.9.0, another-kernel, installed']), 'another kernel')
-        old = root/'usr/src/rp1-gpclk-dkms-1.1.2'
+        old = root/'usr/src/rp1-gpclk-dkms-9.9.9'
         old.mkdir(parents=True)
         rejected(lambda: dev.transition_preflight('0.9.0', 'test-kernel', []), 'stale predecessor')
         old.rmdir()
@@ -94,14 +93,6 @@ with tempfile.TemporaryDirectory() as directory:
             rejected(lambda: dev.rollback(record), 'another instance')
             run.assert_not_called()
 
-for script, args in (
-    ('build_release.py', ['/tmp/not-created-rp1-release']),
-    ('build_release_candidate.py', ['--product', '/absent', '--output', '/tmp/not-created-rp1-release']),
-    ('finalize_release_publication.py', ['/absent']),
-    ('rp1-gpclk-admin.py', ['install', '--execute']),
-):
-    result = subprocess.run(['python3', str(ROOT/'scripts'/script), *args], capture_output=True, text=True)
-    assert result.returncode != 0 and ('historical' in result.stderr), (script, result.stderr)
 print('Development identity and transition boundaries: PASS')
 
 # Bundle generation cannot bind old modules to current userspace identities.
@@ -109,8 +100,8 @@ import sys
 sys.path.insert(0, str(ROOT/'scripts'))
 from build_runtime_binding import validate_module_version
 validate_module_version(b'\x7fELF\x00version=0.9.0\x00')
-for payload in (b'\x00version=1.1.2\x00', b'\x00version=0.1.0\x00', b'no version',
-                b'\x00version=0.9.0\x00\x00version=1.1.2\x00'):
+for payload in (b'\x00version=9.9.9\x00', b'\x00version=0.1.0\x00', b'no version',
+                b'\x00version=0.9.0\x00\x00version=9.9.9\x00'):
     try:
         validate_module_version(payload)
     except ValueError:
@@ -124,11 +115,11 @@ with tempfile.TemporaryDirectory() as directory:
     path.write_text('''#!/usr/bin/env python3
 import sys
 assert sys.argv[1] == '--compare-versions' and sys.argv[3:] == ['gt', '0.9.0-1']
-raise SystemExit(0 if sys.argv[2] in ('1.0.0-1', '1.1.2-1') else 1)
+raise SystemExit(0 if sys.argv[2] == '9.9.9-1' else 1)
 ''')
     path.chmod(0o755)
     for args, expected in ((['install'], 0), (['upgrade', '0.9.0-1'], 0),
-                           (['upgrade', '1.1.2-1'], 1), (['install', '1.0.0-1'], 1)):
+                           (['upgrade', '9.9.9-1'], 1), (['install', '9.9.9-1'], 1)):
         result = subprocess.run(['sh', str(ROOT/'debian/rp1-gpclk-dkms.preinst'), *args],
             env={**os.environ, 'PATH': directory+os.pathsep+os.environ['PATH']},
             capture_output=True, text=True)
@@ -138,7 +129,7 @@ raise SystemExit(0 if sys.argv[2] in ('1.0.0-1', '1.1.2-1') else 1)
 print('Runtime bundle and Debian downgrade guards: PASS')
 
 import shutil
-from build_release import build_dtbo
+from overlay_builder import build_dtbo
 spec = importlib.util.spec_from_file_location('current_route_manager', ROOT/'scripts/rp1-gpclk-route-manager.py')
 manager = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(manager)

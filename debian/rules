@@ -15,7 +15,7 @@ UNIT_DEST := debian/$(PACKAGE)/usr/lib/systemd/system
 
 override_dh_auto_build:
 	mkdir -p debian/build
-	python3 -c 'import pathlib; from scripts.build_release import build_dtbo; root=pathlib.Path("."); [build_dtbo(root / "overlays" / (name + ".dts"), root / "debian" / "build" / (name + ".dtbo"), "dtc") for name in ("rp1-gpclk-gpio4", "rp1-gpclk-gpio20")]'
+	python3 -c 'import pathlib; from scripts.overlay_builder import build_dtbo; root=pathlib.Path("."); [build_dtbo(root / "overlays" / (name + ".dts"), root / "debian" / "build" / (name + ".dtbo"), "dtc") for name in ("rp1-gpclk-gpio4", "rp1-gpclk-gpio20")]'
 
 override_dh_auto_test:
 	python3 tests/check_debian_packaging.py

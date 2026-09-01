@@ -39,7 +39,6 @@ assert 'request->duration_ns < RP1_GPCLK_TONE_DURATION_NS_MIN' in c
 assert 'request->duration_ns > RP1_GPCLK_TONE_DURATION_NS_MAX' in c
 assert 'request->expected_route != core->value.route' in c
 assert 'RP1_GPCLK_MODE_WSPR' in c and 'RP1_GPCLK_MODE_QRSS' in c and 'RP1_GPCLK_MODE_FSKCW' in c and 'RP1_GPCLK_MODE_DFCW' in c
-assert '#define RP1_GPCLK_GPIO4_CANDIDATE_VERSION "1.0.1"' in (R/'include/rp1_gpclk/compatibility.h').read_text()
 assert '#define RP1_GPCLK_MODULE_VERSION "0.9.0"' in (R/'include/rp1_gpclk/version.h').read_text()
 assert '#define RP1_GPCLK_TONE_DURATION_NS_MIN 1000000ULL' in u
 assert '#define RP1_GPCLK_TONE_DURATION_NS_MAX 120000000000ULL' in u

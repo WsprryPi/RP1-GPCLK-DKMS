@@ -64,21 +64,16 @@ The receiver PPM corrects the SDR estimate by division by `(1 + ppm/1e6)`.
 Replace the example zero corrections only with values calibrated for the
 actual source and receiver. They are not interchangeable.
 
-## Historical compatibility checks
+## Compatibility checks
 
-The 1.0.1 and 1.1.0 contract-freeze checks are intentionally retained. They
-protect published UAPI bytes and predecessor compatibility; they do not claim
-that those versions are the current module or package. Route-manager tests
-likewise retain explicit 1.1.1 fixtures solely to verify bounded migration to
-the current owned-block format.
+UAPI tests protect the current canonical header, existing ioctl layouts, and
+additive compatibility. Route-manager tests retain only the minimal predecessor
+fixtures needed to verify bounded migration to the current owned-block format.
 
 Generated test output belongs in temporary directories. Qualification captures,
 run results and deployment inventories belong outside this source checkout.
-The retained version-specific archive layouts, four archive contract inputs in
-`docs/releases/`, and their helpers are consumed by package/integrity regressions.
-Their generation CLIs are blocked; they do not describe current release eligibility.
-The ABI snapshots protect command layouts and the migration fixtures protect
-ownership and rollback. They are functional test inputs, not retained runs.
+Release metadata and publication checks are added with a reviewed release
+candidate rather than retained from obsolete releases.
 
 Target waveform and mode qualification belongs in the external WsprryPi Harness.
 No ordinary repository test authorizes installation, loading, GPIO, transmission,

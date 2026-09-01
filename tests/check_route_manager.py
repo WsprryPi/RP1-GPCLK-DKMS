@@ -127,37 +127,6 @@ for payload in (
      f"dtoverlay=rp1-gpclk-gpio4\n{manager.END}\n{manager.BEGIN}\n# duplicate\n{manager.END}\n").encode(),
 ): rejected(lambda payload=payload:manager.parse_config(payload))
 
-legacy=(f"{manager.BEGIN}\n# version=1.1.1 route=gpio4\n"
-        f"dtoverlay=rp1-gpclk-gpio4\n{manager.END}\n").encode()
-assert manager.parse_config(legacy)=="gpio4" and manager.config_ownership(legacy)=="historical-package-owned"
-
-predecessor=(f"{manager.BEGIN}\n# contract={manager.CONTRACT} package=1.1.1-1 route=gpio20\n"
-             f"dtoverlay=rp1-gpclk-gpio20\n{manager.END}\n").encode()
-assert manager.parse_config(predecessor)=="gpio20"
-assert manager.config_ownership(predecessor)=="historical-package-owned"
-previous_current=predecessor.replace(b"1.1.1-1",b"1.1.2-1")
-assert manager.parse_config(previous_current)=="gpio20"
-assert manager.config_ownership(previous_current)=="historical-package-owned"
-upgraded=manager.config_for_route(b"# base\n\n"+predecessor,"gpio4")
-assert manager.parse_config(upgraded)=="gpio4" and manager.config_ownership(upgraded)=="current"
-assert b"package=1.1.1-1" not in upgraded and b"package=0.9.0-1" in upgraded
-
-with tempfile.TemporaryDirectory() as temporary:
-    fixture=Fixture(pathlib.Path(temporary)); env=fixture.env(); env.path(manager.CONFIG).write_bytes(b"# base\n\n"+legacy)
-    journal_dir=env.path(manager.JOURNAL_DIR); journal_dir.mkdir(parents=True)
-    before="# historical before\n"
-    historical={"schemaVersion":1,"operationId":"wspr5-1-1-1-old-select-gpio4","planSha256":"1"*64,
-                "qualificationArchiveSha256":"2"*64,"sourceCommit":"3"*40,"action":"apply-and-reboot",
-                "status":"complete","checkpoint":"reconciled","rebootRequired":False,"reconciled":True,
-                "route":"gpio4","configBefore":before,"configBeforeSha256":manager.sha256_bytes(before.encode()),
-                "configAfterSha256":"4"*64}
-    historical_path=journal_dir/f"{historical['operationId']}.json"; historical_path.write_text(json.dumps(historical,sort_keys=True)+"\n")
-    original=historical_path.read_bytes(); state=manager.dispatch(request("preflight","gpio20"),env)["state"]
-    assert state["bootOwnership"]=="historical-package-owned" and len(state["historicalJournals"])==1
-    assert state["pendingTransaction"] is None and historical_path.read_bytes()==original
-    historical["status"]="awaiting-reboot"; historical_path.write_text(json.dumps(historical))
-    rejected(lambda:manager.dispatch(request("query"),env),"incomplete")
-
 with tempfile.TemporaryDirectory() as temporary:
     fixture=Fixture(pathlib.Path(temporary)); env=fixture.env(); journal_dir=env.path(manager.JOURNAL_DIR); journal_dir.mkdir(parents=True)
     (journal_dir/"stale.json").write_text(json.dumps({"schemaVersion":0}))
@@ -187,7 +156,7 @@ with tempfile.TemporaryDirectory() as temporary:
     try:
         original_passive_safety=manager.source_development_passive_safety
         manager.source_development_passive_safety=lambda unused:{"services":{name:"inactive" for name in manager.SERVICES},"servicesQuiesced":True,"endpointOwned":True,"endpointOpen":False,"liveOutput":False}
-        result=manager.dispatch(request("query"),env); assert result["status"]=="ok" and result["state"]["activeRoute"]=="gpio4" and result["state"]["bootOwnership"]=="historical-package-owned"
+        result=manager.dispatch(request("query"),env); assert result["status"]=="ok" and result["state"]["activeRoute"]=="gpio4" and result["state"]["bootOwnership"]=="unadopted-source-development"
         assert result["state"]["safety"]=={"services":{name:"inactive" for name in manager.SERVICES},"servicesQuiesced":True,"endpointOwned":True,"endpointOpen":False,"liveOutput":False}
         manager.source_development_passive_safety=lambda unused:{"services":{name:"inactive" for name in manager.SERVICES},"servicesQuiesced":True,"endpointOwned":True,"endpointOpen":False,"liveOutput":True}
         assert manager.dispatch(request("query"),env)["state"]["safety"]["liveOutput"] is True
@@ -198,10 +167,7 @@ with tempfile.TemporaryDirectory() as temporary:
         stale["bootId"]=state["bootId"]; adoption.write_text(json.dumps(stale))
         rejected(lambda:manager.dispatch(request("preflight","gpio4"),env),"passive-query-only")
         adoption.unlink()
-        split=(f"{manager.BEGIN}\n# contract={manager.CONTRACT} package={manager.PREDECESSOR_DEBIAN_VERSION} route=gpio4\n{manager.END}\n"
-               "dtoverlay=rp1-gpclk-gpio4\n").encode()
-        env.path(manager.CONFIG).write_bytes(split); assert manager.dispatch(request("query"),env)["state"]["configuredRoute"]=="gpio4"
-        env.path(manager.CONFIG).write_bytes(split.replace(b"route=gpio4",b"route=gpio20")); rejected(lambda:manager.dispatch(request("query"),env),"ownership")
+        assert manager.dispatch(request("query"),env)["state"]["bootOwnership"]=="unadopted-source-development"
         env.path(manager.CONFIG).write_bytes((f"{manager.BEGIN}\n# contract={manager.CONTRACT} package={manager.DEBIAN_VERSION} route=gpio4\n"
                                               f"dtoverlay=rp1-gpclk-gpio4\n{manager.END}\n").encode())
         value["route"]="gpio20"; binding.write_text(json.dumps(value)); rejected(lambda:manager.dispatch(request("query"),env),"binding differs")
@@ -212,7 +178,7 @@ with tempfile.TemporaryDirectory() as temporary:
         else: os.environ[manager.SOURCE_DEVELOPMENT_BINDING_ENV]=old
 
 source=(ROOT/"scripts/rp1-gpclk-route-manager.py").read_text()
-for prohibited in ("shell=True","/dev/mem","live_output=1","release_candidate_transaction","sudo","/bin/sh"):
+for prohibited in ("shell=True","/dev/mem","live_output=1","sudo","/bin/sh"):
     assert prohibited not in source
 for required in ("os.replace","os.fsync","O_DIRECTORY","/usr/bin/systemctl\",\"reboot","rollback refuses changed"):
     assert required in source

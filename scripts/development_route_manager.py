@@ -161,8 +161,8 @@ def adopt(args:argparse.Namespace)->dict:
     observations(); binding=load(target["binding"])
     query=passive_query()
     state=query.get("state",{}) if isinstance(query,dict) else {}
-    if (query.get("status")!="ok" or state.get("bootOwnership")!="historical-package-owned" or state.get("configuredRoute")!=binding["route"] or
-            state.get("activeRoute")!=binding["route"] or state.get("pendingTransaction") is not None): raise Failure("deployment is not an exact idle historical route eligible for adoption")
+    if (query.get("status")!="ok" or state.get("bootOwnership")!="unadopted-source-development" or state.get("configuredRoute")!=binding["route"] or
+            state.get("activeRoute")!=binding["route"] or state.get("pendingTransaction") is not None): raise Failure("deployment is not an exact idle source-development route eligible for adoption")
     adoption={"schema":ADOPTION_SCHEMA,"classification":"Experimental/source-development","qualification":False,"adoptedAtUnix":int(time.time()),
               "bootId":state["bootId"],"configSha256":state["configSha256"],"route":binding["route"],"sourceCommit":binding["sourceCommit"],
               "executableSha256":binding["executableSha256"],"moduleSourceCommit":binding["moduleSourceCommit"],"moduleManifestSha256":binding["sourceManifestSha256"],

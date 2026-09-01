@@ -30,7 +30,7 @@ assert policy["rotationOrder"].index("rebuild-sign-verify-retained-kernels") < p
 
 fingerprint = "11:22:33:44"
 base = {
-    "targetKernel": "6.18.1+rpt", "moduleVersion": "0.0.0-phase5.53",
+    "targetKernel": "6.18.1+rpt", "moduleVersion": "0.9.0",
     "vermagicKernel": "6.18.1+rpt", "moduleSha256": "a" * 64,
     "enforcement": "enforced", "signatureStatus": "valid", "signer": "Local DKMS",
     "signatureKeyId": "1234", "signatureAlgorithm": "PKCS#7",
@@ -95,13 +95,6 @@ for mutation in ({"enforcement": "unknown"}, {"certificateTrust": "maybe"},
     else:
         raise AssertionError(f"malformed signing snapshot passed: {mutation}")
 
-layout = json.loads((ROOT / "release/release-layout-v1.json").read_text())
-paths = {item["path"] for item in layout["artifacts"]}
-assert {"release/signing-policy-v1.json", "scripts/signing_policy.py"} <= paths
-installation = json.loads((ROOT / "release/installation-model-v1.json").read_text())
-admin = installation["ownership"]["administratorFiles"] if "ownership" in installation else installation["administratorFiles"]
-assert admin["packageUninstall"] == "retain-and-report"
-
 for path in ROOT.rglob("*"):
     if path.is_file() and ".git" not in path.parts:
         assert path.suffix.lower() not in {".key", ".pem", ".p12", ".pfx", ".der"}, path
@@ -115,11 +108,5 @@ for prohibited in ("modprobe ", "dtoverlay ", "/dev/mem"):
 diagnostics = (ROOT / "scripts/rp1-gpclk-diagnostics.py").read_text()
 for field in ("vermagic", "signer", "sig_key", "sig_id", "sig_hashalgo"):
     assert field in diagnostics
-
-administrator = (ROOT / "scripts/rp1-gpclk-admin.py").read_text()
-assert "scripts/sign-file" not in administrator
-assert "exact expected DKMS signer and signature key ID are required" in administrator
-assert "required module signer identity differs" in administrator
-assert "required module signature key ID differs" in administrator
 
 print("signing contracts: PASS")

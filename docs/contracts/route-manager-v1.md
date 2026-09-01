@@ -7,7 +7,7 @@ offline-only and not installed or dispatched by this manager. Its public
 entry point blocks every mutation. This v1 contract and its query-only
 source-development integration remain unchanged.
 
-Beginning with 1.1.1, `/usr/sbin/rp1-gpclk-route-manager` is the stable application-facing executor. The 0.9.0 development package preserves that contract. It accepts one JSON object on standard input, no command-line arguments, and writes one JSON object to standard output. Both directions use schema version 1 and `schema/rp1-gpclk-route-manager-v1.schema.json`; the contract identifier is `rp1-gpclk-route-manager-v1`.
+`/usr/sbin/rp1-gpclk-route-manager` is the stable application-facing executor. It accepts one JSON object on standard input, no command-line arguments, and writes one JSON object to standard output. Both directions use schema version 1 and `schema/rp1-gpclk-route-manager-v1.schema.json`; the contract identifier is `rp1-gpclk-route-manager-v1`.
 
 Requests contain `schemaVersion: 1` and one operation. `query` has no other fields. `preflight` requires `route` (`gpio4` or `gpio20`). `apply-and-reboot` requires `route`, `execute: true`, an 8--64-character `requestId`, and an attributable `actor`. `rollback` and `reconcile` require the same mutation fields except `route`. Unknown or operation-inappropriate fields fail closed.
 
@@ -19,23 +19,7 @@ Mutations require UID 0 and `execute: true`. They accept no paths, overlays, com
 
 The package ships disabled-by-default `rp1-gpclk-route-manager.socket` and `rp1-gpclk-route-manager@.service` units. The Unix socket is mode 0660, owned by root and group `rp1-gpclk-route`. An explicitly enrolled WsprryPi service account can send the same closed JSON request over that fixed socket. Systemd runs the executor as root in a separate service cgroup, so stopping WsprryPi cannot terminate the transaction. Enrollment and enabling the socket are explicit WsprryPi/operator policy; neither occurs silently. This is the supported interactive mutation transport and requires no sudo command, wrapper, arguments, or shell.
 
-Package installation installs the executor, schema, document, disabled units, restricted group, and empty state parent but creates no route block or journal, starts no socket, selects no route, loads no module, and performs no reboot or output activity. WsprryPi retains application policy, scheduling, operator confirmation, topology ownership, enrollment, and qualification. Qualification-only `release_candidate_transaction.py`, plans, and evidence archives are not installed runtime dependencies. The route manager does not expose live-output or carrier execution; the 0.9.0 GPIO4 and GPIO20 development entries belong to the module compatibility gate only and are not present in a successor package yet.
-
-Completed schema-1 qualification journals created by the historical 1.1.1
-package executor remain in place byte-for-byte. The manager recognizes them
-only when their closed field set, attribution, hashes, terminal `complete`
-status, `reconciled: true`, and `rebootRequired: false` validate; it reports
-their names and SHA-256 identities as historical and never treats them as a
-current pending transaction. Unknown, altered, incomplete, or nonterminal
-historical journals still block all operation. The exact earlier package-owned
-`# version=1.1.1 route=gpio4|gpio20` block and the exact 1.1.1 contract marker
-`# contract=rp1-gpclk-route-manager-v1 package=1.1.1-1 route=gpio4|gpio20`
-are accepted as
-`historical-package-owned` and are replaced in place by the current contract
-format only inside a journaled, quiesced route mutation. No evidence is moved,
-renamed, deleted, or rewritten merely to permit operation.
-
-Any 0.9.0 executor-bearing package will be a new artifact. Output-inhibited evidence bound to predecessor package SHA-256 `247bd7da35e4ad812a13828668fe03673da127bad7ed2b3e970876f3f21c002d` establishes only that predecessor's GPIO4/GPIO20/restored-GPIO4 route-manager lifecycle and cleanup. It does not validate future package bytes or transfer completed live eligibility. The r2 source evidence is independently route-bound development execution and cleanup evidence, not package, waveform-integrity, decode, product-live, or RF qualification.
+Package installation installs the executor, schema, document, disabled units, restricted group, and empty state parent but creates no route block or journal, starts no socket, selects no route, loads no module, and performs no reboot or output activity. WsprryPi retains application policy, scheduling, operator confirmation, topology ownership, enrollment, and qualification. The route manager does not expose live-output or carrier execution.
 
 An explicit source-development binding may replace only the service
 `ExecStart` through a recorded `/etc/systemd/system` drop-in. It binds the

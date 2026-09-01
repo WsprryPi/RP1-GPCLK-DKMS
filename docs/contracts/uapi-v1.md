@@ -2,15 +2,12 @@
 
 # RP1 GPCLK UAPI ABI v1 contract
 
-## Frozen 1.0.1 identity
+## ABI v1 identity
 
-The normative 1.0.1 endpoint is `/dev/rp1-gpclk`. The ABI version is 1 and
-the SHA-256 of the byte-authoritative header is
-`1d411644352e61402bd4685a5692070d543ab2ee5b016d394294aa98970bd7fb`.
-`release/uapi-contract-freeze-v1.0.1.json` records the machine-readable
-identity. Changing the endpoint, header bytes, ioctl numbers or sizes, route
-identities, or existing semantics reopens the 1.0.1 normative freeze and
-invalidates consumer work based on it.
+The canonical endpoint is `/dev/rp1-gpclk`, and the ABI version is 1. The
+byte-authoritative current header is `include/uapi/linux/rp1_gpclk.h`.
+Existing endpoint, ioctl, structure, route, and semantic identities remain
+stable for consumers as later ABIs add operations.
 
 ## Authority and status
 
