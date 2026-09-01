@@ -98,15 +98,19 @@ The runtime manager adapter now exposes this transaction on the existing socket
 under its own explicit profile; the packaged manager is unchanged. WsprryPi supplies the companion application/browser protocol support. Provisioning must first supply the exact root-owned
 binding at `/etc/rp1-gpclk-dkms/runtime-controller.json` and a root-owned private
 state directory at `/var/lib/rp1-gpclk-dkms/runtime-admin`. The local-only
-`build_runtime_binding.py` renders a review candidate from compiled modules;
+`build_runtime_binding.py` renders a review candidate from compiled modules and
+the exact installed WsprryPi application companion;
 it is not an installer or a claim about loaded target memory.
 
-The binding fixes the kernel, both uncompressed installed module paths, their
-SHA-256 values, loaded GNU build-note hashes and the installed administration
-script hash. The tool checks module resolution, the consumer interlock marker,
-loaded controller note and character-device identity before effects. Build-note
-agreement corroborates identity; it is not a full hash of executing memory.
-Only a coherent controlled deployment may enroll those observations.
+The version-2 binding fixes the source commit, product and route compatibility
+identities, kernel, both uncompressed installed module paths and SHA-256 values,
+loaded GNU build-note hashes, both UAPIs, both transformed overlays, every runtime
+tool and schema, the base socket/service units, the runtime drop-in, and the exact
+WsprryPi application companion. `artifactSetSha256` binds that complete canonical
+record. The tool checks module resolution, the consumer interlock marker, loaded
+controller note and character-device identity before effects. Build-note agreement
+corroborates identity; it is not a full hash of executing memory. Only a coherent
+controlled deployment may enroll those observations.
 
 A private nonblocking flock serializes cooperating tool instances. A durable
 journal is written with file fsync, atomic replacement and directory fsync before
@@ -179,6 +183,14 @@ and an unfinished deployment blocks administration. The [output reconciliation e
 startup to existing UAPI operation authorization and adds explicit mask resumption.
 Route switching never authorizes output. Application restoration releases only
 owned inhibition after the required idle-state checks.
+
+`runtime_provider.py` is the single installer facade over these components. Its
+read-only `inspect` operation aggregates binding, deployment, controller, route,
+application, service, endpoint and passive-output evidence. Its `plan`/`ensure`
+and `route-plan`/`route-ensure` pairs require unchanged SHA-256 plan digests.
+The latter delegates to the existing preflight-token transaction; it does not
+add another overlay or module mutation path. Stable output and exit statuses are
+defined in the operator workflow.
 
 ### Runtime overlay export policy
 

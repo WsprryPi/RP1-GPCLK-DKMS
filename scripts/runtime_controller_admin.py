@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import uuid
+from runtime_binding import validate as validate_binding
 
 KERNEL = '6.18.34+rpt-rpi-2712'
 STATE = Path('/var/lib/rp1-gpclk-dkms/runtime-admin')
@@ -166,9 +167,7 @@ class Linux:
         raw = read_regular(BINDING)
         self.binding = strict_json(raw)
         self.binding_hash = digest(raw)
-        if not isinstance(self.binding, dict) or set(self.binding) != {'schemaVersion', 'kernel', 'files', 'controllerNoteSha256',
-                                 'consumerNoteSha256'} or type(self.binding['schemaVersion']) is not int or self.binding['schemaVersion'] != 1 or self.binding['kernel'] != KERNEL:
-            raise ValueError('binding schema')
+        validate_binding(self.binding)
         base = f'/lib/modules/{KERNEL}/updates/dkms/'
         from runtime_layout import INVENTORY
         expected = set(INVENTORY)
@@ -178,6 +177,10 @@ class Linux:
             safe_directory(Path(name).parent)
             if not isinstance(sha, str) or len(sha) != 64 or digest(read_regular(name, 32*1024*1024)) != sha:
                 raise ValueError('artifact mismatch: ' + name)
+        for name, sha in self.binding['externalFiles'].items():
+            safe_directory(Path(name).parent)
+            if digest(read_regular(name, 4*1024*1024)) != sha:
+                raise ValueError('external companion mismatch: ' + name)
         if digest(Path(__file__).read_bytes()) != self.binding['files']['/usr/lib/rp1-gpclk-dkms/runtime_controller_admin.py']:
             raise ValueError('executing tool mismatch')
         for module in ('rp1_gpclk_dkms', 'rp1_route_controller'):

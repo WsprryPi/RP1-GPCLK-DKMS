@@ -426,3 +426,25 @@ owned and reviewed in WsprryPi.
 Runtime-owned routes can use the canonical operation lease through the
 [application reconciliation extension](runtime-output.md). Global output stays
 disabled; this does not add qualification or change the kernel ownership contract.
+
+The canonical installer-facing entry point for this profile is
+`/usr/lib/rp1-gpclk-dkms/runtime_provider.py`. Its versioned JSON contract
+classifies the aggregate state as `absent`, `deployment_required`, `exact_ready`,
+`recovery_required`, or `conflict`. Readiness binds the exact source commit,
+product and route compatibility identities, kernel, both modules and build notes,
+both UAPIs, both runtime overlays, runtime tools and schema, systemd units and
+drop-in, WsprryPi application companion, deployment binding, journals, endpoints,
+socket, selected route, application restoration, and passive output state.
+`exact_ready` is unavailable unless the active route is singular and aligned,
+the application restoration is terminal and safe, both endpoints and the socket
+are attributable, the consumer endpoint is closed, and passive UAPI state proves
+`live_output=0`, no owner or lease, no authorization, and stable clock/GPIO/DMA
+quiescence. Unknown or mixed identity fails closed.
+
+The facade composes the existing deployment and route-manager implementations;
+it is not a competing manager. Filesystem deployment and route selection remain
+separate digest-bound operations, and neither authorizes output. Exact repeated
+execution is idempotent. A pending deployment, controller fault, incomplete route
+journal, or failed application restoration is reported as `recovery_required`;
+foreign, substituted, mixed, unsafe, open, or contradictory state is `conflict`.
+The source-development manager remains passive-query-only.

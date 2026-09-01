@@ -82,6 +82,10 @@ do not kill the independently systemd-owned manager worker; durable results
 remain queryable. No successful application restoration is reported merely
 because systemd accepted a start request.
 
+The installer-facing runtime-provider contract classifies a failed restoration
+as `recovery_required` and directs the caller to `restore --execute`; it never
+converts a route-only success into application readiness.
+
 Runtime-controller removal must reconcile the owned application inhibitor
 before discarding the runtime inventory or journals. If an interrupted or older
 removal has already left only the exact owned inhibitor, use
@@ -113,6 +117,11 @@ sandbox permits the canonical application configuration directory. Do not swap
 individual scripts under an incomplete binding. The application requires
 `applicationRestoration: true` from the manager before offering a successful
 runtime preflight.
+
+Bundle construction also requires the exact WsprryPi companion path as an input.
+The companion remains application-owned and is not installed by DKMS, but its
+bytes are bound and reverified before runtime effects. This makes a companion
+update a new deployment identity rather than an in-place script substitution.
 
 An old `/dev/null` service mask is not automatically adopted as workflow-owned.
 Restore the canonical service installation and intentionally clear that legacy

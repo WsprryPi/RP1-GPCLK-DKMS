@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import runtime_manager as manager
 import runtime_deployment as deploy
 import runtime_controller_admin as admin
+import runtime_binding
 from check_runtime_controller import Machine
 
 
@@ -37,6 +38,7 @@ class Files:
         self.crash = None
         self.mask = False
         self.loaded = False
+        self.external_valid = True
     def read(self, path): return self.values.get(path)
     def write(self, path, data):
         self.values[path] = data
@@ -45,8 +47,28 @@ class Files:
             raise OSError('crash after durable write')
     def preflight(self):
         if self.loaded: raise ValueError('loaded module')
+    def verify_external(self, unused):
+        if not self.external_valid: raise ValueError('external prerequisite mismatch')
     def quiesce(self): self.mask = True
     def refresh(self): pass
+
+
+def deployment_values(journals_none=False):
+    value = {'schemaVersion':2, 'contract':runtime_binding.CONTRACT,
+        'productVersion':runtime_binding.PRODUCT_VERSION,
+        'compatibilityIdentities':runtime_binding.COMPATIBILITY,
+        'sourceCommit':'a'*40, 'kernel':admin.KERNEL,
+        'controllerNoteSha256':'a'*64, 'consumerNoteSha256':'b'*64,
+        'files':{name:admin.digest(b'new') for name in deploy.INVENTORY},
+        'externalFiles':{name:'c'*64 for name in runtime_binding.EXTERNAL_PATHS},
+        'uapiSha256':{
+            'consumer':admin.digest(b'new'), 'controller':admin.digest(b'new')}}
+    value['artifactSetSha256'] = runtime_binding.canonical_digest(value)
+    result = {path:b'new' for path in deploy.DESTINATIONS}
+    result[deploy.BINDING] = json.dumps(value).encode()
+    if journals_none:
+        result.update({path:None for path in deploy.JOURNALS})
+    return result
 
 
 class Tests(unittest.TestCase):
@@ -99,7 +121,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(manager.parse({'operation':'query'})['schemaVersion'], 3)
 
     def test_every_deployment_crash_recovers_exact_old_bytes(self):
-        values = {path:(None if path in deploy.JOURNALS else b'new') for path in deploy.DESTINATIONS}
+        values = deployment_values(journals_none=True)
         for crash in range(1, len(values)+4):
             files = Files()
             files.values = {path:b'old' for path in values}
@@ -161,7 +183,7 @@ class Tests(unittest.TestCase):
     def test_loaded_module_refusal_has_no_pending_marker(self):
         files = Files()
         files.loaded = True
-        value = deploy.plan(files, {path:b'new' for path in deploy.DESTINATIONS})
+        value = deploy.plan(files, deployment_values())
         with self.assertRaisesRegex(ValueError, 'loaded'):
             deploy.apply(files, value, deploy.plan_hash(value))
         self.assertEqual(files.count, 0)
@@ -169,7 +191,7 @@ class Tests(unittest.TestCase):
 
     def test_oversized_or_malformed_journal_has_no_effects(self):
         files = Files()
-        value = deploy.plan(files, {path:b'new' for path in deploy.DESTINATIONS})
+        value = deploy.plan(files, deployment_values())
         with patch.object(deploy, 'MAX_JOURNAL_BYTES', 10):
             with self.assertRaisesRegex(ValueError, 'read bound'):
                 deploy.apply(files, value, deploy.plan_hash(value))
@@ -189,14 +211,24 @@ class Tests(unittest.TestCase):
             with self.assertRaises(OSError): deploy.bundle_read(link)
 
     def test_binding_is_read_once_and_same_bytes_are_installed(self):
-        raw = json.dumps({'schemaVersion':1, 'kernel':admin.KERNEL,
-            'controllerNoteSha256':'a'*64, 'consumerNoteSha256':'b'*64, 'files':{
-            name:admin.digest(b'payload') for name in deploy.INVENTORY}}).encode()
+        value = {'schemaVersion':2, 'contract':runtime_binding.CONTRACT,
+            'productVersion':runtime_binding.PRODUCT_VERSION,
+            'compatibilityIdentities':runtime_binding.COMPATIBILITY,
+            'sourceCommit':'a'*40, 'kernel':admin.KERNEL,
+            'controllerNoteSha256':'a'*64, 'consumerNoteSha256':'b'*64,
+            'files':{name:admin.digest(b'payload') for name in deploy.INVENTORY},
+            'externalFiles':{name:'c'*64 for name in runtime_binding.EXTERNAL_PATHS},
+            'uapiSha256':{
+                'consumer':admin.digest(b'payload'), 'controller':admin.digest(b'payload')}}
+        value['artifactSetSha256'] = runtime_binding.canonical_digest(value)
+        raw = json.dumps(value).encode()
         reads = []
-        def read(path, limit=deploy.MAX_FILE_BYTES):
-            reads.append(path.name)
-            return raw if path.name == 'binding.json' else b'payload'
-        with patch.object(deploy, 'bundle_read', read):
+        def read(unused, name, limit=deploy.MAX_FILE_BYTES):
+            reads.append(name)
+            return raw if name == 'binding.json' else b'payload'
+        with patch.object(deploy.os, 'open', return_value=9), \
+             patch.object(deploy.os, 'fstat', return_value=SimpleNamespace(st_mode=stat.S_IFDIR|0o700)), \
+             patch.object(deploy.os, 'close'), patch.object(deploy, 'bundle_member', read):
             values = deploy.payloads(Path('/offline'))
         self.assertEqual(reads.count('binding.json'), 1)
         self.assertEqual(values[deploy.BINDING], raw)
@@ -204,9 +236,32 @@ class Tests(unittest.TestCase):
     def test_invalid_binding_rejected_before_payload_reads(self):
         for value in ([], {'files':None}, {'schemaVersion':True, 'kernel':admin.KERNEL,
                 'files':{}, 'controllerNoteSha256':'a'*64, 'consumerNoteSha256':'b'*64}):
-            with patch.object(deploy, 'bundle_read', return_value=json.dumps(value).encode()) as reader:
+            with patch.object(deploy.os, 'open', return_value=9), \
+                 patch.object(deploy.os, 'fstat', return_value=SimpleNamespace(st_mode=stat.S_IFDIR|0o700)), \
+                 patch.object(deploy.os, 'close'), \
+                 patch.object(deploy, 'bundle_member', return_value=json.dumps(value).encode()) as reader:
                 with self.assertRaises(ValueError): deploy.payloads(Path('/offline'))
                 self.assertEqual(reader.call_count, 1)
+
+    def test_bundle_directory_symlink_and_writable_directory_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle = root/'bundle'; bundle.mkdir(); bundle.chmod(0o777)
+            with self.assertRaisesRegex(ValueError, 'writable'):
+                deploy.payloads(bundle)
+            link = root/'link'; link.symlink_to(bundle, target_is_directory=True)
+            with self.assertRaises(OSError): deploy.payloads(link)
+
+    def test_deployment_lock_excludes_concurrent_ensure(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(admin, 'STATE', Path(directory)), \
+             patch.object(admin, 'safe_directory'), \
+             patch.object(deploy.os, 'geteuid', return_value=0), \
+             patch.object(deploy.os, 'uname', return_value=SimpleNamespace(release=admin.KERNEL)), \
+             patch.object(deploy.os, 'fstat', return_value=SimpleNamespace(st_mode=stat.S_IFREG|0o600, st_uid=0)):
+            with deploy.mutation_lock():
+                with self.assertRaises(BlockingIOError):
+                    with deploy.mutation_lock(): pass
 
     def test_neutrality_rechecked_after_application_stop(self):
         loaded = False
@@ -221,15 +276,42 @@ class Tests(unittest.TestCase):
 
     def test_quiescence_failure_preserves_barrier(self):
         files = Files()
-        value = deploy.plan(files, {path:b'new' for path in deploy.DESTINATIONS})
+        value = deploy.plan(files, deployment_values())
         with patch.object(files, 'quiesce', side_effect=ValueError('stop incomplete')):
             with self.assertRaises(ValueError): deploy.apply(files, value, deploy.plan_hash(value))
         self.assertIsNotNone(files.read(str(admin.STATE/'deployment-pending.json')))
         self.assertTrue(all(files.read(path) is None for path in deploy.DESTINATIONS))
 
+    def test_change_during_quiescence_blocks_publication(self):
+        files = Files()
+        values = deployment_values()
+        value = deploy.plan(files, values)
+        changed = sorted(values)[0]
+        def quiesce():
+            files.mask = True
+            files.values[changed] = b'foreign'
+        files.quiesce = quiesce
+        with self.assertRaisesRegex(ValueError, 'during quiescence'):
+            deploy.apply(files, value, deploy.plan_hash(value))
+        self.assertIsNotNone(files.read(str(admin.STATE/'deployment-pending.json')))
+        self.assertTrue(all(files.read(path) is None for path in values if path != changed))
+
+    def test_external_prerequisite_change_during_quiescence_blocks_publication(self):
+        files = Files()
+        values = deployment_values()
+        value = deploy.plan(files, values)
+        def quiesce():
+            files.mask = True
+            files.external_valid = False
+        files.quiesce = quiesce
+        with self.assertRaisesRegex(ValueError, 'external prerequisite'):
+            deploy.apply(files, value, deploy.plan_hash(value))
+        self.assertIsNotNone(files.read(str(admin.STATE/'deployment-pending.json')))
+        self.assertTrue(all(files.read(path) is None for path in values))
+
     def test_foreign_change_blocks_all_recovery(self):
         files = Files()
-        values = {path:b'new' for path in deploy.DESTINATIONS}
+        values = deployment_values()
         plan = deploy.plan(files, values)
         path = sorted(values)[0]
         files.values[path] = b'foreign'

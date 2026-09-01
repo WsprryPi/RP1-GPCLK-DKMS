@@ -3,14 +3,15 @@
 """Reviewed, journaled runtime-profile filesystem deployment. Never loads modules."""
 import argparse
 import base64
+import contextlib
 import fcntl
 import json
 import os
-import re
 from pathlib import Path
 import stat
 import tempfile
 import runtime_controller_admin as admin
+from runtime_binding import validate as validate_binding
 from runtime_layout import INVENTORY
 
 MAX_FILE_BYTES = 32*1024*1024
@@ -42,27 +43,43 @@ def bundle_read(path, limit=MAX_FILE_BYTES):
         os.close(fd)
 
 
+def bundle_member(directory_fd, name, limit=MAX_FILE_BYTES):
+    if '/' in name or name in ('', '.', '..'):
+        raise ValueError('invalid fixed bundle member')
+    fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                 dir_fd=directory_fd)
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise ValueError('bundle member must be a regular file')
+        with os.fdopen(fd, 'rb', closefd=False) as stream:
+            data = stream.read(limit + 1)
+        if len(data) > limit:
+            raise ValueError('bundle member exceeds bound')
+        return data
+    finally:
+        os.close(fd)
+
+
 def payloads(directory):
-    raw = bundle_read(directory / 'binding.json', 1024*1024)
-    binding = admin.strict_json(raw)
-    if (not isinstance(binding, dict) or set(binding) != {'schemaVersion', 'kernel',
-            'files', 'controllerNoteSha256', 'consumerNoteSha256'} or
-            type(binding['schemaVersion']) is not int or binding['schemaVersion'] != 1 or
-            binding['kernel'] != admin.KERNEL or not isinstance(binding['files'], dict) or
-            set(binding['files']) != set(INVENTORY)):
-        raise ValueError('bundle schema/inventory/kernel mismatch')
-    for sha in list(binding['files'].values()) + [binding['controllerNoteSha256'], binding['consumerNoteSha256']]:
-        if not isinstance(sha, str) or not re.fullmatch('[0-9a-f]{64}', sha):
-            raise ValueError('bundle digest schema')
-    result = {}
-    for destination in sorted(INVENTORY):
-        data = bundle_read(directory / (admin.digest(destination.encode())+'.bin'))
-        if len(data) > 32*1024*1024 or admin.digest(data) != binding['files'][destination]:
-            raise ValueError('bundle hash mismatch')
-        result[destination] = data
-    result[BINDING] = raw
-    result.update({path: None for path in JOURNALS})
-    return result
+    directory_fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        info = os.fstat(directory_fd)
+        if not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o022:
+            raise ValueError('bundle directory is writable by group or other')
+        raw = bundle_member(directory_fd, 'binding.json', 1024*1024)
+        binding = admin.strict_json(raw)
+        validate_binding(binding)
+        result = {}
+        for destination in sorted(INVENTORY):
+            data = bundle_member(directory_fd, admin.digest(destination.encode())+'.bin')
+            if len(data) > 32*1024*1024 or admin.digest(data) != binding['files'][destination]:
+                raise ValueError('bundle hash mismatch')
+            result[destination] = data
+        result[BINDING] = raw
+        result.update({path: None for path in JOURNALS})
+        return result
+    finally:
+        os.close(directory_fd)
 
 
 class Files:
@@ -112,6 +129,13 @@ class Files:
         for name in ('rp1_gpclk_dkms', 'rp1_route_controller'):
             if Path('/sys/module', name).exists():
                 raise ValueError('loaded module; separately authorize neutral migration first')
+
+    def verify_external(self, binding):
+        validate_binding(binding)
+        for path, expected in binding['externalFiles'].items():
+            admin.safe_directory(Path(path).parent)
+            if admin.digest(admin.read_regular(path, 4*1024*1024)) != expected:
+                raise ValueError('external prerequisite mismatch: '+path)
 
     def quiesce(self):
         self.preflight()
@@ -164,6 +188,8 @@ def apply(files, value, approved, recover=False):
         allowed = (decode(record['before']), decode(record['after'])) if recover else (decode(record['before']),)
         if current not in allowed:
             raise ValueError('destination changed since review: '+path)
+    binding = validate_binding(admin.strict_json(decode(value['files'][BINDING]['after'])))
+    files.verify_external(binding)
     pending = str(admin.STATE / 'deployment-pending.json')
     existing = files.read(pending)
     if existing is not None and admin.strict_json(existing) != value:
@@ -171,6 +197,15 @@ def apply(files, value, approved, recover=False):
     files.preflight()
     files.write(pending, encoded)
     files.quiesce()
+    files.verify_external(binding)
+    # Quiescence can take time. Revalidate the complete reviewed baseline after
+    # it and before the first publication; a changed byte retains the pending
+    # barrier and requires explicit recovery/investigation.
+    for path, record in value['files'].items():
+        current = files.read(path)
+        allowed = (decode(record['before']), decode(record['after'])) if recover else (decode(record['before']),)
+        if current not in allowed:
+            raise ValueError('destination changed during quiescence: '+path)
     # Binding and profile are last. The persistent barrier covers all partial
     # updates and all refresh failures, including after every file was written.
     paths = sorted(value['files'], key=lambda p: (p == BINDING or p.endswith('.conf'), p))
@@ -181,16 +216,10 @@ def apply(files, value, approved, recover=False):
     files.write(pending, None)
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('operation', choices=('plan', 'install', 'recover'))
-    parser.add_argument('--bundle', type=Path)
-    parser.add_argument('--plan-sha256')
-    args = parser.parse_args()
+@contextlib.contextmanager
+def mutation_lock():
     if os.geteuid() != 0 or os.uname().release != admin.KERNEL:
         raise ValueError('root and exact kernel required')
-    # Provisioning STATE is a separately visible filesystem action. Other
-    # directories are created only by an approved deployment.
     admin.safe_directory(admin.STATE)
     fd = os.open(admin.STATE / 'lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:
@@ -198,6 +227,20 @@ def main():
         if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077:
             raise ValueError('lock ownership')
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        yield
+    finally:
+        os.close(fd)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('operation', choices=('plan', 'install', 'recover'))
+    parser.add_argument('--bundle', type=Path)
+    parser.add_argument('--plan-sha256')
+    args = parser.parse_args()
+    # Provisioning STATE is a separately visible filesystem action. Other
+    # directories are created only by an approved deployment.
+    with mutation_lock():
         files = Files()
         journal = files.read(str(admin.STATE / 'transaction.json'))
         if journal is not None:
@@ -222,8 +265,6 @@ def main():
             return
         apply(files, value, args.plan_sha256, args.operation == 'recover')
         print('Files deployed/recovered; application remains masked. No module activated.')
-    finally:
-        os.close(fd)
 
 
 if __name__ == '__main__':

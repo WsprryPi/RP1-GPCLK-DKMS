@@ -48,14 +48,17 @@ def ready(system, state, route):
             journal.get('boot') != system.boot or journal.get('binding') != system.binding_hash or
             journal.get('session') != state['session'] or journal.get('observation') != state):
         raise ValueError('runtime route is unresolved or mismatched')
-    require_idle(system.output_snapshot(), route)
+    observed = system.output_snapshot()
+    require_idle(observed, route)
+    return observed
 
 
 def dispatch(system, request, state):
     route = {'gpio4': 1, 'gpio20': 2}[request['route']]
-    ready(system, state, route)
+    observed = ready(system, state, route)
     result = {'ready': True, 'executionAuthorized': False, 'route': request['route'],
-              'controller': state, 'bootId': system.boot, 'bindingSha256': system.binding_hash}
+              'controller': state, 'bootId': system.boot, 'bindingSha256': system.binding_hash,
+              'snapshot': observed}
     if request['operation'] == 'idle':
         return result
     if request['operation'] == 'resume':

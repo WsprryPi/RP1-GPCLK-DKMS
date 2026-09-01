@@ -23,6 +23,10 @@ readback, and a passive module snapshot reporting the selected route, eligible
 compatibility, no owner/lease/live gate, no cleanup fault, and stable GPIO/clock/DMA
 quiescence. Busy and unknown observations fail; kernel errors remain available.
 The existing module acquisition closes the observation-to-acquisition race.
+Successful observations return the validated passive snapshot so the
+installer-facing readiness contract can report owner, lease, live gate,
+eligibility, GPIO, clock, DMA and stability values. This is evidence only;
+`executionAuthorized` remains false.
 
 WsprryPi uses `idle` during startup without clearing its output inhibit. Its
 existing development-operation path uses `reconcile-output` before checking the
