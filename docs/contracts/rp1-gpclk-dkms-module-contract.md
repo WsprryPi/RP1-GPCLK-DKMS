@@ -21,11 +21,10 @@ system configuration, GPIO operation, transmission, or RF activity.
 
 The product is source for an out-of-tree Linux module built by DKMS against the
 operator's installed stock Raspberry Pi kernel. It supplements the stock
-`clk-rp1` provider and does not recreate the private provider lease used by the
-historical custom-kernel implementation.
+`clk-rp1` provider and does not acquire a private provider lease.
 
 The Debian package contains the versioned module source, Kbuild and DKMS
-configuration, canonical UAPI, and inactive GPIO4 and GPIO20 overlays. Package
+configuration, canonical UAPI, and inactive `GPIO4` and `GPIO20` overlays. Package
 installation does not select a route, edit boot configuration, apply an
 overlay, load the module, enable output, or authorize use.
 
@@ -40,7 +39,7 @@ authorization, or qualification by themselves.
 - loadable kernel-module source and kernel-facing lifecycle behavior;
 - Kbuild and DKMS configuration;
 - route-specific device-tree overlays;
-- the bounded, versioned userspace API;
+- the bounded canonical userspace API;
 - compatibility identities and release metadata;
 - package installation, update, rollback, removal, signing, and diagnostics
   behavior; and
@@ -56,7 +55,7 @@ authorization, or qualification by themselves.
 ### WsprryPi owns
 
 - physical-backend selection and fail-closed product policy;
-- persisted GPIO4 or GPIO20 selection;
+- persisted `GPIO4` or `GPIO20` selection;
 - scheduling and application integration;
 - installation orchestration for explicitly compatible tagged releases;
 - operator enrollment, warnings, diagnostics, and recovery workflow; and
@@ -130,7 +129,7 @@ is followed by a second cleanup call. This changes neither the shared PLL's
 frequency nor other consumers' clocks. A different future parent contract must
 update the module identity and userspace divider planning together.
 
-Only GPIO4 and GPIO20 are supported. They are separate administrative routes
+Only `GPIO4` and `GPIO20` are supported. They are separate administrative routes
 with distinct overlays and qualification. The module accepts no arbitrary GPIO
 parameter, combined overlay, or automatic route substitution.
 
@@ -140,7 +139,7 @@ Each route overlay owns one route-specific enabled endpoint node beneath the exi
 bus. The node carries the canonical compatible, route, pin, clock, DMA,
 register, and pinctrl identities. Keeping that ancestry is mandatory: resource
 translation continues through the stock RP1 device-tree ranges and providers.
-GPIO4 and GPIO20 use distinct node names. Consequently, applying both overlays
+`GPIO4` and `GPIO20` use distinct node names. Consequently, applying both overlays
 produces two matching nodes and module initialization rejects the ambiguous
 topology before publishing an endpoint. With neither overlay there are zero
 matching nodes and no endpoint; with exactly one overlay there is exactly one
@@ -183,7 +182,7 @@ neither result transfers qualification to the other.
 ## UAPI
 
 The canonical header is `include/uapi/linux/rp1_gpclk.h`. The UAPI is bounded,
-additive, versioned, and route-neutral. It does not expose physical addresses,
+exact, and route-neutral. It does not expose physical addresses,
 DMA channels, unrestricted programs, or arbitrary register access.
 
 Requests use fixed-size structures, checked arithmetic, bounded counts and
@@ -191,8 +190,8 @@ durations, zero reserved fields, and explicit capability checks. Userspace
 pointers are copied once into bounded kernel-owned storage. Unknown commands,
 flags, values, routes, capabilities, or structure variants fail closed.
 
-One open file may own one opaque lease. WSPR, keyed events, and finite TONE
-work are bounded; continuous TONE is an explicit ABI v2 operation with no
+One open file may own one opaque lease. `WSPR`, keyed events, and finite `TONE`
+work are bounded; continuous `TONE` is an explicit operation with no
 hidden duration and remains owned by its lease until cancellation. Every
 submission has a strictly increasing generation. Cancellation prevents a
 successor and uses a bounded drain. Stale callbacks are rejected. Terminal
@@ -203,15 +202,16 @@ cleared by releasing a lease.
 
 The canonical endpoint is `/dev/rp1-gpclk`. The byte-authoritative current
 interface is `include/uapi/linux/rp1_gpclk.h`; `uapi-identity.json` records its
-current ABI and SHA-256. Existing ioctl identities and sizes, GPIO4/GPIO20
-route identities, lease, submission, terminal-state, and cleanup meanings stay
-stable as the interface evolves additively.
-Submission remains unavailable unless both the immutable load-time output gate
-and a recognized compatibility identity for the selected route permit it.
+SHA-256. The unreleased interface has one current set of ioctl identities,
+sizes, routes, lease semantics, submission semantics, terminal states, and
+cleanup meanings. No legacy layouts or compatibility commands are retained.
+Submission remains unavailable unless a recognized compatibility identity for
+the selected route permits it and either the immutable load-time output gate or
+an operation-scoped authorization permits the exact lease.
 
-Changing the endpoint or an existing canonical UAPI meaning requires explicit
-consumer coordination. Release metadata is generated only for a reviewed
-release candidate.
+Changing the endpoint or canonical UAPI requires coordinated updates to the
+module, consumers, diagnostics, tests, and exact header digest. The complete
+contract is [RP1 GPCLK userspace interface](uapi.md).
 
 ## Lifetime and cleanup
 
@@ -239,7 +239,7 @@ acquire.
 
 Process death, interruption, timeout, unbind, and cleanup failure must converge
 to a safe terminal state or an explicit fault that prevents further use.
-STOP and close cancellation do not synthesize DMA completion or force-abort an
+`STOP` and close cancellation do not synthesize DMA completion or force-abort an
 active RP1 paced descriptor. They reject every successor and allow only the
 current kernel-bounded descriptor to drain before cleanup.
 
@@ -255,7 +255,7 @@ The read-only DMA_TICK DREQ pulse is excluded from configuration ownership and
 restoration comparisons. It is not an enable bit. Runtime DMA uses word-aligned
 scatterlist entries, keeps pacing enabled across linked blocks, and stops pacing
 when the entire descriptor completes. A DMA deadline remains a failure even when
-STOP was requested; cancellation cannot relabel a failed drain as success.
+`STOP` was requested; cancellation cannot relabel a failed drain as success.
 
 ## Compatibility
 
@@ -265,26 +265,26 @@ state. The compatibility ID binds the module version, Pi 5 family and route. It
 does not encode a kernel release or act as a per-kernel permission list.
 
 The exact kernel, configuration, firmware and device tree remain build,
-diagnostic and evidence observations. For Experimental use, an operator may
-explicitly enroll a 0.9.0 module built by DKMS for another stock Raspberry Pi
+diagnostic and evidence observations. For `Experimental` use, an operator may
+explicitly enroll a `0.9.0` module built by DKMS for another stock Raspberry Pi
 kernel. Eligibility still requires the aarch64 Pi 5 Model B boundary, an
 allowlisted route, validated provider/resources, current module/UAPI/artifact
 identity, applicable signing policy, explicit operator authorization and clean
 runtime state. Unknown, missing, ambiguous, or mismatched mandatory runtime
 state disables live eligibility.
 
-A successful module build establishes build compatibility only. Experimental
+A successful module build establishes build compatibility only. `Experimental`
 enrollment permits an operator-controlled attempt but does not qualify loading,
 binding, GPIO output, timing, cleanup, coexistence, transmission, RF behavior,
-or a different system. Qualified claims remain tied to the exact system and
+or a different system. `Qualified` claims remain tied to the exact system and
 evidence on which they were established.
 
-The module contains independent GPIO4 and GPIO20 Experimental entries for the
+The module contains independent `GPIO4` and `GPIO20` `Experimental` entries for the
 Raspberry Pi 5 Model B / BCM2712 / aarch64 target class. The unique active
 device-tree route selects which entry can pass; the other route is absent. Zero
 active route overlays provides no endpoint. Both overlays present is ambiguous and
 must fail closed; overlay order never selects a route. There is no fallback,
-substitution, or evidence transfer between GPIO4 and GPIO20. These entries
+substitution, or evidence transfer between `GPIO4` and `GPIO20`. These entries
 permit bounded development testing only and are reported as `Experimental`;
 they are not completed qualification or normal product live eligibility.
 Hostname and kernel release are retained in target evidence and are not
@@ -326,11 +326,11 @@ administrator drop-in, bind userspace and module source identities separately,
 and expose only passive query while active. Successful deployment or query is
 not execution authorization or qualification.
 
-Where source-development consumers require current boot ownership, deployment
+Where `source-development` consumers require current boot ownership, deployment
 alone is insufficient. A separate attributable adoption record must bind the
 current boot and configuration digest to exact route, userspace, module,
-kernel, UAPI, and compatibility identities. Historical package ownership and
-completed historical journals do not establish that current proof.
+kernel, UAPI, and compatibility identities. Package ownership and completed
+journals do not establish that current proof.
 
 While that exact-source binding is active, passive query also returns a nested
 `state.safety` snapshot containing authenticated endpoint ownership, endpoint
@@ -347,23 +347,21 @@ rejects output-enabled loads, and supplies concrete inhibited administration and
 same-boot crash recovery. It adds a separate administrative UAPI, not transmission
 commands. It is excluded from default packaging and has no target qualification.
 Deployment and hardware tests remain separately authorized gates. It does not
-enable mutation through the packaged or source-development v1 manager.
+enable mutation through the packaged or `source-development` format `1` manager.
 
-The [Experimental runtime-route v2 engine](runtime-route-v2.md) is explicitly an
+The [Experimental runtime-route engine](runtime-route-v2.md) is explicitly an
 offline reference model with a blocked public mutation entry point. Its synthetic
 atomic effects are not a Linux adapter contract. The stock configfs removal
 path discards overlay-removal errors, so it is not a recoverable controller
 interface; use the separate runtime controller contract. A bounded
 read-only collector exists; that foundation supplied no write adapter or deployment
 path. The later opt-in controller above does not reuse the synthetic adapter or
-enable source-development v1 mutation.
+enable `source-development` format `1` mutation.
 Snapshot observations and model tests do not establish exclusion, post-removal
 success, kernel lifetime safety, or hardware readiness.
 
-The additive ABI-v3 passive snapshot contract is specified in
-`docs/contracts/uapi-v3-passive-snapshot.md`. ABI v4 adds the operation-scoped
-live authorization described in `docs/contracts/uapi-v4-operation-live.md`.
-The passive snapshot exposes presence and tri-state
+The canonical [userspace interface](uapi.md) includes passive snapshots and
+operation-scoped live authorization. The passive snapshot exposes presence and tri-state
 observations without granting ownership or disclosing lease tokens. Terminal
 generation, reason, and completed-unit state remain observable after lease
 release until the next successful acquire.
@@ -371,7 +369,7 @@ release until the next successful acquire.
 Ordinary checks are offline, unprivileged, network-free, hardware-free, and
 safe to repeat. Implementation changes receive deterministic tests. Kernel
 build results record the kernel, configuration, compiler, architecture, module
-version, UAPI version, and outcome.
+version, exact UAPI header digest, and outcome.
 
 Binding validation records the firmware-applied device-tree node, platform
 device, driver link, probe result, and canonical character device as separate
@@ -382,20 +380,17 @@ authorization for their system effects. Output-disabled administration, live
 GPIO behavior, timing, transmission, and RF are separate evidence classes and
 must not be inferred from one another.
 
-For the 0.9.0 dual-route development identity, live compatibility also requires
+For the `0.9.0` dual-route development identity, live compatibility also requires
 the route-specific endpoint node name emitted by the corresponding current
-overlay: `rp1-gpclk-dkms-gpio4` for route 1 or
-`rp1-gpclk-dkms-gpio20` for route 2. The predecessor shared
-`rp1-gpclk-dkms` endpoint name is rejected even when its remaining properties
-are otherwise valid. This prevents predecessor overlay bytes from satisfying
-the changed development candidate identity.
+overlay: `rp1-gpclk-dkms-gpio4` for route `1` or
+`rp1-gpclk-dkms-gpio20` for route `2`. Any other endpoint name is rejected even
+when its remaining properties are otherwise valid.
 
-The ABI-v4 operation-scoped build reports the route-specific 0.9.0 development
-IDs in the [development identity contract](development-identity.md). Its exact Pi 5,
-kernel, architecture, module-version, resource and route checks are unchanged.
-Earlier candidate IDs remain historical and cannot satisfy the current exact
-identity contract. Neither version normalization nor eligibility transfers
-qualification; immutable module/overlay hashes remain mandatory evidence.
+The operation-scoped build reports the route-specific `0.9.0` development IDs
+in the [development identity contract](development-identity.md). Its exact Pi 5,
+kernel, architecture, module-version, resource, and route checks apply together.
+Only the current exact identities can satisfy this contract; immutable
+module/UAPI/overlay hashes remain mandatory evidence.
 
 Hardware-free validation and successful build, binding, or functional output
 are separate evidence classes. None establishes waveform or spectral integrity, timing or frequency
@@ -410,8 +405,9 @@ compatibility, provenance, licensing, and security metadata. The source
 version, tag, Debian version, DKMS version, module version, UAPI, package, and
 release metadata must agree according to the release policy.
 
-Version 0.9.0 is the current pre-release development baseline. Debian version
-is 0.9.0-1; UAPI ABI 4 and protocol schema versions are preserved. The
+Version `0.9.0` is the current pre-release development baseline. Debian version
+is `0.9.0-1`; the exact UAPI header and current protocol schemas are coordinated
+with that source. The
 [identity and downgrade contract](development-identity.md) defines source,
 package, diagnostics, compatibility, enrollment and recovery relationships.
 Release metadata is absent from the development baseline and will be generated
@@ -422,15 +418,6 @@ WsprryPi consumes only an explicitly compatible tagged release. Module and
 application commits, reviews, releases, and qualification claims remain
 separate. A clean test run or published artifact never broadens the stated
 qualification scope.
-
-
-### ABI v2 TONE compatibility
-
-ABI v2 preserves all ABI v1 ioctls unchanged and adds explicit continuous and kernel-bounded finite
-TONE operations and v2 negotiation as specified in `docs/contracts/uapi-v2.md`.
-The canonical endpoint and route identities are unchanged. Compatibility and
-qualification remain bound to the current exact module, UAPI, route, and target.
-
 ### Opt-in runtime management integration
 
 The [runtime manager workflow](../operator/runtime-manager-workflow.md) uses a
@@ -443,6 +430,6 @@ profile does not change the packaged compatibility contract, transmission UAPI,
 release status, or hardware qualification. Application/browser adaptation remains
 owned and reviewed in WsprryPi.
 
-Runtime-owned routes can use the existing ABI-v4 operation lease through the
+Runtime-owned routes can use the canonical operation lease through the
 [application reconciliation extension](runtime-output-v1.md). Global output stays
 disabled; this does not add qualification or change the kernel ownership contract.

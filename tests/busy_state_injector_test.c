@@ -35,9 +35,8 @@ static int fake_ioctl(void *context, int fd, unsigned long request, void *argume
 	struct fixture *fixture = context;
 	assert(fd == 7);
 	if (request == RP1_GPCLK_IOC_QUERY) {
-		struct rp1_gpclk_query_v1 *query = argument;
+		struct rp1_gpclk_query *query = argument;
 		fixture->queries++;
-		query->abi_min = query->abi_max = RP1_GPCLK_UAPI_ABI_V1;
 		query->route = fixture->wrong_route ? RP1_GPCLK_ROUTE_GPIO20 :
 			RP1_GPCLK_ROUTE_GPIO4;
 		query->capabilities = RP1_GPCLK_CAP_ROUTE_IDENTITY |
@@ -50,7 +49,7 @@ static int fake_ioctl(void *context, int fd, unsigned long request, void *argume
 		return 0;
 	}
 	if (request == RP1_GPCLK_IOC_ACQUIRE) {
-		struct rp1_gpclk_acquire_v1 *acquire = argument;
+		struct rp1_gpclk_acquire *acquire = argument;
 		fixture->acquires++;
 		assert((acquire->required_capabilities &
 			(RP1_GPCLK_CAP_SUBMIT_WSPR | RP1_GPCLK_CAP_SUBMIT_EVENTS)) == 0);
@@ -58,7 +57,7 @@ static int fake_ioctl(void *context, int fd, unsigned long request, void *argume
 		return 0;
 	}
 	if (request == RP1_GPCLK_IOC_RELEASE) {
-		struct rp1_gpclk_release_v1 *release = argument;
+		struct rp1_gpclk_release *release = argument;
 		fixture->releases++;
 		assert(release->lease_id == 42);
 		return 0;

@@ -2,10 +2,10 @@
 
 # Debian DKMS packaging
 
-The planned Version 0.9.0 package uses the standard Debian DKMS lifecycle.
+The planned version `0.9.0` package uses the standard Debian DKMS lifecycle.
 After the later package-freeze gate, build it with `dpkg-buildpackage`; install,
 upgrade, or remove a reviewed artifact with ordinary Debian package tools.
-`dh-dkms` provides the DKMS maintainer-script integration. No 0.9.0 package or
+`dh-dkms` provides the DKMS maintainer-script integration. No `0.9.0` package or
 final package identity is frozen by the current functional-development state.
 
 The product package owns:
@@ -29,7 +29,7 @@ Both overlays remain inactive. The package does not edit `config.txt`, apply an
 overlay, select a route, load the module, enable output, or reboot. Installing
 the package therefore does not authorize or initiate GPIO activity.
 
-Version 0.9.0 additionally installs the stable application executor at
+Version `0.9.0` additionally installs the stable application executor at
 `/usr/sbin/rp1-gpclk-route-manager` (with a byte-identical package-owned copy
 at `/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager`), its closed JSON schema
 at `/usr/share/rp1-gpclk-dkms/0.9.0/rp1-gpclk-route-manager-v1.schema.json`,
@@ -62,13 +62,13 @@ linux-headers-$(uname -r), verify the matching
 unavailable. A generic architecture header package is not evidence for a
 Raspberry Pi kernel identity.
 
-The source-package build dependencies are debhelper-compat (= 13), dh-dkms,
-device-tree-compiler, and python3. They belong on the package build host and
+The source-package build dependencies are `debhelper-compat (= 13)`, `dh-dkms`,
+`device-tree-compiler`, and `python3`. They belong on the package build host and
 are not WsprryPi runtime dependencies.
 
 ## Install
 
-After a reviewed 0.9.0 package is produced in the later packaging roadmap step,
+After a reviewed `0.9.0` package is produced in the later packaging roadmap step,
 install that downloaded artifact with APT so dependencies are resolved:
 
 ```sh

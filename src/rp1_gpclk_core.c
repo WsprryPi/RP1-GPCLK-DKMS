@@ -22,14 +22,7 @@ static int rp1_gpclk_header_valid(const struct rp1_gpclk_uapi_header *header,
                                   __u16 size)
 {
     return header && header->size == size &&
-           header->version == RP1_GPCLK_UAPI_ABI_V1 && header->flags == 0;
-}
-
-static int rp1_gpclk_header_v2_valid(
-    const struct rp1_gpclk_uapi_header *header, __u16 size)
-{
-    return header && header->size == size &&
-           header->version == RP1_GPCLK_UAPI_ABI_V2 && header->flags == 0;
+           header->reserved == 0 && header->flags == 0;
 }
 
 static int rp1_gpclk_route_valid(__u32 route)
@@ -57,7 +50,7 @@ static int rp1_gpclk_reserved_zero(const __u64 *reserved, __u32 count)
     return 1;
 }
 
-static int rp1_gpclk_tones_valid(const struct rp1_gpclk_tone_v1 *tones,
+static int rp1_gpclk_tones_valid(const struct rp1_gpclk_tone *tones,
                                  __u32 count, __u32 expected_period)
 {
     __u32 index;
@@ -240,8 +233,8 @@ static int rp1_gpclk_submit_begin(struct rp1_gpclk_core *core, __u64 owner_id,
 
 int rp1_gpclk_core_submit_wspr(
     struct rp1_gpclk_core *core, __u64 owner_id,
-    struct rp1_gpclk_submit_wspr_v1 *request,
-    const struct rp1_gpclk_tone_v1 *tones, const unsigned char *symbols)
+    struct rp1_gpclk_submit_wspr *request,
+    const struct rp1_gpclk_tone *tones, const unsigned char *symbols)
 {
     __u32 index;
     __u64 generation;
@@ -290,9 +283,9 @@ int rp1_gpclk_core_submit_wspr(
 
 int rp1_gpclk_core_submit_events(
     struct rp1_gpclk_core *core, __u64 owner_id,
-    struct rp1_gpclk_submit_events_v1 *request,
-    const struct rp1_gpclk_tone_v1 *tones,
-    const struct rp1_gpclk_event_v1 *events)
+    struct rp1_gpclk_submit_events *request,
+    const struct rp1_gpclk_tone *tones,
+    const struct rp1_gpclk_event *events)
 {
     __u32 index;
     __u64 total = 0;
@@ -346,12 +339,12 @@ int rp1_gpclk_core_submit_events(
 }
 
 int rp1_gpclk_core_submit_tone(struct rp1_gpclk_core *core, __u64 owner_id,
-                              struct rp1_gpclk_submit_tone_v2 *request)
+                              struct rp1_gpclk_submit_tone *request)
 {
     int result;
 
     if (!core || !request ||
-        !rp1_gpclk_header_v2_valid(&request->header, sizeof(*request)) ||
+        !rp1_gpclk_header_valid(&request->header, sizeof(*request)) ||
         request->generation != 0 ||
         request->expected_route != core->value.route ||
         request->fractional_bits != RP1_GPCLK_FRACTIONAL_BITS ||

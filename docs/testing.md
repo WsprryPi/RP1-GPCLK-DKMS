@@ -15,7 +15,7 @@ parameterized utility.
 intentional because package validation is also a separately usable gate.
 
 The C programs compiled by `tests/run-offline-checks.sh` are hardware-free
-host tests. `development_tone_v2_client.c` is different: it is a target-only
+host tests. `development_tone_client.c` is different: it is a target-only
 development client that can open the endpoint and request output. It is never
 compiled or executed by an ordinary test target and requires separate,
 route-specific hardware authorization.
@@ -24,7 +24,7 @@ route-specific hardware authorization.
 with `make development-frequency-sweep-client` on a target with SoapySDR
 development headers. Its default, hardware-free `--render-only` run requests
 16 uniformly spaced RF frequencies, inclusive, from 135.7 kHz through 148.0
-MHz. It uses finite two-second GPIO20 tones at 2 mA only with explicit `--live`,
+MHz. It uses finite two-second `GPIO20` tones at 2 mA only with explicit `--live`,
 and measures them with SDRplay serial `2404058C60`. With the selected
 `pll_sys` parent, frequencies through the provider's 100 MHz GPCLK0 output
 limit use the fundamental; higher requested frequencies measure the third
@@ -50,7 +50,7 @@ Render a plan without touching hardware:
   --output /tmp/rp1-gpclk-plan.csv
 ```
 
-Run the same vector live only in an authorized GPIO20/SDRplay window:
+Run the same vector live only in an authorized `GPIO20`/SDRplay window:
 
 ```sh
 ./build/development-frequency-sweep --live --points 16 --repeats 3 \
@@ -64,16 +64,17 @@ The receiver PPM corrects the SDR estimate by division by `(1 + ppm/1e6)`.
 Replace the example zero corrections only with values calibrated for the
 actual source and receiver. They are not interchangeable.
 
-## Compatibility checks
+## Interface checks
 
-UAPI tests protect the current canonical header, existing ioctl layouts, and
-additive compatibility. Route-manager tests retain only the minimal predecessor
-fixtures needed to verify bounded migration to the current owned-block format.
+UAPI tests protect the current canonical header, ioctl layouts, exact digest,
+and absence of legacy layouts or commands. Route-manager tests retain only the
+minimal deterministic fixtures needed to verify current ownership and recovery
+behavior.
 
 Generated test output belongs in temporary directories. Qualification captures,
 run results and deployment inventories belong outside this source checkout.
 Release metadata and publication checks are added with a reviewed release
-candidate rather than retained from obsolete releases.
+candidate rather than retained from development runs.
 
 Target waveform and mode qualification belongs in the external WsprryPi Harness.
 No ordinary repository test authorizes installation, loading, GPIO, transmission,

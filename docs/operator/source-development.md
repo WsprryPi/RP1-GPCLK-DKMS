@@ -5,8 +5,8 @@
 The [runtime-route v2 engine](../contracts/runtime-route-v2.md) is offline-only.
 Do not install its entry point as a route-manager replacement: it reports
 implementation blockers and cannot inspect or switch a target. Existing
-source-development deployment remains passive-query-only. V2 identity files
-are not deployment enrollment or route authorization; no v2 installer or
+`source-development` deployment remains passive-query-only. V2 identity files
+are not deployment enrollment or route authorization; no V2 installer or
 automatic route startup service is provided.
 
 `python3 scripts/runtime_inventory.py` is a separate bounded read-only collector.
@@ -96,8 +96,8 @@ output is retained in the evidence directory. Use `--build-only`, `--install`,
 `--load`, and `--keep-build` to select the lifecycle. A same-name, same-version
 development instance is replaced only after complete source-ownership validation.
 The evidence directory retains its source and installed module bytes for recovery.
-Predecessor versions, foreign/package ownership and active enrollment or manager
-state require the [explicit migration path](../contracts/development-identity.md).
+Non-current versions, foreign/package ownership, and active enrollment or manager
+state require the [explicit removal boundary](../contracts/development-identity.md).
 A rendered development tree deliberately replaces the production DKMS kernel
 name filter with `.*`. The requested kernel only needs a usable header tree;
 DKMS/compiler errors are returned directly. The release/package source retains
@@ -128,7 +128,7 @@ sudo ./scripts/development-overlay rollback --manifest MANIFEST
 
 Before enrolling, query the loaded module and require compatibility ID
 `v0.9.0-pi5-gpio4` or `v0.9.0-pi5-gpio20` for the selected route. If an existing
-0.9.0 installation reports another identifier, keep output inhibited, remove
+`0.9.0` installation reports another identifier, keep output inhibited, remove
 its enrollment using the removal command in that enrollment record, perform the
 guarded same-version replacement, and enroll the current installation. Do not
 edit an enrollment record or substitute an expected identifier for the value
@@ -136,7 +136,7 @@ reported by the module.
 
 Overlay installation and route application report affected files, identities,
 ownership, removal evidence, and whether reboot is required.
-They never reboot automatically. GPIO4 and GPIO20 remain independent; a
+They never reboot automatically. `GPIO4` and `GPIO20` remain independent; a
 manifest or active identity for one never substitutes for the other. After an
 approved reboot, run the read-only status and route verification commands.
 
@@ -147,9 +147,8 @@ and is never produced by this workflow.
 
 ## Passive exact-source route manager
 
-When an enrolled Experimental module is intentionally newer than the installed
-Debian package, install the route manager from a clean, exact Git checkout
-without replacing package-owned files:
+For an exact-source `Experimental` installation, install the route manager from
+a clean, exact Git checkout without replacing package-owned files:
 
 ```sh
 sudo ./scripts/development-route-manager install \
@@ -167,19 +166,19 @@ The installer copies the executable and module manifest below
 commits and hashes, and activates only a drop-in below `/etc/systemd/system`.
 The package executables and unit fragment remain unchanged. Installation alone
 is reported as `deployed-awaiting-current-boot-adoption`, not ready. The
-installer preserves a validated terminal `rolled-back` predecessor record under
+installer preserves a validated terminal `rolled-back` prior record under
 the same root-owned development state directory and binds its path and digest
-into the successor record. Active, malformed, altered, or archive-colliding
-predecessor state fails closed.
+into the current record. Active, malformed, altered, or archive-colliding prior
+state fails closed.
 The explicit adoption operation records the observed boot ID, complete boot
 configuration digest, configured and active route, executable and manifest
 identities, kernel, UAPI, and compatibility identity in a root-owned mode 0600
-record. Passive QUERY reports `bootOwnership: current` only while every bound
+record. Passive `QUERY` reports `bootOwnership: current` only while every bound
 field still matches and no route transaction is pending. A reboot, configuration
 change, route disagreement, artifact replacement, or missing record fails
-closed. Historical completed journals never substitute for adoption.
+closed. Completed journals never substitute for current adoption.
 
-The same source-development QUERY returns its authenticated runtime observations
+The same `source-development` `QUERY` returns its authenticated runtime observations
 under `state.safety`: `endpointOwned` confirms the root-owned mode 0600
 character endpoint, `endpointOpen` reports whether a process currently holds
 it, `liveOutput` reports the immutable module load gate, and `services` records
@@ -206,7 +205,7 @@ sudo ./scripts/development-rollback --record /absolute/evidence/path/ROLLBACK.js
 ```
 
 Removal unloads and removes the selected development module/version and source
-tree; it does not restore a predecessor. Boot, overlay, service, and route
+tree; it does not restore a prior installation. Boot, overlay, service, and route
 operations have separately scoped removal records because they may span a
 reboot. No
 command removes unrelated kernels, modules, overlays, services, repositories,

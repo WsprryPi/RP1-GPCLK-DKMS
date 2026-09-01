@@ -45,12 +45,12 @@ validation. Module signing/loading remains an independent prerequisite.
 
 ## Kernel ownership and admission
 
-The root-only `/dev/rp1-route-admin` endpoint has the separate 64-byte ABI in
-`include/uapi/linux/rp1_route_admin.h`. The transmission UAPI is unchanged.
+The root-only `/dev/rp1-route-admin` endpoint has the separate 64-byte interface in
+`include/uapi/linux/rp1_route_admin.h`. It is separate from the transmission UAPI.
 STATUS takes zero session/generation and returns a random controller-instance
 session, monotonic generation, owned overlay ID, active route, last kernel error
 and flags for fault, consumer presence and lifetime pinning. APPLY permits only
-route 1 (GPIO4) or 2 (GPIO20); REMOVE accepts no route or arbitrary ID. Effects
+route 1 (`GPIO4`) or 2 (`GPIO20`); REMOVE accepts no route or arbitrary ID. Effects
 require the exact session/generation and one controller mutex. Busy operations
 reject immediately; status is not an electrical observation.
 
@@ -123,7 +123,7 @@ Foreign unit files and administrator masks are preserved. Failures and crashes
 retain inhibition. The low-level transaction never starts the application; the
 schema-3 manager restores it only after successful route completion. This covers the named service only, not arbitrary root-launched
 processes, alternate units or other applications. Operators must exclude those
-entry points. The consumer load parameter stays disabled; ABI-v4 operation-scoped output
+entry points. The consumer load parameter stays disabled; operation-scoped output
 is a separate existing path, as clarified in [runtime output reconciliation](runtime-output-v1.md).
 
 The tool unloads only the exact checked consumer with non-forced rmmod, checks
@@ -175,7 +175,7 @@ Schema 3 is distinct from the packaged and source-development protocols. Exact
 bindings include the entire runtime software inventory; old three-file bindings
 must be regenerated and reviewed. Deployment and administration share one lock,
 and an unfinished deployment blocks administration. The [output reconciliation extension](runtime-output-v1.md) connects application
-startup to existing ABI-v4 operation authorization and adds explicit mask resumption.
+startup to existing UAPI operation authorization and adds explicit mask resumption.
 Route switching never authorizes output. Application restoration releases only
 owned inhibition after the required idle-state checks.
 

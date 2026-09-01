@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MIT -->
 
-# Experimental runtime route protocol v2
+# Experimental runtime route protocol
 
 The engine is explicitly `ModelEngine`/`ModelAdapter`; its atomic effects are
 synthetic and must not be implemented by inventing Linux observations.
@@ -55,7 +55,7 @@ indices, UAPI payloads, or authorization digests are accepted.
 The [v2 identity schema](../../schema/rp1-gpclk-runtime-binding-v2.schema.json)
 binds manager and module commits, executable and module artifact hashes,
 module build hash, UAPI hash, kernel/configuration and firmware identities,
-and independent GPIO4/GPIO20 overlay hashes and compatibility IDs.
+and independent `GPIO4`/`GPIO20` overlay hashes and compatibility IDs.
 `binding()` validates closed structure, route association, and distinct
 overlay hashes. These checks validate syntax, **not artifact authenticity**.
 The unavailable adapter must authenticate enrolled records and actual bytes;
@@ -145,7 +145,7 @@ operator may issue a new attributable recovery request to change strategy;
 reusing an existing request ID with different content is rejected.
 
 Completed switch and recovery replays return their recorded result only while
-the complete current observation still matches. Historical completion is not
+the complete current observation still matches. A recorded completion is not
 current readiness. No automatic reboot or output command exists. Once acquired,
 the adapter must retain administrative exclusion through process death and
 partial restoration; cleanup cannot depend on Python exception handling.
@@ -157,9 +157,9 @@ runtime controller. Do not add UAPI merely to satisfy a synthetic atomic
 adapter. The configfs removal interface discards overlay-removal errors;
 it cannot provide the model's required result and retained recovery handle.
 
-Code review of `rp1_gpclk_open()` and the canonical ABI-v4 header found no
+Code review of `rp1_gpclk_open()` and the canonical UAPI header found no
 persistent administrative admission API spanning endpoint closure, unload,
-overlay replacement, and reload. `GET_SNAPSHOT_V3` exposes useful observations
+overlay replacement, and reload. `GET_SNAPSHOT` exposes useful observations
 including operation-scoped live state, but grants no exclusion. Holding a file
 open to guard the endpoint would itself obstruct the proposed unload sequence.
 

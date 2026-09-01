@@ -11,7 +11,7 @@ static void reset(void)
 }
 static struct rp1_route_admin request(unsigned int op, unsigned int route)
 {
- struct rp1_route_admin value = { .abi = 1, .operation = op, .route = route,
+ struct rp1_route_admin value = { .operation = op, .route = route,
   .session = op ? session : 0, .generation = op ? generation : 0 };
  return value;
 }

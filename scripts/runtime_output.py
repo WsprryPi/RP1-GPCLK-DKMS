@@ -64,7 +64,7 @@ def dispatch(system, request, state):
         system.output_resume()
         return result
     # Reconciliation is evidence for the existing application authorization path,
-    # not a new output permit. ABI-v4 acquisition remains the output gate.
+    # not a new output permit. UAPI acquisition remains the output gate.
     return result
 
 

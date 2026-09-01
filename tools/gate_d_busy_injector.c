@@ -21,14 +21,12 @@
 extern int ioctl(int fd, unsigned long request, ...);
 #endif
 
-static int valid_identity(const struct rp1_gpclk_query_v1 *query,
+static int valid_identity(const struct rp1_gpclk_query *query,
 			  const struct gate_d_busy_config *config)
 {
 	return query->header.size == sizeof(*query) &&
-		query->header.version == RP1_GPCLK_UAPI_ABI_V1 &&
+		query->header.reserved == 0 &&
 		query->header.flags == 0 &&
-		query->abi_min == RP1_GPCLK_UAPI_ABI_V1 &&
-		query->abi_max == RP1_GPCLK_UAPI_ABI_V1 &&
 		query->route == config->route &&
 		(query->capabilities & RP1_GPCLK_CAP_LIVE_ELIGIBLE) == 0 &&
 		memchr(query->module_id, '\0', sizeof(query->module_id)) != NULL &&
@@ -42,9 +40,9 @@ int gate_d_busy_run(const struct gate_d_busy_config *config,
 		    struct gate_d_busy_result *result,
 		    const volatile sig_atomic_t *stop_requested)
 {
-	struct rp1_gpclk_query_v1 query = { 0 };
-	struct rp1_gpclk_acquire_v1 acquire = { 0 };
-	struct rp1_gpclk_release_v1 release = { 0 };
+	struct rp1_gpclk_query query = { 0 };
+	struct rp1_gpclk_acquire acquire = { 0 };
+	struct rp1_gpclk_release release = { 0 };
 	int fd = -1;
 	int rc = -1;
 
@@ -65,7 +63,6 @@ int gate_d_busy_run(const struct gate_d_busy_config *config,
 	if (fd < 0)
 		return -1;
 	query.header.size = sizeof(query);
-	query.header.version = RP1_GPCLK_UAPI_ABI_V1;
 	if (ops->ioctl_endpoint(ops->context, fd, RP1_GPCLK_IOC_QUERY,
 				&query) != 0)
 		goto out;
@@ -77,7 +74,6 @@ int gate_d_busy_run(const struct gate_d_busy_config *config,
 	}
 	if (config->mode == GATE_D_BUSY_OWNER) {
 		acquire.header.size = sizeof(acquire);
-		acquire.header.version = RP1_GPCLK_UAPI_ABI_V1;
 		acquire.expected_route = config->route;
 		acquire.required_capabilities = RP1_GPCLK_CAP_ROUTE_IDENTITY |
 			RP1_GPCLK_CAP_COMPAT_IDENTITY |
@@ -102,7 +98,6 @@ int gate_d_busy_run(const struct gate_d_busy_config *config,
 out:
 	if (result->acquired) {
 		release.header.size = sizeof(release);
-		release.header.version = RP1_GPCLK_UAPI_ABI_V1;
 		release.lease_id = result->lease_id;
 		if (ops->ioctl_endpoint(ops->context, fd, RP1_GPCLK_IOC_RELEASE,
 					&release) == 0)

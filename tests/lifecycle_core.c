@@ -25,7 +25,7 @@ static unsigned int tests_run;
         tests_run++;                                                          \
     } while (0)
 
-static void fill_tones(struct rp1_gpclk_tone_v1 *tones, __u32 count,
+static void fill_tones(struct rp1_gpclk_tone *tones, __u32 count,
                        __u32 period)
 {
     __u32 index;
@@ -38,9 +38,9 @@ static void fill_tones(struct rp1_gpclk_tone_v1 *tones, __u32 count,
     }
 }
 
-static void setup_events(struct rp1_gpclk_submit_events_v1 *request,
-                         struct rp1_gpclk_tone_v1 *tones,
-                         struct rp1_gpclk_event_v1 *events, __u32 count)
+static void setup_events(struct rp1_gpclk_submit_events *request,
+                         struct rp1_gpclk_tone *tones,
+                         struct rp1_gpclk_event *events, __u32 count)
 {
     __u32 index;
 
@@ -48,7 +48,6 @@ static void setup_events(struct rp1_gpclk_submit_events_v1 *request,
     memset(tones, 0, sizeof(*tones) * RP1_GPCLK_MAX_TONES);
     memset(events, 0, sizeof(*events) * count);
     request->header.size = sizeof(*request);
-    request->header.version = RP1_GPCLK_UAPI_ABI_V1;
     request->mode = RP1_GPCLK_MODE_QRSS;
     request->fractional_bits = RP1_GPCLK_FRACTIONAL_BITS;
     request->tick_divider = RP1_GPCLK_TICK_DIVIDER;
@@ -63,15 +62,14 @@ static void setup_events(struct rp1_gpclk_submit_events_v1 *request,
     }
 }
 
-static void setup_wspr(struct rp1_gpclk_submit_wspr_v1 *request,
-                       struct rp1_gpclk_tone_v1 *tones, unsigned char *symbols)
+static void setup_wspr(struct rp1_gpclk_submit_wspr *request,
+                       struct rp1_gpclk_tone *tones, unsigned char *symbols)
 {
     __u32 index;
 
     memset(request, 0, sizeof(*request));
     memset(tones, 0, sizeof(*tones) * RP1_GPCLK_MAX_TONES);
     request->header.size = sizeof(*request);
-    request->header.version = RP1_GPCLK_UAPI_ABI_V1;
     request->fractional_bits = RP1_GPCLK_FRACTIONAL_BITS;
     request->tick_divider = RP1_GPCLK_TICK_DIVIDER;
     request->writes_per_symbol = 2;
@@ -97,9 +95,9 @@ static __u64 acquire(struct rp1_gpclk_core *core, __u64 owner)
 static __u64 submit_events(struct rp1_gpclk_core *core, __u64 owner,
                            __u64 lease, __u32 count)
 {
-    struct rp1_gpclk_submit_events_v1 request;
-    struct rp1_gpclk_tone_v1 tones[RP1_GPCLK_MAX_TONES];
-    struct rp1_gpclk_event_v1 events[4];
+    struct rp1_gpclk_submit_events request;
+    struct rp1_gpclk_tone tones[RP1_GPCLK_MAX_TONES];
+    struct rp1_gpclk_event events[4];
 
     CHECK(count <= 4);
     setup_events(&request, tones, events, count);
@@ -210,10 +208,10 @@ static void test_routes_capabilities_and_wrap(void)
 static void test_validation(void)
 {
     struct rp1_gpclk_core core;
-    struct rp1_gpclk_submit_events_v1 events_request;
-    struct rp1_gpclk_submit_wspr_v1 wspr_request;
-    struct rp1_gpclk_tone_v1 tones[RP1_GPCLK_MAX_TONES];
-    struct rp1_gpclk_event_v1 events[2];
+    struct rp1_gpclk_submit_events events_request;
+    struct rp1_gpclk_submit_wspr wspr_request;
+    struct rp1_gpclk_tone tones[RP1_GPCLK_MAX_TONES];
+    struct rp1_gpclk_event events[2];
     unsigned char symbols[RP1_GPCLK_WSPR_SYMBOLS];
     struct rp1_gpclk_core before;
     __u64 lease;
@@ -266,10 +264,10 @@ static void test_validation_matrix(void)
 {
     struct rp1_gpclk_core core;
     struct rp1_gpclk_core before;
-    struct rp1_gpclk_submit_events_v1 request;
-    struct rp1_gpclk_submit_wspr_v1 wspr;
-    struct rp1_gpclk_tone_v1 tones[RP1_GPCLK_MAX_TONES];
-    struct rp1_gpclk_event_v1 events[2];
+    struct rp1_gpclk_submit_events request;
+    struct rp1_gpclk_submit_wspr wspr;
+    struct rp1_gpclk_tone tones[RP1_GPCLK_MAX_TONES];
+    struct rp1_gpclk_event events[2];
     unsigned char symbols[RP1_GPCLK_WSPR_SYMBOLS];
     __u64 lease;
 
@@ -289,7 +287,7 @@ static void test_validation_matrix(void)
     } while (0)
 
     EXPECT_EVENT_INVALID(request.header.size--);
-    EXPECT_EVENT_INVALID(request.header.version++);
+    EXPECT_EVENT_INVALID(request.header.reserved++);
     EXPECT_EVENT_INVALID(request.header.flags = 1);
     EXPECT_EVENT_INVALID(request.reserved0 = 1);
     EXPECT_EVENT_INVALID(request.reserved[3] = 1);
@@ -498,9 +496,9 @@ static void test_owner_close_during_stop_drain(void)
 static void test_generation_wrap(void)
 {
     struct rp1_gpclk_core core;
-    struct rp1_gpclk_submit_events_v1 request;
-    struct rp1_gpclk_tone_v1 tones[RP1_GPCLK_MAX_TONES];
-    struct rp1_gpclk_event_v1 event;
+    struct rp1_gpclk_submit_events request;
+    struct rp1_gpclk_tone tones[RP1_GPCLK_MAX_TONES];
+    struct rp1_gpclk_event event;
     struct rp1_gpclk_core before;
     __u64 lease;
 
@@ -518,10 +516,10 @@ static void test_generation_wrap(void)
 static void test_limit_boundaries(void)
 {
     struct rp1_gpclk_core core;
-    struct rp1_gpclk_submit_events_v1 request;
-    struct rp1_gpclk_submit_wspr_v1 wspr;
-    struct rp1_gpclk_tone_v1 tones[RP1_GPCLK_MAX_TONES];
-    struct rp1_gpclk_event_v1 events[RP1_GPCLK_MAX_EVENTS];
+    struct rp1_gpclk_submit_events request;
+    struct rp1_gpclk_submit_wspr wspr;
+    struct rp1_gpclk_tone tones[RP1_GPCLK_MAX_TONES];
+    struct rp1_gpclk_event events[RP1_GPCLK_MAX_EVENTS];
     unsigned char symbols[RP1_GPCLK_WSPR_SYMBOLS];
     struct rp1_gpclk_core before;
     __u64 lease;
@@ -690,9 +688,9 @@ static void test_fault_points(void)
         lease = acquire(&core, OWNER_A);
         if (point == RP1_GPCLK_FAULT_SUBMIT_COPY ||
             point == RP1_GPCLK_FAULT_SUBMIT_PRECOMMIT) {
-            struct rp1_gpclk_submit_events_v1 request;
-            struct rp1_gpclk_tone_v1 tones[RP1_GPCLK_MAX_TONES];
-            struct rp1_gpclk_event_v1 event;
+            struct rp1_gpclk_submit_events request;
+            struct rp1_gpclk_tone tones[RP1_GPCLK_MAX_TONES];
+            struct rp1_gpclk_event event;
 
             setup_events(&request, tones, &event, 1);
             request.lease_id = lease;
@@ -735,12 +733,11 @@ static void test_fault_points(void)
     }
 }
 
-static void setup_tone(struct rp1_gpclk_submit_tone_v2 *request,
+static void setup_tone(struct rp1_gpclk_submit_tone *request,
 		       __u64 lease, __u32 operation, __u64 duration_ns)
 {
 	memset(request, 0, sizeof(*request));
 	request->header.size = sizeof(*request);
-	request->header.version = RP1_GPCLK_UAPI_ABI_V2;
 	request->lease_id = lease;
 	request->operation = operation;
 	request->expected_route = RP1_GPCLK_ROUTE_GPIO4;
@@ -753,7 +750,7 @@ static void setup_tone(struct rp1_gpclk_submit_tone_v2 *request,
 
 static void test_tone_continuous_lifecycle(void)
 {
-	struct rp1_gpclk_submit_tone_v2 request;
+	struct rp1_gpclk_submit_tone request;
 	struct rp1_gpclk_core core;
 	__u64 lease;
 
@@ -779,7 +776,7 @@ static void test_tone_continuous_lifecycle(void)
 
 static void test_tone_finite_boundaries_and_completion(void)
 {
-	struct rp1_gpclk_submit_tone_v2 request;
+	struct rp1_gpclk_submit_tone request;
 	struct rp1_gpclk_core core;
 	struct rp1_gpclk_core before;
 	__u64 lease;
@@ -810,7 +807,7 @@ static void test_tone_finite_boundaries_and_completion(void)
 
 static void test_tone_fail_closed_matrix(void)
 {
-	struct rp1_gpclk_submit_tone_v2 request;
+	struct rp1_gpclk_submit_tone request;
 	struct rp1_gpclk_core core;
 	struct rp1_gpclk_core before;
 	__u64 lease;
@@ -824,7 +821,7 @@ static void test_tone_fail_closed_matrix(void)
 	CHECK(memcmp(&before, &core, sizeof(core)) == 0); \
 } while (0)
 	EXPECT_TONE_INVALID(request.header.size--);
-	EXPECT_TONE_INVALID(request.header.version = RP1_GPCLK_UAPI_ABI_V1);
+	EXPECT_TONE_INVALID(request.header.reserved = 1);
 	EXPECT_TONE_INVALID(request.header.flags = 1);
 	EXPECT_TONE_INVALID(request.operation = RP1_GPCLK_TONE_OPERATION_INVALID);
 	EXPECT_TONE_INVALID(request.expected_route = RP1_GPCLK_ROUTE_GPIO20);

@@ -81,13 +81,16 @@ require(fixtures["rp1-gpclk-gpio20-route-mismatch.dts"],
         ('wsprrypi,route = <1>', 'wsprrypi,pin = <20>'), "mismatch fixture")
 
 digest = hashlib.sha256(HEADER_PATH.read_bytes()).hexdigest()
-if IDENTITY != {"SPDX-License-Identifier": "MIT", "abi": 4,
+if IDENTITY != {"SPDX-License-Identifier": "MIT",
                 "path": "include/uapi/linux/rp1_gpclk.h", "sha256": digest}:
     raise SystemExit("current UAPI identity does not match canonical header")
-require(HEADER, ("RP1_GPCLK_UAPI_ABI_V1 1U", "RP1_GPCLK_UAPI_ABI_V2 2U", "RP1_GPCLK_UAPI_ABI_V3 3U", "RP1_GPCLK_UAPI_ABI_V4 4U",
-                 "RP1_GPCLK_IOC_MAGIC 0xb8",
+require(HEADER, ("RP1_GPCLK_IOC_MAGIC 0xb8",
                  "RP1_GPCLK_ROUTE_GPIO4 = 1", "RP1_GPCLK_ROUTE_GPIO20 = 2"),
-        "frozen UAPI")
+        "canonical UAPI")
+for legacy in ("UAPI_ABI_V", "_v1", "_v2", "_v3", "_v4",
+               "IOC_QUERY_V", "IOC_ACQUIRE_V", "IOC_RELEASE_V"):
+    if legacy in HEADER:
+        raise SystemExit(f"legacy UAPI token remains: {legacy}")
 
 if SCHEMA["properties"]["defaultState"]["const"] != "Unavailable":
     raise SystemExit("manifest default is not fail-closed")

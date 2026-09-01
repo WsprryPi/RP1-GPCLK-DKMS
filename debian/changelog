@@ -2,8 +2,9 @@ rp1-gpclk-dkms (0.9.0-1) UNRELEASED; urgency=medium
 
   * Provide the current source-development DKMS module and route-neutral
     installation workflow for Raspberry Pi 5.
-  * Preserve ABI v4, explicit GPIO4 and GPIO20 administration, output-disabled
-    installation, rollback records, and operator-controlled compatibility.
+  * Provide one canonical unreleased UAPI, explicit GPIO4 and GPIO20
+    administration, output-disabled installation, rollback records, and
+    operator-controlled compatibility.
   * Defer release metadata and publication until the canonical release is
     prepared from the reviewed development source.
 

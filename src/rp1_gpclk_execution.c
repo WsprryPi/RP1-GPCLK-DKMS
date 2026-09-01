@@ -46,8 +46,8 @@ struct rp1_gpclk_execution_plan {
 	__u32 tone_operation;
 	__u64 tone_duration_ns;
 	__u64 expected_frame_duration_ns;
-	struct rp1_gpclk_tone_v1 tones[RP1_GPCLK_MAX_TONES];
-	struct rp1_gpclk_event_v1 events[RP1_GPCLK_MAX_EVENTS];
+	struct rp1_gpclk_tone tones[RP1_GPCLK_MAX_TONES];
+	struct rp1_gpclk_event events[RP1_GPCLK_MAX_EVENTS];
 	unsigned char symbols[RP1_GPCLK_WSPR_SYMBOLS];
 };
 
@@ -590,7 +590,7 @@ static int rp1_gpclk_sleep_or_stop(struct rp1_gpclk_device *device,
 
 static int rp1_gpclk_run_descriptor(struct rp1_gpclk_device *device,
 				    struct rp1_gpclk_execution_context *context,
-				    const struct rp1_gpclk_tone_v1 *tone,
+				    const struct rp1_gpclk_tone *tone,
 				    __u32 *words, dma_addr_t words_dma,
 				    size_t writes, __u64 duration_ns,
 				    __u32 *expected)
@@ -915,8 +915,8 @@ void rp1_gpclk_execution_activate(struct rp1_gpclk_device *device)
 
 int rp1_gpclk_execution_submit_wspr(
 	struct rp1_gpclk_device *device, __u64 owner,
-	struct rp1_gpclk_submit_wspr_v1 *request,
-	const struct rp1_gpclk_tone_v1 *tones, const unsigned char *symbols)
+	struct rp1_gpclk_submit_wspr *request,
+	const struct rp1_gpclk_tone *tones, const unsigned char *symbols)
 {
 	struct rp1_gpclk_execution_plan *plan;
 	int result;
@@ -959,9 +959,9 @@ int rp1_gpclk_execution_submit_wspr(
 
 int rp1_gpclk_execution_submit_events(
 	struct rp1_gpclk_device *device, __u64 owner,
-	struct rp1_gpclk_submit_events_v1 *request,
-	const struct rp1_gpclk_tone_v1 *tones,
-	const struct rp1_gpclk_event_v1 *events)
+	struct rp1_gpclk_submit_events *request,
+	const struct rp1_gpclk_tone *tones,
+	const struct rp1_gpclk_event *events)
 {
 	struct rp1_gpclk_execution_plan *plan;
 	__u32 index;
@@ -1013,7 +1013,7 @@ int rp1_gpclk_execution_submit_events(
 
 int rp1_gpclk_execution_submit_tone(
 	struct rp1_gpclk_device *device, __u64 owner,
-	struct rp1_gpclk_submit_tone_v2 *request)
+	struct rp1_gpclk_submit_tone *request)
 {
 	struct rp1_gpclk_execution_plan *plan;
 	size_t writes;

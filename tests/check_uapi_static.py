@@ -6,10 +6,18 @@ u=(R/'include/uapi/linux/rp1_gpclk.h').read_text()
 d=(R/'src/rp1_gpclk_uapi_dispatch.c').read_text()
 e=(R/'src/rp1_gpclk_execution.c').read_text()
 c=(R/'src/rp1_gpclk_core.c').read_text()
-for token in ('RP1_GPCLK_IOC_QUERY_V2','RP1_GPCLK_IOC_SUBMIT_TONE_V2','RP1_GPCLK_IOC_RELEASE_V2','RP1_GPCLK_CAP_TONE_CONTINUOUS','RP1_GPCLK_CAP_TONE_FINITE'):
+contract=(R/'docs/contracts/uapi.md').read_text()
+for legacy_document in ('uapi-v1.md','uapi-v2.md','uapi-v3-passive-snapshot.md',
+                        'uapi-v4-operation-live.md'):
+    assert not (R/'docs/contracts'/legacy_document).exists()
+for legacy_token in ('RP1_GPCLK_UAPI_ABI_V','RP1_GPCLK_IOC_QUERY_V2',
+                     'RP1_GPCLK_IOC_ACQUIRE_V4','RP1_GPCLK_IOC_RELEASE_V2',
+                     'RP1_GPCLK_IOC_GET_SNAPSHOT_V3','struct rp1_gpclk_query_v'):
+    assert legacy_token not in u
+assert 'no legacy layouts, compatibility commands, version' in contract
+for token in ('RP1_GPCLK_IOC_QUERY','RP1_GPCLK_IOC_SUBMIT_TONE','RP1_GPCLK_IOC_RELEASE','RP1_GPCLK_CAP_TONE_CONTINUOUS','RP1_GPCLK_CAP_TONE_FINITE'):
     assert token in u
-assert 'request.capabilities = RP1_GPCLK_V1_CAPABILITIES' in d
-assert 'request.capabilities = RP1_GPCLK_V2_CAPABILITIES' in d
+assert d.count('request.capabilities = RP1_GPCLK_CAPABILITIES') == 2
 assert 'complete_all(&device->dma_done);' not in e
 assert "expected != 0 && ret != -ECANCELED" in e
 assert "completion_done(&context->device->execution_done)" in d
@@ -43,4 +51,4 @@ assert '#define RP1_GPCLK_MODULE_VERSION "0.9.0"' in (R/'include/rp1_gpclk/versi
 assert '#define RP1_GPCLK_TONE_DURATION_NS_MIN 1000000ULL' in u
 assert '#define RP1_GPCLK_TONE_DURATION_NS_MAX 120000000000ULL' in u
 assert 1_000_000 <= 1_000_000_000 <= 120_000_000_000
-print('ABI v2 TONE static safety contract: PASS')
+print('canonical UAPI static safety contract: PASS')

@@ -48,7 +48,7 @@ struct Plan {
 	unsigned harmonic;
 	double planned_fundamental_hz;
 	double planned_rf_hz;
-	rp1_gpclk_tone_v1 tone;
+	rp1_gpclk_tone tone;
 };
 struct Measurement {
 	double raw_hz;
@@ -118,10 +118,9 @@ Options options(int argc, char **argv)
 			usage(argv[0], "frequency must be within 135700..148000000 Hz");
 	return out;
 }
-void set_header(rp1_gpclk_uapi_header &header, size_t size, uint16_t version)
+void set_header(rp1_gpclk_uapi_header &header, size_t size)
 {
 	header.size = static_cast<uint16_t>(size);
-	header.version = version;
 }
 Plan plan(double requested, long double parent, double maximum_direct)
 {
@@ -173,28 +172,28 @@ public:
 		if (fd_ < 0) throw std::runtime_error(std::string("open: ") + strerror(errno));
 	}
 	~Endpoint() { if (fd_ >= 0) close(fd_); }
-	void transmit(const rp1_gpclk_tone_v1 &tone, double requested)
+	void transmit(const rp1_gpclk_tone &tone, double requested)
 	{
-		rp1_gpclk_query_v2 query{};
-		rp1_gpclk_acquire_v4 acquire{};
-		rp1_gpclk_submit_tone_v2 submit{};
-		rp1_gpclk_state_v1 state{};
-		rp1_gpclk_release_v2 release{};
-		set_header(query.header, sizeof(query), RP1_GPCLK_UAPI_ABI_V2);
-		checked_ioctl(fd_, RP1_GPCLK_IOC_QUERY_V2, &query, "QUERY_V2");
+		rp1_gpclk_query query{};
+		rp1_gpclk_acquire acquire{};
+		rp1_gpclk_submit_tone submit{};
+		rp1_gpclk_state state{};
+		rp1_gpclk_release release{};
+		set_header(query.header, sizeof(query));
+		checked_ioctl(fd_, RP1_GPCLK_IOC_QUERY, &query, "QUERY");
 		if (query.route != RP1_GPCLK_ROUTE_GPIO20 || !query.build_id[0] ||
 		    !query.compatibility_id[0])
 			throw std::runtime_error("GPIO20 development identity unavailable");
-		set_header(acquire.header, sizeof(acquire), RP1_GPCLK_UAPI_ABI_V4);
+		set_header(acquire.header, sizeof(acquire));
 		acquire.expected_route = RP1_GPCLK_ROUTE_GPIO20;
-		acquire.authorization_flags = RP1_GPCLK_ACQUIRE_V4_F_AUTHORIZE_LIVE;
+		acquire.authorization_flags = RP1_GPCLK_ACQUIRE_F_AUTHORIZE_LIVE;
 		acquire.required_capabilities = RP1_GPCLK_CAP_LIVE_ELIGIBLE |
 			RP1_GPCLK_CAP_OPERATION_LIVE_GATE | RP1_GPCLK_CAP_TONE_FINITE;
 		for (size_t i = 0; i < sizeof(acquire.authorization_digest); ++i)
 			acquire.authorization_digest[i] = static_cast<uint8_t>(0x5aU ^ i ^
 				static_cast<uint64_t>(llround(requested)));
-		checked_ioctl(fd_, RP1_GPCLK_IOC_ACQUIRE_V4, &acquire, "ACQUIRE_V4");
-		set_header(submit.header, sizeof(submit), RP1_GPCLK_UAPI_ABI_V2);
+		checked_ioctl(fd_, RP1_GPCLK_IOC_ACQUIRE, &acquire, "ACQUIRE");
+		set_header(submit.header, sizeof(submit));
 		submit.lease_id = acquire.lease_id;
 		submit.tone = tone;
 		submit.duration_ns = kToneDurationNs;
@@ -203,11 +202,11 @@ public:
 		submit.fractional_bits = RP1_GPCLK_FRACTIONAL_BITS;
 		submit.tick_divider = RP1_GPCLK_TICK_DIVIDER;
 		submit.drive_ma = RP1_GPCLK_DRIVE_MA_2;
-		checked_ioctl(fd_, RP1_GPCLK_IOC_SUBMIT_TONE_V2, &submit, "TONE_V2");
+		checked_ioctl(fd_, RP1_GPCLK_IOC_SUBMIT_TONE, &submit, "SUBMIT_TONE");
 		for (;;) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			state = {};
-			set_header(state.header, sizeof(state), RP1_GPCLK_UAPI_ABI_V1);
+			set_header(state.header, sizeof(state));
 			state.lease_id = acquire.lease_id;
 			state.generation = submit.generation;
 			checked_ioctl(fd_, RP1_GPCLK_IOC_GET_STATE, &state, "GET_STATE");
@@ -216,14 +215,14 @@ public:
 		if (state.state != RP1_GPCLK_STATE_COMPLETE || state.cleanup_fault ||
 		    state.terminal_reason != RP1_GPCLK_REASON_COMPLETE)
 			throw std::runtime_error("finite tone did not complete cleanly");
-		set_header(release.header, sizeof(release), RP1_GPCLK_UAPI_ABI_V2);
+		set_header(release.header, sizeof(release));
 		release.lease_id = acquire.lease_id;
 		release.generation = submit.generation;
 		for (unsigned attempt = 0;; ++attempt) {
-			if (!ioctl(fd_, RP1_GPCLK_IOC_RELEASE_V2, &release))
+			if (!ioctl(fd_, RP1_GPCLK_IOC_RELEASE, &release))
 				break;
 			if (errno != EALREADY || attempt == 49)
-				throw std::runtime_error(std::string("RELEASE_V2: ") +
+				throw std::runtime_error(std::string("RELEASE: ") +
 					strerror(errno));
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}

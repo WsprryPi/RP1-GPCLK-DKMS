@@ -103,8 +103,8 @@ preservation and startup policy. They do not qualify systemd behavior, kernel
 overlay removal, GPIO, RF or exact-target deployment.
 
 Separately authorized target validation should start with coherent identities,
-GPIO20 and output disabled. Check running/stopped service restoration, GPIO20 to
-GPIO4 to GPIO20 switching with no output, deliberate restart failure and explicit
-restoration, service/unit preservation, and final GPIO20 idle state. Record route,
+`GPIO20` and output disabled. Check running/stopped service restoration, `GPIO20` to
+`GPIO4` to `GPIO20` switching with no output, deliberate restart failure and explicit
+restoration, service/unit preservation, and final `GPIO20` idle state. Record route,
 service PID/readiness, configuration, clock/DMA quiescence and both journals.
 Do not resume transmission or infer RF qualification from these tests.

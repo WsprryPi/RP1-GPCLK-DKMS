@@ -7,7 +7,7 @@
   "enrollmentPath": "/etc/rp1-gpclk-dkms/enrollment.json",
   "enrollmentMode": "0600",
   "compatibilityStates": ["Qualified", "Experimental", "Compatible-unqualified", "Unavailable", "Rejected"],
-  "identityFields": ["compatibilityEntryId", "compatibilityManifestSha256", "moduleRelease", "moduleSha256", "uapiAbi", "uapiHeaderSha256", "kernelRelease", "kernelConfigSha256", "baseDtSha256", "firmwareIdentity", "overlaySourceSha256", "overlayDtboSha256", "route", "signingIdentity"],
+  "identityFields": ["compatibilityEntryId", "compatibilityManifestSha256", "moduleRelease", "moduleSha256", "uapiHeaderSha256", "kernelRelease", "kernelConfigSha256", "baseDtSha256", "firmwareIdentity", "overlaySourceSha256", "overlayDtboSha256", "route", "signingIdentity"],
   "stateOrder": ["installed", "available", "enrolled", "liveEligible", "active"],
   "qualifiedRequires": ["routeSelected", "operatorAuthorized"],
   "experimentalRequires": ["routeSelected", "operatorAuthorized", "currentEnrollment"],

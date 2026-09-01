@@ -11,9 +11,9 @@ The runtime controller continues to own its overlay and exclude removal while
 the consumer is attached. Neither its UAPI nor its consumer interlock changes.
 The consumer remains loaded with `live_output=0`.
 
-ABI v4 supports operation-scoped live acquisition on this consumer.
+The canonical UAPI supports operation-scoped live acquisition on this consumer.
 The load parameter blocks the global output path;
-it does not disable ABI-v4 authorization. No new permit, duration cap, or mode
+it does not disable operation-scoped authorization. No new permit, duration cap, or mode
 restriction is introduced here.
 
 Schema 3 supports `idle` and `reconcile-output`, each with an explicit gpio4 or gpio20
@@ -27,7 +27,7 @@ The existing module acquisition closes the observation-to-acquisition race.
 WsprryPi uses `idle` during startup without clearing its output inhibit. Its
 existing development-operation path uses `reconcile-output` before checking the
 operator confirmation and consuming its existing one-use application authorization.
-The existing ABI-v4 lease, finite request, cancellation, owner-close cleanup and
+The existing UAPI lease, finite request, cancellation, owner-close cleanup and
 terminal observation remain responsible for execution. Route reconciliation is
 not itself output authorization or RF qualification.
 

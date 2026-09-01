@@ -17,8 +17,8 @@
     "route":{"enum":["GPIO4","GPIO20"]},"mode":{"enum":["WSPR","QRSS","FSKCW","DFCW"]},
     "state":{"enum":["Qualified","Experimental","Compatible-unqualified","Unavailable","Rejected"]},
     "releaseModule":{"type":"object","additionalProperties":false,
-      "required":["name","release","sourceCommit","sourceArchiveSha256","uapiAbi","uapiHeaderSha256"],
-      "properties":{"name":{"const":"rp1_gpclk_dkms"},"release":{"$ref":"#/$defs/nonempty"},"sourceCommit":{"$ref":"#/$defs/sha1"},"sourceArchiveSha256":{"$ref":"#/$defs/sha256"},"uapiAbi":{"const":1},"uapiHeaderSha256":{"$ref":"#/$defs/sha256"}}},
+      "required":["name","release","sourceCommit","sourceArchiveSha256","uapiHeaderSha256"],
+      "properties":{"name":{"const":"rp1_gpclk_dkms"},"release":{"$ref":"#/$defs/nonempty"},"sourceCommit":{"$ref":"#/$defs/sha1"},"sourceArchiveSha256":{"$ref":"#/$defs/sha256"},"uapiHeaderSha256":{"$ref":"#/$defs/sha256"}}},
     "kernelConfig":{"type":"object","additionalProperties":false,"required":["sha256","selected"],
       "properties":{"sha256":{"$ref":"#/$defs/sha256"},"selected":{"type":"object","minProperties":1,"additionalProperties":{"enum":["y","m","n"]}}}},
     "signature":{"type":"object","additionalProperties":false,"required":["policy","status","identity","keyFingerprint"],
@@ -33,8 +33,8 @@
     "evidence":{"type":"object","additionalProperties":false,"required":["id","sha256","routes","modes","classes"],
       "properties":{"id":{"$ref":"#/$defs/nonempty"},"sha256":{"$ref":"#/$defs/sha256"},"routes":{"type":"array","minItems":1,"uniqueItems":true,"items":{"$ref":"#/$defs/route"}},"modes":{"type":"array","minItems":1,"uniqueItems":true,"items":{"$ref":"#/$defs/mode"}},"classes":{"type":"array","minItems":1,"uniqueItems":true,"items":{"enum":["build","clock-disabled","timing","cleanup","recovery","rf"]}}}},
     "entry":{"type":"object","additionalProperties":false,
-      "required":["id","state","liveEligible","reason","route","supportedDriveMa","supportedModes","uapiAbi","uapiHeaderSha256","build","runtime","overlay","evidence"],
-      "properties":{"id":{"$ref":"#/$defs/nonempty"},"state":{"$ref":"#/$defs/state"},"liveEligible":{"type":"boolean"},"reason":{"$ref":"#/$defs/nonempty"},"route":{"$ref":"#/$defs/route"},"supportedDriveMa":{"type":"integer","minimum":2,"maximum":16},"supportedModes":{"type":"array","minItems":1,"uniqueItems":true,"items":{"$ref":"#/$defs/mode"}},"uapiAbi":{"const":1},"uapiHeaderSha256":{"$ref":"#/$defs/sha256"},"build":{"$ref":"#/$defs/buildIdentity"},"runtime":{"$ref":"#/$defs/runtimeIdentity"},"overlay":{"$ref":"#/$defs/overlay"},"evidence":{"type":"array","minItems":1,"items":{"$ref":"#/$defs/evidence"}}},
+      "required":["id","state","liveEligible","reason","route","supportedDriveMa","supportedModes","uapiHeaderSha256","build","runtime","overlay","evidence"],
+      "properties":{"id":{"$ref":"#/$defs/nonempty"},"state":{"$ref":"#/$defs/state"},"liveEligible":{"type":"boolean"},"reason":{"$ref":"#/$defs/nonempty"},"route":{"$ref":"#/$defs/route"},"supportedDriveMa":{"type":"integer","minimum":2,"maximum":16},"supportedModes":{"type":"array","minItems":1,"uniqueItems":true,"items":{"$ref":"#/$defs/mode"}},"uapiHeaderSha256":{"$ref":"#/$defs/sha256"},"build":{"$ref":"#/$defs/buildIdentity"},"runtime":{"$ref":"#/$defs/runtimeIdentity"},"overlay":{"$ref":"#/$defs/overlay"},"evidence":{"type":"array","minItems":1,"items":{"$ref":"#/$defs/evidence"}}},
       "allOf":[
         {"if":{"properties":{"state":{"const":"Qualified"}},"required":["state"]},"then":{"properties":{"liveEligible":{"const":true},"evidence":{"allOf":[{"$ref":"#/$defs/hasBuild"},{"$ref":"#/$defs/hasClock"},{"$ref":"#/$defs/hasTiming"},{"$ref":"#/$defs/hasCleanup"},{"$ref":"#/$defs/hasRecovery"},{"$ref":"#/$defs/hasRf"}]}}}},
         {"if":{"properties":{"state":{"enum":["Compatible-unqualified","Unavailable","Rejected"]}},"required":["state"]},"then":{"properties":{"liveEligible":{"const":false}}}}

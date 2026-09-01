@@ -84,7 +84,7 @@ EXPORT_SYMBOL_GPL(rp1_route_consumer_detach);
 
 static long route_ioctl(struct file *file, unsigned int command, unsigned long arg)
 {
-	struct rp1_route_admin request, result = { .abi = RP1_ROUTE_ADMIN_ABI };
+	struct rp1_route_admin request, result = { 0 };
 	void __user *address = (void __user *)arg;
 	int ret = 0, id;
 	unsigned int route;
@@ -95,7 +95,7 @@ static long route_ioctl(struct file *file, unsigned int command, unsigned long a
 		return -ENOTTY;
 	if (copy_from_user(&request, address, sizeof(request)))
 		return -EFAULT;
-	if (request.abi != RP1_ROUTE_ADMIN_ABI || request.reserved ||
+	if (request.reserved0 || request.reserved ||
 	    request.overlay_id || request.last_error || request.active_route ||
 	    request.flags || request.reserved2[0] || request.reserved2[1] ||
 	    request.operation > RP1_ROUTE_REMOVE ||

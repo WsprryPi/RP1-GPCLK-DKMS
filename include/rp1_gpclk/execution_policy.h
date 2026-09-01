@@ -13,10 +13,10 @@
 #define RP1_GPCLK_DIVIDER_INTEGER_MAX 65535ULL
 #define RP1_GPCLK_DIVIDER_Q16_MAX 0xffffffffULL
 
-int rp1_gpclk_execution_tones_valid(const struct rp1_gpclk_tone_v1 *tones,
+int rp1_gpclk_execution_tones_valid(const struct rp1_gpclk_tone *tones,
 				    __u32 tone_count, __u32 drive_ma);
 int rp1_gpclk_execution_event_writes(__u64 duration_ns, size_t *writes);
-int rp1_gpclk_execution_fill_words(const struct rp1_gpclk_tone_v1 *tone,
+int rp1_gpclk_execution_fill_words(const struct rp1_gpclk_tone *tone,
 				   __u32 *words, size_t count);
 
 #endif /* RP1_GPCLK_EXECUTION_POLICY_H */

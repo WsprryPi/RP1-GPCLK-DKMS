@@ -6,7 +6,7 @@
 
 #include "rp1_gpclk/execution_policy.h"
 
-int rp1_gpclk_execution_tones_valid(const struct rp1_gpclk_tone_v1 *tones,
+int rp1_gpclk_execution_tones_valid(const struct rp1_gpclk_tone *tones,
 				    __u32 tone_count, __u32 drive_ma)
 {
 	__u64 integer;
@@ -53,7 +53,7 @@ int rp1_gpclk_execution_event_writes(__u64 duration_ns, size_t *writes)
 	return 0;
 }
 
-int rp1_gpclk_execution_fill_words(const struct rp1_gpclk_tone_v1 *tone,
+int rp1_gpclk_execution_fill_words(const struct rp1_gpclk_tone *tone,
 				   __u32 *words, size_t count)
 {
 	__u64 period;

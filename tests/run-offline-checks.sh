@@ -13,7 +13,7 @@ trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
 python3 "$repo_dir/tests/check_spdx.py"
 python3 "$repo_dir/tests/check_test_inventory.py"
 python3 "$repo_dir/tests/check_uapi_identity.py"
-python3 "$repo_dir/tests/check_tone_v2_static.py"
+python3 "$repo_dir/tests/check_uapi_static.py"
 python3 "$repo_dir/tests/check_clock_disabled_source_boundary.py"
 python3 "$repo_dir/tests/check_pll_sys_parent_contract.py"
 python3 "$repo_dir/tests/check_build_contract.py"

@@ -65,8 +65,8 @@ struct rp1_gpclk_core {
     __u32 plan_tone_count;
     __u32 plan_event_count;
     __u32 plan_symbol_count;
-    struct rp1_gpclk_tone_v1 plan_tones[RP1_GPCLK_MAX_TONES];
-    struct rp1_gpclk_event_v1 plan_events[RP1_GPCLK_MAX_EVENTS];
+    struct rp1_gpclk_tone plan_tones[RP1_GPCLK_MAX_TONES];
+    struct rp1_gpclk_event plan_events[RP1_GPCLK_MAX_EVENTS];
     unsigned char plan_symbols[RP1_GPCLK_WSPR_SYMBOLS];
 #ifdef RP1_GPCLK_HOST_TEST
     __u32 fault_point;
@@ -81,15 +81,15 @@ int rp1_gpclk_core_acquire(struct rp1_gpclk_core *core, __u64 owner_id,
                           __u64 *lease_id);
 int rp1_gpclk_core_submit_wspr(
     struct rp1_gpclk_core *core, __u64 owner_id,
-    struct rp1_gpclk_submit_wspr_v1 *request,
-    const struct rp1_gpclk_tone_v1 *tones, const unsigned char *symbols);
+    struct rp1_gpclk_submit_wspr *request,
+    const struct rp1_gpclk_tone *tones, const unsigned char *symbols);
 int rp1_gpclk_core_submit_events(
     struct rp1_gpclk_core *core, __u64 owner_id,
-    struct rp1_gpclk_submit_events_v1 *request,
-    const struct rp1_gpclk_tone_v1 *tones,
-    const struct rp1_gpclk_event_v1 *events);
+    struct rp1_gpclk_submit_events *request,
+    const struct rp1_gpclk_tone *tones,
+    const struct rp1_gpclk_event *events);
 int rp1_gpclk_core_submit_tone(struct rp1_gpclk_core *core, __u64 owner_id,
-                              struct rp1_gpclk_submit_tone_v2 *request);
+                              struct rp1_gpclk_submit_tone *request);
 int rp1_gpclk_core_progress(struct rp1_gpclk_core *core, __u64 owner_id,
                            __u64 lease_id, __u64 generation);
 int rp1_gpclk_core_stop(struct rp1_gpclk_core *core, __u64 owner_id,

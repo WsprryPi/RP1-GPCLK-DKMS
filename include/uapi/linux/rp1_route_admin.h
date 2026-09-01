@@ -3,7 +3,6 @@
 #define RP1_ROUTE_ADMIN_H
 #include <linux/types.h>
 #include <linux/ioctl.h>
-#define RP1_ROUTE_ADMIN_ABI 1U
 #define RP1_ROUTE_STATUS 0U
 #define RP1_ROUTE_APPLY 1U
 #define RP1_ROUTE_REMOVE 2U
@@ -12,7 +11,7 @@
 #define RP1_ROUTE_PINNED 4U
 /* Input output fields must be zero. STATUS requires zero session/generation. */
 struct rp1_route_admin {
-	__u32 abi;
+	__u32 reserved0;
 	__u32 operation;
 	__u32 route;
 	__u32 reserved;

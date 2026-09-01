@@ -15,13 +15,12 @@
 #define PARENT_HZ 49997248.0L
 #define PERIOD 66792U
 
-static void header(struct rp1_gpclk_uapi_header *value, size_t size, uint16_t version)
+static void header(struct rp1_gpclk_uapi_header *value, size_t size)
 {
 	value->size = (uint16_t)size;
-	value->version = version;
 }
 
-static void tone(struct rp1_gpclk_tone_v1 *out, long double frequency)
+static void tone(struct rp1_gpclk_tone *out, long double frequency)
 {
 	long double ideal = PARENT_HZ * 65536.0L / frequency;
 	uint64_t lower = (uint64_t)floorl(ideal);
@@ -38,11 +37,11 @@ static void tone(struct rp1_gpclk_tone_v1 *out, long double frequency)
 
 int main(int argc, char **argv)
 {
-	struct rp1_gpclk_query_v2 query = { 0 };
-	struct rp1_gpclk_acquire_v1 acquire = { 0 };
-	struct rp1_gpclk_submit_tone_v2 submit = { 0 };
-	struct rp1_gpclk_state_v1 state = { 0 };
-	struct rp1_gpclk_release_v2 release = { 0 };
+	struct rp1_gpclk_query query = { 0 };
+	struct rp1_gpclk_acquire acquire = { 0 };
+	struct rp1_gpclk_submit_tone submit = { 0 };
+	struct rp1_gpclk_state_request state = { 0 };
+	struct rp1_gpclk_release release = { 0 };
 	const char *route_environment = getenv("RP1_GPCLK_TEST_ROUTE");
 	const char *compatibility_id;
 	uint32_t expected_route = RP1_GPCLK_ROUTE_GPIO20;
@@ -64,18 +63,22 @@ int main(int argc, char **argv)
 		RP1_GPCLK_TONE_OPERATION_FINITE : RP1_GPCLK_TONE_OPERATION_CONTINUOUS;
 	fd = open("/dev/rp1-gpclk", O_RDONLY | O_CLOEXEC);
 	if (fd < 0) { perror("open"); return 1; }
-	header(&query.header, sizeof(query), RP1_GPCLK_UAPI_ABI_V2);
-	if (ioctl(fd, RP1_GPCLK_IOC_QUERY_V2, &query)) { perror("QUERY_V2"); return 1; }
+	header(&query.header, sizeof(query));
+	if (ioctl(fd, RP1_GPCLK_IOC_QUERY, &query)) { perror("QUERY"); return 1; }
 	if (query.route != expected_route || strcmp(query.build_id, "0.9.0") ||
 	    strcmp(query.compatibility_id, compatibility_id) ||
 	    !(query.capabilities & RP1_GPCLK_CAP_LIVE_ELIGIBLE))
 		return 1;
-	header(&acquire.header, sizeof(acquire), RP1_GPCLK_UAPI_ABI_V1);
+	header(&acquire.header, sizeof(acquire));
 	acquire.expected_route = expected_route;
+	acquire.authorization_flags = RP1_GPCLK_ACQUIRE_F_AUTHORIZE_LIVE;
 	acquire.required_capabilities = RP1_GPCLK_CAP_LIVE_ELIGIBLE |
+		RP1_GPCLK_CAP_OPERATION_LIVE_GATE |
 		RP1_GPCLK_CAP_TONE_CONTINUOUS | RP1_GPCLK_CAP_TONE_FINITE;
+	memset(acquire.authorization_digest, 0x5a,
+	       sizeof(acquire.authorization_digest));
 	if (ioctl(fd, RP1_GPCLK_IOC_ACQUIRE, &acquire)) { perror("ACQUIRE"); return 1; }
-	header(&submit.header, sizeof(submit), RP1_GPCLK_UAPI_ABI_V2);
+	header(&submit.header, sizeof(submit));
 	submit.lease_id = acquire.lease_id;
 	tone(&submit.tone, 10140200.0L);
 	submit.duration_ns = operation == RP1_GPCLK_TONE_OPERATION_FINITE ?
@@ -85,12 +88,12 @@ int main(int argc, char **argv)
 	submit.fractional_bits = RP1_GPCLK_FRACTIONAL_BITS;
 	submit.tick_divider = RP1_GPCLK_TICK_DIVIDER;
 	submit.drive_ma = RP1_GPCLK_DRIVE_MA_2;
-	if (ioctl(fd, RP1_GPCLK_IOC_SUBMIT_TONE_V2, &submit)) { perror("TONE_V2"); return 1; }
+	if (ioctl(fd, RP1_GPCLK_IOC_SUBMIT_TONE, &submit)) { perror("SUBMIT_TONE"); return 1; }
 	if (operation == RP1_GPCLK_TONE_OPERATION_CONTINUOUS) {
-		struct rp1_gpclk_stop_v1 stop = { 0 };
+		struct rp1_gpclk_stop stop = { 0 };
 		struct timespec delay = { .tv_sec = 1 };
 		nanosleep(&delay, NULL);
-		header(&stop.header, sizeof(stop), RP1_GPCLK_UAPI_ABI_V1);
+		header(&stop.header, sizeof(stop));
 		stop.lease_id = acquire.lease_id;
 		stop.generation = submit.generation;
 		if (ioctl(fd, RP1_GPCLK_IOC_STOP, &stop)) { perror("STOP"); return 1; }
@@ -98,7 +101,7 @@ int main(int argc, char **argv)
 	for (;;) {
 		struct timespec delay = { .tv_nsec = 10000000L };
 		memset(&state, 0, sizeof(state));
-		header(&state.header, sizeof(state), RP1_GPCLK_UAPI_ABI_V1);
+		header(&state.header, sizeof(state));
 		state.lease_id = acquire.lease_id;
 		state.generation = submit.generation;
 		if (ioctl(fd, RP1_GPCLK_IOC_GET_STATE, &state)) { perror("STATE"); return 1; }
@@ -114,10 +117,10 @@ int main(int argc, char **argv)
 	    state.terminal_reason != (operation == RP1_GPCLK_TONE_OPERATION_FINITE ?
 		RP1_GPCLK_REASON_COMPLETE : RP1_GPCLK_REASON_STOPPED))
 		return 1;
-	header(&release.header, sizeof(release), RP1_GPCLK_UAPI_ABI_V2);
+	header(&release.header, sizeof(release));
 	release.lease_id = acquire.lease_id;
 	release.generation = submit.generation;
-	if (ioctl(fd, RP1_GPCLK_IOC_RELEASE_V2, &release)) { perror("RELEASE_V2"); return 1; }
+	if (ioctl(fd, RP1_GPCLK_IOC_RELEASE, &release)) { perror("RELEASE"); return 1; }
 	close(fd);
 	return 0;
 }

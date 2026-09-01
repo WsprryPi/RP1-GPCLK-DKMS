@@ -5,7 +5,7 @@
 ## Scope
 
 This contract defines the evidence boundary between an external WsprryPi
-Qualification Harness, WsprryPi, and the RP1-GPCLK-DKMS 0.9.0 development
+Qualification Harness, WsprryPi, and the `RP1-GPCLK-DKMS` `0.9.0` development
 module. It prepares later product integration and qualification; it does not
 authorize installation, target access, module or overlay changes, endpoint
 operation, GPIO output, receiver access, transmission, or RF activity.
@@ -15,7 +15,7 @@ script, `python -m` entry point, published schemas, maintained semantic
 validators, supported replay/fixture interfaces, and machine-readable result
 bundles. No WsprryPi or DKMS code may import undocumented Harness internals.
 
-The current module state is `Experimental`. GPIO4 and GPIO20 are separate
+The current module state is `Experimental`. `GPIO4` and `GPIO20` are separate
 independently attributable targets requiring exact-build qualification; identity,
 authorization, results, and retained evidence never transfer between them.
 
@@ -29,15 +29,15 @@ ordering or implicit defaults.
 - repository URL and absolute checkout path used for development evidence;
 - exact 40-hex source revision and whether tracked or untracked bytes differ;
 - module, DKMS, and intended Debian versions;
-- canonical UAPI ABI range and header SHA-256;
-- module ID, build ID, and route-specific compatibility ID from ABI-v2 QUERY;
+- canonical UAPI header path and SHA-256;
+- module ID, build ID, and route-specific compatibility ID from `QUERY`;
 - compatibility metadata path, ID, SHA-256, selected entry, state, reason, and
   `liveEligible` value;
 - source and installed module hashes, transform, vermagic, signer, signing
   policy, and actual installed module-file hash when an artifact exists; and
 - route overlay source, compiled DTBO, and installed DTBO hashes.
 
-Unreleased 0.9.0 source labels are development inputs, not a final package,
+Unreleased `0.9.0` source labels are development inputs, not a final package,
 tag, inventory, compatibility manifest, or consumer identity. An absent future
 package identity remains an explicit blocker rather than a fabricated value.
 
@@ -52,12 +52,13 @@ package identity remains an explicit blocker rather than a fabricated value.
 - exactly one enabled `rp1-gpclk-dkms-gpio4` or
   `rp1-gpclk-dkms-gpio20` endpoint, with the matching `wsprrypi,route`
   property;
-- exact GPIO4 r3 or GPIO20 r3 compatibility ID and `Experimental` state; and
+- exact `v0.9.0-pi5-gpio4` or `v0.9.0-pi5-gpio20` compatibility ID and
+  `Experimental` state; and
 - package route-manager transaction ID, status, boot IDs, configuration
   hashes, attribution, and reconciliation result.
 
 The route manager supplies configured and active route state. WsprryPi supplies
-requested and persisted state. ABI-v2 QUERY supplies the module-reported route
+requested and persisted state. `QUERY` supplies the module-reported route
 and compatibility identity. The DKMS diagnostics report independently records
 the live endpoint topology and agreement; none of these observations may be
 substituted for another.
@@ -65,13 +66,13 @@ substituted for another.
 ### Endpoint and operation
 
 - canonical endpoint `/dev/rp1-gpclk`, file identity and availability;
-- ABI-v2 capability mask including finite TONE, duration bounds, compatibility
+- capability mask including finite `TONE`, duration bounds, compatibility
   state/reason, and cleanup-fault latch;
 - WsprryPi parent revision, executable path, SHA-256, build metadata, component
   tree identity, backend, mode, band, exact output frequencies, route, drive,
   request and plan identities, and authorized plan digest;
 - endpoint ownership check before launch; acquired nonzero lease and strictly
-  increasing generation; RUNNING/DRAINING/terminal state and reason; current
+  increasing generation; `RUNNING`/`DRAINING`/terminal state and reason; current
   event; elapsed/remaining time; cancellation outcome; cleanup result; and
 - process exit, endpoint closure, lease release, GPIO-safe state, clock/DMA
   quiescence, cleanup latch, and terminal-silence observation.
@@ -103,7 +104,7 @@ The common readiness labels are `externally consumable`,
 `hardware-free exercised`, `live-plan ready`, `not ready`, and
 `not applicable`. Hardware-free results are not labelled qualified.
 
-For each of WSPR, Tone, QRSS, FSKCW, and DFCW, a readiness record covers:
+For each of `WSPR`, `TONE`, `QRSS`, `FSKCW`, and `DFCW`, a readiness record covers:
 
 1. application-plan construction;
 2. explicit mode parameters with no device defaults;
@@ -119,7 +120,7 @@ For each of WSPR, Tone, QRSS, FSKCW, and DFCW, a readiness record covers:
 12. a passing hardware-free rehearsal.
 
 Harness support alone does not make a WsprryPi mode `live-plan ready`. That
-label additionally requires an exact integrated WsprryPi execution path for DKMS 0.9.0,
+label additionally requires an exact integrated WsprryPi execution path for DKMS `0.9.0`,
 final artifact identities, operator window, receiver configuration, physical
 path, and cleanup contract.
 
@@ -142,7 +143,7 @@ path, and cleanup contract.
    WsprryPi through the plan-bound structured argument vector and authenticated
    helper. A pre-launch capture failure prevents output.
 7. Prove launch from authenticated process evidence plus a nonzero lease,
-   matching generation, and RUNNING state. A process start alone is
+   matching generation, and `RUNNING` state. A process start alone is
    insufficient.
 8. Enforce the kernel/request duration and Harness deadline. Cancellation
    names the exact generation, permits only bounded drain, and admits no
@@ -167,24 +168,24 @@ calibration applicability, spectral interpretation, and claim scope.
 
 An external full-mode campaign can contain five separate test definitions:
 
-1. finite carrier (`TONE`), never continuous TONE;
-2. WSPR;
-3. QRSS;
-4. FSKCW; and
-5. DFCW.
+1. finite carrier (`TONE`), never continuous `TONE`;
+2. `WSPR`;
+3. `QRSS`;
+4. `FSKCW`; and
+5. `DFCW`.
 
-QRSS, FSKCW, and DFCW are the three required QRSS-family modes. Each has its
+`QRSS`, `FSKCW`, and `DFCW` are the three required QRSS-family modes. Each has its
 own explicit mode parameters, plan identity, lifecycle result, capture and
 analysis evidence, cleanup result, and semantic validation. A passing carrier
 does not replace any mode test, and one keyed-mode result does not satisfy another.
 
-A finite carrier test uses ABI-v2 finite TONE and a kernel-enforced duration.
+A finite carrier test uses finite `TONE` and a kernel-enforced duration.
 The Harness and WsprryPi own campaign ordering and mode selection; DKMS adds no
 product-mode approval list. Resolve these run-specific values before execution:
 
 - WsprryPi revision/executable: `REQUIRED-BEFORE-LIVE`;
 - DKMS revision/module/artifact/manifest: `REQUIRED-BEFORE-LIVE`;
-- route: one of GPIO4 r3 or GPIO20 r3, independently authorized;
+- route: one of `GPIO4` or `GPIO20`, independently authorized;
 - transmitter host alias and current target identities: `REQUIRED-BEFORE-LIVE`;
 - receiver, calibration binding, connection, attenuation, load/antenna state,
   center/analysis frequency, sample rate, bandwidth, and gain:
@@ -210,7 +211,7 @@ Existing artifacts are accepted only through supported authenticated replay or
 intake. Missing, altered, partial, unauthenticated, unrelated, or wrong-route
 sources are rejected and never indexed. Retained evidence is not a new run.
 
-WsprryPi owns finite carrier, WSPR, QRSS, FSKCW, and DFCW product policy.
+WsprryPi owns finite carrier, `WSPR`, `QRSS`, `FSKCW`, and `DFCW` product policy.
 The DKMS adapter enforces capability, resource, lease, generation and cleanup
 contracts. No automatic fallback, `/dev/mem` access or alternate transmitter
 is permitted. A full-mode campaign does not convert those application modes

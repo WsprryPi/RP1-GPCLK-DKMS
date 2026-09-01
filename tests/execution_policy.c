@@ -15,7 +15,7 @@
 
 int main(void)
 {
-    struct rp1_gpclk_tone_v1 tones[RP1_GPCLK_MAX_TONES] = { 0 };
+    struct rp1_gpclk_tone tones[RP1_GPCLK_MAX_TONES] = { 0 };
     __u32 words[8] = { 0 };
     size_t writes = 0;
     unsigned int index;

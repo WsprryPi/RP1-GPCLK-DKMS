@@ -11,7 +11,7 @@ closed when current state is incomplete or ambiguous.
 Package installation registers the module source with DKMS and installs both
 allowlisted overlays as inactive files. It does not:
 
-- select GPIO4 or GPIO20;
+- select `GPIO4` or `GPIO20`;
 - edit boot configuration;
 - apply a device-tree overlay;
 - load or bind the module;
@@ -27,15 +27,15 @@ external orchestrator. Later overlay, route, enrollment, and load operations
 are separate lifecycle steps.
 
 Route selection is an administrative configuration decision. Exactly one of
-the GPIO4 or GPIO20 overlays may be selected. There is no arbitrary GPIO
+the `GPIO4` or `GPIO20` overlays may be selected. There is no arbitrary GPIO
 parameter, combined overlay, hot route change, or automatic substitution.
 
 ## Compatibility and signing
 
 Before loading the module, record the exact running kernel, hardware, firmware
 and device tree; verify that DKMS built the module for that kernel; and validate
-the clock provider, resource layout, selected route, module version, UAPI
-version, signing policy and current Experimental enrollment. The kernel release
+the clock provider, resource layout, selected route, module version, exact UAPI
+header identity, signing policy, and current `Experimental` enrollment. The kernel release
 is diagnostic provenance rather than a compatibility-ID component.
 
 The device endpoint remains root-owned and mode `0600`. Signing keys and trust
@@ -44,29 +44,29 @@ enrollment are administrator-owned and are not package content. See
 
 ## Loading and operation
 
-The sole canonical ABI v1/v2 endpoint is `/dev/rp1-gpclk`. A historical
-`/dev/rp1-gpclk0` node is not a supported discovery fallback. A missing
+The sole canonical transmission endpoint is `/dev/rp1-gpclk`. No alternate
+endpoint spelling is a supported discovery fallback. A missing
 endpoint does not authorize userspace to create or substitute one.
 
 Loading with live output disabled is distinct from live eligibility. A module
 that builds or loads successfully may still reject all submissions. Live use
 requires the immutable load-time output gate, a recognized route compatibility
-identity, the selected allowlisted route, current Experimental enrollment, and
+identity, the selected allowlisted route, current `Experimental` enrollment, and
 application-level authorization.
 
-One open file may hold one lease. WSPR, keyed events, and finite TONE are
-bounded; explicit continuous TONE has no hidden duration and persists only
-while its lease remains owned. `STOP`, `RELEASE_V2`, owner close, process death,
+One open file may hold one lease. `WSPR`, keyed events, and finite `TONE` are
+bounded; explicit continuous `TONE` has no hidden duration and persists only
+while its lease remains owned. `STOP`, `RELEASE`, owner close, process death,
 unbind, and unload use the bounded cleanup path. A cleanup fault is a stop
 condition and prevents further use until it is investigated.
 
 ## Update and rollback
 
-Retain the installed predecessor until a successor has passed all applicable
+Retain the installed instance until its replacement has passed all applicable
 build, signing, installation, output-disabled runtime, and cleanup checks.
 Version ordering alone does not establish compatibility.
 
-On failure, remove only state attributable to the failed successor. Do not
+On failure, remove only state attributable to the failed replacement. Do not
 weaken compatibility or signing policy, overwrite foreign files, or force an
 unknown runtime state to make an update succeed.
 
@@ -93,4 +93,4 @@ There is no `/dev/mem`, raw userspace MMIO, arbitrary-route, or
 alternate-transmitter fallback. Unknown hardware, kernel, device-tree,
 resource, signing, route, UAPI, artifact, or cleanup state remains unavailable;
 an identified operator-built stock-kernel combination may be enrolled as
-Experimental without asserting that it is supported or qualified.
+`Experimental` without asserting that it is supported or qualified.

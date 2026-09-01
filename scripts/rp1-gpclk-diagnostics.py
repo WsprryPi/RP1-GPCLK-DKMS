@@ -10,19 +10,17 @@ PACKAGE, MODULE, VERSION = "rp1-gpclk-dkms", "rp1_gpclk_dkms", "0.9.0"
 DEVICE = "/dev/rp1-gpclk"
 FILE_LIMIT, LOG_LIMIT, COMMAND_LIMIT, TIMEOUT = 4096, 16384, 8192, 5
 # The UAPI uses __aligned_u64, so native C alignment is part of the ioctl size.
-QUERY_V1_FORMAT = "@HHIHHIIIIQIIIIIIQQ64s64s64s4Q"
-QUERY_V2_FORMAT = "@HHIHHIIIIQIIIIIIQQQQ64s64s64s4Q"
-SNAPSHOT_V3_FORMAT = "@HHIHH" + "I"*18 + "6Q64s64s64s8Q"
-QUERY_V1_SIZE, QUERY_V2_SIZE = struct.calcsize(QUERY_V1_FORMAT), struct.calcsize(QUERY_V2_FORMAT)
-SNAPSHOT_V3_SIZE = struct.calcsize(SNAPSHOT_V3_FORMAT)
-QUERY_V1_IOCTL = 0xC0000000 | (QUERY_V1_SIZE << 16) | (0xB8 << 8) | 0x20
-QUERY_V2_IOCTL = 0xC0000000 | (QUERY_V2_SIZE << 16) | (0xB8 << 8) | 0x27
-SNAPSHOT_V3_IOCTL = 0xC0000000 | (SNAPSHOT_V3_SIZE << 16) | (0xB8 << 8) | 0x2A
+QUERY_FORMAT = "@HHI" + "I"*4 + "Q" + "I"*6 + "Q"*4 + "64s"*3 + "Q"*4
+SNAPSHOT_FORMAT = "@HHI" + "I"*18 + "Q"*6 + "64s"*3 + "Q"*8
+QUERY_SIZE, SNAPSHOT_SIZE = struct.calcsize(QUERY_FORMAT), struct.calcsize(SNAPSHOT_FORMAT)
+QUERY_IOCTL = 0xC0000000 | (QUERY_SIZE << 16) | (0xB8 << 8) | 0x20
+SNAPSHOT_IOCTL = 0xC0000000 | (SNAPSHOT_SIZE << 16) | (0xB8 << 8) | 0x28
 STATES = {1:"Qualified",2:"Experimental",3:"Compatible-unqualified",4:"Unavailable",5:"Rejected"}
 REASONS = {0:"none",1:"manifest-missing",2:"identity-unknown",3:"identity-mismatch",4:"build-unsupported",5:"signature-rejected",6:"resource-unavailable",7:"resource-conflict",8:"self-test-failed",9:"cleanup-latched",10:"administrator-enrollment-required"}
 ROUTES = {1:"GPIO4",2:"GPIO20"}
 CAPS = {0:"submit-wspr",1:"submit-events",2:"stop-drain",3:"stable-state",4:"route-identity",5:"compat-identity",6:"cleanup-fault-latch",7:"live-eligible",8:"tone-continuous",9:"tone-finite"}
 CAPS[10] = "passive-snapshot"
+CAPS[11] = "operation-live-gate"
 OPERATION_STATES = {0:"IDLE",1:"RUNNING",2:"DRAINING",3:"COMPLETE",4:"FAILED",5:"DEAD"}
 TERMINAL_REASONS = {0:"none",1:"complete",2:"stopped",3:"owner-closed",4:"provider-removed",5:"deadline-missed",6:"invalid-request",7:"resource-unavailable",8:"startup-conflict",9:"dma-failed",10:"clock-failed",11:"pinctrl-failed",12:"readback-failed",13:"cleanup-failed",14:"compatibility-rejected",15:"internal-error"}
 OBSERVATIONS = {0:"unknown",1:"false",2:"true"}
@@ -30,21 +28,20 @@ DRAIN_STATES = {0:"none",1:"active",2:"complete"}
 SNAPSHOT_FLAGS = {0:"current-event-valid",1:"elapsed-valid",2:"remaining-valid"}
 
 def decode_passive_snapshot(payload: bytes) -> dict:
-    if len(payload)!=SNAPSHOT_V3_SIZE: return {"status":"rejected","reason":"malformed-snapshot-size"}
-    values=struct.unpack(SNAPSHOT_V3_FORMAT,payload)
-    if values[0]!=SNAPSHOT_V3_SIZE or values[1]!=3 or values[2]!=0:
+    if len(payload)!=SNAPSHOT_SIZE: return {"status":"rejected","reason":"malformed-snapshot-size"}
+    values=struct.unpack(SNAPSHOT_FORMAT,payload)
+    if values[0]!=SNAPSHOT_SIZE or values[1]!=0 or values[2]!=0:
         return {"status":"rejected","reason":"malformed-snapshot-header"}
-    route,compat_state,compat_reason,operation,terminal,current_event,flags,cleanup,owner,lease,live_output,live_eligible,drain,gpio_safe,clock_quiescent,dma_quiescent,stable,reserved0=values[5:23]
+    route,compat_state,compat_reason,operation,terminal,current_event,flags,cleanup,owner,lease,live_output,live_eligible,drain,gpio_safe,clock_quiescent,dma_quiescent,stable,reserved0=values[3:21]
     if reserved0 or flags & ~0x7: return {"status":"rejected","reason":"unknown-snapshot-flags"}
     observations=(cleanup,owner,lease,live_output,live_eligible,gpio_safe,clock_quiescent,dma_quiescent,stable)
     if route not in ROUTES or compat_state not in STATES or compat_reason not in REASONS or operation not in OPERATION_STATES or terminal not in TERMINAL_REASONS or drain not in DRAIN_STATES or any(item not in OBSERVATIONS for item in observations):
         return {"status":"rejected","reason":"unknown-snapshot-enum"}
-    capabilities,generation,elapsed,remaining,min_tone,max_tone=values[23:29]
-    if capabilities & ~0x7ff: return {"status":"rejected","reason":"unknown-snapshot-capability"}
-    if any(values[index] != 0 for index in range(32,40)): return {"status":"rejected","reason":"nonzero-snapshot-reserved"}
+    capabilities,generation,elapsed,remaining,min_tone,max_tone=values[21:27]
+    if capabilities & ~0xfff: return {"status":"rejected","reason":"unknown-snapshot-capability"}
+    if any(values[index] != 0 for index in range(30,38)): return {"status":"rejected","reason":"nonzero-snapshot-reserved"}
     valid={name:bool(flags&(1<<bit)) for bit,name in SNAPSHOT_FLAGS.items()}
-    return {"status":"ok","snapshotVersion":3,"abiMin":values[3],"abiMax":values[4],
-        "route":ROUTES[route],"compatibilityState":STATES[compat_state],"compatibilityReason":REASONS[compat_reason],
+    return {"status":"ok","route":ROUTES[route],"compatibilityState":STATES[compat_state],"compatibilityReason":REASONS[compat_reason],
         "operationState":OPERATION_STATES[operation],"terminalReason":TERMINAL_REASONS[terminal],
         "currentEvent":current_event if valid["current-event-valid"] else None,"generation":generation,
         "elapsedNs":elapsed if valid["elapsed-valid"] else None,"remainingNs":remaining if valid["remaining-valid"] else None,
@@ -53,7 +50,7 @@ def decode_passive_snapshot(payload: bytes) -> dict:
         "gpioSafe":OBSERVATIONS[gpio_safe],"clockQuiescent":OBSERVATIONS[clock_quiescent],"dmaQuiescent":OBSERVATIONS[dma_quiescent],"stable":OBSERVATIONS[stable],
         "capabilityMask":f"0x{capabilities:016x}","capabilities":[name for bit,name in CAPS.items() if capabilities&(1<<bit)],
         "minToneDurationNs":min_tone,"maxToneDurationNs":max_tone,
-        "moduleId":values[29].split(b"\0",1)[0].decode(errors="replace"),"buildId":values[30].split(b"\0",1)[0].decode(errors="replace"),"compatibilityId":values[31].split(b"\0",1)[0].decode(errors="replace"),
+        "moduleId":values[27].split(b"\0",1)[0].decode(errors="replace"),"buildId":values[28].split(b"\0",1)[0].decode(errors="replace"),"compatibilityId":values[29].split(b"\0",1)[0].decode(errors="replace"),
         "nonOwning":True,"leaseTokenExposed":False,"descriptorClosed":True}
 
 def sha256(path: pathlib.Path) -> str | None:
@@ -113,26 +110,19 @@ class Collector:
         try:
             descriptor=os.open(self.path(DEVICE),os.O_RDONLY|os.O_CLOEXEC|os.O_NONBLOCK)
             try:
-                payload=bytearray(QUERY_V2_SIZE); struct.pack_into("<HHI",payload,0,QUERY_V2_SIZE,2,0)
-                try:
-                    fcntl.ioctl(descriptor,QUERY_V2_IOCTL,payload,True)
-                    values=struct.unpack(QUERY_V2_FORMAT,payload); query_version=2; identity_index=20
-                except OSError as error:
-                    if error.errno not in {errno.EOPNOTSUPP, errno.ENOTTY}: raise
-                    payload=bytearray(QUERY_V1_SIZE); struct.pack_into("<HHI",payload,0,QUERY_V1_SIZE,1,0)
-                    fcntl.ioctl(descriptor,QUERY_V1_IOCTL,payload,True)
-                    values=struct.unpack(QUERY_V1_FORMAT,payload); query_version=1; identity_index=18
+                payload=bytearray(QUERY_SIZE); struct.pack_into("<HHI",payload,0,QUERY_SIZE,0,0)
+                fcntl.ioctl(descriptor,QUERY_IOCTL,payload,True)
+                values=struct.unpack(QUERY_FORMAT,payload)
             finally: os.close(descriptor)
-            bits=values[9]
-            reason=REASONS.get(values[7],f"unknown-{values[7]}")
-            result={"status":"ok","queryVersion":query_version,"abiMin":values[3],"abiMax":values[4],"route":ROUTES.get(values[5],f"unknown-{values[5]}"),
-                "compatibilityState":STATES.get(values[6],f"unknown-{values[6]}"),"compatibilityReason":REASONS.get(values[7],f"unknown-{values[7]}"),
+            bits=values[7]
+            reason=REASONS.get(values[5],f"unknown-{values[5]}")
+            result={"status":"ok","route":ROUTES.get(values[3],f"unknown-{values[3]}"),
+                "compatibilityState":STATES.get(values[4],f"unknown-{values[4]}"),"compatibilityReason":REASONS.get(values[5],f"unknown-{values[5]}"),
                 "cleanupFault":reason=="cleanup-latched",
                 "capabilityMask":f"0x{bits:016x}","capabilities":[name for bit,name in CAPS.items() if bits&(1<<bit)],
-                "unknownCapabilityMask":f"0x{bits&~0x3ff:016x}","moduleId":values[identity_index].split(b"\0",1)[0].decode(errors="replace"),
-                "buildId":values[identity_index+1].split(b"\0",1)[0].decode(errors="replace"),"compatibilityId":values[identity_index+2].split(b"\0",1)[0].decode(errors="replace")}
-            if query_version==2:
-                result.update(minToneDurationNs=values[18],maxToneDurationNs=values[19])
+                "unknownCapabilityMask":f"0x{bits&~0xfff:016x}","moduleId":values[18].split(b"\0",1)[0].decode(errors="replace"),
+                "buildId":values[19].split(b"\0",1)[0].decode(errors="replace"),"compatibilityId":values[20].split(b"\0",1)[0].decode(errors="replace"),
+                "minToneDurationNs":values[16],"maxToneDurationNs":values[17]}
             return result
         except PermissionError: return {"status":"indeterminate","reason":"permission-denied"}
         except FileNotFoundError: return {"status":"unavailable","reason":"endpoint-absent"}
@@ -144,9 +134,9 @@ class Collector:
         descriptor=None
         try:
             descriptor=os.open(self.path(DEVICE),os.O_RDONLY|os.O_CLOEXEC|os.O_NONBLOCK)
-            payload=bytearray(SNAPSHOT_V3_SIZE)
-            struct.pack_into("<HHI",payload,0,SNAPSHOT_V3_SIZE,3,0)
-            fcntl.ioctl(descriptor,SNAPSHOT_V3_IOCTL,payload,True)
+            payload=bytearray(SNAPSHOT_SIZE)
+            struct.pack_into("<HHI",payload,0,SNAPSHOT_SIZE,0,0)
+            fcntl.ioctl(descriptor,SNAPSHOT_IOCTL,payload,True)
             return decode_passive_snapshot(payload)
         except PermissionError: return {"status":"indeterminate","reason":"permission-denied"}
         except FileNotFoundError: return {"status":"unavailable","reason":"endpoint-absent"}
