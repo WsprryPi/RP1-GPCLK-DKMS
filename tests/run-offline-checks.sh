@@ -30,6 +30,7 @@ python3 "$repo_dir/tests/check_runtime_controller.py"
 python3 "$repo_dir/tests/check_runtime_manager.py"
 python3 "$repo_dir/tests/check_runtime_output.py"
 python3 "$repo_dir/tests/check_runtime_restoration.py"
+python3 "$repo_dir/tests/check_runtime_inhibitor_cleanup.py"
 python3 "$repo_dir/tests/check_development_route_manager.py"
 python3 "$repo_dir/tests/check_doc_links.py"
 

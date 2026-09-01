@@ -82,6 +82,28 @@ do not kill the independently systemd-owned manager worker; durable results
 remain queryable. No successful application restoration is reported merely
 because systemd accepted a start request.
 
+Runtime-controller removal must reconcile the owned application inhibitor
+before discarding the runtime inventory or journals. If an interrupted or older
+removal has already left only the exact owned inhibitor, use
+`scripts/runtime_inhibitor_cleanup.py inspect` to obtain a reviewed plan. The
+cleanup operation is eligible only when the canonical WsprryPi service and all
+fixed runtime-controller bindings, tools, journals, modules, endpoints and
+module artifacts are absent. Execution requires the unchanged plan digest and
+removes only the exact root-owned regular file with the canonical bytes and
+mode. Foreign overrides or any ambiguous runtime state remain untouched.
+
+Review and execute the cleanup as two separate operations:
+
+```sh
+sudo python3 scripts/runtime_inhibitor_cleanup.py inspect
+sudo python3 scripts/runtime_inhibitor_cleanup.py cleanup --execute \
+  --plan-sha256 REVIEWED_PLAN_SHA256
+```
+
+The second operation re-inspects the machine and refuses cleanup if the
+reviewed plan digest no longer describes the current state. It reloads systemd
+after removal and restores the exact inhibitor if that reload fails.
+
 ## Deployment and validation boundary
 
 Install the companion and matching WsprryPi executable using the application's
