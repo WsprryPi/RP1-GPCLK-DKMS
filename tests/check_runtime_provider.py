@@ -13,6 +13,7 @@ import unittest
 from unittest.mock import patch
 import contextlib
 import io
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import runtime_binding as binding
@@ -285,6 +286,51 @@ class Tests(unittest.TestCase):
                 '--plan-sha256', digest]), contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(provider.main(host), 0)
         self.assertTrue(host.removed)
+
+    def test_real_host_retires_exact_recovered_activation_before_removal(self):
+        journal = {'version': 1, 'phase': 'recovered-inhibited'}
+        activation_path = str(provider.activation.JOURNAL)
+        value = {'version': 2, 'files': {activation_path: {
+            'before': None, 'after': None}}}
+        digest = provider.deployment.plan_hash(value)
+        events = []
+        system = SimpleNamespace(
+            read_record=lambda path: journal,
+            archive_journal=lambda current: events.append(('archive', current)),
+            retire_journal=lambda current: events.append(('retire', current)))
+        files = SimpleNamespace(prune_removed_directories=lambda: events.append(('prune', None)))
+        host = provider.Host.__new__(provider.Host)
+        host.files = files
+        with patch.object(provider.deployment, 'mutation_lock',
+                          return_value=contextlib.nullcontext()), \
+             patch.object(provider.deployment, 'removal_plan', return_value=value), \
+             patch.object(provider.deployment, 'remove',
+                          side_effect=lambda *args: events.append(('remove', None))), \
+             patch.object(provider.activation, 'Linux', return_value=system), \
+             patch.object(provider.activation, 'recovery_plan',
+                          return_value={'alreadyRecovered': True}):
+            self.assertEqual(host.deployment_remove(value, digest),
+                             {'status': 'removed-exact-deployment'})
+        self.assertEqual([event[0] for event in events],
+                         ['archive', 'retire', 'remove', 'prune'])
+
+    def test_real_host_does_not_retire_recovery_on_unreviewed_removal(self):
+        journal = {'version': 1, 'phase': 'recovered-inhibited'}
+        events = []
+        system = SimpleNamespace(
+            read_record=lambda path: journal,
+            archive_journal=lambda current: events.append('archive'),
+            retire_journal=lambda current: events.append('retire'))
+        host = provider.Host.__new__(provider.Host)
+        host.files = SimpleNamespace()
+        value = {'version': 2, 'files': {}}
+        with patch.object(provider.deployment, 'mutation_lock',
+                          return_value=contextlib.nullcontext()), \
+             patch.object(provider.deployment, 'removal_plan', return_value=value), \
+             patch.object(provider.activation, 'Linux', return_value=system):
+            with self.assertRaisesRegex(ValueError, 'reviewed deployment removal'):
+                host.deployment_remove(value, '0' * 64)
+        self.assertEqual(events, [])
 
     def test_reviewed_post_reboot_activation_retirement(self):
         host = Host()

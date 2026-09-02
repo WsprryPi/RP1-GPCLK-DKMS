@@ -196,6 +196,24 @@ class Host:
 
     def deployment_remove(self, value, approved):
         with deployment.mutation_lock():
+            # Neutral-activation recovery deliberately leaves an exact,
+            # inhibited terminal journal after the deployment was published.
+            # Bind its retirement to both the reviewed inverse deployment and
+            # the recovery contract before restoring the predeployment bytes.
+            if (deployment.plan_hash(value) != approved or
+                    deployment.removal_plan(self.files) != value):
+                raise ValueError('reviewed deployment removal plan changed before mutation')
+            system = activation.Linux()
+            journal = system.read_record(activation.JOURNAL)
+            if journal is not None and journal.get('phase') == 'recovered-inhibited':
+                record = value['files'].get(str(activation.JOURNAL))
+                if not isinstance(record, dict) or deployment.decode(record.get('after')) is not None:
+                    raise ValueError('deployment does not own the activation journal')
+                recovery = activation.recovery_plan(system)
+                if recovery.get('alreadyRecovered') is not True:
+                    raise ValueError('activation journal is not exactly recovered')
+                system.archive_journal(journal)
+                system.retire_journal(journal)
             deployment.remove(self.files, value, approved)
         self.files.prune_removed_directories()
         return {'status': 'removed-exact-deployment'}
