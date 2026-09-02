@@ -253,6 +253,43 @@ class Files:
             admin.fsync_dir(admin.STATE)
         except FileNotFoundError:
             pass
+        archives = []
+        try:
+            admin.safe_directory(admin.STATE)
+            for path in admin.STATE.glob('prior-activation-*.json'):
+                match = re.fullmatch(r'prior-activation-([0-9a-f]{64})\.json',
+                                     path.name)
+                info = path.lstat()
+                if (match is None or not stat.S_ISREG(info.st_mode) or
+                        info.st_uid != expected_uid or
+                        stat.S_IMODE(info.st_mode) != 0o600 or info.st_nlink != 1):
+                    raise ValueError('unexpected prior activation archive: '+str(path))
+                fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+                try:
+                    opened = os.fstat(fd)
+                    if ((opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino) or
+                            not stat.S_ISREG(opened.st_mode) or
+                            opened.st_uid != expected_uid or
+                            stat.S_IMODE(opened.st_mode) != 0o600 or opened.st_nlink != 1):
+                        raise ValueError('prior activation archive changed during validation: '+str(path))
+                    with os.fdopen(fd, 'rb', closefd=False) as stream:
+                        data = stream.read(MAX_JOURNAL_BYTES + 1)
+                finally:
+                    os.close(fd)
+                if len(data) > MAX_JOURNAL_BYTES:
+                    raise ValueError('prior activation archive exceeds read bound: '+str(path))
+                if (not data.endswith(b'\n') or data.endswith(b'\n\n') or
+                        admin.digest(data[:-1]) != match.group(1)):
+                    raise ValueError('prior activation archive identity differs: '+str(path))
+                archives.append((path, info.st_dev, info.st_ino))
+            for path, device, inode in archives:
+                current = path.lstat()
+                if (current.st_dev, current.st_ino) != (device, inode):
+                    raise ValueError('prior activation archive changed before removal: '+str(path))
+                path.unlink()
+                admin.fsync_dir(admin.STATE)
+        except FileNotFoundError:
+            pass
         cache = RUNTIME_LIBRARY / '__pycache__'
         try:
             admin.safe_directory(cache)
