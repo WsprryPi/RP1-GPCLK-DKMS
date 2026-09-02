@@ -21,7 +21,6 @@ import runtime_route_client as client
 
 JOURNAL = admin.STATE / 'activation.json'
 LAST_DEPLOYMENT = admin.STATE / 'last-deployment.json'
-CONTROLLER = f'/lib/modules/{admin.KERNEL}/updates/dkms/rp1_route_controller.ko'
 SOCKET_UNIT = 'rp1-gpclk-route-manager.socket'
 SERVICE_UNIT = 'rp1-gpclk-route-manager@.service'
 APPLICATION_UNIT = 'wsprrypi.service'
@@ -150,6 +149,13 @@ class Linux:
             limit = 32 * 1024 * 1024 if path.endswith('.ko') else 4 * 1024 * 1024
             if admin.digest(admin.read_regular(path, limit)) != expected:
                 raise ValueError('activation artifact mismatch: ' + path)
+        for module, record in value['modules'].items():
+            path = record['path']
+            self.trusted_file(Path(path), 0o644)
+            if admin.digest(admin.read_regular(path, 32 * 1024 * 1024)) != record['installedFileSha256']:
+                raise ValueError('activation DKMS module mismatch: ' + path)
+            if admin.run(('/usr/sbin/modinfo', '-F', 'filename', module)) != path:
+                raise ValueError('activation module resolution mismatch: ' + module)
         return raw, value
 
     def trusted_file(self, path, mode):
@@ -253,7 +259,7 @@ class Linux:
             os.close(fd)
 
     def load_controller(self):
-        admin.run(('/usr/sbin/insmod', CONTROLLER))
+        admin.run(('/usr/sbin/modprobe', 'rp1_route_controller'))
 
     def unload_controller(self):
         admin.run(('/usr/sbin/rmmod', 'rp1_route_controller'))

@@ -205,7 +205,6 @@ class Linux:
                     not (self.allow_activation_query and
                          activation['phase'] == 'manager-query-intent')):
                 raise ValueError('neutral activation requires completion or recovery')
-        base = f'/lib/modules/{KERNEL}/updates/dkms/'
         from runtime_layout import INVENTORY
         expected = set(INVENTORY)
         if not isinstance(self.binding['files'], dict) or set(self.binding['files']) != expected:
@@ -218,11 +217,15 @@ class Linux:
             safe_directory(Path(name).parent)
             if digest(read_regular(name, 4*1024*1024)) != sha:
                 raise ValueError('external companion mismatch: ' + name)
+        for module, record in self.binding['modules'].items():
+            name = record['path']
+            safe_directory(Path(name).parent)
+            if digest(read_regular(name, 32*1024*1024)) != record['installedFileSha256']:
+                raise ValueError('DKMS module artifact mismatch: ' + name)
+            if run(('/usr/sbin/modinfo', '-F', 'filename', module)) != name:
+                raise ValueError('module resolution mismatch')
         if digest(Path(__file__).read_bytes()) != self.binding['files']['/usr/lib/rp1-gpclk-dkms/runtime_controller_admin.py']:
             raise ValueError('executing tool mismatch')
-        for module in ('rp1_gpclk_dkms', 'rp1_route_controller'):
-            if run(('/usr/sbin/modinfo', '-F', 'filename', module)) != base+module+'.ko':
-                raise ValueError('module resolution mismatch')
         if run(('/usr/sbin/modinfo', '-F', 'rp1_runtime_controller', 'rp1_gpclk_dkms')) != '1':
             raise ValueError('consumer lacks interlock')
         self.boot = read_regular('/proc/sys/kernel/random/boot_id').decode().strip()
@@ -286,7 +289,7 @@ class Linux:
 
     def load(self):
         self.check_inhibit()
-        run(('/usr/sbin/insmod', f'/lib/modules/{KERNEL}/updates/dkms/rp1_gpclk_dkms.ko', 'live_output=0'))
+        run(('/usr/sbin/modprobe', 'rp1_gpclk_dkms', 'live_output=0'))
         self.note('rp1_gpclk_dkms', 'consumerNoteSha256')
         if read_regular('/sys/module/rp1_gpclk_dkms/parameters/live_output').strip() not in (b'N', b'0'):
             raise ValueError('consumer gate mismatch')

@@ -31,9 +31,12 @@ retains the OF match table for explicit binding. The default build retains its
 autoload alias. The consumer version follows the same development identity contract;
 changed bytes do not inherit qualification. Output-enabled consumer
 loads are unconditionally rejected by the interlock. Default builds do not link
-the controller or change their administration interface. No default DKMS or package
-installation path is added; the explicit runtime bundle has its own reviewed
-filesystem deployment workflow. Changing build modes requires clean isolated build
+the controller or change their administration interface. The ordinary package and
+DKMS profile remains unchanged. Exact-source orchestration may explicitly select
+the `runtime-controller` DKMS profile; that one DKMS instance builds, installs,
+tracks, and rolls back both modules. The runtime bundle binds those installed
+module artifacts as external prerequisites and never installs a second copy.
+Changing build modes requires clean isolated build
 directories; never reuse an opt-in object as a default artifact.
 
 The controller admits only the reviewed Pi 5 Model B / aarch64 /
@@ -104,9 +107,12 @@ execution begins. Read-only inspection and planning do not create it. The local-
 the exact installed WsprryPi application companion;
 it is not an installer or a claim about loaded target memory.
 
-The version-2 binding fixes the source commit, product and route compatibility
-identities, kernel, both uncompressed installed module paths and SHA-256 values,
-loaded GNU build-note hashes, both UAPIs, both transformed overlays, every runtime
+The version-3 binding fixes the source commit, product and route compatibility
+identities, kernel, and the unique DKMS-installed path for each module. Each module
+record includes its installed-file digest, decompressed-ELF digest, compression,
+version, kernel, and build-note digest. `.ko`, `.ko.xz`, `.ko.gz`, `.ko.zst`, and
+`.ko.bz2` are accepted only when exactly one artifact exists for each module and
+`modinfo -F filename` resolves to that exact path. It also binds both UAPIs, both transformed overlays, every runtime
 tool and schema, the base socket/service units, the runtime drop-in, and the exact
 WsprryPi application companion. `artifactSetSha256` binds that complete canonical
 record. The tool checks module resolution, the consumer interlock marker, loaded
@@ -135,8 +141,9 @@ is a separate existing path, as clarified in [runtime output reconciliation](run
 The tool unloads only the exact checked consumer with non-forced rmmod, checks
 absence and controller detachment, removes the owned overlay, then applies the
 new fixed overlay and loads the checked consumer with `live_output=0` using its
-fixed absolute module path. No modprobe install/remove hook or dependency removal
-is used for effects. Each stage rechecks inhibition and boot identity. Completion
+exact DKMS module name after verifying that `modinfo` resolves it to the bound
+path. No modprobe install/remove hook or dependency removal is used for effects.
+Each stage rechecks inhibition and boot identity. Completion
 requires actual controller readback and successful consumer initialization;
 the application remains inhibited even on success.
 

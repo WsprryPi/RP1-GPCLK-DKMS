@@ -18,15 +18,16 @@ an uncertain effect.
 
 ## Build and review offline
 
-Build the opt-in modules using the controller contract's exact-kernel procedure.
-Then run:
+Install the exact source through `development-install --runtime-controller`; DKMS
+must own exactly one consumer and one controller artifact for the running kernel.
+Then point the bundle builder at that DKMS installation directory:
 
 ```sh
 python3 scripts/build_runtime_bundle.py COMPILED_MODULE_DIRECTORY NEW_BUNDLE_DIRECTORY \
   --application-companion /usr/local/lib/wsprrypi/route_application.py
 ```
 
-The builder checks ELF64/kernel identity, the consumer interlock marker and
+The builder reads compressed or uncompressed DKMS artifacts, checks ELF64/kernel identity, the consumer interlock marker and
 controller dependency, build notes, and the exact canonical DTBO bytes embedded
 in the controller. The binding covers the exact source commit, product and route
 compatibility identities, both modules, private copies of both UAPIs and DTBOs,
@@ -58,8 +59,9 @@ plan. Keep clocks and transmission disabled throughout.
 3. From the reviewed bundle, run `python3 runtime_provider.py plan --bundle .`.
    Review the classification, old/new hashes, destinations and `planSha256`.
    Existing files must be ordinary,
-   root-owned 0644 files; compressed/alternate module resolution is not silently
-   replaced. Resolve such a conflict through a separately reviewed migration.
+   root-owned 0644 files. Modules are external prerequisites: the plan never
+   writes `/lib/modules`, and duplicate or mismatched module resolution fails
+   closed rather than creating a shadow artifact.
 4. Execute that exact plan with
    `python3 runtime_provider.py ensure --bundle . --plan-sha256 DIGEST`.
    Only after the supplied digest matches the reviewed plan, the tool creates

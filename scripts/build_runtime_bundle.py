@@ -4,7 +4,7 @@
 import argparse
 import json
 from pathlib import Path
-from build_runtime_binding import build, ROOT
+from build_runtime_binding import build, module_payload, ROOT
 from runtime_controller_admin import digest, KERNEL
 from runtime_layout import INVENTORY
 from build_runtime_controller import generate
@@ -14,8 +14,10 @@ def bundle(modules, output, application_companion):
     generate(ROOT / "build/runtime-controller")
     binding = build(modules, application_companion)
     # Reject an ordinary consumer and mismatched kernel before producing a bundle.
-    consumer = (modules / 'rp1_gpclk_dkms.ko').read_bytes()
-    controller = (modules / 'rp1_route_controller.ko').read_bytes()
+    consumer = module_payload(modules / Path(
+        binding['modules']['rp1_gpclk_dkms']['path']).name)[0]
+    controller = module_payload(modules / Path(
+        binding['modules']['rp1_route_controller']['path']).name)[0]
     if b'rp1_runtime_controller=1\0' not in consumer or b'rp1_route_controller' not in consumer:
         raise ValueError('interlocked consumer required')
     if b'alias=of:' in consumer:
@@ -28,7 +30,7 @@ def bundle(modules, output, application_companion):
             raise ValueError('controller embedded overlay differs from canonical overlay')
     output.mkdir(mode=0o700, parents=True, exist_ok=False)
     for destination, source in INVENTORY.items():
-        data = ((modules / source) if source.endswith('.ko') else (ROOT / source)).read_bytes()
+        data = (ROOT / source).read_bytes()
         if digest(data) != binding['files'][destination]:
             raise ValueError('source changed during bundle creation')
         (output / (digest(destination.encode())+'.bin')).write_bytes(data)

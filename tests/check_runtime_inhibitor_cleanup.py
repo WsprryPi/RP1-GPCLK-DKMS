@@ -101,7 +101,6 @@ class Tests(unittest.TestCase):
             MODULE.SERVICE_UNITS[0],
             MODULE.SERVICE_UNITS[1],
             MODULE.RUNTIME_ARTIFACTS[0],
-            "/lib/modules/fixture/updates/dkms/rp1_route_controller.ko",
         )
         for candidate in candidates:
             with self.subTest(candidate=candidate):
@@ -116,6 +115,15 @@ class Tests(unittest.TestCase):
                         expected_uid=self.uid, reload_systemd=False,
                     )
                 path.unlink()
+
+    def test_dkms_owned_modules_are_not_runtime_inhibitor_residue(self):
+        module = MODULE.rooted(
+            self.root, "/lib/modules/fixture/updates/dkms/rp1_route_controller.ko.xz")
+        module.parent.mkdir(parents=True, exist_ok=True)
+        module.write_bytes(b"provider-owned")
+        plan = self.plan()
+        self.assertTrue(plan["orphanCleanupEligible"])
+        self.assertNotIn(str(module), plan["runtimeArtifacts"])
 
     def test_state_change_after_review_is_rejected(self):
         approved = MODULE.digest(self.plan())

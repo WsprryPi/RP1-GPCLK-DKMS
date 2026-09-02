@@ -149,13 +149,6 @@ def inspect(root: Path = Path("/"), expected_uid: int = 0) -> dict[str, Any]:
     residue = sorted(
         str(path) for path in (rooted(root, item) for item in RUNTIME_ARTIFACTS) if present(path)
     )
-    modules = rooted(root, "/lib/modules")
-    if modules.exists():
-        for pattern in (
-            "*/updates/dkms/rp1_route_controller.ko*",
-            "*/updates/dkms/rp1_gpclk_dkms.ko*",
-        ):
-            residue.extend(str(path) for path in modules.glob(pattern))
     result = {
         "schema": SCHEMA,
         "inhibitor": str(inhibitor),

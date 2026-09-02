@@ -91,12 +91,20 @@ class Files:
 
 
 def deployment_values(journals_none=False):
-    value = {'schemaVersion':2, 'contract':runtime_binding.CONTRACT,
+    value = {'schemaVersion':3, 'contract':runtime_binding.CONTRACT,
         'productVersion':runtime_binding.PRODUCT_VERSION,
         'compatibilityIdentities':runtime_binding.COMPATIBILITY,
         'sourceCommit':'a'*40, 'kernel':admin.KERNEL,
         'controllerNoteSha256':'a'*64, 'consumerNoteSha256':'b'*64,
         'files':{name:admin.digest(b'new') for name in deploy.INVENTORY},
+        'modules': {name: {'name': name,
+            'path': f'/lib/modules/{admin.KERNEL}/updates/dkms/{name}.ko.xz',
+            'installedFileSha256': ('1' if name == 'rp1_route_controller' else '2')*64,
+            'decompressedElfSha256': ('3' if name == 'rp1_route_controller' else '4')*64,
+            'compression': 'xz', 'buildNoteSha256':
+                ('a' if name == 'rp1_route_controller' else 'b')*64,
+            'version': runtime_binding.PRODUCT_VERSION, 'kernel': admin.KERNEL}
+            for name in ('rp1_route_controller', 'rp1_gpclk_dkms')},
         'externalFiles':{name:'c'*64 for name in runtime_binding.EXTERNAL_PATHS},
         'uapiSha256':{
             'consumer':admin.digest(b'new'), 'controller':admin.digest(b'new')}}
@@ -248,12 +256,20 @@ class Tests(unittest.TestCase):
             with self.assertRaises(OSError): deploy.bundle_read(link)
 
     def test_binding_is_read_once_and_same_bytes_are_installed(self):
-        value = {'schemaVersion':2, 'contract':runtime_binding.CONTRACT,
+        value = {'schemaVersion':3, 'contract':runtime_binding.CONTRACT,
             'productVersion':runtime_binding.PRODUCT_VERSION,
             'compatibilityIdentities':runtime_binding.COMPATIBILITY,
             'sourceCommit':'a'*40, 'kernel':admin.KERNEL,
             'controllerNoteSha256':'a'*64, 'consumerNoteSha256':'b'*64,
             'files':{name:admin.digest(b'payload') for name in deploy.INVENTORY},
+            'modules': {name: {'name': name,
+                'path': f'/lib/modules/{admin.KERNEL}/updates/dkms/{name}.ko.xz',
+                'installedFileSha256': ('1' if name == 'rp1_route_controller' else '2')*64,
+                'decompressedElfSha256': ('3' if name == 'rp1_route_controller' else '4')*64,
+                'compression': 'xz', 'buildNoteSha256':
+                    ('a' if name == 'rp1_route_controller' else 'b')*64,
+                'version': runtime_binding.PRODUCT_VERSION, 'kernel': admin.KERNEL}
+                for name in ('rp1_route_controller', 'rp1_gpclk_dkms')},
             'externalFiles':{name:'c'*64 for name in runtime_binding.EXTERNAL_PATHS},
             'uapiSha256':{
                 'consumer':admin.digest(b'payload'), 'controller':admin.digest(b'payload')}}

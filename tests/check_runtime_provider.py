@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: MIT
 """Hardware-free installer-facing readiness and ensure-contract tests."""
 import copy
+import hashlib
 import json
+import lzma
 from pathlib import Path
 import stat
 import subprocess
@@ -17,15 +19,23 @@ import runtime_binding as binding
 import build_runtime_binding as build_binding
 import build_runtime_bundle as bundle_builder
 import runtime_provider as provider
-from runtime_layout import INVENTORY, KERNEL
+from runtime_layout import INVENTORY, KERNEL, MODULES
 
 
 def exact_binding():
-    value = {'schemaVersion': 2, 'contract': binding.CONTRACT,
+    value = {'schemaVersion': 3, 'contract': binding.CONTRACT,
         'productVersion': binding.PRODUCT_VERSION,
         'compatibilityIdentities': binding.COMPATIBILITY,
         'sourceCommit': 'a'*40, 'kernel': KERNEL,
         'files': {path: provider.admin.digest(path.encode()) for path in INVENTORY},
+        'modules': {name: {'name': name,
+            'path': f'/lib/modules/{KERNEL}/updates/dkms/{name}.ko.xz',
+            'installedFileSha256': ('1' if name == 'rp1_route_controller' else '2')*64,
+            'decompressedElfSha256': ('3' if name == 'rp1_route_controller' else '4')*64,
+            'compression': 'xz', 'buildNoteSha256':
+                ('c' if name == 'rp1_route_controller' else 'd')*64,
+            'version': binding.PRODUCT_VERSION, 'kernel': KERNEL}
+            for name in MODULES},
         'externalFiles': {name: 'b'*64 for name in binding.EXTERNAL_PATHS},
         'uapiSha256': {'consumer': provider.admin.digest(
             b'/usr/lib/rp1-gpclk-dkms/runtime-uapi/rp1_gpclk.h'),
@@ -75,6 +85,10 @@ class Host:
         self._artifacts = {path: {'status': 'exact', 'expectedSha256': sha,
             'actualSha256': sha} for path, sha in
             {**self.value['files'], **self.value['externalFiles']}.items()}
+        self._artifacts.update({record['path']: {'status': 'exact',
+            'expectedSha256': record['installedFileSha256'],
+            'actualSha256': record['installedFileSha256']}
+            for record in self.value['modules'].values()})
         self._journals = {name: {'status': 'absent'} for name in
             ('deployment-pending.json', 'transaction.json', 'manager.json',
              'application.json', 'activation.json')}
@@ -124,8 +138,11 @@ class Host:
             'before': None, 'after': provider.deployment.encode(
                 json.dumps(self.value).encode())}}}
     def expected_external(self, expected):
+        values = dict(expected['externalFiles'])
+        values.update({record['path']: record['installedFileSha256']
+                       for record in expected['modules'].values()})
         return {path: {'status': 'exact', 'expectedSha256': sha,
-            'actualSha256': sha} for path, sha in expected['externalFiles'].items()}
+            'actualSha256': sha} for path, sha in values.items()}
     def deployment_removal_plan(self): return copy.deepcopy(self.removal)
     def deployment_remove(self, value, approved):
         if value != self.removal or approved != provider.deployment.plan_hash(value):
@@ -283,7 +300,8 @@ class Tests(unittest.TestCase):
     def test_missing_application_prerequisite_blocks_plan(self):
         host = Host(False)
         host.expected_external = lambda expected: {path: {'status': 'absent'}
-            for path in expected['externalFiles']}
+            for path in [*expected['externalFiles'],
+                         *(item['path'] for item in expected['modules'].values())]}
         result = provider.inspect(host, bundle=Path('/reviewed'))[0]
         self.assertEqual(result['result'], 'conflict')
         self.assertTrue(any(item.startswith('external-prerequisite-conflict:')
@@ -316,6 +334,25 @@ class Tests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'bound'):
                 build_binding.companion_bytes(companion)
 
+    def test_installed_module_accepts_one_compressed_artifact_and_rejects_drift(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            payload = b'\x7fELF\x02\x01\0version=0.9.0\0fixture'
+            compressed = root/'rp1_gpclk_dkms.ko.xz'
+            compressed.write_bytes(lzma.compress(payload))
+            with patch.object(build_binding, 'module_note', return_value=b'fixture-note'):
+                record, observed = build_binding.installed_module(root, 'rp1_gpclk_dkms')
+            self.assertEqual(observed, payload)
+            self.assertEqual(record['compression'], 'xz')
+            self.assertEqual(record['installedFileSha256'],
+                             hashlib.sha256(compressed.read_bytes()).hexdigest())
+            self.assertEqual(record['decompressedElfSha256'],
+                             hashlib.sha256(payload).hexdigest())
+            (root/'rp1_gpclk_dkms.ko').write_bytes(payload)
+            with self.assertRaisesRegex(ValueError, 'exactly one'):
+                build_binding.installed_module(root, 'rp1_gpclk_dkms')
+
     def test_runtime_bundle_rebuild_is_byte_deterministic(self):
         import hashlib
         import tempfile
@@ -333,9 +370,14 @@ class Tests(unittest.TestCase):
             (modules/'rp1_route_controller.ko').write_bytes(controller_data)
             value = exact_binding()
             for destination, source in INVENTORY.items():
-                data = ((modules/source) if source.endswith('.ko') else
-                        (bundle_builder.ROOT/source)).read_bytes()
+                data = (bundle_builder.ROOT/source).read_bytes()
                 value['files'][destination] = hashlib.sha256(data).hexdigest()
+            for name, data in (('rp1_gpclk_dkms', consumer),
+                               ('rp1_route_controller', controller_data)):
+                record = value['modules'][name]
+                record.update(path=f'/lib/modules/{KERNEL}/updates/dkms/{name}.ko',
+                    installedFileSha256=hashlib.sha256(data).hexdigest(),
+                    decompressedElfSha256=hashlib.sha256(data).hexdigest(), compression='none')
             value['uapiSha256'] = {
                 'consumer': value['files']['/usr/lib/rp1-gpclk-dkms/runtime-uapi/rp1_gpclk.h'],
                 'controller': value['files']['/usr/lib/rp1-gpclk-dkms/runtime-uapi/rp1_route_admin.h']}

@@ -55,6 +55,23 @@ def test_render() -> None:
         assert allowed.returncode == 0 and json.loads((base / "allowed/DEVELOPMENT_MANIFEST.json").read_text())["sourceState"] == "dirty-explicitly-allowed"
 
 
+def test_runtime_controller_render() -> None:
+    with tempfile.TemporaryDirectory() as temporary:
+        base = pathlib.Path(temporary); source = fixture_repo(base); output = base / "runtime-rendered"
+        result = command(str(source / "scripts/render-development-tree"), "--source", str(source),
+                         "--output", str(output), "--runtime-controller", cwd=source)
+        assert result.returncode == 0, result.stderr
+        manifest = json.loads((output / "DEVELOPMENT_MANIFEST.json").read_text())
+        configuration = (output / "dkms.conf").read_text()
+        assert manifest["buildProfile"] == "runtime-controller"
+        assert [item["operation"] for item in manifest["transformations"]] == [
+            "replace-module-version-placeholder", "relax-development-kernel-name-filter",
+            "select-runtime-controller-profile"]
+        assert "RP1_RUNTIME_CONTROLLER=1" in configuration
+        assert 'BUILT_MODULE_NAME[1]="rp1_route_controller"' in configuration
+        assert 'AUTOINSTALL="no"' in configuration
+
+
 def test_forbidden_transform() -> None:
     with tempfile.TemporaryDirectory() as temporary:
         base = pathlib.Path(temporary); source = fixture_repo(base)
@@ -234,7 +251,7 @@ case "$2" in live_output=1) echo Y;; *) echo N;; esac >"$RP1_GPCLK_DEVELOPMENT_R
 
 
 def main() -> None:
-    test_render(); test_forbidden_transform(); test_compression(); test_false_qualification_and_cli(); test_controlled_lifecycle()
+    test_render(); test_runtime_controller_render(); test_forbidden_transform(); test_compression(); test_false_qualification_and_cli(); test_controlled_lifecycle()
     print("development workflow checks passed")
 
 

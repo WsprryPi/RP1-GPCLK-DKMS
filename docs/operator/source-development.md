@@ -56,6 +56,15 @@ different development version.
 `RESULT.json` points to that manifest and its rollback record. Neither file
 authorizes route selection, module loading, output, or qualification.
 
+An installer that requires rebootless runtime administration adds the explicit
+`--runtime-controller` flag to that route-neutral command. This selects a
+separate DKMS build profile whose single DKMS instance owns both
+`rp1_gpclk_dkms` and `rp1_route_controller`. The manifest and rollback record
+bind both installed-file and decompressed-ELF digests. The consumer must expose
+the controller interlock and dependency and no OF autoload alias. Ordinary
+source-development installation omits this flag and remains a one-module profile.
+Neither profile loads a module in route-neutral mode.
+
 Route-specific development remains separate. Use the maintained overlay,
 route, enrollment, and module commands only under their own reviewed
 authorization. The combined workflow below remains available when one explicit

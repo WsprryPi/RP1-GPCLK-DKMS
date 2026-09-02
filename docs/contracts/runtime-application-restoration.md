@@ -114,8 +114,10 @@ before discarding the runtime inventory or journals. If an interrupted or older
 removal has already left only the exact owned inhibitor, use
 `scripts/runtime_inhibitor_cleanup.py inspect` to obtain a reviewed plan. The
 cleanup operation is eligible only when the canonical WsprryPi service and all
-fixed runtime-controller bindings, tools, journals, modules, endpoints and
-module artifacts are absent. Execution requires the unchanged plan digest and
+fixed runtime-controller bindings, tools, journals, loaded modules, and endpoints
+are absent. DKMS-installed module files are provider-owned prerequisites rather
+than runtime-deployment residue and do not block this orphan-inhibitor cleanup.
+Execution requires the unchanged plan digest and
 removes only the exact root-owned regular file with the canonical bytes and
 mode. Foreign overrides or any ambiguous runtime state remain untouched.
 

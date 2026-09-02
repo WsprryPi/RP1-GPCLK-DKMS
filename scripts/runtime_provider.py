@@ -63,9 +63,13 @@ class Host:
         if binding.get('status') == 'valid':
             expected.update(binding['value']['files'])
             expected.update(binding['value']['externalFiles'])
+            expected.update({record['path']: record['installedFileSha256']
+                             for record in binding['value']['modules'].values()})
+        module_paths = ({record['path'] for record in binding.get('value', {}).get('modules', {}).values()}
+                        if isinstance(binding.get('value'), dict) else set())
         for path, wanted in sorted(expected.items()):
             try:
-                limit = 32*1024*1024 if path.endswith('.ko') else 4*1024*1024
+                limit = 32*1024*1024 if path in module_paths else 4*1024*1024
                 data = admin.read_regular(path, limit)
                 actual = admin.digest(data)
                 result[path] = {'status': 'exact' if actual == wanted else 'changed',
@@ -198,7 +202,9 @@ class Host:
 
     def expected_external(self, expected):
         observed = self.artifacts({'status': 'valid', 'value': expected})
-        return {path: observed[path] for path in expected['externalFiles']}
+        paths = set(expected['externalFiles']) | {
+            record['path'] for record in expected['modules'].values()}
+        return {path: observed[path] for path in paths}
 
     def activation_observation(self):
         try:

@@ -28,6 +28,7 @@ from typing import Any
 
 PACKAGE = "rp1-gpclk-dkms"
 CANONICAL_MODULE = "rp1_gpclk_dkms"
+CONTROLLER_MODULE = "rp1_route_controller"
 ENDPOINT = "/dev/rp1-gpclk"
 SCHEMA = "rp1-gpclk-source-development-manifest"
 ENROLLMENT_SCHEMA = "rp1-gpclk-development-enrollment-v1"
@@ -141,7 +142,8 @@ def canonical_module_version(source: pathlib.Path) -> str:
     return declared[0]
 
 
-def render(source: pathlib.Path, output: pathlib.Path, allow_dirty: bool) -> pathlib.Path:
+def render(source: pathlib.Path, output: pathlib.Path, allow_dirty: bool,
+           runtime_controller: bool = False) -> pathlib.Path:
     source, output = source.resolve(), output.absolute()
     version = canonical_module_version(source)
     if output.exists():
@@ -172,6 +174,28 @@ def render(source: pathlib.Path, output: pathlib.Path, allow_dirty: bool) -> pat
         if len(kernel_filter.findall(intermediate)) != 1:
             raise Failure("dkms.conf does not contain exactly one kernel-name filter")
         after = kernel_filter.sub(b'BUILD_EXCLUSIVE_KERNEL=".*"', intermediate)
+        transformations = [
+            {"path":"dkms.conf","operation":"replace-module-version-placeholder","beforeSha256":sha256_bytes(before),"afterSha256":sha256_bytes(intermediate)},
+            {"path":"dkms.conf","operation":"relax-development-kernel-name-filter","beforeSha256":sha256_bytes(intermediate),"afterSha256":sha256_bytes(after)},
+        ]
+        if runtime_controller:
+            runtime_before = after
+            make = b'MAKE[0]="make KERNEL_BUILD=${kernel_source_dir}"'
+            if after.count(make) != 1:
+                raise Failure("dkms.conf does not contain exactly one maintained build command")
+            after = after.replace(make,
+                b'MAKE[0]="make KERNEL_BUILD=${kernel_source_dir} RP1_RUNTIME_CONTROLLER=1"')
+            anchor = b'DEST_MODULE_LOCATION[0]="/updates/dkms"'
+            if after.count(anchor) != 1:
+                raise Failure("dkms.conf does not contain exactly one maintained module destination")
+            after = after.replace(anchor, anchor + b'\n\nBUILT_MODULE_NAME[1]="rp1_route_controller"\n'
+                b'BUILT_MODULE_LOCATION[1]="."\nDEST_MODULE_LOCATION[1]="/updates/dkms"')
+            autoinstall = b'AUTOINSTALL="yes"'
+            if after.count(autoinstall) != 1:
+                raise Failure("dkms.conf does not contain exactly one maintained autoinstall policy")
+            after = after.replace(autoinstall, b'AUTOINSTALL="no"')
+            transformations.append({"path":"dkms.conf","operation":"select-runtime-controller-profile",
+                "beforeSha256":sha256_bytes(runtime_before),"afterSha256":sha256_bytes(after)})
         dkms.write_bytes(after)
         unresolved = []
         for name in names:
@@ -189,10 +213,6 @@ def render(source: pathlib.Path, output: pathlib.Path, allow_dirty: bool) -> pat
                                 "afterSha256": item["sha256"], "operation": "replace-module-version-placeholder"})
         if [item["path"] for item in changes] != ["dkms.conf"]:
             raise Failure("renderer performed an unapproved transformation")
-        transformations = [
-            {"path":"dkms.conf","operation":"replace-module-version-placeholder","beforeSha256":sha256_bytes(before),"afterSha256":sha256_bytes(intermediate)},
-            {"path":"dkms.conf","operation":"relax-development-kernel-name-filter","beforeSha256":sha256_bytes(intermediate),"afterSha256":sha256_bytes(after)},
-        ]
         repository_url = run([tool("git") or "git", "-C", str(source), "config", "--get", "remote.origin.url"], check=False).stdout.strip()
         manifest = {
             "schema": SCHEMA, "classification": "source-development", "qualification": False,
@@ -202,6 +222,7 @@ def render(source: pathlib.Path, output: pathlib.Path, allow_dirty: bool) -> pat
             "sourceState": "dirty-explicitly-allowed" if dirty else "clean", "sourceStatus": status.splitlines(),
             "renderedVersion": version, "packageName": PACKAGE, "dkmsName": PACKAGE,
             "moduleName": CANONICAL_MODULE, "renderedTree": str(output),
+            "buildProfile": "runtime-controller" if runtime_controller else "ordinary",
             "versionIdentity": {"path":"include/rp1_gpclk/version.h",
                                 "sha256":sha256(output/"include/rp1_gpclk/version.h"),
                                 "moduleVersion":version},
@@ -229,6 +250,10 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
         raise Failure("not a valid source-development manifest")
     if value.get("moduleName") != CANONICAL_MODULE or value.get("dkmsName") != PACKAGE:
         raise Failure("manifest module identity mismatch")
+    if "buildProfile" not in value:
+        value["buildProfile"] = "ordinary"
+    if value.get("buildProfile") not in {"ordinary", "runtime-controller"}:
+        raise Failure("manifest build profile is invalid")
     return value
 
 
@@ -251,9 +276,9 @@ def decompressed(path: pathlib.Path) -> bytes:
     raise Failure(f"unsupported module compression: {kind}")
 
 
-def module_candidates(kernel: str) -> list[pathlib.Path]:
+def module_candidates(kernel: str, module: str = CANONICAL_MODULE) -> list[pathlib.Path]:
     base = root_path(f"/lib/modules/{kernel}")
-    return sorted(path for path in base.rglob(f"{CANONICAL_MODULE}.ko*")
+    return sorted(path for path in base.rglob(f"{module}.ko*")
                   if path.is_file() and any(path.name.endswith(s) for s in MODULE_SUFFIXES)) if base.is_dir() else []
 
 
@@ -262,15 +287,16 @@ def modinfo(path: pathlib.Path, field: str) -> str:
     return (result.stdout or "").strip() if result.returncode == 0 else ""
 
 
-def resolve_module(kernel: str, expected_version: str | None = None) -> dict[str, Any]:
+def resolve_module(kernel: str, expected_version: str | None = None,
+                   module: str = CANONICAL_MODULE) -> dict[str, Any]:
     matches = []
-    for path in module_candidates(kernel):
+    for path in module_candidates(kernel, module):
         name = modinfo(path, "name")
-        if name != CANONICAL_MODULE:
+        if name != module:
             raise Failure(f"foreign or unreadable module at canonical path: {path}")
         matches.append((path, name))
     if len(matches) != 1:
-        raise Failure(f"expected exactly one installed {CANONICAL_MODULE} artifact for {kernel}; found {len(matches)}")
+        raise Failure(f"expected exactly one installed {module} artifact for {kernel}; found {len(matches)}")
     path, name = matches[0]
     version = modinfo(path, "version")
     if expected_version and version != expected_version:
@@ -346,7 +372,8 @@ def owned_source(path: pathlib.Path, version: str) -> dict[str, Any]:
     return value
 
 
-def transition_preflight(version: str, kernel: str, dkms_status: list[str]) -> pathlib.Path | None:
+def transition_preflight(version: str, kernel: str, dkms_status: list[str],
+                         expected_modules: tuple[str, ...] = (CANONICAL_MODULE,)) -> pathlib.Path | None:
     """Never implicitly downgrade, take package ownership, or hide stale instances."""
     destination = root_path(f"/usr/src/{PACKAGE}-{version}")
     for line in dkms_status:
@@ -369,17 +396,27 @@ def transition_preflight(version: str, kernel: str, dkms_status: list[str]) -> p
         if root_path(name).exists():
             raise Failure(f"retained package/manager ownership {name}: explicit migration required")
     loaded = root_path(f"/sys/module/{CANONICAL_MODULE}/version")
+    loaded_controller = root_path(f"/sys/module/{CONTROLLER_MODULE}/version")
     if loaded.parent.exists() and not loaded.is_file():
         raise Failure("loaded module version unavailable: explicit migration required")
     if loaded.exists() and loaded.read_text().strip() != version:
         raise Failure("loaded predecessor: explicit maintainer downgrade migration required")
-    candidates = module_candidates(kernel)
-    if candidates:
-        resolve_module(kernel, version)
+    if loaded_controller.parent.exists() and not loaded_controller.is_file():
+        raise Failure("loaded controller version unavailable: explicit migration required")
+    if loaded_controller.exists() and loaded_controller.read_text().strip() != version:
+        raise Failure("loaded controller predecessor: explicit maintainer migration required")
+    candidates = {name: module_candidates(kernel, name)
+                  for name in (CANONICAL_MODULE, CONTROLLER_MODULE)}
+    for name in expected_modules:
+        if candidates[name]:
+            resolve_module(kernel, version, name)
+    unexpected = set(candidates) - set(expected_modules)
+    if any(candidates[name] for name in unexpected):
+        raise Failure("installed module set differs from the selected development profile")
     if destination.exists() or destination.is_symlink():
         owned_source(destination, version)
         return destination
-    if dkms_status or candidates or loaded.exists():
+    if dkms_status or any(candidates.values()) or loaded.exists() or loaded_controller.exists():
         raise Failure("orphan module/DKMS instance without attributable development source")
     return None
 
@@ -469,12 +506,15 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
     if evidence.exists(): raise Failure(f"evidence directory already exists: {evidence}")
     evidence.mkdir(parents=True, mode=0o755)
     rendered = evidence / "rendered-source"
-    manifest_path = render(source, rendered, args.allow_dirty)
+    runtime_controller = bool(getattr(args, "runtime_controller", False))
+    manifest_path = render(source, rendered, args.allow_dirty, runtime_controller)
     rollback_path = evidence / "ROLLBACK.json"
+    expected_modules = (CANONICAL_MODULE, CONTROLLER_MODULE) if runtime_controller else (CANONICAL_MODULE,)
     before = {"dkmsStatus": run([tools["dkms"], "status", "-m", PACKAGE]).stdout.splitlines(),
-              "installedArtifacts": [{"path": str(p), "sha256": sha256(p)} for p in module_candidates(requested)],
+              "installedArtifacts": [{"path": str(p), "sha256": sha256(p)}
+                  for name in expected_modules for p in module_candidates(requested, name)],
               "loaded": root_path(f"/sys/module/{CANONICAL_MODULE}").exists(), "createdFiles": []}
-    predecessor = transition_preflight(version, requested, before["dkmsStatus"])
+    predecessor = transition_preflight(version, requested, before["dkmsStatus"], expected_modules)
     if predecessor is not None:
         shutil.copytree(predecessor, evidence / "prior-source")
     for index, item in enumerate(before["installedArtifacts"]):
@@ -494,6 +534,8 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
         if destination.exists():
             if root_path(f"/sys/module/{CANONICAL_MODULE}").exists():
                 run([tools["modprobe"], "-r", CANONICAL_MODULE], log=evidence / "module-unload-for-replace.log")
+            if root_path(f"/sys/module/{CONTROLLER_MODULE}").exists():
+                run([tools["modprobe"], "-r", CONTROLLER_MODULE], log=evidence / "controller-unload-for-replace.log")
             run([tools["dkms"], "remove", "-m", PACKAGE, "-v", version, "--all"], log=evidence / "dkms-remove.log")
             if destination.exists(): shutil.rmtree(destination)
         rollback["workflowCreatedFiles"].append(str(destination))
@@ -506,7 +548,17 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
         if install_requested:
             run([tools["dkms"], "install", "-m", PACKAGE, "-v", version, "-k", requested], log=evidence / "dkms-install.log")
             run([tools["depmod"], "-a", requested], log=evidence / "depmod.log")
-    module = resolve_module(requested, version) if install_requested else None
+    installed_modules = ({name: resolve_module(requested, version, name)
+                          for name in expected_modules} if install_requested else {})
+    module = installed_modules.get(CANONICAL_MODULE)
+    if runtime_controller and module:
+        if modinfo(pathlib.Path(module["installedPath"]), "rp1_runtime_controller") != "1":
+            raise Failure("runtime-profile consumer lacks controller interlock")
+        dependencies = set(filter(None, modinfo(pathlib.Path(module["installedPath"]), "depends").split(',')))
+        if CONTROLLER_MODULE not in dependencies:
+            raise Failure("runtime-profile consumer lacks controller dependency")
+        if modinfo(pathlib.Path(module["installedPath"]), "alias"):
+            raise Failure("runtime-profile consumer unexpectedly retains an autoload alias")
     if module: print_mutation_identity(requested, module["installedPath"])
     neutral_after = route_neutral_observation() if route_neutral else None
     if neutral_after is not None:
@@ -517,7 +569,8 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
                      for name,path in tools.items() if path and name in version_safe}
     manifest = update_manifest(manifest_path, {"targetKernel": requested, "kernelIdentities": kernel_identities(requested),
         "architecture": platform.machine(), "headersPath":str(root_path(f"/lib/modules/{requested}/build")),
-        "compiler":compiler, "toolVersions":tool_versions, "tools": tools, "installedModule": module, "route": args.route,
+        "compiler":compiler, "toolVersions":tool_versions, "tools": tools, "installedModule": module,
+        "installedModules": installed_modules, "route": args.route,
         "installationMode": "route-neutral" if route_neutral else "route-specific",
         "routeNeutralSafety": {"before": neutral_before, "after": neutral_after} if route_neutral else None,
         "parameters": {"live_output": args.live_output}, "buildLogs": sorted(str(p) for p in evidence.glob("*.log")),
@@ -527,6 +580,9 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
         if requested != platform.release(): raise Failure("cannot load a module built for a non-running kernel")
         lifecycle_action("load", manifest_path, args.live_output)
         manifest = load_manifest(manifest_path)
+    rollback["installedModules"] = installed_modules
+    rollback["installedManifestSha256"] = sha256(manifest_path)
+    rollback["buildProfile"] = "runtime-controller" if runtime_controller else "ordinary"
     rollback["status"] = "ready"; atomic_write(rollback_path, canonical(rollback))
     result = {"status": "ok", "classification": "source-development", "manifest": str(manifest_path),
               "rollback": str(rollback_path), "state": manifest.get("developmentState"), "module": module}
@@ -662,18 +718,35 @@ def rollback(record_path: pathlib.Path) -> dict[str, Any]:
     if sha256(allowed / "DEVELOPMENT_MANIFEST.json") != record.get("sourceManifestSha256"):
         raise Failure("rollback source has been replaced by another instance")
     loaded = root_path(f"/sys/module/{CANONICAL_MODULE}/version")
+    loaded_controller = root_path(f"/sys/module/{CONTROLLER_MODULE}/version")
     if loaded.exists() and loaded.read_text().strip() != version:
         raise Failure("rollback refuses to unload a different version")
-    manifest = load_manifest(pathlib.Path(record["manifest"]))
-    if module_candidates(kernel):
-        current = resolve_module(kernel, version)
-        expected = manifest.get("installedModule")
-        if not expected or current["installedFileSha256"] != expected["installedFileSha256"]:
-            raise Failure("rollback installed artifact ownership mismatch")
+    if loaded_controller.parent.exists() and not loaded_controller.is_file():
+        raise Failure("rollback controller version is unavailable")
+    if loaded_controller.exists() and loaded_controller.read_text().strip() != version:
+        raise Failure("rollback refuses to unload a different controller version")
+    expected_names = ((CANONICAL_MODULE, CONTROLLER_MODULE)
+                      if record.get("buildProfile") == "runtime-controller"
+                      else (CANONICAL_MODULE,))
+    installed = record.get("installedModules")
+    if not isinstance(installed, dict) or set(installed) != set(expected_names):
+        raise Failure("rollback installed module set ownership mismatch")
+    for name in expected_names:
+        current = resolve_module(kernel, version, name)
+        expected = installed[name]
+        if (not isinstance(expected, dict)
+                or current["installedPath"] != expected.get("installedPath")
+                or current["installedFileSha256"] != expected.get("installedFileSha256")
+                or current["decompressedElfSha256"] != expected.get("decompressedElfSha256")):
+            raise Failure(f"rollback installed {name} artifact ownership mismatch")
+    unexpected = set((CANONICAL_MODULE, CONTROLLER_MODULE)) - set(expected_names)
+    if any(module_candidates(kernel, name) for name in unexpected):
+        raise Failure("rollback installed module set contains an unowned artifact")
     status = run([tool("dkms") or "dkms", "status", "-m", PACKAGE]).stdout.splitlines()
-    transition_preflight(version, kernel, status)
+    transition_preflight(version, kernel, status, expected_names)
     print_mutation_identity(kernel)
     if root_path(f"/sys/module/{CANONICAL_MODULE}").exists(): run([tool("modprobe") or "modprobe", "-r", CANONICAL_MODULE])
+    if root_path(f"/sys/module/{CONTROLLER_MODULE}").exists(): run([tool("modprobe") or "modprobe", "-r", CONTROLLER_MODULE])
     run([tool("dkms") or "dkms", "remove", "-m", PACKAGE, "-v", version, "--all"])
     for name in record.get("workflowCreatedFiles", []):
         path = pathlib.Path(name)
@@ -798,6 +871,7 @@ def parser_for(command: str) -> argparse.ArgumentParser:
     if command == "render-development-tree":
         parser.add_argument("--source", required=True); parser.add_argument("--output", required=True)
         parser.add_argument("--allow-dirty", action="store_true")
+        parser.add_argument("--runtime-controller", action="store_true")
     elif command == "development-preflight":
         parser.add_argument("--source", default="."); parser.add_argument("--kernel", default=platform.release())
     elif command == "development-install":
@@ -809,6 +883,7 @@ def parser_for(command: str) -> argparse.ArgumentParser:
         parser.add_argument("--build-only", action="store_true"); parser.add_argument("--install", action="store_true")
         parser.add_argument("--load", action="store_true")
         parser.add_argument("--keep-build", action="store_true"); parser.add_argument("--allow-dirty", action="store_true")
+        parser.add_argument("--runtime-controller", action="store_true")
     elif command == "development-enroll":
         parser.add_argument("--manifest", type=pathlib.Path, required=True); parser.add_argument("--route", choices=ROUTES, required=True)
         parser.add_argument("--kernel", required=True); parser.add_argument("--remove", action="store_true")
@@ -833,7 +908,9 @@ def main() -> int:
         if len(sys.argv) < 2: raise Failure("development command required")
         command, sys.argv = sys.argv[1], [sys.argv[0], *sys.argv[2:]]
     args = parser_for(command).parse_args()
-    if command == "render-development-tree": result = {"manifest": str(render(pathlib.Path(args.source), pathlib.Path(args.output), args.allow_dirty))}
+    if command == "render-development-tree": result = {"manifest": str(render(
+        pathlib.Path(args.source), pathlib.Path(args.output), args.allow_dirty,
+        args.runtime_controller))}
     elif command == "development-preflight":
         source = pathlib.Path(args.source).resolve()
         result = {"classification":"source-development", "kernels":kernel_identities(args.kernel),

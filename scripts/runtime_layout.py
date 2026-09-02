@@ -2,15 +2,12 @@
 """Fixed runtime deployment inventory; no caller-selected destinations."""
 KERNEL = '6.18.34+rpt-rpi-2712'
 LIB = '/usr/lib/rp1-gpclk-dkms/'
-INVENTORY = {
-    f'/lib/modules/{KERNEL}/updates/dkms/{name}.ko': f'{name}.ko'
-    for name in ('rp1_route_controller', 'rp1_gpclk_dkms')
-}
-INVENTORY.update({LIB+name: 'scripts/'+name for name in (
+MODULES = ('rp1_route_controller', 'rp1_gpclk_dkms')
+INVENTORY = {LIB+name: 'scripts/'+name for name in (
     'runtime_controller_admin.py', 'runtime_manager.py', 'runtime_route_client.py',
     'runtime_layout.py', 'runtime_deployment.py', 'runtime_output.py',
     'runtime_application.py', 'runtime_activation.py', 'runtime_provider.py',
-    'runtime_binding.py')})
+    'runtime_binding.py')}
 INVENTORY['/usr/lib/systemd/system/rp1-gpclk-route-manager.socket'] = 'systemd/rp1-gpclk-route-manager.socket'
 INVENTORY['/usr/lib/systemd/system/rp1-gpclk-route-manager@.service'] = 'systemd/rp1-gpclk-route-manager@.service'
 INVENTORY['/etc/systemd/system/rp1-gpclk-route-manager@.service.d/95-runtime-controller.conf'] = 'systemd/95-runtime-controller.conf'

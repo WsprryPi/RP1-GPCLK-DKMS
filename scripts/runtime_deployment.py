@@ -180,6 +180,13 @@ class Files:
             admin.safe_directory(Path(path).parent)
             if admin.digest(admin.read_regular(path, 4*1024*1024)) != expected:
                 raise ValueError('external prerequisite mismatch: '+path)
+        for module, record in binding['modules'].items():
+            path = record['path']
+            admin.safe_directory(Path(path).parent)
+            if admin.digest(admin.read_regular(path, MAX_FILE_BYTES)) != record['installedFileSha256']:
+                raise ValueError('external DKMS module mismatch: '+path)
+            if admin.run(('/usr/sbin/modinfo', '-F', 'filename', module)) != path:
+                raise ValueError('external DKMS module resolution mismatch: '+module)
 
     def quiesce(self):
         self.preflight()

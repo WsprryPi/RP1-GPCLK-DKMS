@@ -193,7 +193,7 @@ class Tests(unittest.TestCase):
              patch.object(admin, 'read_regular', return_value=b'N\n'):
             system.load()
             with patch.object(Path, 'exists', side_effect=[True, False]): system.unload()
-        self.assertEqual(calls, [('/usr/sbin/insmod', '/lib/modules/'+admin.KERNEL+'/updates/dkms/rp1_gpclk_dkms.ko', 'live_output=0'),
+        self.assertEqual(calls, [('/usr/sbin/modprobe', 'rp1_gpclk_dkms', 'live_output=0'),
                                  ('/usr/sbin/rmmod', 'rp1_gpclk_dkms')])
         self.assertFalse(any('force' in token or token in ('-f', '--force') for argv in calls for token in argv))
 
