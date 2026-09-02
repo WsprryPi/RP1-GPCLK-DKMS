@@ -20,7 +20,6 @@ import tempfile
 import uuid
 from runtime_binding import validate as validate_binding
 
-KERNEL = '6.18.34+rpt-rpi-2712'
 STATE = Path('/var/lib/rp1-gpclk-dkms/runtime-admin')
 BINDING = Path('/etc/rp1-gpclk-dkms/runtime-controller.json')
 ENDPOINT = '/dev/rp1-route-admin'
@@ -174,8 +173,8 @@ class Linux:
                 setattr(self, name, None)
 
     def initialize(self):
-        if os.geteuid() != 0 or os.uname().release != KERNEL:
-            raise ValueError('root and exact reviewed kernel required')
+        if os.geteuid() != 0:
+            raise ValueError('root required')
         safe_directory(STATE)
         self.lock = os.open(STATE / 'lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
         info = os.fstat(self.lock)
@@ -197,6 +196,8 @@ class Linux:
         self.binding = strict_json(raw)
         self.binding_hash = digest(raw)
         validate_binding(self.binding)
+        if self.binding['kernel'] != os.uname().release:
+            raise ValueError('binding kernel differs from running kernel')
         activation = self.read_record('activation.json')
         if activation is not None:
             from runtime_activation import validate_journal
@@ -233,8 +234,8 @@ class Linux:
         self.note('rp1_route_controller', 'controllerNoteSha256')
         if Path('/sys/module/rp1_gpclk_dkms').exists():
             self.note('rp1_gpclk_dkms', 'consumerNoteSha256')
-            if read_regular('/sys/module/rp1_gpclk_dkms/parameters/live_output').strip() not in (b'N', b'0'):
-                raise ValueError('loaded consumer output is not disabled')
+            if read_regular('/sys/module/rp1_gpclk_dkms/parameters/output_inhibit').strip() not in (b'N', b'0', b'Y', b'1'):
+                raise ValueError('loaded consumer output-inhibit state is unknown')
         self.fd = os.open(ENDPOINT, os.O_RDWR | os.O_NOFOLLOW)
         info = os.fstat(self.fd)
         if not stat.S_ISCHR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o077:
@@ -281,18 +282,18 @@ class Linux:
         self.check_inhibit()
         if Path('/sys/module/rp1_gpclk_dkms').exists():
             self.note('rp1_gpclk_dkms', 'consumerNoteSha256')
-            if read_regular('/sys/module/rp1_gpclk_dkms/parameters/live_output').strip() not in (b'N', b'0'):
-                raise ValueError('consumer output gate not disabled')
+            if read_regular('/sys/module/rp1_gpclk_dkms/parameters/output_inhibit').strip() not in (b'N', b'0', b'Y', b'1'):
+                raise ValueError('consumer output-inhibit state is unknown')
             run(('/usr/sbin/rmmod', 'rp1_gpclk_dkms'))
         if Path('/sys/module/rp1_gpclk_dkms').exists():
             raise ValueError('consumer remains loaded')
 
     def load(self):
         self.check_inhibit()
-        run(('/usr/sbin/modprobe', 'rp1_gpclk_dkms', 'live_output=0'))
+        run(('/usr/sbin/modprobe', 'rp1_gpclk_dkms'))
         self.note('rp1_gpclk_dkms', 'consumerNoteSha256')
-        if read_regular('/sys/module/rp1_gpclk_dkms/parameters/live_output').strip() not in (b'N', b'0'):
-            raise ValueError('consumer gate mismatch')
+        if read_regular('/sys/module/rp1_gpclk_dkms/parameters/output_inhibit').strip() not in (b'N', b'0'):
+            raise ValueError('production consumer unexpectedly output-inhibited')
 
     def inhibited(self):
         try:

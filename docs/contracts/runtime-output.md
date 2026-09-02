@@ -3,66 +3,65 @@
 # Runtime route reconciliation for application output
 
 The runtime manager completes application restoration as specified in
-[Runtime application restoration](runtime-application-restoration.md). Its successful switch path
-restores a previously running application in idle mode. `restore --execute`
-retries application completion after a successful route transaction.
+[Runtime application restoration](runtime-application-restoration.md). A
+successful route switch restores a previously running application in idle mode;
+`restore --execute` retries application completion after a successful route
+transaction.
 
-The runtime controller continues to own its overlay and exclude removal while
-the consumer is attached. Neither its UAPI nor its consumer interlock changes.
-The consumer remains loaded with `live_output=0`.
+The controller continues to own its overlay and exclude removal while the
+consumer is attached. Production loads the consumer with its default
+`output_inhibit=0`. This makes the root-owned mode-`0600` consumer endpoint the
+execution authority; it does not start output. Clock-disabled development and
+lifecycle workflows instead load with `output_inhibit=1`.
 
-In the separate neutral-administration state, only the controller is loaded.
-There is no overlay, consumer endpoint, lease, owner, authorization, clock, GPIO
-or DMA execution state to resume. `neutral_ready` therefore means administration
-is available for a later explicit route plan; it does not mean the transmission
-consumer is compatible or eligible.
+In neutral administration only the controller is loaded. There is no overlay,
+consumer endpoint, owner, lease, clock, GPIO, or DMA execution state.
+`neutral_ready` means administration is available for a later explicit route
+plan, not that a consumer or transmission is qualified.
 
-The canonical UAPI supports operation-scoped live acquisition on this consumer.
-The load parameter blocks the global output path;
-it does not disable operation-scoped authorization. No new permit, duration cap, or mode
-restriction is introduced here.
+The runtime manager supports `idle` and `reconcile-output` for an explicit
+`gpio4` or `gpio20` route. Both are observational and return
+`productionAuthority=root-owned-endpoint`. They require the current
+boot/session/binding, a completed route journal agreeing with controller
+readback, and a passive consumer snapshot reporting the selected route,
+`outputInhibited=false`, `operationalReady=true`, no owner or lease, no cleanup
+fault, and stable GPIO/clock/DMA quiescence. Busy and unknown observations fail.
+The result is evidence that a root client may proceed to ordinary UAPI
+acquisition; reconciliation is not a transmission or RF qualification.
 
-The runtime manager supports `idle` and `reconcile-output`, each with an explicit `gpio4` or `gpio20`
-route. Both are observational and return `executionAuthorized=false`. They require
-a current boot/session/binding, a completed route journal agreeing with controller
-readback, and a passive module snapshot reporting the selected route, eligible
-compatibility, no owner/lease/live gate, no cleanup fault, and stable GPIO/clock/DMA
-quiescence. Busy and unknown observations fail; kernel errors remain available.
-The existing module acquisition closes the observation-to-acquisition race.
-Successful observations return the validated passive snapshot so the
-installer-facing readiness contract can report owner, lease, live gate,
-eligibility, GPIO, clock, DMA and stability values. This is evidence only;
-`executionAuthorized` remains false.
+A matching WsprryPi integration uses `idle` during startup without clearing its
+application inhibit. Its adapter translates product modes, schedules, and
+operator decisions into generic finite events after reconciliation, then relies
+on the canonical lease, cancellation, cleanup, and terminal-state contract. The
+kernel does not receive an authorization digest or product-mode identifier.
 
-WsprryPi uses `idle` during startup without clearing its output inhibit. Its
-existing development-operation path uses `reconcile-output` before checking the
-operator confirmation and consuming its existing one-use application authorization.
-The existing UAPI lease, finite request, cancellation, owner-close cleanup and
-terminal observation remain responsible for execution. Route reconciliation is
-not itself output authorization or RF qualification.
+The companion is compatible only when its copied UAPI header digest exactly
+matches `uapi-identity.json`. It must use `SUBMIT_EVENTS` for WSPR, keyed modes,
+and finite carriers; require `outputInhibited=false` and
+`operationalReady=true` before acquisition; and surface the provider's terminal
+reason without replacing it with a generic failure. An application feature that
+has no operator-supplied end time, such as a continuous carrier, still chooses
+an explicit finite request duration. If it uses successor requests, the
+application checks its stop condition before each successor and never treats one
+completed request as permission to start another.
 
-The low-level `resume gpio4|gpio20 --execute` checks the idle route and releases
-owned inhibition without starting the service or authorizing output. It is not
-the application-restoration handshake. Normal runtime switching performs that
-handshake itself; use `restore --execute` if application completion fails.
-An open consumer file blocks unload. Removal errors and unresolved transactions
-remain visible, and no previous transmission is resumed automatically.
+`resume gpio4|gpio20 --execute` verifies the idle route and releases owned
+application inhibition without starting the service or submitting output. It is
+not the application-restoration handshake. Normal switching performs that
+handshake; use `restore --execute` if completion fails. Open consumer files
+block unload, removal errors remain visible, and no prior transmission resumes
+automatically.
 
 ## Coherent update procedure
 
 Use the [runtime deployment workflow](../operator/runtime-manager-workflow.md)
-with a complete newly bound bundle and matching WsprryPi companion. Keep module,
-manager, UAPI, overlay and application identities coherent; do not swap scripts
-under an old binding. The [application restoration contract](runtime-application-restoration.md)
-defines startup readiness and preservation of service/configuration state.
+with one complete binding and matching WsprryPi companion. Keep the module,
+manager, UAPI, overlays, and application identities coherent. Failed deployment
+uses the existing deployment recovery path; failed route effects retain their
+ID and error for explicit recovery. Compilation or idle reconciliation is not
+output evidence.
 
-A failed update uses the existing deployment journal recovery while modules are
-unloaded. A failed route operation keeps its ID/error and requires explicit
-recovery. Preserve target evidence, including any failed operation, and do not
-claim output success from compilation or idle reconciliation alone.
-
-After a reboot, load the reviewed controller and use explicit `recover --execute`
-before switching. If its new state is completely empty, recovery archives the
-previous boot's journal and establishes a current neutral record. A nonempty or
-faulted controller is not adopted through this path. Recovery leaves output
-disabled and the application masked.
+After reboot, load the reviewed controller and use explicit recovery before
+switching. A clean empty state may archive the prior boot journal and establish
+current neutral state. Nonempty or faulted state is not adopted. Recovery leaves
+the application inhibited and output inactive.

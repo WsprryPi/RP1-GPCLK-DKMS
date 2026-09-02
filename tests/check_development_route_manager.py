@@ -19,7 +19,7 @@ with tempfile.TemporaryDirectory() as temporary:
     commit=subprocess.run(["git","rev-parse","HEAD"],cwd=source,text=True,stdout=subprocess.PIPE,check=True).stdout.strip()
     for name in DEV.PACKAGE_PATHS:
         path=fake/name.lstrip("/"); path.parent.mkdir(parents=True,exist_ok=True); path.write_text(name+"\n"); path.chmod(0o755 if "/usr/sbin/" in name or "/libexec/" in name else 0o644)
-    live=fake/"sys/module/rp1_gpclk_dkms/parameters/live_output"; live.parent.mkdir(parents=True); live.write_text("N\n")
+    inhibit=fake/"sys/module/rp1_gpclk_dkms/parameters/output_inhibit"; inhibit.parent.mkdir(parents=True); inhibit.write_text("Y\n")
     (fake/"sys/module/rp1_gpclk_dkms/refcnt").write_text("0\n")
     boot=fake/"proc/sys/kernel/random/boot_id"; boot.parent.mkdir(parents=True); boot.write_text("11111111-2222-3333-4444-555555555555\n")
     config=fake/"boot/firmware/config.txt"; config.parent.mkdir(parents=True); config.write_text("fixture gpio4 config\n")
@@ -37,7 +37,7 @@ case "$1:${2:-}" in
  *) echo "unexpected systemctl: $*" >&2; exit 2;;
 esac
 ''')
-    manifest=base/"module-manifest.json"; manifest.write_text(json.dumps({"schema":DEV.MANIFEST_SCHEMA,"classification":"source-development","qualification":False,"sourceState":"clean","sourceCommit":"7"*40,"targetKernel":"fixture-kernel","route":"gpio4","renderedVersion":"0.9.0","uapiIdentity":{"sha256":"d40b48c817bdcb0b72d0fca624e1fe43e37cd924dd799c82dc6e94244614d082"}}))
+    manifest=base/"module-manifest.json"; manifest.write_text(json.dumps({"schema":DEV.MANIFEST_SCHEMA,"classification":"source-development","qualification":False,"sourceState":"clean","sourceCommit":"7"*40,"targetKernel":"fixture-kernel","route":"gpio4","renderedVersion":"0.9.0","uapiIdentity":{"sha256":"4af14cdf60471ac4b318b10d7d70824a63c74029c2934e86bbdcd1b7f06cf633"}}))
     old=dict(os.environ); os.environ.update({"RP1_GPCLK_DEVELOPMENT_ROOT":str(fake),"RP1_GPCLK_DEVELOPMENT_TEST_ROOT":"1","RP1_GPCLK_TOOL_SYSTEMCTL":str(tools/"systemctl"),"RP1_TEST_SYSTEMD_STATE":str(state)})
     try:
         args=type("Args",(),{"source":source,"module_manifest":manifest,"route":"gpio4","kernel":"fixture-kernel"})()
@@ -47,7 +47,7 @@ esac
         except DEV.Failure: pass
         else: raise AssertionError("deployment without adoption reported ready")
         binding=DEV.load(DEV.root(f"{DEV.BASE}/{commit}/binding.json"))
-        safety={"endpointOwned":True,"endpointOpen":False,"liveOutput":False,"services":{}}
+        safety={"endpointOwned":True,"endpointOpen":False,"outputInhibited":True,"services":{}}
         DEV.passive_query=lambda:{"status":"ok","state":{"bootOwnership":"unadopted-source-development","configuredRoute":"gpio4","activeRoute":"gpio4","pendingTransaction":None,"bootId":boot.read_text().strip(),"configSha256":DEV.digest(config),"safety":safety}}
         adopted=DEV.adopt(status_args); assert adopted["status"]=="ok" and adopted["passiveQuery"] is None
         assert DEV.status(status_args)==adopted
@@ -95,6 +95,6 @@ esac
 
 source=(ROOT/"scripts/development_route_manager.py").read_text()
 assert "client.shutdown(socket.SHUT_WR)" in source
-for forbidden in ("modprobe ","/dev/mem","live_output=1","Soapy","transmit"):
+for forbidden in ("modprobe ","/dev/mem","Soapy","transmit"):
     assert forbidden not in source
 print("source-development route manager lifecycle: PASS")

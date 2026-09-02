@@ -17,7 +17,7 @@ ROWS = (
     "removal-open-or-active", "reinstall-after-removal",
 )
 SHA = re.compile(r"[0-9a-f]{64}")
-PROHIBITED = ("live_output=1", "/dev/mem", "rpi-update", "force-remove",
+PROHIBITED = ("output_inhibit=0", "/dev/mem", "rpi-update", "force-remove",
               "clock-enable", "dma-submit", "gpio-output", "sdr-operation", "rf")
 REQUIRED_ACTIONS = {
     "current-supported-kernel": {"apply-route-runtime-output-disabled", "query-release", "complete-test-owned-removal"},
@@ -92,7 +92,7 @@ def validate(value: dict, *, verify_tools: bool = True) -> dict:
         if schema in {4,5} and bootstrap_value.get("qualificationRoot")!=value["qualificationRoot"]:
             raise ValueError("target plan and bootstrap qualification roots differ")
     invariants = value["invariants"]
-    expected_invariants = {"liveOutput": False, "si5351Disconnected": True,
+    expected_invariants = {"outputActive": False, "si5351Disconnected": True,
                            "antennaConnected": False, "sdrPermitted": False,
                            "forcedRemoval": False, "trybootMutation": False,
                            "historicalArtifactMutation": False}
@@ -212,7 +212,7 @@ def validate(value: dict, *, verify_tools: bool = True) -> dict:
     if set(busy["attempts"]) != {"open-gpio4", "owner-gpio4", "open-gpio20", "owner-gpio20"}:
         raise ValueError("busy-state attempts are incomplete")
     return {"valid": True, "readOnly": True, "rowCount": len(rows), "attemptCount": attempts,
-            "liveOutput": False}
+            "outputActive": False}
 
 
 def main() -> None:

@@ -13,7 +13,7 @@ JOURNAL_DIR="/var/lib/rp1-gpclk-dkms/route-transactions"
 UAPI=f"/usr/src/{PACKAGE}-{VERSION}/include/uapi/linux/rp1_gpclk.h"
 OVERLAY_DIR="/boot/firmware/overlays"
 BEGIN="# BEGIN RP1-GPCLK-DKMS OWNED ROUTE"; END="# END RP1-GPCLK-DKMS OWNED ROUTE"
-UAPI_SHA256="d40b48c817bdcb0b72d0fca624e1fe43e37cd924dd799c82dc6e94244614d082"
+UAPI_SHA256="4af14cdf60471ac4b318b10d7d70824a63c74029c2934e86bbdcd1b7f06cf633"
 SOURCE_DEVELOPMENT_BINDING_ENV="RP1_GPCLK_SOURCE_DEVELOPMENT_BINDING"
 ADOPTION_SCHEMA="rp1-gpclk-route-manager-current-boot-adoption"
 OVERLAY_SHA256={"gpio4":"96b157b50961ebf74915f84186494f9a0d5427faa59bf9729a8bd4c95dc5f681","gpio20":"b43691796628e4675f9f8cae8aef187cc670b3f7a3713cb67e352ee585c53713"}
@@ -189,9 +189,10 @@ def service_safety(env:Environment,require_quiesced:bool=False)->dict:
             try: opened=fd.stat()
             except OSError: continue
             if (opened.st_dev,opened.st_ino)==(endpoint_stat.st_dev,endpoint_stat.st_ino): raise ContractError("RP1 GPCLK endpoint is open")
-    live=env.path(f"/sys/module/{MODULE}/parameters/live_output")
-    if live.exists() and live.read_text().strip() not in {"N","0"}: raise ContractError("live_output is enabled or unknown")
-    return {"services":observed,"servicesQuiesced":all(value in {"inactive","failed"} for value in observed.values()),"endpointOwned":True,"endpointOpen":False,"liveOutput":False}
+    inhibit=env.path(f"/sys/module/{MODULE}/parameters/output_inhibit")
+    inhibit_value=inhibit.read_text().strip() if inhibit.is_file() else None
+    if inhibit_value not in {None,"N","0","Y","1"}: raise ContractError("output_inhibit is unknown")
+    return {"services":observed,"servicesQuiesced":all(value in {"inactive","failed"} for value in observed.values()),"endpointOwned":True,"endpointOpen":False,"outputInhibited":inhibit_value in {"Y","1"} if inhibit_value is not None else None}
 
 def source_development_passive_safety(env:Environment)->dict:
     observed={}
@@ -209,11 +210,11 @@ def source_development_passive_safety(env:Environment)->dict:
         try: opened=fd.stat()
         except OSError: continue
         if (opened.st_dev,opened.st_ino)==(endpoint_stat.st_dev,endpoint_stat.st_ino): endpoint_open=True; break
-    live=env.path(f"/sys/module/{MODULE}/parameters/live_output")
-    if not live.is_file(): raise ContractError("live_output is absent or unsafe")
-    live_value=live.read_text().strip()
-    if live_value not in {"N","0","Y","1"}: raise ContractError("live_output is unknown")
-    return {"services":observed,"servicesQuiesced":all(value in {"inactive","failed"} for value in observed.values()),"endpointOwned":True,"endpointOpen":endpoint_open,"liveOutput":live_value in {"Y","1"}}
+    inhibit=env.path(f"/sys/module/{MODULE}/parameters/output_inhibit")
+    if not inhibit.is_file(): raise ContractError("output_inhibit is absent or unsafe")
+    inhibit_value=inhibit.read_text().strip()
+    if inhibit_value not in {"N","0","Y","1"}: raise ContractError("output_inhibit is unknown")
+    return {"services":observed,"servicesQuiesced":all(value in {"inactive","failed"} for value in observed.values()),"endpointOwned":True,"endpointOpen":endpoint_open,"outputInhibited":inhibit_value in {"Y","1"}}
 
 def active_route(env:Environment)->str|None:
     matches=[]; of_root=env.path("/sys/firmware/devicetree/base")

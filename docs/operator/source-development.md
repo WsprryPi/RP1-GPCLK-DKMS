@@ -39,14 +39,14 @@ git checkout EXACT_COMMIT
 sudo ./scripts/development-install \
   --kernel "$(uname -r)" \
   --route-neutral \
-  --live-output 0 \
+  --output-inhibit 1 \
   --install \
   --evidence-directory /absolute/evidence/path
 ```
 
 This mode requires no configured or active RP1 GPCLK route, installed route
 overlay, loaded consumer, or endpoint before and after installation. It requires
-a clean source commit and rejects `--load`, `live_output=1`, and a simultaneous
+a clean source commit and rejects `--load`, `output_inhibit=0`, and a simultaneous
 GPIO route. The resulting `DEVELOPMENT_MANIFEST.json` records `route: null`, the
 target kernel, installed and decompressed module hashes, UAPI hash,
 output-disabled parameters, and pre/post route-neutral observations.
@@ -78,7 +78,7 @@ git checkout EXACT_COMMIT
 sudo ./scripts/development-install \
   --kernel "$(uname -r)" \
   --route gpio4 \
-  --live-output 0 \
+  --output-inhibit 1 \
   --load \
   --evidence-directory /absolute/evidence/path
 
@@ -87,7 +87,7 @@ sudo ./scripts/development-install \
   --json
 ```
 
-Use `--live-output 1` only inside a separately authorized plan with the exact
+Use `--output-inhibit 0` only inside a separately authorized plan with the exact
 route, topology, compatibility identity, cleanup controls, and operator window.
 Installation or loading alone does not authorize GPIO, GPCLK, transmission, or
 RF activity.
@@ -97,7 +97,7 @@ from fixed noninteractive system locations, renders only tracked inputs without
 modifying the checkout, records the exact commit and any explicitly allowed
 dirty state, registers and builds with DKMS, installs for the requested kernel,
 runs `depmod`, resolves the real module artifact, verifies version and vermagic,
-and optionally loads with an explicit `live_output` value. Detailed command
+and optionally loads with an explicit `output_inhibit` value. Detailed command
 output is retained in the evidence directory. Use `--build-only`, `--install`,
 `--load`, and `--keep-build` to select the lifecycle. A same-name, same-version
 development instance is replaced only after complete source-ownership validation.
@@ -118,8 +118,8 @@ module, route, endpoint, or installed route overlay is a preflight refusal.
 ./scripts/render-development-tree --source . --output /absolute/tree
 
 sudo ./scripts/development-enroll --manifest MANIFEST --route gpio4 --kernel "$(uname -r)"
-sudo ./scripts/development-module load --live-output 0 --manifest MANIFEST
-sudo ./scripts/development-module reload --live-output 0 --manifest MANIFEST
+sudo ./scripts/development-module load --output-inhibit 1 --manifest MANIFEST
+sudo ./scripts/development-module reload --output-inhibit 1 --manifest MANIFEST
 ./scripts/development-module status --manifest MANIFEST
 ./scripts/development-endpoint --manifest MANIFEST --json
 sudo ./scripts/development-module unload --manifest MANIFEST
@@ -133,7 +133,7 @@ sudo ./scripts/development-overlay rollback --manifest MANIFEST
 ```
 
 Before enrolling, query the loaded module and require compatibility ID
-`v0.9.0-pi5-gpio4` or `v0.9.0-pi5-gpio20` for the selected route. If an existing
+`v0.9.0-rp1-gpio4` or `v0.9.0-rp1-gpio20` for the selected route. If an existing
 `0.9.0` installation reports another identifier, keep output inhibited, remove
 its enrollment using the removal command in that enrollment record, perform the
 guarded same-version replacement, and enroll the current installation. Do not
@@ -187,7 +187,7 @@ closed. Completed journals never substitute for current adoption.
 The same `source-development` `QUERY` returns its authenticated runtime observations
 under `state.safety`: `endpointOwned` confirms the root-owned mode 0600
 character endpoint, `endpointOpen` reports whether a process currently holds
-it, `liveOutput` reports the immutable module load gate, and `services` records
+it, `outputInhibited` reports the immutable module load switch, and `services` records
 the bounded service observations. These fields are observations for the
 consuming policy; they do not acquire the endpoint or authorize output.
 

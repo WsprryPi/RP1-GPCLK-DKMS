@@ -151,15 +151,15 @@ with tempfile.TemporaryDirectory() as temporary:
     manifest=env.path("/opt/development/DEVELOPMENT_MANIFEST.json")
     manifest.write_text(json.dumps({"schema":"rp1-gpclk-source-development-manifest","classification":"source-development","qualification":False,"sourceCommit":"7"*40,"renderedVersion":"0.9.0","targetKernel":"fixture-kernel","route":"gpio4","uapiIdentity":{"sha256":manager.sha256_bytes(fixture.uapi)}}))
     binding=env.path("/opt/development/binding.json")
-    value={"schema":"rp1-gpclk-route-manager-source-development-v1","classification":"Experimental/source-development","qualification":False,"sourceCommit":"8"*40,"moduleSourceCommit":"7"*40,"sourceManifest":"/opt/development/DEVELOPMENT_MANIFEST.json","sourceManifestSha256":manager.sha256(manifest),"executable":"/opt/development/rp1-gpclk-route-manager","executableSha256":manager.sha256(executable),"adoptionRecord":"/opt/development/current-boot-ownership.json","module":manager.MODULE,"moduleVersion":"0.9.0","uapiSha256":manager.sha256_bytes(fixture.uapi),"kernel":"fixture-kernel","route":"gpio4","compatibilityId":"v0.9.0-pi5-gpio4"}
+    value={"schema":"rp1-gpclk-route-manager-source-development-v1","classification":"Experimental/source-development","qualification":False,"sourceCommit":"8"*40,"moduleSourceCommit":"7"*40,"sourceManifest":"/opt/development/DEVELOPMENT_MANIFEST.json","sourceManifestSha256":manager.sha256(manifest),"executable":"/opt/development/rp1-gpclk-route-manager","executableSha256":manager.sha256(executable),"adoptionRecord":"/opt/development/current-boot-ownership.json","module":manager.MODULE,"moduleVersion":"0.9.0","uapiSha256":manager.sha256_bytes(fixture.uapi),"kernel":"fixture-kernel","route":"gpio4","compatibilityId":"v0.9.0-rp1-gpio4"}
     binding.write_text(json.dumps(value)); old=os.environ.get(manager.SOURCE_DEVELOPMENT_BINDING_ENV); os.environ[manager.SOURCE_DEVELOPMENT_BINDING_ENV]="/opt/development/binding.json"
     try:
         original_passive_safety=manager.source_development_passive_safety
-        manager.source_development_passive_safety=lambda unused:{"services":{name:"inactive" for name in manager.SERVICES},"servicesQuiesced":True,"endpointOwned":True,"endpointOpen":False,"liveOutput":False}
+        manager.source_development_passive_safety=lambda unused:{"services":{name:"inactive" for name in manager.SERVICES},"servicesQuiesced":True,"endpointOwned":True,"endpointOpen":False,"outputInhibited":True}
         result=manager.dispatch(request("query"),env); assert result["status"]=="ok" and result["state"]["activeRoute"]=="gpio4" and result["state"]["bootOwnership"]=="unadopted-source-development"
-        assert result["state"]["safety"]=={"services":{name:"inactive" for name in manager.SERVICES},"servicesQuiesced":True,"endpointOwned":True,"endpointOpen":False,"liveOutput":False}
-        manager.source_development_passive_safety=lambda unused:{"services":{name:"inactive" for name in manager.SERVICES},"servicesQuiesced":True,"endpointOwned":True,"endpointOpen":False,"liveOutput":True}
-        assert manager.dispatch(request("query"),env)["state"]["safety"]["liveOutput"] is True
+        assert result["state"]["safety"]=={"services":{name:"inactive" for name in manager.SERVICES},"servicesQuiesced":True,"endpointOwned":True,"endpointOpen":False,"outputInhibited":True}
+        manager.source_development_passive_safety=lambda unused:{"services":{name:"inactive" for name in manager.SERVICES},"servicesQuiesced":True,"endpointOwned":True,"endpointOpen":False,"outputInhibited":False}
+        assert manager.dispatch(request("query"),env)["state"]["safety"]["outputInhibited"] is False
         state=result["state"]; adoption=env.path(value["adoptionRecord"])
         adoption.write_text(json.dumps({"schema":manager.ADOPTION_SCHEMA,"classification":"Experimental/source-development","qualification":False,"adoptedAtUnix":1,"bootId":state["bootId"],"configSha256":state["configSha256"],"route":"gpio4","sourceCommit":value["sourceCommit"],"executableSha256":value["executableSha256"],"moduleSourceCommit":value["moduleSourceCommit"],"moduleManifestSha256":value["sourceManifestSha256"],"moduleVersion":"0.9.0","uapiSha256":value["uapiSha256"],"kernel":"fixture-kernel","compatibilityId":value["compatibilityId"]}))
         assert manager.dispatch(request("query"),env)["state"]["bootOwnership"]=="current"
@@ -178,7 +178,7 @@ with tempfile.TemporaryDirectory() as temporary:
         else: os.environ[manager.SOURCE_DEVELOPMENT_BINDING_ENV]=old
 
 source=(ROOT/"scripts/rp1-gpclk-route-manager.py").read_text()
-for prohibited in ("shell=True","/dev/mem","live_output=1","sudo","/bin/sh"):
+for prohibited in ("shell=True","/dev/mem","sudo","/bin/sh"):
     assert prohibited not in source
 for required in ("os.replace","os.fsync","O_DIRECTORY","/usr/bin/systemctl\",\"reboot","rollback refuses changed"):
     assert required in source

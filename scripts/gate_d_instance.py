@@ -151,8 +151,8 @@ def validate(value: dict, *, require_ready: bool = False,
     route_entries = route_decision.get("routes")
     if (not isinstance(route_entries, list) or
             {entry.get("route") for entry in route_entries} != {"GPIO4", "GPIO20"} or
-            any(entry.get("liveEligible") is not False for entry in route_entries)):
-        raise ValueError("route decision is incomplete or live-enabled")
+            any(entry.get("operationalReady") is not False for entry in route_entries)):
+        raise ValueError("route decision is incomplete or operationally enabled")
     positive_routes = {entry["route"].lower() for entry in route_entries
                        if entry.get("state") == "Compatible-unqualified"}
     boundary = route_decision.get("decisionBoundary", {})

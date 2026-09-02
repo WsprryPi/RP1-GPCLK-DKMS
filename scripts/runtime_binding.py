@@ -5,11 +5,11 @@ import hashlib
 import json
 import re
 
-from runtime_layout import INVENTORY, KERNEL, MODULES
+from runtime_layout import INVENTORY, MODULES
 
 CONTRACT = 'rp1-gpclk-runtime-binding-v3'
 PRODUCT_VERSION = '0.9.0'
-COMPATIBILITY = {'gpio4': 'v0.9.0-pi5-gpio4', 'gpio20': 'v0.9.0-pi5-gpio20'}
+COMPATIBILITY = {'gpio4': 'v0.9.0-rp1-gpio4', 'gpio20': 'v0.9.0-rp1-gpio20'}
 APPLICATION = '/usr/local/lib/wsprrypi/route_application.py'
 EXTERNAL_PATHS = {APPLICATION}
 
@@ -27,7 +27,9 @@ def validate(binding):
     if (not isinstance(binding, dict) or set(binding) != fields or
             type(binding.get('schemaVersion')) is not int or binding['schemaVersion'] != 3 or
             binding.get('contract') != CONTRACT or binding.get('productVersion') != PRODUCT_VERSION or
-            binding.get('kernel') != KERNEL or binding.get('compatibilityIdentities') != COMPATIBILITY or
+            not isinstance(binding.get('kernel'), str) or
+            not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+~-]{0,127}', binding['kernel']) or
+            binding.get('compatibilityIdentities') != COMPATIBILITY or
             not isinstance(binding.get('sourceCommit'), str) or
             not re.fullmatch('[0-9a-f]{40}', binding['sourceCommit']) or
             not isinstance(binding.get('files'), dict) or set(binding['files']) != set(INVENTORY) or
@@ -38,13 +40,14 @@ def validate(binding):
         raise ValueError('runtime binding schema/identity mismatch')
     module_fields = {'name', 'path', 'installedFileSha256', 'decompressedElfSha256',
                      'compression', 'buildNoteSha256', 'version', 'kernel'}
+    kernel = binding['kernel']
     for name, module in binding['modules'].items():
         suffix = r'\.ko(?:\.(?:xz|gz|zst|bz2))?'
         if (not isinstance(module, dict) or set(module) != module_fields or
-                module.get('name') != name or module.get('kernel') != KERNEL or
+                module.get('name') != name or module.get('kernel') != kernel or
                 module.get('version') != PRODUCT_VERSION or
                 module.get('compression') not in {'none', 'xz', 'gz', 'zst', 'bz2'} or
-                not re.fullmatch(rf'/lib/modules/{re.escape(KERNEL)}/updates/dkms/{re.escape(name)}{suffix}',
+                not re.fullmatch(rf'/lib/modules/{re.escape(kernel)}/updates/dkms/{re.escape(name)}{suffix}',
                                  module.get('path', ''))):
             raise ValueError('runtime binding module identity mismatch')
         expected_compression = ('none' if module['path'].endswith('.ko')

@@ -22,6 +22,7 @@
 #include "rp1_gpclk/execution_policy.h"
 #include "rp1_gpclk/kernel_api.h"
 #include "rp1_gpclk/resource_policy.h"
+#include "rp1_gpclk/target_fault.h"
 
 #define RP1_GPCLK_TICKS_DMA0_CTRL 0x0
 #define RP1_GPCLK_TICKS_DMA0_CYCLES 0x4
@@ -34,21 +35,14 @@
 #define RP1_GPCLK_FIRMWARE_TICK_CTRL 3U
 #define RP1_GPCLK_FIRMWARE_TICK_CYCLES 50U
 #define RP1_GPCLK_COMPLETION_SLACK_MS 1000U
-#define RP1_GPCLK_QUIESCE_TIMEOUT_MS 122000U
+#define RP1_GPCLK_QUIESCE_TIMEOUT_MS 3000U
 
 struct rp1_gpclk_execution_plan {
-	__u32 mode;
 	__u32 drive_ma;
 	__u32 tone_count;
 	__u32 event_count;
-	__u32 symbol_count;
-	__u32 writes_per_symbol;
-	__u32 tone_operation;
-	__u64 tone_duration_ns;
-	__u64 expected_frame_duration_ns;
 	struct rp1_gpclk_tone tones[RP1_GPCLK_MAX_TONES];
 	struct rp1_gpclk_event events[RP1_GPCLK_MAX_EVENTS];
-	unsigned char symbols[RP1_GPCLK_WSPR_SYMBOLS];
 };
 
 struct rp1_gpclk_execution_context {
@@ -63,6 +57,9 @@ static void rp1_gpclk_dma_complete(void *argument)
 {
 	struct rp1_gpclk_device *device = argument;
 
+	if (rp1_gpclk_target_fault(
+		    RP1_GPCLK_TARGET_FAULT_DMA_COMPLETION))
+		return;
 	if (READ_ONCE(device->dma_generation) ==
 	    READ_ONCE(device->execution_generation))
 		complete(&device->dma_done);
@@ -127,6 +124,9 @@ static int rp1_gpclk_configure_dma(struct rp1_gpclk_device *device,
 	ret = dmaengine_slave_config(device->dma_chan, &config);
 	if (ret)
 		return ret;
+	if (direction == DMA_MEM_TO_DEV &&
+	    rp1_gpclk_target_fault(RP1_GPCLK_TARGET_FAULT_DMA_PREPARE))
+		return -EIO;
 	reinit_completion(&device->dma_done);
 	if (!bytes || bytes % sizeof(__u32))
 		return -EINVAL;
@@ -159,6 +159,9 @@ static int rp1_gpclk_configure_dma(struct rp1_gpclk_device *device,
 	device->dma_cookie = cookie;
 	WRITE_ONCE(device->dma_generation, device->execution_generation);
 	device->dma_submitted = true;
+	if (direction == DMA_MEM_TO_DEV &&
+	    rp1_gpclk_target_fault(RP1_GPCLK_TARGET_FAULT_DMA_SUBMIT))
+		return -EIO;
 	return 0;
 }
 
@@ -167,7 +170,6 @@ static int rp1_gpclk_wait_dma(struct rp1_gpclk_device *device,
 {
 	unsigned long completed;
 
-	rp1_gpclk_tick_start(device);
 	completed = wait_for_completion_timeout(&device->dma_done,
 		rp1_gpclk_timeout_jiffies(duration_ns));
 	if (!completed) {
@@ -290,6 +292,8 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 			device->initial_tick_dma0_cycles,
 			device->initial_dma_tick0_en,
 			device->initial_dma_tick0_ctrl);
+		device->execution_failure_reason =
+			RP1_GPCLK_REASON_STARTUP_CONFLICT;
 		return -EBUSY;
 	}
 	if (__clk_is_enabled(device->clock)) {
@@ -320,6 +324,9 @@ static int rp1_gpclk_machine_set_rate(void *argument)
 	}
 	ret = rp1_gpclk_clock_setup(&rp1_gpclk_setup_ops, device,
 		plan->tones[0].lower_divider_q16, parent_rate);
+	if (!ret && rp1_gpclk_target_fault(
+			    RP1_GPCLK_TARGET_FAULT_CLOCK_SETUP))
+		ret = -EIO;
 	if (ret)
 		dev_err(device->dev,
 			"phase4d parent/integer-divider setup failed: %d\n", ret);
@@ -330,7 +337,11 @@ static int rp1_gpclk_machine_prepare(void *argument)
 {
 	struct rp1_gpclk_device *device =
 		((struct rp1_gpclk_execution_context *)argument)->device;
-	int ret = clk_prepare(device->clock);
+	int ret;
+
+	if (rp1_gpclk_target_fault(RP1_GPCLK_TARGET_FAULT_PREPARE))
+		return -EIO;
+	ret = clk_prepare(device->clock);
 
 	if (ret)
 		return ret;
@@ -345,7 +356,11 @@ static int rp1_gpclk_machine_select_active(void *argument)
 {
 	struct rp1_gpclk_device *device =
 		((struct rp1_gpclk_execution_context *)argument)->device;
-	int ret = pinctrl_select_state(device->pinctrl, device->pins_active);
+	int ret;
+
+	if (rp1_gpclk_target_fault(RP1_GPCLK_TARGET_FAULT_PIN_ACTIVE))
+		return -EIO;
+	ret = pinctrl_select_state(device->pinctrl, device->pins_active);
 
 	if (ret)
 		return ret;
@@ -362,6 +377,9 @@ static int rp1_gpclk_machine_stop_tick(void *argument)
 
 	if (device->tick_state_captured)
 		rp1_gpclk_tick_stop(device);
+	if (rp1_gpclk_target_fault(
+		    RP1_GPCLK_TARGET_FAULT_CLEANUP_STOP_TICK))
+		return -EIO;
 	return 0;
 }
 
@@ -406,6 +424,9 @@ static int rp1_gpclk_machine_terminate_dma(void *argument)
 		}
 		device->tick_state_captured = false;
 	}
+	if (rp1_gpclk_target_fault(
+		    RP1_GPCLK_TARGET_FAULT_CLEANUP_TERMINATE_DMA))
+		return -EIO;
 	return 0;
 }
 
@@ -418,6 +439,8 @@ static int rp1_gpclk_machine_disable(void *argument)
 		clk_disable(device->clock);
 		device->clock_enabled = false;
 	}
+	if (rp1_gpclk_target_fault(RP1_GPCLK_TARGET_FAULT_CLEANUP_DISABLE))
+		return -EIO;
 	return 0;
 }
 
@@ -430,6 +453,9 @@ static int rp1_gpclk_machine_unprepare(void *argument)
 		clk_unprepare(device->clock);
 		device->clock_prepared = false;
 	}
+	if (rp1_gpclk_target_fault(
+		    RP1_GPCLK_TARGET_FAULT_CLEANUP_UNPREPARE))
+		return -EIO;
 	return 0;
 }
 
@@ -444,7 +470,11 @@ static int rp1_gpclk_machine_select_safe(void *argument)
 	if (ret)
 		dev_err(device->dev, "phase4d cleanup: safe pinctrl failed: %d\n",
 			ret);
-	device->pins_active_selected = false;
+	else
+		device->pins_active_selected = false;
+	if (!ret && rp1_gpclk_target_fault(
+			    RP1_GPCLK_TARGET_FAULT_CLEANUP_PIN_SAFE))
+		ret = -EIO;
 	return ret;
 }
 
@@ -490,7 +520,10 @@ static int rp1_gpclk_machine_restore_rate(void *argument)
 	device->parent_selected = false;
 	if (ret && !device->clock_cleanup_error)
 		device->clock_cleanup_error = ret;
-	return device->clock_cleanup_error;
+	if (!ret && rp1_gpclk_target_fault(
+			    RP1_GPCLK_TARGET_FAULT_CLEANUP_RESTORE_RATE))
+		ret = -EIO;
+	return ret ?: device->clock_cleanup_error;
 }
 
 static int rp1_gpclk_machine_restore_parent(void *argument)
@@ -512,7 +545,10 @@ static int rp1_gpclk_machine_restore_parent(void *argument)
 	}
 	if (ret && !device->clock_cleanup_error)
 		device->clock_cleanup_error = ret;
-	return device->clock_cleanup_error;
+	if (!ret && rp1_gpclk_target_fault(
+			    RP1_GPCLK_TARGET_FAULT_CLEANUP_RESTORE_PARENT))
+		ret = -EIO;
+	return ret ?: device->clock_cleanup_error;
 }
 
 static const struct rp1_gpclk_execution_ops rp1_gpclk_machine_ops = {
@@ -536,6 +572,9 @@ static int rp1_gpclk_set_enabled(struct rp1_gpclk_device *device, bool enabled)
 	if (enabled == device->clock_enabled)
 		return 0;
 	if (enabled) {
+		if (rp1_gpclk_target_fault(
+			    RP1_GPCLK_TARGET_FAULT_CLOCK_ENABLE))
+			return -EIO;
 		ret = clk_enable(device->clock);
 		if (ret)
 			return ret;
@@ -553,12 +592,23 @@ static int rp1_gpclk_readback(struct rp1_gpclk_device *device,
 {
 	int ret;
 
+	if (rp1_gpclk_target_fault(RP1_GPCLK_TARGET_FAULT_READBACK))
+		return -EIO;
 	*word = 0;
 	device->readback_expected = expected;
 	ret = rp1_gpclk_configure_dma(device, word_dma, sizeof(*word),
 				      DMA_DEV_TO_MEM);
 	if (ret)
 		return ret;
+	mutex_lock(&device->execution_commit_lock);
+	if (atomic_read(&device->stop_requested)) {
+		mutex_unlock(&device->execution_commit_lock);
+		dmaengine_terminate_sync(device->dma_chan);
+		device->dma_submitted = false;
+		return -ECANCELED;
+	}
+	rp1_gpclk_tick_start(device);
+	mutex_unlock(&device->execution_commit_lock);
 	ret = rp1_gpclk_wait_dma(device, NSEC_PER_MSEC);
 	if (ret) {
 		device->readback_observed = *word;
@@ -593,52 +643,65 @@ static int rp1_gpclk_run_descriptor(struct rp1_gpclk_device *device,
 				    const struct rp1_gpclk_tone *tone,
 				    __u32 *words, dma_addr_t words_dma,
 				    size_t writes, __u64 duration_ns,
-				    __u32 *expected)
+				    __u64 *accumulator, __u32 *expected)
 {
 	int ret;
 
-	ret = rp1_gpclk_execution_fill_words(tone, words, writes);
-	if (ret)
+	ret = rp1_gpclk_execution_fill_words_stateful(tone, words, writes,
+		accumulator);
+	if (ret) {
+		device->execution_failure_reason =
+			RP1_GPCLK_REASON_INVALID_REQUEST;
 		return ret;
+	}
 	*expected = words[writes - 1];
+	device->execution_failure_reason = RP1_GPCLK_REASON_DMA_FAILED;
 	ret = rp1_gpclk_configure_dma(device, words_dma,
 				      writes * sizeof(*words), DMA_MEM_TO_DEV);
 	if (ret)
 		return ret;
+	mutex_lock(&device->execution_commit_lock);
 	if (atomic_read(&device->stop_requested)) {
+		mutex_unlock(&device->execution_commit_lock);
 		dmaengine_terminate_sync(device->dma_chan);
 		device->dma_submitted = false;
 		return -ECANCELED;
 	}
 	if (!device->pins_active_selected) {
+		device->execution_failure_reason = RP1_GPCLK_REASON_PINCTRL_FAILED;
 		ret = rp1_gpclk_execution_machine_activate(
 			&rp1_gpclk_machine_ops, context);
 		if (ret) {
+			mutex_unlock(&device->execution_commit_lock);
 			dmaengine_terminate_sync(device->dma_chan);
 			device->dma_submitted = false;
 			return ret;
 		}
 	}
+	device->execution_failure_reason = RP1_GPCLK_REASON_CLOCK_FAILED;
 	ret = rp1_gpclk_set_enabled(device, true);
 	if (ret) {
+		mutex_unlock(&device->execution_commit_lock);
 		dmaengine_terminate_sync(device->dma_chan);
 		device->dma_submitted = false;
 		return ret;
 	}
+	device->execution_failure_reason = RP1_GPCLK_REASON_DMA_FAILED;
+	rp1_gpclk_tick_start(device);
+	mutex_unlock(&device->execution_commit_lock);
 	return rp1_gpclk_wait_dma(device, duration_ns);
 }
 
 static void rp1_gpclk_publish_failure(struct rp1_gpclk_device *device,
 				      int error, bool cleanup_failed)
 {
-	__u32 reason = RP1_GPCLK_REASON_INTERNAL_ERROR;
+	__u32 reason = device->execution_failure_reason;
 
 	if (error == -ETIMEDOUT)
 		reason = RP1_GPCLK_REASON_DEADLINE_MISSED;
-	else if (error == -EBUSY)
-		reason = RP1_GPCLK_REASON_STARTUP_CONFLICT;
-	else if (error == -EIO)
-		reason = RP1_GPCLK_REASON_DMA_FAILED;
+	if (reason < RP1_GPCLK_REASON_DEADLINE_MISSED ||
+	    reason > RP1_GPCLK_REASON_INTERNAL_ERROR)
+		reason = RP1_GPCLK_REASON_INTERNAL_ERROR;
 	mutex_lock(&device->lock);
 	if (cleanup_failed)
 		rp1_gpclk_core_cleanup_failed(&device->core,
@@ -658,10 +721,14 @@ static int rp1_gpclk_execution_thread(void *argument)
 	dma_addr_t words_dma;
 	__u32 *words;
 	__u32 expected = 0;
-	size_t maximum = 1;
-	__u32 units;
+	__u64 tone_accumulators[RP1_GPCLK_MAX_TONES] = { 0 };
+	__u64 timing_remainder = 0;
+	__u64 maximum_remainder =
+		(__u64)RP1_GPCLK_TICK_DIVIDER * 1000000000ULL - 1;
+	size_t maximum;
 	__u32 index;
 	int cleanup_ret;
+	int readback_ret = 0;
 	int ret = 0;
 	struct rp1_gpclk_execution_context context = {
 		.device = device,
@@ -670,36 +737,10 @@ static int rp1_gpclk_execution_thread(void *argument)
 
 	if (atomic_read(&device->stop_requested))
 		goto cancelled_before_buffer;
-	if (plan->mode == RP1_GPCLK_MODE_WSPR) {
-		maximum = plan->writes_per_symbol;
-		units = plan->symbol_count;
-	} else if (plan->mode == RP1_GPCLK_MODE_TONE) {
-		__u64 chunk = plan->tone_operation == RP1_GPCLK_TONE_OPERATION_FINITE ?
-			plan->tone_duration_ns : RP1_GPCLK_TONE_CONTINUOUS_CHUNK_NS;
-
-		if (rp1_gpclk_execution_event_writes(chunk, &maximum)) {
-			ret = -ERANGE;
-			goto fail_without_buffer;
-		}
-		units = 1;
-	} else {
-		units = plan->event_count;
-		for (index = 0; index < units; index++) {
-			size_t writes;
-
-			if (!(plan->events[index].flags &
-			      RP1_GPCLK_EVENT_F_OUTPUT_ENABLED))
-				continue;
-			if (rp1_gpclk_execution_event_writes(
-				    plan->events[index].duration_ns, &writes)) {
-				ret = -ERANGE;
-				goto fail_without_buffer;
-			}
-
-			if (writes > maximum)
-				maximum = writes;
-		}
-	}
+	ret = rp1_gpclk_execution_chunk_writes(
+		RP1_GPCLK_DMA_CHUNK_DURATION_NS, &maximum_remainder, &maximum);
+	if (ret)
+		goto fail_without_buffer;
 	if (!maximum || maximum > SIZE_MAX / sizeof(*words)) {
 		ret = -EOVERFLOW;
 		goto fail_without_buffer;
@@ -713,61 +754,62 @@ static int rp1_gpclk_execution_thread(void *argument)
 	context.word = words;
 	context.word_dma = words_dma;
 	WRITE_ONCE(device->execution_started_ns, ktime_get_boottime_ns());
+	device->execution_failure_reason = RP1_GPCLK_REASON_CLOCK_FAILED;
 	ret = rp1_gpclk_execution_machine_start(&rp1_gpclk_machine_ops,
 		&context);
 	if (ret)
 		goto fail;
 
-	for (index = 0; index < units; index++) {
-		__u64 duration;
-		size_t writes;
-		__u32 tone_index;
-		bool enabled = true;
+	for (index = 0; index < plan->event_count; index++) {
+		const struct rp1_gpclk_event *event = &plan->events[index];
+		bool enabled = event->flags & RP1_GPCLK_EVENT_F_OUTPUT_ENABLED;
 
 		if (atomic_read(&device->stop_requested)) {
 			ret = -ECANCELED;
 			break;
 		}
-		if (plan->mode == RP1_GPCLK_MODE_WSPR) {
-			duration = div_u64(plan->expected_frame_duration_ns,
-					   plan->symbol_count);
-			writes = plan->writes_per_symbol;
-			tone_index = plan->symbols[index];
-		} else if (plan->mode == RP1_GPCLK_MODE_TONE) {
-			duration = plan->tone_operation ==
-				RP1_GPCLK_TONE_OPERATION_FINITE ?
-				plan->tone_duration_ns :
-				RP1_GPCLK_TONE_CONTINUOUS_CHUNK_NS;
-			tone_index = 0;
-			ret = rp1_gpclk_execution_event_writes(duration, &writes);
-			if (ret)
-				break;
+		if (!enabled) {
+			device->execution_failure_reason =
+				RP1_GPCLK_REASON_CLOCK_FAILED;
+			ret = rp1_gpclk_set_enabled(device, false);
+			if (!ret) {
+				device->execution_failure_reason =
+					RP1_GPCLK_REASON_PINCTRL_FAILED;
+				ret = rp1_gpclk_machine_select_safe(&context);
+			}
+			if (!ret)
+				ret = rp1_gpclk_sleep_or_stop(device,
+					event->duration_ns);
+			expected = 0;
+			timing_remainder = 0;
 		} else {
-			duration = plan->events[index].duration_ns;
-			enabled = plan->events[index].flags &
-				  RP1_GPCLK_EVENT_F_OUTPUT_ENABLED;
-			tone_index = plan->events[index].tone_index;
-			if (enabled) {
-				ret = rp1_gpclk_execution_event_writes(duration,
-							       &writes);
+			struct rp1_gpclk_chunk_cursor cursor;
+			__u64 duration;
+			size_t writes;
+			int next;
+
+			ret = rp1_gpclk_chunk_cursor_init(&cursor,
+				event->duration_ns);
+			cursor.timing_remainder = timing_remainder;
+			while (!ret) {
+				if (atomic_read(&device->stop_requested))
+					rp1_gpclk_chunk_cursor_cancel(&cursor);
+				next = rp1_gpclk_chunk_cursor_next(&cursor, &duration,
+					&writes);
+				if (next <= 0) {
+					if (next < 0)
+						ret = next;
+					break;
+				}
+				ret = rp1_gpclk_run_descriptor(device, &context,
+					&plan->tones[event->tone_index], words,
+					words_dma, writes, duration,
+					&tone_accumulators[event->tone_index],
+					&expected);
 				if (ret)
 					break;
-			} else {
-				writes = 0;
 			}
-		}
-		if (!enabled) {
-			ret = rp1_gpclk_set_enabled(device, false);
-			if (!ret)
-				ret = rp1_gpclk_machine_select_safe(&context);
-			if (!ret)
-				ret = rp1_gpclk_sleep_or_stop(device, duration);
-		} else if (!writes) {
-			ret = -ERANGE;
-		} else {
-			ret = rp1_gpclk_run_descriptor(device, &context,
-				&plan->tones[tone_index], words, words_dma,
-				writes, duration, &expected);
+			timing_remainder = cursor.timing_remainder;
 		}
 		if (ret && ret != -ECANCELED)
 			break;
@@ -776,12 +818,7 @@ static int rp1_gpclk_execution_thread(void *argument)
 			ret = -ECANCELED;
 			break;
 		}
-		if (plan->mode == RP1_GPCLK_MODE_TONE &&
-		    plan->tone_operation == RP1_GPCLK_TONE_OPERATION_CONTINUOUS) {
-			index--;
-			continue;
-		}
-		if (index + 1 != units) {
+		if (index + 1 != plan->event_count) {
 			mutex_lock(&device->lock);
 			rp1_gpclk_core_progress(&device->core,
 				device->execution_owner, device->execution_lease,
@@ -791,24 +828,38 @@ static int rp1_gpclk_execution_thread(void *argument)
 	}
 
 	context.expected = expected;
+	if (expected != 0 && !ret &&
+	    !atomic_read(&device->stop_requested)) {
+		device->execution_failure_reason = RP1_GPCLK_REASON_READBACK_FAILED;
+		readback_ret = rp1_gpclk_machine_readback(&context);
+		if (readback_ret == -ECANCELED) {
+			ret = -ECANCELED;
+			readback_ret = 0;
+		}
+	}
 	cleanup_ret = rp1_gpclk_execution_machine_finish(
-		&rp1_gpclk_machine_ops, &context,
-		expected != 0 && ret != -ECANCELED);
+		&rp1_gpclk_machine_ops, &context, false);
+	WRITE_ONCE(device->execution_finished_ns, ktime_get_boottime_ns());
 	if (cleanup_ret) {
 		ret = cleanup_ret;
 		rp1_gpclk_publish_failure(device, ret, true);
 	} else if (ret && ret != -ECANCELED) {
 		rp1_gpclk_publish_failure(device, ret, false);
+	} else if (readback_ret) {
+		device->execution_failure_reason =
+			readback_ret == -ETIMEDOUT ?
+			RP1_GPCLK_REASON_DEADLINE_MISSED :
+			RP1_GPCLK_REASON_READBACK_FAILED;
+		rp1_gpclk_publish_failure(device, readback_ret, false);
 	} else {
 		mutex_lock(&device->lock);
 		rp1_gpclk_core_progress(&device->core, device->execution_owner,
 			device->execution_lease, device->execution_generation);
 		mutex_unlock(&device->lock);
 	}
-	WRITE_ONCE(device->execution_finished_ns, ktime_get_boottime_ns());
 	dev_info(device->dev,
-		 "phase4d generation=%llu mode=%u start_ns=%llu finish_ns=%llu expected_div_frac=0x%08x observed_div_frac=0x%08x tick_initial=%08x/%08x/%08x/%08x tick_final=%08x/%08x/%08x/%08x cleanup=%d result=%d\n",
-		 device->execution_generation, plan->mode,
+		 "generation=%llu events=%u start_ns=%llu finish_ns=%llu expected_div_frac=0x%08x observed_div_frac=0x%08x tick_initial=%08x/%08x/%08x/%08x tick_final=%08x/%08x/%08x/%08x cleanup=%d result=%d\n",
+		 device->execution_generation, plan->event_count,
 		 device->execution_started_ns, device->execution_finished_ns,
 		 device->readback_expected, device->readback_observed,
 		 device->initial_tick_dma0_ctrl, device->initial_tick_dma0_cycles,
@@ -829,6 +880,7 @@ fail:
 	cleanup_ret = rp1_gpclk_execution_machine_finish(
 		&rp1_gpclk_machine_ops, &context, false);
 	dma_free_coherent(dma_device, maximum * sizeof(*words), words, words_dma);
+	WRITE_ONCE(device->execution_finished_ns, ktime_get_boottime_ns());
 	if (cleanup_ret)
 		rp1_gpclk_publish_failure(device, cleanup_ret, true);
 	else
@@ -836,6 +888,7 @@ fail:
 	goto release_plan;
 
 fail_without_buffer:
+	WRITE_ONCE(device->execution_finished_ns, ktime_get_boottime_ns());
 	rp1_gpclk_publish_failure(device, ret, false);
 release_plan:
 	kfree_sensitive(plan);
@@ -845,6 +898,7 @@ release_plan:
 	return 0;
 
 cancelled_before_buffer:
+	WRITE_ONCE(device->execution_finished_ns, ktime_get_boottime_ns());
 	mutex_lock(&device->lock);
 	rp1_gpclk_core_progress(&device->core, device->execution_owner,
 		device->execution_lease, device->execution_generation);
@@ -858,6 +912,7 @@ int rp1_gpclk_execution_init(struct rp1_gpclk_device *device)
 		return -EINVAL;
 	init_completion(&device->dma_done);
 	init_completion(&device->execution_done);
+	mutex_init(&device->execution_commit_lock);
 	complete_all(&device->execution_done);
 	atomic_set(&device->stop_requested, 0);
 	return 0;
@@ -868,6 +923,7 @@ static int rp1_gpclk_start_thread(struct rp1_gpclk_device *device,
 				  __u64 owner, __u64 lease, __u64 generation)
 {
 	struct task_struct *worker;
+	__u32 index;
 
 	if (READ_ONCE(device->worker))
 		return -EBUSY;
@@ -879,18 +935,11 @@ static int rp1_gpclk_start_thread(struct rp1_gpclk_device *device,
 	device->readback_expected = 0;
 	device->readback_observed = 0;
 	device->tick_state_captured = false;
-	device->execution_total_ns = plan->mode == RP1_GPCLK_MODE_WSPR ?
-		plan->expected_frame_duration_ns : 0;
-	if (plan->mode == RP1_GPCLK_MODE_TONE) {
-		device->execution_total_ns = plan->tone_operation ==
-			RP1_GPCLK_TONE_OPERATION_FINITE ? plan->tone_duration_ns : 0;
-	} else if (plan->mode != RP1_GPCLK_MODE_WSPR) {
-		__u32 index;
-
-		for (index = 0; index < plan->event_count; index++)
-			device->execution_total_ns += plan->events[index].duration_ns;
-	}
+	device->execution_total_ns = 0;
+	for (index = 0; index < plan->event_count; index++)
+		device->execution_total_ns += plan->events[index].duration_ns;
 	device->stop_reason = RP1_GPCLK_REASON_NONE;
+	device->execution_failure_reason = RP1_GPCLK_REASON_NONE;
 	atomic_set(&device->stop_requested, 0);
 	device->execution_plan = plan;
 	reinit_completion(&device->execution_done);
@@ -913,50 +962,6 @@ void rp1_gpclk_execution_activate(struct rp1_gpclk_device *device)
 		wake_up_process(worker);
 }
 
-int rp1_gpclk_execution_submit_wspr(
-	struct rp1_gpclk_device *device, __u64 owner,
-	struct rp1_gpclk_submit_wspr *request,
-	const struct rp1_gpclk_tone *tones, const unsigned char *symbols)
-{
-	struct rp1_gpclk_execution_plan *plan;
-	int result;
-
-	plan = kzalloc(sizeof(*plan), GFP_KERNEL);
-	if (!plan)
-		return -ENOMEM;
-	if (rp1_gpclk_execution_tones_valid(tones, request->tone_count,
-					    request->drive_ma)) {
-		kfree(plan);
-		return RP1_GPCLK_CORE_INVALID;
-	}
-	if (READ_ONCE(device->worker)) {
-		kfree(plan);
-		return RP1_GPCLK_CORE_BUSY;
-	}
-	result = rp1_gpclk_core_submit_wspr(&device->core, owner, request,
-					    tones, symbols);
-	if (result != RP1_GPCLK_CORE_OK) {
-		kfree(plan);
-		return result;
-	}
-	plan->mode = RP1_GPCLK_MODE_WSPR;
-	plan->drive_ma = request->drive_ma;
-	plan->tone_count = request->tone_count;
-	plan->symbol_count = request->symbol_count;
-	plan->writes_per_symbol = request->writes_per_symbol;
-	plan->expected_frame_duration_ns = request->expected_frame_duration_ns;
-	memcpy(plan->tones, tones, sizeof(*tones) * request->tone_count);
-	memcpy(plan->symbols, symbols, request->symbol_count);
-	result = rp1_gpclk_start_thread(device, plan, owner, request->lease_id,
-					request->generation);
-	if (result) {
-		rp1_gpclk_core_fail(&device->core, owner, request->lease_id,
-			request->generation, RP1_GPCLK_REASON_INTERNAL_ERROR);
-		kfree(plan);
-	}
-	return result;
-}
-
 int rp1_gpclk_execution_submit_events(
 	struct rp1_gpclk_device *device, __u64 owner,
 	struct rp1_gpclk_submit_events *request,
@@ -976,10 +981,15 @@ int rp1_gpclk_execution_submit_events(
 		return RP1_GPCLK_CORE_INVALID;
 	}
 	for (index = 0; index < request->event_count; index++) {
+		__u64 duration;
+		__u64 remainder = 0;
 		size_t writes;
 
-		if ((events[index].flags & RP1_GPCLK_EVENT_F_OUTPUT_ENABLED) &&
-		    rp1_gpclk_execution_event_writes(events[index].duration_ns,
+		if (!(events[index].flags & RP1_GPCLK_EVENT_F_OUTPUT_ENABLED))
+			continue;
+		duration = min_t(__u64, events[index].duration_ns,
+			RP1_GPCLK_DMA_CHUNK_DURATION_NS);
+		if (rp1_gpclk_execution_chunk_writes(duration, &remainder,
 						     &writes)) {
 			kfree(plan);
 			return RP1_GPCLK_CORE_INVALID;
@@ -995,60 +1005,11 @@ int rp1_gpclk_execution_submit_events(
 		kfree(plan);
 		return result;
 	}
-	plan->mode = request->mode;
 	plan->drive_ma = request->drive_ma;
 	plan->tone_count = request->tone_count;
 	plan->event_count = request->event_count;
 	memcpy(plan->tones, tones, sizeof(*tones) * request->tone_count);
 	memcpy(plan->events, events, sizeof(*events) * request->event_count);
-	result = rp1_gpclk_start_thread(device, plan, owner, request->lease_id,
-					request->generation);
-	if (result) {
-		rp1_gpclk_core_fail(&device->core, owner, request->lease_id,
-			request->generation, RP1_GPCLK_REASON_INTERNAL_ERROR);
-		kfree(plan);
-	}
-	return result;
-}
-
-int rp1_gpclk_execution_submit_tone(
-	struct rp1_gpclk_device *device, __u64 owner,
-	struct rp1_gpclk_submit_tone *request)
-{
-	struct rp1_gpclk_execution_plan *plan;
-	size_t writes;
-	__u64 duration;
-	int result;
-
-	plan = kzalloc(sizeof(*plan), GFP_KERNEL);
-	if (!plan)
-		return -ENOMEM;
-	if (rp1_gpclk_execution_tones_valid(&request->tone, 1,
-					    request->drive_ma)) {
-		kfree(plan);
-		return RP1_GPCLK_CORE_INVALID;
-	}
-	duration = request->operation == RP1_GPCLK_TONE_OPERATION_FINITE ?
-		request->duration_ns : RP1_GPCLK_TONE_CONTINUOUS_CHUNK_NS;
-	if (rp1_gpclk_execution_event_writes(duration, &writes)) {
-		kfree(plan);
-		return RP1_GPCLK_CORE_INVALID;
-	}
-	if (READ_ONCE(device->worker)) {
-		kfree(plan);
-		return RP1_GPCLK_CORE_BUSY;
-	}
-	result = rp1_gpclk_core_submit_tone(&device->core, owner, request);
-	if (result != RP1_GPCLK_CORE_OK) {
-		kfree(plan);
-		return result;
-	}
-	plan->mode = RP1_GPCLK_MODE_TONE;
-	plan->drive_ma = request->drive_ma;
-	plan->tone_count = 1;
-	plan->tone_operation = request->operation;
-	plan->tone_duration_ns = request->duration_ns;
-	plan->tones[0] = request->tone;
 	result = rp1_gpclk_start_thread(device, plan, owner, request->lease_id,
 					request->generation);
 	if (result) {
@@ -1067,8 +1028,10 @@ int rp1_gpclk_execution_stop(struct rp1_gpclk_device *device, __u64 owner,
 	result = rp1_gpclk_core_stop(&device->core, owner, lease, generation);
 	if (result != RP1_GPCLK_CORE_OK)
 		return result;
+	mutex_lock(&device->execution_commit_lock);
 	device->stop_reason = reason;
 	atomic_set(&device->stop_requested, 1);
+	mutex_unlock(&device->execution_commit_lock);
 	if (READ_ONCE(device->worker))
 		wake_up_process(device->worker);
 	return RP1_GPCLK_CORE_OK;
@@ -1098,8 +1061,10 @@ void rp1_gpclk_execution_quiesce(struct rp1_gpclk_device *device,
 void rp1_gpclk_execution_request_stop(struct rp1_gpclk_device *device,
 				      __u32 reason)
 {
+	mutex_lock(&device->execution_commit_lock);
 	device->stop_reason = reason;
 	atomic_set(&device->stop_requested, 1);
+	mutex_unlock(&device->execution_commit_lock);
 	if (READ_ONCE(device->worker))
 		wake_up_process(device->worker);
 }

@@ -23,7 +23,7 @@ Exact-source development installation also provides a route-neutral mode. It
 installs the selected commit through DKMS but installs no route overlay and
 requires the module, endpoint, configured route, and active route to remain
 absent. It emits exact module, kernel, UAPI, and rollback identities for an
-external orchestrator. Later overlay, route, enrollment, and load operations
+external orchestrator. Later overlay, route-record, and load operations
 are separate lifecycle steps.
 
 Route selection is an administrative configuration decision. Exactly one of
@@ -34,9 +34,9 @@ parameter, combined overlay, hot route change, or automatic substitution.
 
 Before loading the module, record the exact running kernel, hardware, firmware
 and device tree; verify that DKMS built the module for that kernel; and validate
-the clock provider, resource layout, selected route, module version, exact UAPI
-header identity, signing policy, and current `Experimental` enrollment. The kernel release
-is diagnostic provenance rather than a compatibility-ID component.
+the RP1 ancestry, clock and DMA providers, resource layout, selected route,
+module version, exact UAPI identity, and signing policy. Kernel and board names
+are diagnostic provenance rather than compatibility-ID components.
 
 The device endpoint remains root-owned and mode `0600`. Signing keys and trust
 enrollment are administrator-owned and are not package content. See
@@ -48,22 +48,23 @@ The sole canonical transmission endpoint is `/dev/rp1-gpclk`. No alternate
 endpoint spelling is a supported discovery fallback. A missing
 endpoint does not authorize userspace to create or substitute one.
 
-Loading with live output disabled is distinct from live eligibility. A module
-that builds or loads successfully may still reject all submissions. Live use
-requires the immutable load-time output gate, a recognized route compatibility
-identity, the selected allowlisted route, current `Experimental` enrollment, and
-application-level authorization.
+Production loads with the immutable default `output_inhibit=0`; the root-owned,
+mode-`0600` endpoint is then the execution authority. Clock-disabled development
+and lifecycle testing loads with `output_inhibit=1`, which retains query,
+ownership, cancellation, cleanup, and lifecycle paths but rejects submission.
+Either path still requires the recognized structural RP1 and route identities.
 
-One open file may hold one lease. `WSPR`, keyed events, and finite `TONE` are
-bounded; explicit continuous `TONE` has no hidden duration and persists only
-while its lease remains owned. `STOP`, `RELEASE`, owner close, process death,
-unbind, and unload use the bounded cleanup path. A cleanup fault is a stop
-condition and prevents further use until it is investigated.
+One open file may hold one lease. All submissions are finite generic event
+sequences. Long logical events use fixed one-second coherent DMA chunks, so
+memory and cancellation bounds do not scale with duration. `STOP`, `RELEASE`,
+owner close, process death, unbind, and unload use the bounded cleanup path. A
+cleanup fault is a stop condition and prevents further use until it is
+investigated.
 
 ## Update and rollback
 
 Retain the installed instance until its replacement has passed all applicable
-build, signing, installation, output-disabled runtime, and cleanup checks.
+build, signing, installation, output-inhibited runtime, and cleanup checks.
 Version ordering alone does not establish compatibility.
 
 On failure, remove only state attributable to the failed replacement. Do not
@@ -91,6 +92,6 @@ bind, repair, select a route, edit boot configuration, or operate hardware. See
 
 There is no `/dev/mem`, raw userspace MMIO, arbitrary-route, or
 alternate-transmitter fallback. Unknown hardware, kernel, device-tree,
-resource, signing, route, UAPI, artifact, or cleanup state remains unavailable;
-an identified operator-built stock-kernel combination may be enrolled as
-`Experimental` without asserting that it is supported or qualified.
+resource, signing, route, UAPI, artifact, or cleanup state remains unavailable.
+An identified stock-kernel RP1 combination may be classified `Experimental`
+without asserting that it is qualified.

@@ -11,12 +11,12 @@ import pathlib
 
 MODULE = "rp1_gpclk_dkms"
 DRIVER = pathlib.Path("/sys/bus/platform/drivers/rp1-gpclk-dkms")
-PARAMETER = pathlib.Path(f"/sys/module/{MODULE}/parameters/live_output")
+PARAMETER = pathlib.Path(f"/sys/module/{MODULE}/parameters/output_inhibit")
 ENDPOINT = pathlib.Path("/dev/rp1-gpclk")
 
 
 def output_disabled() -> bool:
-    return PARAMETER.is_file() and PARAMETER.read_text().strip() in {"N", "0", "false", "False"}
+    return PARAMETER.is_file() and PARAMETER.read_text().strip() in {"Y", "1", "true", "True"}
 
 
 def bound_devices() -> list[str]:
@@ -46,7 +46,7 @@ def cycle(write_control=control_write, administrator_uid: int | None = None) -> 
     write_control(DRIVER / "bind", device)
     if bound_devices() != [device] or not ENDPOINT.exists() or not output_disabled():
         raise ValueError("rebind identity or output-disabled gate differs")
-    return {"device": device, "unbindBind": True, "liveOutput": False}
+    return {"device": device, "unbindBind": True, "outputInhibited": True}
 
 
 def main() -> None:
@@ -55,7 +55,7 @@ def main() -> None:
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
     if args.action == "status":
-        result = {"devices": bound_devices(), "liveOutput": not output_disabled(), "readOnly": True}
+        result = {"devices": bound_devices(), "outputInhibited": output_disabled(), "readOnly": True}
     else:
         if not args.execute:
             raise SystemExit("unbind/rebind requires --execute")

@@ -9,5 +9,7 @@
 #define EBUSY 16
 #define EINVAL 22
 #define ERANGE 34
+#define EUCLEAN 117
+#define ECANCELED 125
 
 #endif /* RP1_GPCLK_TEST_LINUX_ERRNO_H */

@@ -34,7 +34,7 @@ MAX_OUTPUT = 65536
 FIXED_ENV = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C", "LC_ALL": "C"}
 SAFE_ID = re.compile(r"[a-z0-9][a-z0-9._-]+")
 SHA256 = re.compile(r"[0-9a-f]{64}")
-PROHIBITED = ("live_output=1", "/dev/mem", "rpi-update", "--force", "force-remove")
+PROHIBITED = ("output_inhibit=0", "/dev/mem", "rpi-update", "--force", "force-remove")
 
 
 def digest(path: pathlib.Path) -> str:
@@ -492,7 +492,7 @@ class ClosedDispatcher:
             "recover-predecessor": ("/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle", "dispatch", "recover", predecessor, candidate, kernel, staging, "--execute"),
             "remove-failed-successor": ("/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle", "dispatch", "dkms-remove", candidate, kernel, staging, "--execute"),
             "apply-route": ("/usr/bin/dtoverlay", "-d", str(dtbo_path.parent), dtbo_path.stem),
-            "load-disabled": ("/usr/sbin/modprobe", "rp1_gpclk_dkms", "live_output=0"),
+            "load-disabled": ("/usr/sbin/modprobe", "rp1_gpclk_dkms", "output_inhibit=1"),
             "query-release": ("/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe", route, candidate),
             "unbind-rebind": ("/usr/libexec/rp1-gpclk-dkms/gate-d-platform", "unbind-bind-cycle", "--execute"),
             "unload": ("/usr/sbin/modprobe", "-r", "rp1_gpclk_dkms"),
@@ -619,7 +619,7 @@ class FilesystemFake:
                     self.dkms_phase.pop((successor, kernel), None)
                 atomic_json(journal_path, {"status": "inactive-recovery-required",
                             "operationId": subordinate["transition"]["operationId"],
-                            "checkpoint": checkpoint, "liveOutput": False,
+                            "checkpoint": checkpoint, "outputActive": False,
                             "phase": self.dkms_phase.get((successor, kernel), "absent"),
                             "moduleLoaded": self.module_loaded, "endpointOpen": self.endpoint,
                             "overlay": self.overlay})
@@ -633,7 +633,7 @@ class FilesystemFake:
             self.dkms_phase[(predecessor, kernel)] = "installed"
             self.module_loaded = self.endpoint = False
             atomic_json(journal_path, {"status": "complete", "operationId": subordinate["recovery"]["operationId"],
-                        "recovers": subordinate["transition"]["operationId"], "liveOutput": False})
+                        "recovers": subordinate["transition"]["operationId"], "outputActive": False})
             return 0, "recovered"
         if operation == "dkms-install":
             self.dkms.setdefault(argv[3], set()).add(argv[4])
@@ -665,7 +665,7 @@ class FilesystemFake:
             if self.module_loaded:
                 return 2, "module loaded"
             self.overlay = None
-        elif argv[0].endswith("modprobe") and argv[1:] == ["rp1_gpclk_dkms", "live_output=0"]:
+        elif argv[0].endswith("modprobe") and argv[1:] == ["rp1_gpclk_dkms", "output_inhibit=1"]:
             if not self.overlay or not self.dkms:
                 return 2, "load precondition"
             self.module_loaded = self.endpoint = True
@@ -676,7 +676,7 @@ class FilesystemFake:
         elif argv[0].endswith("gate-d-uapi-probe"):
             if not self.module_loaded or not self.endpoint:
                 return 2, "endpoint absent"
-            return 0, "live_eligible=0 released=1"
+            return 0, "output_inhibit_supported=1 released=1"
         elif argv[0].endswith("gate-d-boot") and argv[1] == "verify-running":
             return (0, "verified") if self.kernel == argv[2] else (2, "wrong kernel")
         elif argv[0].endswith("gate-d-boot") and argv[1] == "select":
@@ -725,7 +725,7 @@ class FilesystemFake:
             self.open_descriptor = not self.owner
             atomic_json(evidence / "busy-state.json", {"ready": True,
                         "mode": "owner" if self.owner else "open",
-                        "route": document["route"], "liveOutput": False})
+                        "route": document["route"], "outputActive": False})
         elif operation == "expect-removal-refusal":
             if not (self.owner or self.open_descriptor):
                 raise ValueError("busy readiness is absent")
@@ -770,14 +770,14 @@ class FilesystemFake:
             return
         marker = evidence / f"{operation}.json"
         if not marker.exists():
-            atomic_json(marker, {"operation": operation, "liveOutput": False})
+            atomic_json(marker, {"operation": operation, "outputActive": False})
 
 
 def _journal_identity(document: dict, document_sha256: str, index_sha256: str) -> dict:
     return {"schemaVersion": VERSION, "operationId": document["operationId"],
             "documentSha256": document_sha256, "indexSha256": index_sha256,
             "executorSha256": digest(pathlib.Path(__file__).resolve()),
-            "status": "inactive-in-progress", "liveOutput": False,
+            "status": "inactive-in-progress", "outputActive": False,
             "nextStep": 0, "records": [], "startedUtc": utc(),
             "startedMonotonicNs": time.monotonic_ns(), "recoveryRequired": True,
             "deadlineEpochSeconds": time.time(),
@@ -859,7 +859,7 @@ def execute(document: dict, *, document_sha256: str, index_sha256: str,
         verify_sealed_directory(prior_path.parent)
         prior = load_json(prior_path)
         if (prior.get("status") != "inactive-recovery-required" or
-                prior.get("liveOutput") is not False or prior.get("sealed") is not True or
+                prior.get("outputActive") is not False or prior.get("sealed") is not True or
                 stat.S_IMODE(prior_path.stat().st_mode) & 0o222):
             raise ValueError("recovery source is not an immutable inactive failed journal")
         if prior.get("operationId") == document["operationId"]:
@@ -997,7 +997,7 @@ def default_internal(operation: str, document: dict, root: pathlib.Path) -> None
                     "runningKernel": running_kernel, "bootId": boot_id,
                     "moduleSigningPolicy": signing, "activeOverlays": overlays.splitlines(),
                     "resourceConflict": False, "installedTools": tool_hashes,
-                    "liveOutput": False})
+                    "outputActive": False})
         return
     if operation == "snapshot-services":
         states = {}
@@ -1144,7 +1144,7 @@ def default_internal(operation: str, document: dict, root: pathlib.Path) -> None
                 break
             time.sleep(0.05)
         if parsed != {"event": "ready", "mode": mode, "route": route,
-                      "liveEligible": False, "acquired": mode == "owner"}:
+                      "outputInhibited": True, "acquired": mode == "owner"}:
             process.terminate()
             process.wait(timeout=5)
             raise ValueError("busy injector readiness is absent or malformed")
@@ -1177,7 +1177,7 @@ def default_internal(operation: str, document: dict, root: pathlib.Path) -> None
         state = load_json(journal)
         if (state.get("status") != "inactive-recovery-required" or
                 state.get("checkpoint") != subordinate["checkpoint"] or
-                state.get("liveOutput") is not False):
+                state.get("outputActive") is not False):
             raise ValueError("subordinate interruption journal differs")
         return
     if operation == "freeze-failed-journal":
@@ -1222,7 +1222,7 @@ def default_internal(operation: str, document: dict, root: pathlib.Path) -> None
     if marker.exists() or marker.is_symlink():
         raise ValueError("internal operation marker already exists")
     atomic_json(marker, {"operation": operation, "operationId": document["operationId"],
-                         "liveOutput": False})
+                         "outputActive": False})
 
 
 def main() -> None:
@@ -1266,7 +1266,7 @@ def main() -> None:
             return {"moduleLoaded": pathlib.Path("/sys/module/rp1_gpclk_dkms").exists(),
                     "endpointPresent": pathlib.Path("/dev/rp1-gpclk").exists(),
                     "overlayActive": "rp1-gpclk" in overlays,
-                    "dkmsTestVersions": "rp1-gpclk-dkms/" in dkms, "liveOutput": False}
+                    "dkmsTestVersions": "rp1-gpclk-dkms/" in dkms, "outputActive": False}
         def pre_root_runner(argv: list[str]) -> None:
             subprocess.run(argv, stdin=subprocess.DEVNULL, check=True,
                            timeout=document["deadlineSeconds"], env=FIXED_ENV)
@@ -1303,7 +1303,7 @@ def main() -> None:
         def probe() -> dict:
             overlays=subprocess.run(["/usr/bin/dtoverlay","-l"],stdout=subprocess.PIPE,text=True,check=False,env=FIXED_ENV).stdout
             dkms=subprocess.run(["/usr/sbin/dkms","status"],stdout=subprocess.PIPE,text=True,check=False,env=FIXED_ENV).stdout
-            return {"moduleLoaded":pathlib.Path("/sys/module/rp1_gpclk_dkms").exists(),"endpointPresent":pathlib.Path("/dev/rp1-gpclk").exists(),"overlayActive":"rp1-gpclk" in overlays,"dkmsTestVersions":"rp1-gpclk-dkms/" in dkms,"liveOutput":False}
+            return {"moduleLoaded":pathlib.Path("/sys/module/rp1_gpclk_dkms").exists(),"endpointPresent":pathlib.Path("/dev/rp1-gpclk").exists(),"overlayActive":"rp1-gpclk" in overlays,"dkmsTestVersions":"rp1-gpclk-dkms/" in dkms,"outputActive":False}
         def run_bootstrap(argv:list[str])->None:
             subprocess.run(argv,stdin=subprocess.DEVNULL,check=True,timeout=document["deadlineSeconds"],env=FIXED_ENV)
         result=execute_bootstrap(document,root=pathlib.Path("/"),runner=run_bootstrap,probe=probe,recover=args.resume)

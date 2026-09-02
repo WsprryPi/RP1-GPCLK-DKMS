@@ -193,7 +193,7 @@ class Tests(unittest.TestCase):
              patch.object(admin, 'read_regular', return_value=b'N\n'):
             system.load()
             with patch.object(Path, 'exists', side_effect=[True, False]): system.unload()
-        self.assertEqual(calls, [('/usr/sbin/modprobe', 'rp1_gpclk_dkms', 'live_output=0'),
+        self.assertEqual(calls, [('/usr/sbin/modprobe', 'rp1_gpclk_dkms'),
                                  ('/usr/sbin/rmmod', 'rp1_gpclk_dkms')])
         self.assertFalse(any('force' in token or token in ('-f', '--force') for argv in calls for token in argv))
 
@@ -345,6 +345,10 @@ class Tests(unittest.TestCase):
         self.assertNotIn('RP1_ROUTE_ADMIN_ABI', header)
         self.assertRegex(header, r'struct rp1_route_admin\s*\{\s*__u32 reserved0;')
         self.assertIn('if (request.reserved0 || request.reserved ||', controller)
+        self.assertNotIn('"raspberrypi,rp1"', controller)
+        for compatible in ('raspberrypi,rp1-clocks', 'raspberrypi,rp1-gpio',
+                           'snps,axi-dma-1.01a'):
+            self.assertIn(f'"{compatible}"', controller)
 
 
 if __name__ == '__main__':

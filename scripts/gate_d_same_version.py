@@ -16,16 +16,16 @@ def validate(plan:dict)->dict:
   if not isinstance(value,str) or len(value)!=64 or any(c not in "0123456789abcdef" for c in value): raise ValueError("same-version identity differs")
  for field in ARGV_FIELDS:
   argv=plan[field]
-  if not isinstance(argv,list) or not argv or not all(isinstance(x,str) and x for x in argv) or any(x in " ".join(argv) for x in ("--force","/dev/mem","live_output=1")): raise ValueError("unsafe same-version argv")
+  if not isinstance(argv,list) or not argv or not all(isinstance(x,str) and x for x in argv) or any(x in " ".join(argv) for x in ("--force","/dev/mem","output_inhibit=0")): raise ValueError("unsafe same-version argv")
  states=(plan["preState"],plan["absentState"],plan["qualifiedState"])
- if any(not isinstance(state,dict) or state.get("liveOutput") is not False for state in states): raise ValueError("unsafe same-version state")
+ if any(not isinstance(state,dict) or state.get("outputActive") is not False for state in states): raise ValueError("unsafe same-version state")
  if states[0].get("product") is not True or states[0].get("qualification") is not False: raise ValueError("same-version prestate differs")
  if states[1].get("product") is not False or states[1].get("qualification") is not False: raise ValueError("same-version absent state differs")
  if states[2].get("product") is not True or states[2].get("qualification") is not True: raise ValueError("same-version qualified state differs")
  return copy.deepcopy(plan)
 
 def execute(plan:dict,*,run,probe,record,stop_after:str|None=None)->dict:
- value=validate(plan); state={"status":"in-progress","checkpoint":"preflight","recoveryRequired":True,"liveOutput":False,"productRemoved":False,"qualificationInstalled":False}; record(state)
+ value=validate(plan); state={"status":"in-progress","checkpoint":"preflight","recoveryRequired":True,"outputActive":False,"productRemoved":False,"qualificationInstalled":False}; record(state)
  try:
   if probe()!=value["preState"]: raise ValueError("same-version prestate differs")
   actions={"remove-product":value["removeArgv"],"install-qualification":value["qualificationInstallArgv"]}
@@ -45,7 +45,7 @@ def execute(plan:dict,*,run,probe,record,stop_after:str|None=None)->dict:
 
 def recover(plan:dict,state:dict,*,run,probe,record)->dict:
  value=validate(plan)
- if state.get("status")!="recovery-required" or state.get("liveOutput") is not False: raise ValueError("same-version state is not recoverable")
+ if state.get("status")!="recovery-required" or state.get("outputActive") is not False: raise ValueError("same-version state is not recoverable")
  checkpoint=state.get("checkpoint")
  if checkpoint not in CHECKPOINTS or type(state.get("productRemoved")) is not bool or type(state.get("qualificationInstalled")) is not bool: raise ValueError("same-version journal differs")
  if state["qualificationInstalled"] and not state["productRemoved"]: raise ValueError("same-version journal is inconsistent")

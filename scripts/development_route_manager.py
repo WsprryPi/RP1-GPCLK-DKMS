@@ -12,7 +12,7 @@ DROPIN="/etc/systemd/system/rp1-gpclk-route-manager@.service.d/90-source-develop
 UNIT="rp1-gpclk-route-manager@source-development-status.service"
 RECORD="/var/lib/rp1-gpclk-dkms/development/route-manager.json"
 PACKAGE_PATHS=("/usr/sbin/rp1-gpclk-route-manager","/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager","/usr/lib/systemd/system/rp1-gpclk-route-manager@.service")
-COMPAT={"gpio4":"v0.9.0-pi5-gpio4","gpio20":"v0.9.0-pi5-gpio20"}
+COMPAT={"gpio4":"v0.9.0-rp1-gpio4","gpio20":"v0.9.0-rp1-gpio20"}
 
 class Failure(RuntimeError): pass
 def root(path:str)->pathlib.Path:
@@ -42,8 +42,8 @@ def load(path:pathlib.Path)->dict:
 def require_root()->None:
     if not os.environ.get("RP1_GPCLK_DEVELOPMENT_TEST_ROOT") and os.geteuid()!=0: raise Failure("operation requires root")
 def observations()->dict:
-    live=root("/sys/module/rp1_gpclk_dkms/parameters/live_output")
-    if not live.is_file() or live.read_text().strip() not in {"N","0"}: raise Failure("live_output is enabled, absent, or unknown")
+    inhibit=root("/sys/module/rp1_gpclk_dkms/parameters/output_inhibit")
+    if not inhibit.is_file() or inhibit.read_text().strip() not in {"N","0","Y","1"}: raise Failure("output_inhibit is absent or unknown")
     module=root("/sys/module/rp1_gpclk_dkms/refcnt"); refcount=int(module.read_text().strip()) if module.is_file() else 0
     if refcount!=0: raise Failure("module reference count is not zero")
     endpoint=root("/dev/rp1-gpclk")
@@ -55,7 +55,7 @@ def observations()->dict:
             if (opened.st_dev,opened.st_ino)==(meta.st_dev,meta.st_ino): raise Failure("RP1 GPCLK endpoint is open")
     active=systemctl("is-active","wsprrypi.service",check=False)
     if active not in {"inactive","failed"}: raise Failure("wsprrypi.service is active or unknown")
-    return {"liveOutput":False,"moduleRefcount":refcount,"endpointOpen":False,"wsprrypiService":active}
+    return {"outputInhibited":inhibit.read_text().strip() in {"Y","1"},"moduleRefcount":refcount,"endpointOpen":False,"wsprrypiService":active}
 def manifest(path:pathlib.Path,route:str,kernel:str)->dict:
     value=load(path)
     if (value.get("schema")!=MANIFEST_SCHEMA or value.get("classification")!="source-development" or value.get("qualification") is not False or
@@ -152,7 +152,8 @@ def status(args:argparse.Namespace)->dict:
         if (query.get("status")!="ok" or state.get("configuredRoute")!=binding["route"] or state.get("activeRoute")!=binding["route"] or
                 state.get("pendingTransaction") is not None or state.get("bootOwnership")!="current" or
                 query_safety.get("endpointOwned") is not True or query_safety.get("endpointOpen") is not False or
-                query_safety.get("liveOutput") is not False or not isinstance(query_safety.get("services"),dict)):
+                type(query_safety.get("outputInhibited")) is not bool or
+                not isinstance(query_safety.get("services"),dict)):
             raise Failure("passive QUERY does not authenticate current ownership and exact idle safety of the selected route")
     return {"status":"ok","classification":record["classification"],"qualification":False,"sourceCommit":commit,"moduleSourceCommit":record["moduleSourceCommit"],"record":str(args.record),"binding":binding,"adoption":{"path":str(target["adoption"]),"sha256":digest(target["adoption"]),"record":adoption},"passiveQuery":query,"dropin":{"path":str(target["dropin"]),"sha256":record["dropinSha256"]},"systemd":{"dropInPaths":dropins,"execStart":resolved},"packageFiles":package_after,"safety":safety,"rollbackCommand":f"sudo ./scripts/development-route-manager rollback --record {args.record}"}
 def adopt(args:argparse.Namespace)->dict:

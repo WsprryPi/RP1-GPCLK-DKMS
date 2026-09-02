@@ -20,23 +20,22 @@ labels, not frozen artifacts or qualification. See the
 [development identity and migration contract](docs/contracts/development-identity.md).
 The development baseline is unpublished and not release-qualified.
 `Experimental` is a runtime compatibility classification, not a release status.
-It permits only explicitly enrolled, bounded development operation on an exact
-identified build and route; it does not authorize installation, route selection,
-clock output, transmission, RF use, or product qualification.
+It identifies a bounded development build and route; it does not qualify
+installation, clock output, transmission, RF use, or product behavior.
 
 ## Safety
 
 Installing the package does not select an overlay, edit boot configuration,
 load the module, enable a clock, change GPIO state, or authorize transmission.
-Both overlays are installed inactive. Route selection, `Experimental` enrollment,
-and live operation are separate administrative decisions. Compatibility IDs are
-stable across kernel releases; the exact kernel remains visible in build and
-diagnostic records.
+Both overlays are installed inactive. Route selection, root-only endpoint use,
+and product operation are separate administrative decisions. Compatibility IDs
+are stable across kernel releases; exact kernel and board identities remain
+visible in build and diagnostic records.
 
-Unknown hardware, routes, resources, signing state, compatibility state, or
-cleanup state fail closed. Operators may explicitly enroll an identified `0.9.0`
-DKMS build on another stock Raspberry Pi kernel as `Experimental`; that does not
-make the kernel supported or qualified.
+Unknown or ambiguous RP1 topology, routes, resources, signing state,
+compatibility state, or cleanup state fails closed. Eligibility is established
+from the RP1 device-tree/provider/resource structure, not a Raspberry Pi product
+model allowlist. Structural acceptance does not make a kernel or board qualified.
 There is no `/dev/mem`, raw userspace MMIO, custom-kernel, arbitrary-route, or
 alternate-transmitter fallback.
 
@@ -68,16 +67,15 @@ only; it does not qualify installation or hardware behavior on a target.
 The byte-authoritative userspace header is
 [`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The
 [userspace interface contract](docs/contracts/uapi.md) describes queries,
-ownership, explicit continuous and finite `TONE` requests, state, cancellation,
-passive snapshots, and operation-scoped authorization. This unreleased
+root-only ownership, generic finite events, state, bounded cancellation, passive
+snapshots, and immutable test inhibition. This unreleased
 interface has no legacy layouts or compatibility fallbacks.
 
 The API supports:
 
 - `QUERY` for capabilities and compatibility state;
 - `ACQUIRE` and `RELEASE` for exclusive ownership;
-- bounded `WSPR` and keyed-event submission;
-- explicit continuous and kernel-bounded finite `TONE` submission;
+- bounded generic tone/gap event submission with fixed coherent DMA chunks;
 - `GET_STATE` for stable runtime and terminal state;
 - `GET_SNAPSHOT` for passive, non-owning state observation; and
 - `STOP` for generation-specific bounded cancellation.

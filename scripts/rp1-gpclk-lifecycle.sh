@@ -44,12 +44,12 @@ kernel_build="/lib/modules/$kernel_release/build"
 preflight()
 {
 	[ "$(uname -m)" = aarch64 ] || { echo "unsupported architecture" >&2; exit 1; }
-	grep -aq 'Raspberry Pi 5' /proc/device-tree/model || { echo "unsupported model" >&2; exit 1; }
+	grep -aRq 'raspberrypi,rp1' /proc/device-tree || { echo "RP1 device-tree identity unavailable" >&2; exit 1; }
 	[ -d "$kernel_build" ] || { echo "missing running-kernel headers" >&2; exit 1; }
 	command -v dkms >/dev/null || { echo "DKMS unavailable" >&2; exit 1; }
 	grep -q '^AUTOINSTALL="yes"$' "$source_dir/dkms.conf"
 	grep -q "RP1_GPCLK_MODULE_VERSION \"$version\"" "$source_dir/include/rp1_gpclk/version.h"
-	printf 'package=%s version=%s kernel=%s architecture=%s live_output=disabled\n' \
+	printf 'package=%s version=%s kernel=%s architecture=%s output_inhibit=enabled\n' \
 		"$package" "$version" "$kernel_release" "$(uname -m)"
 }
 
@@ -79,8 +79,8 @@ build|install|uninstall|remove)
 load-disabled)
 	preflight
 	[ "$(id -u)" -eq 0 ] || { echo "root required" >&2; exit 1; }
-	run modprobe "$module" live_output=0
-	[ "$(cat "/sys/module/$module/parameters/live_output")" = N ] || { echo "live output gate is not disabled" >&2; exit 1; }
+	run modprobe "$module" output_inhibit=1
+	[ "$(cat "/sys/module/$module/parameters/output_inhibit")" = Y ] || { echo "output inhibit is not enabled" >&2; exit 1; }
 	;;
 unload)
 	[ "$(id -u)" -eq 0 ] || { echo "root required" >&2; exit 1; }
@@ -89,8 +89,8 @@ unload)
 status)
 	preflight
 	dkms status -m "$package" -v "$version" || true
-	if [ -e "/sys/module/$module/parameters/live_output" ]; then
-		printf 'loaded live_output=%s\n' "$(cat "/sys/module/$module/parameters/live_output")"
+	if [ -e "/sys/module/$module/parameters/output_inhibit" ]; then
+		printf 'loaded output_inhibit=%s\n' "$(cat "/sys/module/$module/parameters/output_inhibit")"
 	else
 		echo 'not loaded'
 	fi

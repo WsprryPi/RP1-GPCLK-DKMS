@@ -12,8 +12,9 @@ import re
 import stat
 import subprocess
 import sys
+import platform
 from runtime_inventory import module_note
-from runtime_layout import INVENTORY, KERNEL
+from runtime_layout import INVENTORY
 from runtime_binding import (APPLICATION, COMPATIBILITY, CONTRACT, PRODUCT_VERSION,
                              canonical_digest, validate)
 
@@ -82,7 +83,8 @@ def module_payload(path):
     return payload, kind
 
 
-def installed_module(directory, name):
+def installed_module(directory, name, kernel=None):
+    kernel = kernel or platform.release()
     matches = sorted(directory.glob(name + '.ko*'))
     if len(matches) != 1:
         raise ValueError('exactly one installed runtime module required: ' + name)
@@ -93,16 +95,19 @@ def installed_module(directory, name):
     if not payload.startswith(b'\x7fELF\x02\x01'):
         raise ValueError('exact-kernel ELF64 module required')
     validate_module_version(payload)
-    installed = f'/lib/modules/{KERNEL}/updates/dkms/{path.name}'
+    if b'vermagic=' + kernel.encode() + b' ' not in payload:
+        raise ValueError('runtime module vermagic differs from target kernel')
+    installed = f'/lib/modules/{kernel}/updates/dkms/{path.name}'
     return {'name': name, 'path': installed,
             'installedFileSha256': hashlib.sha256(path.read_bytes()).hexdigest(),
             'decompressedElfSha256': hashlib.sha256(payload).hexdigest(),
             'compression': compression,
             'buildNoteSha256': hashlib.sha256(module_note(payload)).hexdigest(),
-            'version': PRODUCT_VERSION, 'kernel': KERNEL}, payload
+            'version': PRODUCT_VERSION, 'kernel': kernel}, payload
 
 
-def build(directory, application_companion):
+def build(directory, application_companion, kernel=None):
+    kernel = kernel or platform.release()
     from build_runtime_controller import generate
     generate(ROOT / "build/runtime-controller")
     companion = Path(application_companion)
@@ -110,13 +115,13 @@ def build(directory, application_companion):
     values = {'schemaVersion': 3, 'contract': CONTRACT,
               'productVersion': PRODUCT_VERSION,
               'compatibilityIdentities': COMPATIBILITY,
-              'sourceCommit': source_commit(), 'kernel': KERNEL, 'files': {}, 'modules': {},
+              'sourceCommit': source_commit(), 'kernel': kernel, 'files': {}, 'modules': {},
               'externalFiles': {APPLICATION: hashlib.sha256(companion).hexdigest()},
               'uapiSha256': {}}
     payloads = {}
     for module, field in (('rp1_route_controller', 'controllerNoteSha256'),
                           ('rp1_gpclk_dkms', 'consumerNoteSha256')):
-        record, payload = installed_module(directory, module)
+        record, payload = installed_module(directory, module, kernel)
         values['modules'][module] = record
         payloads[module] = payload
         values[field] = record['buildNoteSha256']
@@ -136,6 +141,8 @@ def build(directory, application_companion):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        raise SystemExit('usage: build_runtime_binding.py INSTALLED_DKMS_MODULE_DIRECTORY WSPRRYPI_APPLICATION_COMPANION')
-    print(json.dumps(build(Path(sys.argv[1]), Path(sys.argv[2])), indent=2, sort_keys=True))
+    if len(sys.argv) not in (3, 4):
+        raise SystemExit('usage: build_runtime_binding.py INSTALLED_DKMS_MODULE_DIRECTORY WSPRRYPI_APPLICATION_COMPANION [KERNEL]')
+    print(json.dumps(build(Path(sys.argv[1]), Path(sys.argv[2]),
+                           sys.argv[3] if len(sys.argv) == 4 else None),
+                     indent=2, sort_keys=True))

@@ -102,10 +102,10 @@ class Host:
                 result[field] = record_error(error)
         if name == 'rp1_gpclk_dkms':
             try:
-                gate = admin.read_regular(root/'parameters/live_output').decode().strip()
-                result['liveOutput'] = gate in ('Y', '1') if gate in ('Y', 'N', '0', '1') else 'unknown'
+                gate = admin.read_regular(root/'parameters/output_inhibit').decode().strip()
+                result['outputInhibited'] = gate in ('Y', '1') if gate in ('Y', 'N', '0', '1') else 'unknown'
             except (OSError, ValueError, UnicodeError) as error:
-                result['liveOutput'] = record_error(error)
+                result['outputInhibited'] = record_error(error)
         return result
 
     def endpoint(self, path):
@@ -262,7 +262,7 @@ def inspect(host, bundle=None, requested=None, configured=None, persisted=None):
         'profile': 'runtime', 'result': None, 'state': None,
         'compatible': False, 'eligible': False,
         'administrationCompatible': False, 'administrationEligible': False,
-        'routeSelected': False, 'transmissionEligible': False,
+        'routeSelected': False, 'executionReady': False,
         'identities': {'installedBinding': binding, 'expectedBinding': expected,
             'expectedExternal': expected_external},
         'artifacts': artifacts, 'deployment': {'journal': journals['deployment-pending.json'],
@@ -273,8 +273,8 @@ def inspect(host, bundle=None, requested=None, configured=None, persisted=None):
         'modules': modules, 'journals': journals, 'manager': manager,
         'activation': activation_observation,
         'reboot': {'occurred': 'unknown', 'required': False},
-        'safety': {'liveOutput': 'unknown', 'owner': 'unknown', 'lease': 'unknown',
-            'authorization': False, 'clock': 'unknown', 'gpio': 'unknown',
+        'safety': {'outputInhibited': 'unknown', 'operationalReady': 'unknown',
+            'owner': 'unknown', 'lease': 'unknown', 'clock': 'unknown', 'gpio': 'unknown',
             'dma': 'unknown', 'endpointOpen': endpoints['consumer'].get('open', 'unknown')},
         'conflicts': [], 'remediation': []}
     classify(result)
@@ -323,8 +323,8 @@ def classify(result):
             field = 'controllerNoteSha256' if name == 'rp1_route_controller' else 'consumerNoteSha256'
             if value.get('buildNoteSha256') != binding['value'][field]:
                 conflicts.append('loaded-module-identity-mismatch:'+name)
-    if modules['rp1_gpclk_dkms'].get('liveOutput') not in (False, None):
-        conflicts.append('live-output-not-disabled')
+    if modules['rp1_gpclk_dkms'].get('outputInhibited') not in (False, True, None):
+        conflicts.append('output-inhibit-unknown')
 
     pending = journals['deployment-pending.json'].get('status') == 'present'
     activation_journal = journals['activation.json']
@@ -372,14 +372,15 @@ def classify(result):
     output = idle.get('state', {}).get('outputLifecycle', {}) if isinstance(idle, dict) else {}
     snapshot = output.get('snapshot', {}) if isinstance(output, dict) else {}
     if snapshot:
-        result['safety'].update({'liveOutput': snapshot.get('live') != 1,
+        result['safety'].update({'outputInhibited': snapshot.get('outputInhibited') == 2,
+            'operationalReady': snapshot.get('operationalReady') == 2,
             'owner': snapshot.get('owner') != 1, 'lease': snapshot.get('lease') != 1,
             'clock': 'quiescent' if snapshot.get('clock') == 2 else 'unknown',
             'gpio': 'quiescent' if snapshot.get('gpio') == 2 else 'unknown',
             'dma': 'quiescent' if snapshot.get('dma') == 2 else 'unknown'})
-        if (any(snapshot.get(key) != 1 for key in ('fault', 'owner', 'lease', 'live')) or
-                any(snapshot.get(key) != 2 for key in ('eligible', 'gpio', 'clock', 'dma', 'stable'))):
-            conflicts.append('consumer-not-closed-disabled-and-quiescent')
+        if (any(snapshot.get(key) != 1 for key in ('fault', 'owner', 'lease', 'outputInhibited')) or
+                any(snapshot.get(key) != 2 for key in ('operationalReady', 'gpio', 'clock', 'dma', 'stable'))):
+            conflicts.append('consumer-not-ready-closed-and-quiescent')
     aligned = bool(active in ROUTES and all(value == active for value in route_values))
     endpoints_ready = all(value.get('status') == 'owned' for value in result['endpoints'].values())
     closed = result['endpoints']['consumer'].get('open') is False
@@ -392,10 +393,11 @@ def classify(result):
                        all(value.get('status') == 'exact' for value in artifacts.values()))
     modules_ready = all(value.get('status') == 'loaded' for value in modules.values())
     application_ready = phase in ('restored', 'stopped', 'administrator-masked')
-    output_ready = (output.get('ready') is True and output.get('executionAuthorized') is False and
+    output_ready = (output.get('ready') is True and
+        output.get('productionAuthority') == 'root-owned-endpoint' and
         snapshot and snapshot.get('route') in (1, 2) and
-        all(snapshot.get(key) == 1 for key in ('fault', 'owner', 'lease', 'live')) and
-        all(snapshot.get(key) == 2 for key in ('eligible', 'gpio', 'clock', 'dma', 'stable')))
+        all(snapshot.get(key) == 1 for key in ('fault', 'owner', 'lease', 'outputInhibited')) and
+        all(snapshot.get(key) == 2 for key in ('operationalReady', 'gpio', 'clock', 'dma', 'stable')))
     controller_ready = (controller.get('flags') == admin.CONSUMER | admin.PINNED and
                         controller.get('error') == 0 and controller.get('route') in (1, 2))
     neutral = (activation_observation.get('status') == 'observed' and
@@ -418,8 +420,8 @@ def classify(result):
             else:
                 post_reboot_blocked = True
     if neutral:
-        result['safety'].update({'liveOutput': False, 'owner': False,
-            'lease': False, 'authorization': False, 'clock': 'quiescent',
+        result['safety'].update({'outputInhibited': False, 'operationalReady': False,
+            'owner': False, 'lease': False, 'clock': 'quiescent',
             'gpio': 'quiescent', 'dma': 'quiescent', 'endpointOpen': False})
         result['reboot']['occurred'] = False
     if (modules['rp1_route_controller'].get('status') == 'loaded' and
@@ -467,7 +469,7 @@ def classify(result):
     result['administrationCompatible'] = classification in ('neutral_ready', 'exact_ready')
     result['administrationEligible'] = classification in ('neutral_ready', 'exact_ready')
     result['routeSelected'] = classification == 'exact_ready'
-    result['transmissionEligible'] = classification == 'exact_ready'
+    result['executionReady'] = classification == 'exact_ready'
 
 
 def route_plan(result, route):

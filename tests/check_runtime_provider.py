@@ -19,7 +19,9 @@ import runtime_binding as binding
 import build_runtime_binding as build_binding
 import build_runtime_bundle as bundle_builder
 import runtime_provider as provider
-from runtime_layout import INVENTORY, KERNEL, MODULES
+from runtime_layout import INVENTORY, MODULES
+
+KERNEL = '6.18.34+rpt-rpi-2712'
 
 
 def exact_binding():
@@ -69,12 +71,13 @@ def manager_ready(route='gpio4'):
         'pendingTransaction': transaction,
         'application': {'phase': 'restored'}, 'applicationRestoration': True,
         'outputEnabled': False, 'qualification': False}}
-    snapshot = {'route': number, 'compatibility': 2, 'fault': 1, 'owner': 1,
-        'lease': 1, 'live': 1, 'eligible': 2, 'gpio': 2, 'clock': 2,
-        'dma': 2, 'stable': 2}
+    snapshot = {'route': number, 'compatibility': 3, 'fault': 1, 'owner': 1,
+        'lease': 1, 'outputInhibited': 1, 'operationalReady': 2,
+        'gpio': 2, 'clock': 2, 'dma': 2, 'stable': 2}
     idle = {'schemaVersion': 3, 'contract': 'rp1-gpclk-route-manager-runtime',
         'operation': 'idle', 'status': 'ok', 'state': {'outputLifecycle': {
-        'ready': True, 'executionAuthorized': False, 'snapshot': snapshot}}}
+        'ready': True, 'productionAuthority': 'root-owned-endpoint',
+        'snapshot': snapshot}}}
     return {'status': 'observed', 'query': query, 'idle': idle}
 
 
@@ -97,7 +100,7 @@ class Host:
                 'buildNoteSha256': self.value['controllerNoteSha256']},
             'rp1_gpclk_dkms': {'status': 'loaded', 'version': '0.9.0',
                 'buildNoteSha256': self.value['consumerNoteSha256']}}
-        self._modules['rp1_gpclk_dkms']['liveOutput'] = False
+        self._modules['rp1_gpclk_dkms']['outputInhibited'] = False
         self._endpoints = {name: {'status': 'owned', 'open': False}
                            for name in ('/dev/rp1-gpclk', '/dev/rp1-route-admin')}
         self._socket = {'status': 'owned'}
@@ -173,8 +176,8 @@ class Tests(unittest.TestCase):
         exact = self.inspect(Host())
         self.assertEqual(exact['result'], 'exact_ready')
         self.assertTrue(exact['compatible'] and exact['eligible'])
-        self.assertFalse(exact['safety']['authorization'])
-        self.assertFalse(exact['safety']['liveOutput'])
+        self.assertTrue(exact['safety']['operationalReady'])
+        self.assertFalse(exact['safety']['outputInhibited'])
         self.assertFalse(exact['safety']['owner'])
         self.assertFalse(exact['safety']['lease'])
         self.assertEqual(provider.EXIT['exact_ready'], 0)
@@ -327,7 +330,7 @@ class Tests(unittest.TestCase):
         self.assertTrue(result['administrationCompatible'])
         self.assertTrue(result['administrationEligible'])
         self.assertFalse(result['compatible'] or result['eligible'])
-        self.assertFalse(result['routeSelected'] or result['transmissionEligible'])
+        self.assertFalse(result['routeSelected'] or result['executionReady'])
 
     def test_partial_file_publication_requires_recovery(self):
         host = Host()
@@ -400,8 +403,30 @@ class Tests(unittest.TestCase):
         with self.assertRaises(ValueError): binding.validate(altered)
         altered = copy.deepcopy(value)
         altered['uapiSha256']['consumer'] = '0'*64
-        altered['artifactSetSha256'] = binding.canonical_digest({key: item for key, item in altered.items() if key != 'artifactSetSha256'})
-        with self.assertRaises(ValueError): binding.validate(altered)
+        altered['artifactSetSha256'] = binding.canonical_digest(
+            {key: item for key, item in altered.items()
+             if key != 'artifactSetSha256'})
+        with self.assertRaises(ValueError):
+            binding.validate(altered)
+
+    def test_binding_accepts_an_exact_nonreference_stock_kernel(self):
+        value = exact_binding()
+        kernel = '6.20.1+rpt-rpi-2712'
+        value['kernel'] = kernel
+        for name, record in value['modules'].items():
+            record['kernel'] = kernel
+            record['path'] = f'/lib/modules/{kernel}/updates/dkms/{name}.ko.xz'
+        value['artifactSetSha256'] = binding.canonical_digest(
+            {key: item for key, item in value.items()
+             if key != 'artifactSetSha256'})
+        self.assertIs(binding.validate(value), value)
+        value['modules']['rp1_gpclk_dkms']['path'] = (
+            f'/lib/modules/{KERNEL}/updates/dkms/rp1_gpclk_dkms.ko.xz')
+        value['artifactSetSha256'] = binding.canonical_digest(
+            {key: item for key, item in value.items()
+             if key != 'artifactSetSha256'})
+        with self.assertRaises(ValueError):
+            binding.validate(value)
 
     def test_application_companion_read_is_bounded_and_nofollow(self):
         import tempfile
@@ -419,11 +444,13 @@ class Tests(unittest.TestCase):
         import tempfile
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            payload = b'\x7fELF\x02\x01\0version=0.9.0\0fixture'
+            payload = (b'\x7fELF\x02\x01\0version=0.9.0\0vermagic=' +
+                       KERNEL.encode() + b' fixture')
             compressed = root/'rp1_gpclk_dkms.ko.xz'
             compressed.write_bytes(lzma.compress(payload))
             with patch.object(build_binding, 'module_note', return_value=b'fixture-note'):
-                record, observed = build_binding.installed_module(root, 'rp1_gpclk_dkms')
+                record, observed = build_binding.installed_module(
+                    root, 'rp1_gpclk_dkms', KERNEL)
             self.assertEqual(observed, payload)
             self.assertEqual(record['compression'], 'xz')
             self.assertEqual(record['installedFileSha256'],
@@ -432,7 +459,7 @@ class Tests(unittest.TestCase):
                              hashlib.sha256(payload).hexdigest())
             (root/'rp1_gpclk_dkms.ko').write_bytes(payload)
             with self.assertRaisesRegex(ValueError, 'exactly one'):
-                build_binding.installed_module(root, 'rp1_gpclk_dkms')
+                build_binding.installed_module(root, 'rp1_gpclk_dkms', KERNEL)
 
     def test_runtime_bundle_rebuild_is_byte_deterministic(self):
         import hashlib

@@ -32,7 +32,7 @@ ordering or implicit defaults.
 - canonical UAPI header path and SHA-256;
 - module ID, build ID, and route-specific compatibility ID from `QUERY`;
 - compatibility metadata path, ID, SHA-256, selected entry, state, reason, and
-  `liveEligible` value;
+  `operationalReady` value;
 - source and installed module hashes, transform, vermagic, signer, signing
   policy, and actual installed module-file hash when an artifact exists; and
 - route overlay source, compiled DTBO, and installed DTBO hashes.
@@ -47,12 +47,12 @@ package identity remains an explicit blocker rather than a fabricated value.
   headers/configuration, firmware, base device-tree hash, and boot ID;
 - clock and DMA provider identity and ancestry, GPCLK0 clock ID, DMA request and
   translation, pinctrl identity, resource layout, and signing policy;
-- requested, persisted, configured, active-overlay, module-reported,
-  reconciled, and live-eligible routes as separate values;
+- requested, persisted, configured, active-overlay, module-reported, and
+  reconciled routes as separate values;
 - exactly one enabled `rp1-gpclk-dkms-gpio4` or
   `rp1-gpclk-dkms-gpio20` endpoint, with the matching `wsprrypi,route`
   property;
-- exact `v0.9.0-pi5-gpio4` or `v0.9.0-pi5-gpio20` compatibility ID and
+- exact `v0.9.0-rp1-gpio4` or `v0.9.0-rp1-gpio20` compatibility ID and
   `Experimental` state; and
 - package route-manager transaction ID, status, boot IDs, configuration
   hashes, attribution, and reconciliation result.
@@ -66,7 +66,7 @@ substituted for another.
 ### Endpoint and operation
 
 - canonical endpoint `/dev/rp1-gpclk`, file identity and availability;
-- capability mask including finite `TONE`, duration bounds, compatibility
+- capability mask including generic events and bounded DMA chunks, duration bounds, compatibility
   state/reason, and cleanup-fault latch;
 - WsprryPi parent revision, executable path, SHA-256, build metadata, component
   tree identity, backend, mode, band, exact output frequencies, route, drive,
@@ -168,7 +168,7 @@ calibration applicability, spectral interpretation, and claim scope.
 
 An external full-mode campaign can contain five separate test definitions:
 
-1. finite carrier (`TONE`), never continuous `TONE`;
+1. finite carrier expressed as one generic output-enabled event;
 2. `WSPR`;
 3. `QRSS`;
 4. `FSKCW`; and
@@ -179,7 +179,7 @@ own explicit mode parameters, plan identity, lifecycle result, capture and
 analysis evidence, cleanup result, and semantic validation. A passing carrier
 does not replace any mode test, and one keyed-mode result does not satisfy another.
 
-A finite carrier test uses finite `TONE` and a kernel-enforced duration.
+A finite carrier test uses one generic event and a kernel-enforced duration.
 The Harness and WsprryPi own campaign ordering and mode selection; DKMS adds no
 product-mode approval list. Resolve these run-specific values before execution:
 

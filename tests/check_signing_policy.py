@@ -46,7 +46,7 @@ def result(**changes):
 
 
 accepted = result()
-assert accepted["state"] == "Compatible-unqualified" and accepted["liveEligible"] is False
+assert accepted["state"] == "Compatible-unqualified" and accepted["operationalReady"] is False
 assert accepted["fallbackPermitted"] is False and accepted["readOnly"] is True
 
 unsigned = result(enforcement="not-enforced", signatureStatus="unsigned", signer="none",

@@ -77,8 +77,8 @@ def validate(value: dict, *, root: pathlib.Path = pathlib.Path("/"), verify_file
     cleanup=["/usr/libexec/rp1-gpclk-dkms/gate-d-lifecycle","dispatch","complete-removal",value["predecessorVersion"],candidate["release"],value["kernelRelease"],value["stagingDirectory"],"--execute"]
     recovery=["/usr/bin/python3",admin["bootstrapPath"],"recover","--execute"]
     if value["argv"]!=expected or value["cleanupArgv"]!=cleanup or value["recoveryArgv"]!=recovery: raise ValueError("bootstrap argv differs")
-    baseline={"moduleLoaded":False,"endpointPresent":False,"overlayActive":False,"dkmsTestVersions":False,"liveOutput":False}
-    if value["expectedPreState"]!=baseline or value["expectedPostState"]!=baseline or value["safety"]!={"outputDisabled":True,"liveOutput":False,"gpioAccess":False,"clockEnabled":False,"dmaActive":False,"sdrActive":False,"rf":False}: raise ValueError("bootstrap safety differs")
+    baseline={"moduleLoaded":False,"endpointPresent":False,"overlayActive":False,"dkmsTestVersions":False,"outputActive":False}
+    if value["expectedPreState"]!=baseline or value["expectedPostState"]!=baseline or value["safety"]!={"outputDisabled":True,"outputActive":False,"gpioAccess":False,"clockEnabled":False,"dmaActive":False,"sdrActive":False,"rf":False}: raise ValueError("bootstrap safety differs")
     if not isinstance(value["retainedTools"],list) or not value["retainedTools"] or not isinstance(value["cleanupPaths"],list) or not value["cleanupPaths"] or not 1<=value["deadlineSeconds"]<=1800: raise ValueError("bootstrap lifecycle incomplete")
     for item in value["retainedTools"]:
         if not isinstance(item,dict) or set(item)!={"path","sha256"} or not pathlib.PurePosixPath(item.get("path","")).is_absolute() or not SHA.fullmatch(item.get("sha256","")): raise ValueError("invalid retained tool identity")
@@ -121,7 +121,7 @@ def execute(value: dict, *, root: pathlib.Path, runner: Callable[[list[str]], No
         old=json.loads(journal.read_text())
         if not recover or old.get("status")!="recovery-required": raise ValueError("bootstrap journal already exists")
         runner(value["recoveryArgv"])
-    state={"operationId":value["operationId"],"status":"in-progress","checkpoint":"preflight","liveOutput":False}
+    state={"operationId":value["operationId"],"status":"in-progress","checkpoint":"preflight","outputActive":False}
     atomic(journal,state)
     try:
         if probe()!=value["expectedPreState"]: raise ValueError("bootstrap pre-state differs")

@@ -82,7 +82,7 @@ def _version(value: object, label: str) -> str:
 
 def validate_safety(value: object, *, removal_refusal: bool = False) -> dict:
     required_false = {
-        "liveOutput", "clockEnabled", "clockPrepared", "dmaActive", "gpioOutput",
+        "outputActive", "clockEnabled", "clockPrepared", "dmaActive", "gpioOutput",
         "transmitterActive", "sdrActive", "antennaConnected", "moduleLoaded",
         "platformBound", "endpointOpen", "ownerPresent", "workActive",
         "callbackPending", "cleanupLatched",
@@ -330,7 +330,7 @@ def dispatch_primitive(arguments: list[str], *, runner=command_runner,
                 raise ValueError("DKMS removal failed and the exact scope remains present")
             continue
         outputs.append({"argv": command, "output": output[:65536], "status": 0})
-    return {"operation": operation, "commands": outputs, "liveOutput": False}
+    return {"operation": operation, "commands": outputs, "outputActive": False}
 
 
 def dkms(action: str, version: str, kernel: str) -> list[str]:
@@ -352,8 +352,8 @@ def operation_commands(spec: dict) -> list[tuple[str, list[str]]]:
         ("dkms-add", dkms("add", version, kernel)),
         ("dkms-build", dkms("build", version, kernel)),
         ("dkms-install", dkms("install", version, kernel)),
-        ("load-disabled", ["modprobe", MODULE, "live_output=0"]),
-        ("query-disabled", ["cat", f"/sys/module/{MODULE}/parameters/live_output"]),
+        ("load-disabled", ["modprobe", MODULE, "output_inhibit=1"]),
+        ("query-disabled", ["cat", f"/sys/module/{MODULE}/parameters/output_inhibit"]),
         ("uapi-query-release", ["/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe",
                                 spec["route"], version]),
         ("unbind-bind", ["/usr/libexec/rp1-gpclk-dkms/gate-d-platform",
@@ -368,8 +368,8 @@ def operation_commands(spec: dict) -> list[tuple[str, list[str]]]:
     ]
     if operation == "output-disabled-cycle":
         commands += install_sequence(successor)[3:] if successor else [
-            ("load-disabled", ["modprobe", MODULE, "live_output=0"]),
-            ("query-disabled", ["cat", f"/sys/module/{MODULE}/parameters/live_output"]),
+            ("load-disabled", ["modprobe", MODULE, "output_inhibit=1"]),
+            ("query-disabled", ["cat", f"/sys/module/{MODULE}/parameters/output_inhibit"]),
             ("uapi-query-release", ["/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe",
                                     spec["route"], successor or "installed"]),
             ("unbind-bind", ["/usr/libexec/rp1-gpclk-dkms/gate-d-platform",
@@ -381,8 +381,8 @@ def operation_commands(spec: dict) -> list[tuple[str, list[str]]]:
     elif operation in {"rollback", "recover"}:
         commands += remove_sequence(successor)
         commands += [("dkms-install", dkms("install", predecessor, kernel)),
-                     ("load-disabled", ["modprobe", MODULE, "live_output=0"]),
-                     ("query-disabled", ["cat", f"/sys/module/{MODULE}/parameters/live_output"]),
+                     ("load-disabled", ["modprobe", MODULE, "output_inhibit=1"]),
+                     ("query-disabled", ["cat", f"/sys/module/{MODULE}/parameters/output_inhibit"]),
                      ("uapi-query-release", ["/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe",
                                              spec["route"], predecessor]),
                      ("unbind-bind", ["/usr/libexec/rp1-gpclk-dkms/gate-d-platform",
@@ -403,8 +403,8 @@ def operation_commands(spec: dict) -> list[tuple[str, list[str]]]:
             ("dkms-add", dkms("add", successor, kernel)),
             ("dkms-build", dkms("build", successor, kernel)),
             ("dkms-install", dkms("install", successor, kernel)),
-            ("load-disabled", ["modprobe", MODULE, "live_output=0"]),
-            ("query-disabled", ["cat", f"/sys/module/{MODULE}/parameters/live_output"]),
+            ("load-disabled", ["modprobe", MODULE, "output_inhibit=1"]),
+            ("query-disabled", ["cat", f"/sys/module/{MODULE}/parameters/output_inhibit"]),
             ("uapi-query-release", ["/usr/libexec/rp1-gpclk-dkms/gate-d-uapi-probe",
                                     spec["route"], successor]),
             ("unbind-bind", ["/usr/libexec/rp1-gpclk-dkms/gate-d-platform",
@@ -506,14 +506,14 @@ def execute(spec: dict, instance: dict, journal: pathlib.Path, *, root: pathlib.
             raise ValueError("recovery requires an immutable failed journal")
         prior = load_json(recover_from)
         if (prior.get("status") != "inactive-recovery-required" or
-                prior.get("liveOutput") is not False or
+                prior.get("outputActive") is not False or
                 prior.get("operationId") != spec["priorOperationId"]):
             raise ValueError("recovery requires the matching inactive failed journal")
     elif recover_from is not None:
         raise ValueError("only recovery may name a failed journal")
     state = {"schemaVersion": 1, "operationId": spec["operationId"],
              "operation": spec["operation"], "status": "inactive-in-progress",
-             "liveOutput": False, "checkpoint": "preflight", "commands": [],
+             "outputActive": False, "checkpoint": "preflight", "commands": [],
              "recoveryRequired": True,
              "startedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")}
     operation_started_ns = time.monotonic_ns()
@@ -606,9 +606,9 @@ def execute(spec: dict, instance: dict, journal: pathlib.Path, *, root: pathlib.
                 if status.strip():
                     raise ValueError("DKMS removal failed and exact version remains")
                 output = "already absent"
-            if checkpoint == "query-disabled" and output.strip() not in {"N", "0", "false", "False"}:
+            if checkpoint == "query-disabled" and output.strip() not in {"Y", "1", "true", "True"}:
                 raise ValueError("immutable output-disabled gate verification failed")
-            if checkpoint == "uapi-query-release" and "live_eligible=0 released=1" not in output:
+            if checkpoint == "uapi-query-release" and "output_inhibit_supported=1 released=1" not in output:
                 raise ValueError("output-disabled UAPI query/acquire/release verification failed")
             if checkpoint == "unbind-bind" and '"unbindBind": true' not in output and "unbind_bind=1" not in output:
                 raise ValueError("output-disabled unbind/rebind verification failed")
@@ -674,7 +674,7 @@ def main() -> None:
         result = {"valid": True, "operationId": spec["operationId"], "readOnly": True}
     elif args.action == "plan":
         result = {"operationId": spec["operationId"], "commands": operation_commands(spec),
-                  "liveOutput": False, "readOnly": True}
+                  "outputActive": False, "readOnly": True}
     else:
         if not args.execute or os.geteuid() != 0 or args.journal is None or args.instance is None:
             raise SystemExit("execution requires root, --execute, --instance, and --journal")

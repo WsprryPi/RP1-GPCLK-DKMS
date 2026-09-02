@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Fixed runtime deployment inventory; no caller-selected destinations."""
-KERNEL = '6.18.34+rpt-rpi-2712'
+"""Fixed runtime deployment destinations; kernel identity is binding-specific."""
 LIB = '/usr/lib/rp1-gpclk-dkms/'
 MODULES = ('rp1_route_controller', 'rp1_gpclk_dkms')
 INVENTORY = {LIB+name: 'scripts/'+name for name in (

@@ -10,17 +10,17 @@ PACKAGE, MODULE, VERSION = "rp1-gpclk-dkms", "rp1_gpclk_dkms", "0.9.0"
 DEVICE = "/dev/rp1-gpclk"
 FILE_LIMIT, LOG_LIMIT, COMMAND_LIMIT, TIMEOUT = 4096, 16384, 8192, 5
 # The UAPI uses __aligned_u64, so native C alignment is part of the ioctl size.
-QUERY_FORMAT = "@HHI" + "I"*4 + "Q" + "I"*6 + "Q"*4 + "64s"*3 + "Q"*4
+QUERY_FORMAT = "@HHI" + "I"*4 + "Q" + "I"*4 + "Q"*3 + "64s"*3 + "Q"*4
 SNAPSHOT_FORMAT = "@HHI" + "I"*18 + "Q"*6 + "64s"*3 + "Q"*8
 QUERY_SIZE, SNAPSHOT_SIZE = struct.calcsize(QUERY_FORMAT), struct.calcsize(SNAPSHOT_FORMAT)
 QUERY_IOCTL = 0xC0000000 | (QUERY_SIZE << 16) | (0xB8 << 8) | 0x20
 SNAPSHOT_IOCTL = 0xC0000000 | (SNAPSHOT_SIZE << 16) | (0xB8 << 8) | 0x28
 STATES = {1:"Qualified",2:"Experimental",3:"Compatible-unqualified",4:"Unavailable",5:"Rejected"}
-REASONS = {0:"none",1:"manifest-missing",2:"identity-unknown",3:"identity-mismatch",4:"build-unsupported",5:"signature-rejected",6:"resource-unavailable",7:"resource-conflict",8:"self-test-failed",9:"cleanup-latched",10:"administrator-enrollment-required"}
+REASONS = {0:"none",1:"manifest-missing",2:"identity-unknown",3:"identity-mismatch",4:"build-unsupported",5:"signature-rejected",6:"resource-unavailable",7:"resource-conflict",8:"self-test-failed",9:"cleanup-latched"}
 ROUTES = {1:"GPIO4",2:"GPIO20"}
-CAPS = {0:"submit-wspr",1:"submit-events",2:"stop-drain",3:"stable-state",4:"route-identity",5:"compat-identity",6:"cleanup-fault-latch",7:"live-eligible",8:"tone-continuous",9:"tone-finite"}
-CAPS[10] = "passive-snapshot"
-CAPS[11] = "operation-live-gate"
+CAPS = {0:"submit-events",1:"stop-drain",2:"stable-state",3:"route-identity",
+        4:"compat-identity",5:"cleanup-fault-latch",6:"output-inhibit",
+        7:"passive-snapshot",8:"bounded-dma-chunks"}
 OPERATION_STATES = {0:"IDLE",1:"RUNNING",2:"DRAINING",3:"COMPLETE",4:"FAILED",5:"DEAD"}
 TERMINAL_REASONS = {0:"none",1:"complete",2:"stopped",3:"owner-closed",4:"provider-removed",5:"deadline-missed",6:"invalid-request",7:"resource-unavailable",8:"startup-conflict",9:"dma-failed",10:"clock-failed",11:"pinctrl-failed",12:"readback-failed",13:"cleanup-failed",14:"compatibility-rejected",15:"internal-error"}
 OBSERVATIONS = {0:"unknown",1:"false",2:"true"}
@@ -32,13 +32,13 @@ def decode_passive_snapshot(payload: bytes) -> dict:
     values=struct.unpack(SNAPSHOT_FORMAT,payload)
     if values[0]!=SNAPSHOT_SIZE or values[1]!=0 or values[2]!=0:
         return {"status":"rejected","reason":"malformed-snapshot-header"}
-    route,compat_state,compat_reason,operation,terminal,current_event,flags,cleanup,owner,lease,live_output,live_eligible,drain,gpio_safe,clock_quiescent,dma_quiescent,stable,reserved0=values[3:21]
+    route,compat_state,compat_reason,operation,terminal,current_event,flags,cleanup,owner,lease,output_inhibited,operational_ready,drain,gpio_safe,clock_quiescent,dma_quiescent,stable,reserved0=values[3:21]
     if reserved0 or flags & ~0x7: return {"status":"rejected","reason":"unknown-snapshot-flags"}
-    observations=(cleanup,owner,lease,live_output,live_eligible,gpio_safe,clock_quiescent,dma_quiescent,stable)
+    observations=(cleanup,owner,lease,output_inhibited,operational_ready,gpio_safe,clock_quiescent,dma_quiescent,stable)
     if route not in ROUTES or compat_state not in STATES or compat_reason not in REASONS or operation not in OPERATION_STATES or terminal not in TERMINAL_REASONS or drain not in DRAIN_STATES or any(item not in OBSERVATIONS for item in observations):
         return {"status":"rejected","reason":"unknown-snapshot-enum"}
     capabilities,generation,elapsed,remaining,min_tone,max_tone=values[21:27]
-    if capabilities & ~0xfff: return {"status":"rejected","reason":"unknown-snapshot-capability"}
+    if capabilities & ~0x1ff: return {"status":"rejected","reason":"unknown-snapshot-capability"}
     if any(values[index] != 0 for index in range(30,38)): return {"status":"rejected","reason":"nonzero-snapshot-reserved"}
     valid={name:bool(flags&(1<<bit)) for bit,name in SNAPSHOT_FLAGS.items()}
     return {"status":"ok","route":ROUTES[route],"compatibilityState":STATES[compat_state],"compatibilityReason":REASONS[compat_reason],
@@ -46,10 +46,10 @@ def decode_passive_snapshot(payload: bytes) -> dict:
         "currentEvent":current_event if valid["current-event-valid"] else None,"generation":generation,
         "elapsedNs":elapsed if valid["elapsed-valid"] else None,"remainingNs":remaining if valid["remaining-valid"] else None,
         "cleanupFault":OBSERVATIONS[cleanup],"ownerPresent":OBSERVATIONS[owner],"leasePresent":OBSERVATIONS[lease],
-        "liveOutput":OBSERVATIONS[live_output],"liveEligible":OBSERVATIONS[live_eligible],"drainState":DRAIN_STATES[drain],
+        "outputInhibited":OBSERVATIONS[output_inhibited],"operationalReady":OBSERVATIONS[operational_ready],"drainState":DRAIN_STATES[drain],
         "gpioSafe":OBSERVATIONS[gpio_safe],"clockQuiescent":OBSERVATIONS[clock_quiescent],"dmaQuiescent":OBSERVATIONS[dma_quiescent],"stable":OBSERVATIONS[stable],
         "capabilityMask":f"0x{capabilities:016x}","capabilities":[name for bit,name in CAPS.items() if capabilities&(1<<bit)],
-        "minToneDurationNs":min_tone,"maxToneDurationNs":max_tone,
+        "dmaChunkDurationNs":min_tone,"maxRequestDurationNs":max_tone,
         "moduleId":values[27].split(b"\0",1)[0].decode(errors="replace"),"buildId":values[28].split(b"\0",1)[0].decode(errors="replace"),"compatibilityId":values[29].split(b"\0",1)[0].decode(errors="replace"),
         "nonOwning":True,"leaseTokenExposed":False,"descriptorClosed":True}
 
@@ -120,9 +120,11 @@ class Collector:
                 "compatibilityState":STATES.get(values[4],f"unknown-{values[4]}"),"compatibilityReason":REASONS.get(values[5],f"unknown-{values[5]}"),
                 "cleanupFault":reason=="cleanup-latched",
                 "capabilityMask":f"0x{bits:016x}","capabilities":[name for bit,name in CAPS.items() if bits&(1<<bit)],
-                "unknownCapabilityMask":f"0x{bits&~0xfff:016x}","moduleId":values[18].split(b"\0",1)[0].decode(errors="replace"),
-                "buildId":values[19].split(b"\0",1)[0].decode(errors="replace"),"compatibilityId":values[20].split(b"\0",1)[0].decode(errors="replace"),
-                "minToneDurationNs":values[16],"maxToneDurationNs":values[17]}
+                "unknownCapabilityMask":f"0x{bits&~0x1ff:016x}","moduleId":values[15].split(b"\0",1)[0].decode(errors="replace"),
+                "buildId":values[16].split(b"\0",1)[0].decode(errors="replace"),"compatibilityId":values[17].split(b"\0",1)[0].decode(errors="replace"),
+                "maxTones":values[8],"maxEvents":values[9],"maxDitherPeriod":values[10],
+                "supportedDriveMaMask":f"0x{values[11]:08x}","maxEventDurationNs":values[12],
+                "maxRequestDurationNs":values[13],"dmaChunkDurationNs":values[14]}
             return result
         except PermissionError: return {"status":"indeterminate","reason":"permission-denied"}
         except FileNotFoundError: return {"status":"unavailable","reason":"endpoint-absent"}
@@ -156,7 +158,6 @@ class Collector:
         modinfo={name:self.runner(["modinfo","-F",field,module_path]) for name,field in
             (("version","version"),("vermagic","vermagic"),("signer","signer"),("signatureKeyId","sig_key"),("signatureAlgorithm","sig_id"),("signatureHashAlgorithm","sig_hashalgo"))}
         transaction=self.json_file(f"/var/lib/{PACKAGE}/transaction.json")
-        enrollment=self.json_file(f"/etc/{PACKAGE}/enrollment.json")
         query=self.query(); snapshot=self.passive_snapshot(); release=self._release(release_directory)
         selected=select_manifest_entry(release.get("manifest"),query)
         endpoint=self.metadata(DEVICE); driver=self.path("/sys/bus/platform/drivers/rp1-gpclk-dkms")
@@ -165,13 +166,14 @@ class Collector:
         development=self._development(development_manifest)
         result={"SPDX-License-Identifier":"MIT","schemaVersion":1,"readOnly":True,
             "collectionLimits":{"commandSeconds":TIMEOUT,"commandStreamBytes":COMMAND_LIMIT,"fileBytes":FILE_LIMIT,"kernelLogBytes":LOG_LIMIT,"kernelLogScope":"current boot, matching rp1_gpclk or rp1-gpclk only"},
-            "summary":classify(query,selected,transaction,enrollment),
+            "summary":classify(query,selected,transaction),
             "package":{"version":VERSION,"manager":self.runner(["dpkg-query","-W","-f=${Status} ${Version}",PACKAGE]),"dkms":self.runner(["dkms","status","-m",PACKAGE])},
             "kernels":{"running":self.kernel,"installed":kernels,"headers":{k:self.metadata(f"/lib/modules/{k}/build") for k in kernels}},
             "build":{"transaction":transaction,"logs":self._build_logs()},
             "module":{"installedPath":module_path,"file":module_file,"metadata":modinfo,
-                      "signatureStatus":self._signature_status(modinfo),"loaded":self.path(f"/sys/module/{MODULE}").is_dir(),"liveGate":self.read(f"/sys/module/{MODULE}/parameters/live_output"),"taint":self.read("/proc/sys/kernel/tainted")},
-            "endpoint":endpoint,"uapi":query,"passiveSnapshot":snapshot,"release":release,"compatibility":selected,"enrollment":enrollment,
+                      "signatureStatus":self._signature_status(modinfo),"loaded":self.path(f"/sys/module/{MODULE}").is_dir(),"outputInhibit":self.read(f"/sys/module/{MODULE}/parameters/output_inhibit"),"taint":self.read("/proc/sys/kernel/tainted")},
+            "endpoint":endpoint,"uapi":query,"passiveSnapshot":snapshot,"release":release,"compatibility":selected,
+            "authority":{"model":"root-owned-endpoint","requiredUid":0,"requiredGid":0,"requiredMode":"0600"},
             "cleanupFaultLatch":query.get("cleanupFault","not-exposed-by-QUERY-v1") if query.get("status")=="ok" else query,
             "routeOverlay":self._route_overlay(query),"hardwareIdentity":self._hardware(),
             "kernelDiagnostics":self.runner(["journalctl","-k","-b","--no-pager","-g","rp1[_-]gpclk","--output=short-monotonic"]),
@@ -268,11 +270,11 @@ def select_manifest_entry(manifest,query):
     if query.get("status")!="ok": return {"status":"indeterminate","reason":"UAPI-query-unavailable","selectedEntry":None,"manifestId":manifest.get("manifestId")}
     matches=[e for e in manifest["entries"] if e.get("id")==query.get("compatibilityId") and e.get("route")==query.get("route")]
     if len(matches)!=1: return {"status":"Unavailable","reason":"no-unique-exact-manifest-entry","selectedEntry":None,"manifestId":manifest.get("manifestId")}
-    entry=matches[0]; return {"status":entry.get("state","Rejected"),"reason":entry.get("reason","missing-reason"),"selectedEntry":entry.get("id"),"manifestId":manifest.get("manifestId"),"liveEligible":entry.get("liveEligible",False)}
+    entry=matches[0]; return {"status":entry.get("state","Rejected"),"reason":entry.get("reason","missing-reason"),"selectedEntry":entry.get("id"),"manifestId":manifest.get("manifestId"),"operationalReady":entry.get("operationalReady",False)}
 
-def classify(query,selected,transaction,enrollment):
+def classify(query,selected,transaction):
     if transaction.get("status")=="ok" and transaction.get("value",{}).get("status") not in {"complete","recovered"}: return {"category":"rejected","compatibilityState":"Rejected","reason":"interrupted-operation-requires-recovery"}
-    if any(x.get("status")=="indeterminate" for x in (query,selected,enrollment)): return {"category":"indeterminate-because-inspection-lacked-privileges","compatibilityState":"indeterminate","reason":"required-read-denied-or-query-unavailable"}
+    if any(x.get("status")=="indeterminate" for x in (query,selected)): return {"category":"indeterminate-because-inspection-lacked-privileges","compatibilityState":"indeterminate","reason":"required-read-denied-or-query-unavailable"}
     state=query.get("compatibilityState") if query.get("status")=="ok" else selected.get("status","Unavailable")
     if query.get("cleanupFault") is True or state=="Rejected": return {"category":"rejected","compatibilityState":"Rejected","reason":query.get("compatibilityReason",selected.get("reason"))}
     if selected.get("status")=="Unavailable": return {"category":"unavailable","compatibilityState":"Unavailable","reason":selected.get("reason")}

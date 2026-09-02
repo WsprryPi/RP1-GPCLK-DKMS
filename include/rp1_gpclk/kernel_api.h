@@ -12,8 +12,8 @@ int rp1_gpclk_dma_acquire(struct rp1_gpclk_device *device);
 int rp1_gpclk_pinctrl_acquire(struct rp1_gpclk_device *device);
 int rp1_gpclk_tick_resources_acquire(struct platform_device *pdev,
 				     struct rp1_gpclk_device *device);
-bool rp1_gpclk_live_output_enabled(void);
-bool rp1_gpclk_live_output_eligible(const struct rp1_gpclk_device *device);
+bool rp1_gpclk_output_inhibited(void);
+bool rp1_gpclk_operationally_ready(const struct rp1_gpclk_device *device);
 void rp1_gpclk_quiesce(struct rp1_gpclk_device *device);
 void rp1_gpclk_resources_release(struct rp1_gpclk_device *device);
 

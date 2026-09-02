@@ -7,13 +7,11 @@
 #include <uapi/linux/rp1_gpclk.h>
 
 #define RP1_GPCLK_CORE_SUPPORTED_CAPABILITIES \
-    (RP1_GPCLK_CAP_SUBMIT_WSPR | RP1_GPCLK_CAP_SUBMIT_EVENTS | \
+    (RP1_GPCLK_CAP_SUBMIT_EVENTS | \
      RP1_GPCLK_CAP_STOP_DRAIN | RP1_GPCLK_CAP_STABLE_STATE | \
      RP1_GPCLK_CAP_ROUTE_IDENTITY | RP1_GPCLK_CAP_COMPAT_IDENTITY | \
-     RP1_GPCLK_CAP_CLEANUP_FAULT_LATCH | RP1_GPCLK_CAP_LIVE_ELIGIBLE | \
-     RP1_GPCLK_CAP_TONE_CONTINUOUS | RP1_GPCLK_CAP_TONE_FINITE | \
-     RP1_GPCLK_CAP_PASSIVE_SNAPSHOT | \
-     RP1_GPCLK_CAP_OPERATION_LIVE_GATE)
+     RP1_GPCLK_CAP_CLEANUP_FAULT_LATCH | RP1_GPCLK_CAP_OUTPUT_INHIBIT | \
+     RP1_GPCLK_CAP_PASSIVE_SNAPSHOT | RP1_GPCLK_CAP_BOUNDED_DMA_CHUNKS)
 
 enum rp1_gpclk_core_result {
     RP1_GPCLK_CORE_OK = 0,
@@ -61,13 +59,10 @@ struct rp1_gpclk_core {
     struct rp1_gpclk_core_snapshot value;
     __u32 pending_reason;
     __u32 owner_closing;
-    __u32 plan_mode;
     __u32 plan_tone_count;
     __u32 plan_event_count;
-    __u32 plan_symbol_count;
     struct rp1_gpclk_tone plan_tones[RP1_GPCLK_MAX_TONES];
     struct rp1_gpclk_event plan_events[RP1_GPCLK_MAX_EVENTS];
-    unsigned char plan_symbols[RP1_GPCLK_WSPR_SYMBOLS];
 #ifdef RP1_GPCLK_HOST_TEST
     __u32 fault_point;
     __u32 fault_occurrence;
@@ -79,17 +74,11 @@ void rp1_gpclk_core_init(struct rp1_gpclk_core *core);
 int rp1_gpclk_core_acquire(struct rp1_gpclk_core *core, __u64 owner_id,
                           __u32 route, __u64 required_capabilities,
                           __u64 *lease_id);
-int rp1_gpclk_core_submit_wspr(
-    struct rp1_gpclk_core *core, __u64 owner_id,
-    struct rp1_gpclk_submit_wspr *request,
-    const struct rp1_gpclk_tone *tones, const unsigned char *symbols);
 int rp1_gpclk_core_submit_events(
     struct rp1_gpclk_core *core, __u64 owner_id,
     struct rp1_gpclk_submit_events *request,
     const struct rp1_gpclk_tone *tones,
     const struct rp1_gpclk_event *events);
-int rp1_gpclk_core_submit_tone(struct rp1_gpclk_core *core, __u64 owner_id,
-                              struct rp1_gpclk_submit_tone *request);
 int rp1_gpclk_core_progress(struct rp1_gpclk_core *core, __u64 owner_id,
                            __u64 lease_id, __u64 generation);
 int rp1_gpclk_core_stop(struct rp1_gpclk_core *core, __u64 owner_id,

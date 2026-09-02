@@ -28,10 +28,10 @@ with tempfile.TemporaryDirectory() as temporary:
     (root/f"lib/modules/{kernel}/build").mkdir(parents=True)
     write(root,f"/lib/modules/{kernel}/updates/dkms/{module.MODULE}.ko","module")
     write(root,"/proc/device-tree/model","Raspberry Pi 5 Model B")
-    write(root,"/sys/module/rp1_gpclk_dkms/parameters/live_output","0")
+    write(root,"/sys/module/rp1_gpclk_dkms/parameters/output_inhibit","0")
     write(root,"/var/lib/rp1-gpclk-dkms/transaction.json",{"status":"complete","ownedFiles":[],"ownedDirectories":[]})
     query={"status":"ok","route":"GPIO4","compatibilityState":"Compatible-unqualified",
-           "compatibilityReason":"identity-unknown","compatibilityId":"entry","capabilities":["route-identity","tone-finite"],"cleanupFault":False}
+           "compatibilityReason":"identity-unknown","compatibilityId":"entry","capabilities":["route-identity","submit-events"],"cleanupFault":False}
     write(root,"/run/rp1-gpclk-dkms/query-fixture.json",query)
     snapshot={"status":"ok","route":"GPIO4","operationState":"IDLE",
               "stable":"true","nonOwning":True,"leaseTokenExposed":False,"descriptorClosed":True}
@@ -42,7 +42,7 @@ with tempfile.TemporaryDirectory() as temporary:
     (endpoint/"compatible").write_bytes(b"wsprrypi,rp1-gpclk-dkms-v1\0")
     (endpoint/"clocks").write_bytes(b"\0\0\0\x01\0\0\0\x21")
     release=root/"release"; release.mkdir()
-    write(root,"/release/rp1-gpclk-compatibility-manifest.json",{"manifestId":"manifest","entries":[{"id":"entry","route":"GPIO4","state":"Compatible-unqualified","liveEligible":False,"reason":"build only"}]})
+    write(root,"/release/rp1-gpclk-compatibility-manifest.json",{"manifestId":"manifest","entries":[{"id":"entry","route":"GPIO4","state":"Compatible-unqualified","operationalReady":False,"reason":"build only"}]})
     write(root,"/release/release-metadata.json",{"release":module.VERSION})
     write(root,"/release/SHA256SUMS","0"*64+"  fixture\n")
     report=module.Collector(root,runner,kernel,"aarch64").collect(release)
@@ -51,7 +51,7 @@ with tempfile.TemporaryDirectory() as temporary:
     assert report["compatibility"]["selectedEntry"]=="entry"
     assert report["module"]["file"]["sha256"]
     assert report["module"]["signatureStatus"]["status"]=="signed"
-    assert report["module"]["liveGate"]["value"]=="0"
+    assert report["module"]["outputInhibit"]["value"]=="0"
     assert report["kernels"]["headers"][kernel]["present"] is True
     assert report["endpoint"]["present"] is False
     assert report["endpoint"]["bound"] is False
@@ -61,8 +61,8 @@ with tempfile.TemporaryDirectory() as temporary:
     properties=report["routeOverlay"]["activeEndpointNodes"][0]["propertyIdentities"]
     assert properties["compatible"]["status"]=="ok" and properties["compatible"]["sha256"]
     assert properties["clocks"]["sizeBytes"]==8 and properties["dmas"]["status"]=="absent"
-    assert module.QUERY_SIZE==312 and module.SNAPSHOT_SIZE==384
-    assert module.CAPS[8]=="tone-continuous" and module.CAPS[9]=="tone-finite"
+    assert module.QUERY_SIZE==296 and module.SNAPSHOT_SIZE==384
+    assert module.CAPS[0]=="submit-events" and module.CAPS[8]=="bounded-dma-chunks"
     assert set(report) >= set(contract["requiredSections"])
 
     development=root/"development.json"
@@ -83,18 +83,18 @@ with tempfile.TemporaryDirectory() as temporary:
                            ("Compatible-unqualified","build-compatible-but-live-disabled"),("Unavailable","unavailable"),("Rejected","rejected")):
         q={**query,"compatibilityState":state}
         selected={"status":state,"reason":"fixture","selectedEntry":"entry"}
-        assert module.classify(q,selected,{"status":"absent"},{"status":"absent"})["category"]==category
+        assert module.classify(q,selected,{"status":"absent"})["category"]==category
     denied={"status":"indeterminate","reason":"permission-denied"}
-    assert module.classify(denied,{"status":"indeterminate"},{"status":"absent"},{"status":"absent"})["category"].startswith("indeterminate")
+    assert module.classify(denied,{"status":"indeterminate"},{"status":"absent"})["category"].startswith("indeterminate")
     interrupted={"status":"ok","value":{"status":"inactive-recovery-required"}}
-    assert module.classify(query,{"status":"Compatible-unqualified"},interrupted,{"status":"absent"})["category"]=="rejected"
+    assert module.classify(query,{"status":"Compatible-unqualified"},interrupted)["category"]=="rejected"
     assert module.select_manifest_entry({"entries":[]},query)["status"]=="Unavailable"
     duplicate={"entries":[{"id":"entry","route":"GPIO4"},{"id":"entry","route":"GPIO4"}]}
     assert module.select_manifest_entry(duplicate,query)["status"]=="Unavailable"
     exact_missing={"status":"Unavailable","reason":"no-unique-exact-manifest-entry"}
-    assert module.classify({**query,"compatibilityState":"Qualified"},exact_missing,{"status":"absent"},{"status":"absent"})["category"]=="unavailable"
+    assert module.classify({**query,"compatibilityState":"Qualified"},exact_missing,{"status":"absent"})["category"]=="unavailable"
     mismatch={"status":"Experimental","reason":"manifest experimental"}
-    assert module.classify({**query,"compatibilityState":"Qualified"},mismatch,{"status":"absent"},{"status":"absent"})["category"]=="rejected"
+    assert module.classify({**query,"compatibilityState":"Qualified"},mismatch,{"status":"absent"})["category"]=="rejected"
 
     residue=root/"owned"; residue.mkdir()
     journal={"status":"ok","value":{"status":"inactive-recovery-required","ownedFiles":[{"path":"/owned/file"}],"ownedDirectories":["/owned"]}}
@@ -104,11 +104,11 @@ with tempfile.TemporaryDirectory() as temporary:
 
 def snapshot_payload(**changes):
     values=[384,0,0,1,3,1,3,2,3,0x7,1,1,1,1,2,2,2,2,2,0,0,
-            0xfff,9,100,200,1_000,9_000,
+            0x1ff,9,100,200,1_000,9_000,
             b"rp1_gpclk_dkms",b"build",b"compat",0,0,0,0,0,0,0,0]
     indexes={"size":0,"header_reserved":1,"header_flags":2,"route":3,"compat_state":4,
              "operation":6,"terminal":7,"snapshot_flags":9,"cleanup":10,
-             "owner":11,"lease":12,"live_output":13,"live_eligible":14,
+             "owner":11,"lease":12,"output_inhibited":13,"operational_ready":14,
              "drain":15,"gpio":16,"clock":17,"dma":18,"stable":19,
              "reserved0":20,"capabilities":21,"generation":22,"elapsed":23,
              "remaining":24,"reserved1":30}
@@ -138,7 +138,7 @@ for changes,reason in (({"size":383},"malformed-snapshot-header"),
                        ({"snapshot_flags":8},"unknown-snapshot-flags"),
                        ({"route":99},"unknown-snapshot-enum"),
                        ({"stable":99},"unknown-snapshot-enum"),
-                       ({"capabilities":0x1000},"unknown-snapshot-capability"),
+                       ({"capabilities":0x200},"unknown-snapshot-capability"),
                        ({"reserved1":1},"nonzero-snapshot-reserved")):
     assert module.decode_passive_snapshot(snapshot_payload(**changes))["reason"]==reason
 assert module.decode_passive_snapshot(snapshot_payload()[:-1])["reason"]=="malformed-snapshot-size"

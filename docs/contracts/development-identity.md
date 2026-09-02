@@ -2,9 +2,9 @@
 
 # Development identity and installation transitions
 
-The current pre-release development baseline is `0.9.0`. It includes finite and
-continuous operations, event timing, exact `GPIO4`/`GPIO20` selection, runtime
-switching through none, bounded cancellation/drain and application restoration.
+The current pre-release development baseline is `0.9.0`. It includes finite
+generic events, fixed-memory DMA chunking, exact `GPIO4`/`GPIO20` selection,
+runtime switching through none, bounded cancellation/drain, and application restoration.
 WsprryPi owns present/future modes and product policy; DKMS enforces resource,
 ownership, capability and cleanup contracts without a product-mode allowlist.
 
@@ -22,26 +22,26 @@ ownership, capability and cleanup contracts without a product-mode allowlist.
 | Administrative UAPI | exact `include/uapi/linux/rp1_route_admin.h` bytes |
 | Development manifest | `rp1-gpclk-source-development-manifest` |
 | Route-manager protocols | packaged/source and runtime profiles |
-| `GPIO4` compatibility ID | `v0.9.0-pi5-gpio4` |
-| `GPIO20` compatibility ID | `v0.9.0-pi5-gpio20` |
+| `GPIO4` compatibility ID | `v0.9.0-rp1-gpio4` |
+| `GPIO20` compatibility ID | `v0.9.0-rp1-gpio20` |
 | Classification | `source-development` / `Experimental`; not release-qualified |
 | Future tag convention | `vMAJOR.MINOR.PATCH`; no `v0.9.0` tag is created |
 
 Product, Debian, DKMS, UAPI, and schema identities are distinct. Current
-compatibility IDs identify the Pi 5 product identity and route. `Experimental`
-is reported separately through the UAPI and enrollment state. Kernel release is
+compatibility IDs identify the RP1 resource contract and route. `Experimental`
+is reported separately through the UAPI and development record. Kernel release is
 recorded in build manifests, diagnostics and enrollment records, but is not part
 of the compatibility ID and is not a per-release permission list. Exact hashes
 identify each build. Canonical route overlay names and endpoint nodes are stable
 and carry no product-version suffix.
 
 An operator may build `0.9.0` through DKMS for another stock Raspberry Pi kernel
-and explicitly enroll that installation for `Experimental` use without defining a
-new compatibility ID. The running kernel must still be identified, the module
-must be built for it, and all hardware, route, resource, ownership, signing and
-cleanup checks still apply. Such use establishes no support or qualification
-claim. A kernel change can change module bytes and therefore requires the normal
-DKMS rebuild and current-installation enrollment checks.
+on a structurally compatible RP1 system without defining a new compatibility
+ID. The running kernel must still be identified, the module must be built for
+it, and all route, resource, ownership, signing, and cleanup checks still apply.
+Such use establishes no support or qualification claim. A kernel change can
+change module bytes and therefore requires the normal DKMS rebuild and artifact
+identity checks.
 
 The supported development paths are `development-*` and the opt-in runtime
 manager. Release generation and finalization are disabled until the release
@@ -51,7 +51,7 @@ unpublished development artifacts, not release qualification.
 ## Maintainer transition policy
 
 1. **Clean install:** external orchestration uses
-   `development-install --route-neutral --live-output 0 --install` from a clean
+   `development-install --route-neutral --output-inhibit 1 --install` from a clean
    exact commit. It installs the DKMS source and module for the named kernel but
    does not select a route, install or apply an overlay, enroll, load, edit boot
    configuration, operate a service, or enable output. Its manifest records

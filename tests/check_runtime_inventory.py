@@ -45,7 +45,7 @@ class FakeReader:
             return b"11111111-2222-3333-4444-555555555555\n"
         if name == inv.FILES["bootConfig"]:
             return self.config
-        if name == inv.FILES["loadOutputGate"]:
+        if name == inv.FILES["outputInhibit"]:
             return b"N\n"
         if name.endswith(".ko.xz"):
             return self.packed
@@ -81,7 +81,7 @@ class Tests(unittest.TestCase):
         self.assertFalse(value["assessment"]["mutationAvailable"])
         self.assertEqual(value["assessment"]["bootRouteCandidates"], ["gpio20"])
         self.assertEqual(value["assessment"]["runtimeOwnership"], "not-established")
-        self.assertEqual(value["assessment"]["operationLive"], "unknown")
+        self.assertEqual(value["assessment"]["operationalReady"], "unknown")
         self.assertIn("boot-route-migration-review-required", value["assessment"]["blockers"])
         self.assertTrue(value["files"]["installedModuleBytes"]["buildNoteMatchesLoaded"])
         self.assertEqual(value["files"]["installedModuleBytes"]["decompressedSha256"], inv.sha(elf()))

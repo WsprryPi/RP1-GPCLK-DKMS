@@ -14,6 +14,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import runtime_activation as activation
 import runtime_binding
+KERNEL = '6.18.34+rpt-rpi-2712'
 import runtime_controller_admin as admin
 import runtime_deployment as deployment
 
@@ -35,7 +36,7 @@ class System:
         self.binding_value = {'schemaVersion': 2, 'contract': runtime_binding.CONTRACT,
             'productVersion': runtime_binding.PRODUCT_VERSION,
             'compatibilityIdentities': runtime_binding.COMPATIBILITY,
-            'sourceCommit': 'a' * 40, 'kernel': admin.KERNEL,
+            'sourceCommit': 'a' * 40, 'kernel': KERNEL,
             'files': {path: admin.digest(path.encode()) for path in deployment.INVENTORY},
             'externalFiles': {path: 'b' * 64 for path in runtime_binding.EXTERNAL_PATHS},
             'uapiSha256': {}, 'controllerNoteSha256': 'c' * 64,

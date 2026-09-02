@@ -215,7 +215,7 @@ class Files:
             raise ValueError('application state changed since deployment review')
 
     def refresh(self):
-        admin.run(('/usr/sbin/depmod', '-a', admin.KERNEL))
+        admin.run(('/usr/sbin/depmod', '-a', os.uname().release))
         admin.run(('/usr/bin/systemctl', 'daemon-reload'))
 
     def preflight_removal(self):
@@ -376,8 +376,8 @@ def remove(files, value, approved):
 
 @contextlib.contextmanager
 def mutation_lock():
-    if os.geteuid() != 0 or os.uname().release != admin.KERNEL:
-        raise ValueError('root and exact kernel required')
+    if os.geteuid() != 0:
+        raise ValueError('root required')
     admin.safe_directory(admin.STATE)
     fd = os.open(admin.STATE / 'lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:

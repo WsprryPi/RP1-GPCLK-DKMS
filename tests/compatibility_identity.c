@@ -11,14 +11,9 @@ int main(void)
 {
 	const char *version = RP1_GPCLK_COMPATIBILITY_VERSION;
 	CHECK(rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
-		"6.18.34+rpt-rpi-2712",
-		RP1_GPCLK_COMPATIBILITY_ARCH, version, true, true));
+		RP1_GPCLK_COMPATIBILITY_ARCH, version, true));
 	CHECK(rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO20,
-		"6.18.35+rpt-rpi-2712",
-		RP1_GPCLK_COMPATIBILITY_ARCH, version, true, true));
-	CHECK(rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
-		"experimental-operator-kernel",
-		RP1_GPCLK_COMPATIBILITY_ARCH, version, true, true));
+		RP1_GPCLK_COMPATIBILITY_ARCH, version, true));
 	CHECK(!strcmp(rp1_gpclk_compatibility_id(RP1_GPCLK_ROUTE_GPIO4),
 		RP1_GPCLK_GPIO4_COMPATIBILITY_ID));
 	CHECK(!strcmp(rp1_gpclk_compatibility_id(RP1_GPCLK_ROUTE_GPIO20),
@@ -26,20 +21,19 @@ int main(void)
 	CHECK(strcmp(rp1_gpclk_compatibility_id(RP1_GPCLK_ROUTE_GPIO4),
 		rp1_gpclk_compatibility_id(RP1_GPCLK_ROUTE_GPIO20)));
 	CHECK(!rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
-		"6.18.34+rpt-rpi-2712",
-		RP1_GPCLK_COMPATIBILITY_ARCH, "1.1.1", true, true));
+		RP1_GPCLK_COMPATIBILITY_ARCH, "1.1.1", true));
 	CHECK(!rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
-		"6.18.34+rpt-rpi-2712",
-		RP1_GPCLK_COMPATIBILITY_ARCH, version, false, true));
+		RP1_GPCLK_COMPATIBILITY_ARCH, version, false));
 	CHECK(!rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
-		"6.18.34+rpt-rpi-2712",
-		RP1_GPCLK_COMPATIBILITY_ARCH, version, true, false));
+		"armv7l", version, true));
 	CHECK(!rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
-		"", RP1_GPCLK_COMPATIBILITY_ARCH, version, true, true));
+		NULL, version, true));
 	CHECK(!rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
-		NULL, RP1_GPCLK_COMPATIBILITY_ARCH, version, true, true));
+		RP1_GPCLK_COMPATIBILITY_ARCH, NULL, true));
 	CHECK(!rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_GPIO4,
-		"6.18.34+rpt-rpi-2712", "armv7l", version, true, true));
-	puts("compatibility identity: PASS (kernel-independent GPIO4/GPIO20 Experimental identities)");
+		RP1_GPCLK_COMPATIBILITY_ARCH, version, false));
+	CHECK(!rp1_gpclk_compatibility_allowed(RP1_GPCLK_ROUTE_INVALID,
+		RP1_GPCLK_COMPATIBILITY_ARCH, version, true));
+	puts("compatibility identity: PASS (structural GPIO4/GPIO20 identities)");
 	return 0;
 }

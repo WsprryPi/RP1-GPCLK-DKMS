@@ -13,17 +13,12 @@
 #include "rp1_gpclk/version.h"
 
 #define RP1_GPCLK_CAPABILITIES \
-	(RP1_GPCLK_CAP_SUBMIT_WSPR | RP1_GPCLK_CAP_SUBMIT_EVENTS | \
+	(RP1_GPCLK_CAP_SUBMIT_EVENTS | \
 	 RP1_GPCLK_CAP_STOP_DRAIN | RP1_GPCLK_CAP_STABLE_STATE | \
 	 RP1_GPCLK_CAP_ROUTE_IDENTITY | RP1_GPCLK_CAP_COMPAT_IDENTITY | \
 	 RP1_GPCLK_CAP_CLEANUP_FAULT_LATCH | \
-	 RP1_GPCLK_CAP_TONE_CONTINUOUS | RP1_GPCLK_CAP_TONE_FINITE | \
-	 RP1_GPCLK_CAP_PASSIVE_SNAPSHOT | \
-	 RP1_GPCLK_CAP_OPERATION_LIVE_GATE)
-
-#define RP1_GPCLK_PHASE4A_INERT_CAPABILITIES \
-	(RP1_GPCLK_CAP_ROUTE_IDENTITY | RP1_GPCLK_CAP_COMPAT_IDENTITY | \
-	 RP1_GPCLK_CAP_CLEANUP_FAULT_LATCH)
+	 RP1_GPCLK_CAP_OUTPUT_INHIBIT | RP1_GPCLK_CAP_PASSIVE_SNAPSHOT | \
+	 RP1_GPCLK_CAP_BOUNDED_DMA_CHUNKS)
 
 static bool rp1_gpclk_reserved_zero(const __u64 *reserved,
 				    size_t count)
@@ -44,46 +39,10 @@ static bool rp1_gpclk_header_valid(const struct rp1_gpclk_uapi_header *header,
 		header->flags == 0;
 }
 
-static bool rp1_gpclk_digest_nonzero(const __u8 *digest)
+static bool rp1_gpclk_execution_allowed(
+	const struct rp1_gpclk_file *context)
 {
-	size_t index;
-	__u8 aggregate = 0;
-
-	for (index = 0; index < RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE;
-	     index++)
-		aggregate |= digest[index];
-	return aggregate != 0;
-}
-
-static bool rp1_gpclk_operation_live_eligible(
-	const struct rp1_gpclk_file *context, __u64 lease)
-{
-	return rp1_gpclk_live_output_eligible(context->device) ||
-		(context->device->live_eligible && lease != 0 &&
-		 READ_ONCE(context->operation_live_lease) == lease &&
-		 READ_ONCE(context->device->operation_live_owner) == context->owner &&
-		 READ_ONCE(context->device->operation_live_lease) == lease &&
-		 !memcmp(context->operation_live_digest,
-			 context->device->operation_live_digest,
-			 RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE) &&
-		 rp1_gpclk_digest_nonzero(context->operation_live_digest));
-}
-
-static void rp1_gpclk_revoke_operation_live(
-	struct rp1_gpclk_file *context, __u64 lease)
-{
-	if (context->operation_live_lease != lease)
-		return;
-	if (context->device->operation_live_owner == context->owner &&
-	    context->device->operation_live_lease == lease) {
-		context->device->operation_live_owner = 0;
-		context->device->operation_live_lease = 0;
-		memzero_explicit(context->device->operation_live_digest,
-			RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE);
-	}
-	context->operation_live_lease = 0;
-	memzero_explicit(context->operation_live_digest,
-		RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE);
+	return rp1_gpclk_operationally_ready(context->device);
 }
 
 static long rp1_gpclk_core_error(int result)
@@ -111,8 +70,8 @@ static long rp1_gpclk_core_error(int result)
 static __u32 rp1_gpclk_compatibility_reason(
 	const struct rp1_gpclk_device *device)
 {
-	return device->live_eligible ? RP1_GPCLK_COMPAT_REASON_NONE :
-		RP1_GPCLK_COMPAT_REASON_ADMIN_ENROLLMENT_REQUIRED;
+	return device->operational_ready ? RP1_GPCLK_COMPAT_REASON_NONE :
+		RP1_GPCLK_COMPAT_REASON_RESOURCE_UNAVAILABLE;
 }
 
 static long rp1_gpclk_query(struct rp1_gpclk_file *context, void __user *user)
@@ -123,7 +82,7 @@ static long rp1_gpclk_query(struct rp1_gpclk_file *context, void __user *user)
 	if (copy_from_user(&request, user, sizeof(request)))
 		return -EFAULT;
 	if (!rp1_gpclk_header_valid(&request.header, sizeof(request)) ||
-	    request.reserved0 || request.reserved1 ||
+	    request.reserved0 ||
 	    !rp1_gpclk_reserved_zero(request.reserved, 4))
 		return -EINVAL;
 	mutex_lock(&context->device->lock);
@@ -140,19 +99,13 @@ static long rp1_gpclk_query(struct rp1_gpclk_file *context, void __user *user)
 	request.compatibility_reason =
 		rp1_gpclk_compatibility_reason(context->device);
 	request.capabilities = RP1_GPCLK_CAPABILITIES;
-	if (rp1_gpclk_live_output_eligible(context->device)) {
-		request.capabilities |= RP1_GPCLK_CAP_LIVE_ELIGIBLE;
-		request.compatibility_state = RP1_GPCLK_COMPAT_EXPERIMENTAL;
-	}
 	request.max_tones = RP1_GPCLK_MAX_TONES;
-	request.wspr_symbols = RP1_GPCLK_WSPR_SYMBOLS;
 	request.max_events = RP1_GPCLK_MAX_EVENTS;
 	request.max_dither_period = RP1_GPCLK_DITHER_PERIOD_MAX;
 	request.supported_drive_ma_mask = RP1_GPCLK_DRIVE_SUPPORT_2_MA;
 	request.max_event_duration_ns = RP1_GPCLK_EVENT_DURATION_NS_MAX;
 	request.max_request_duration_ns = RP1_GPCLK_REQUEST_DURATION_NS_MAX;
-	request.min_tone_duration_ns = RP1_GPCLK_TONE_DURATION_NS_MIN;
-	request.max_tone_duration_ns = RP1_GPCLK_TONE_DURATION_NS_MAX;
+	request.dma_chunk_duration_ns = RP1_GPCLK_DMA_CHUNK_DURATION_NS;
 	strscpy(request.module_id, "rp1-gpclk-dkms", sizeof(request.module_id));
 	strscpy(request.build_id, RP1_GPCLK_MODULE_VERSION, sizeof(request.build_id));
 	strscpy(request.compatibility_id, rp1_gpclk_compatibility_id(route),
@@ -166,60 +119,27 @@ static long rp1_gpclk_acquire(struct rp1_gpclk_file *context,
 			      void __user *user)
 {
 	struct rp1_gpclk_acquire request;
-	bool authorize_live;
 	__u64 required;
 	int result;
 
 	if (copy_from_user(&request, user, sizeof(request)))
 		return -EFAULT;
-	authorize_live = request.authorization_flags ==
-		RP1_GPCLK_ACQUIRE_F_AUTHORIZE_LIVE;
 	if (!rp1_gpclk_header_valid(&request.header, sizeof(request)) ||
-	    (request.authorization_flags != 0 && !authorize_live) ||
+	    request.reserved0 ||
 	    !rp1_gpclk_reserved_zero(request.reserved, 4) || request.lease_id ||
 	    (request.required_capabilities &
-	     ~(RP1_GPCLK_CAPABILITIES | RP1_GPCLK_CAP_LIVE_ELIGIBLE)) != 0)
+	     ~RP1_GPCLK_CAPABILITIES) != 0)
 		return -EINVAL;
-	if (authorize_live) {
-		if (!rp1_gpclk_digest_nonzero(request.authorization_digest) ||
-		    (request.required_capabilities &
-		     RP1_GPCLK_CAP_LIVE_ELIGIBLE) == 0 ||
-		    (request.required_capabilities &
-		     RP1_GPCLK_CAP_OPERATION_LIVE_GATE) == 0)
-			return -EINVAL;
-	} else if (rp1_gpclk_digest_nonzero(request.authorization_digest) ||
-		   (request.required_capabilities &
-		    (RP1_GPCLK_CAP_LIVE_ELIGIBLE |
-		     RP1_GPCLK_CAP_OPERATION_LIVE_GATE)) != 0) {
-		return -EINVAL;
-	}
 	mutex_lock(&context->device->lock);
 	if (context->device->dead)
 		result = -ENODEV;
 	else if (request.expected_route != context->device->route)
 		result = -EINVAL;
-	else if (authorize_live && !context->device->live_eligible)
-		result = -EACCES;
-	else if (context->operation_live_lease ||
-		 context->device->operation_live_owner ||
-		 context->device->operation_live_lease)
-		result = -EBUSY;
 	else {
 		required = request.required_capabilities;
 		result = rp1_gpclk_core_acquire(&context->device->core,
 			context->owner, request.expected_route, required,
 			&request.lease_id);
-		if (result == RP1_GPCLK_CORE_OK && authorize_live) {
-			context->operation_live_lease = request.lease_id;
-			context->device->operation_live_owner = context->owner;
-			context->device->operation_live_lease = request.lease_id;
-			memcpy(context->operation_live_digest,
-				request.authorization_digest,
-				RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE);
-			memcpy(context->device->operation_live_digest,
-				request.authorization_digest,
-				RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE);
-		}
 		result = rp1_gpclk_core_error(result);
 	}
 	mutex_unlock(&context->device->lock);
@@ -227,7 +147,6 @@ static long rp1_gpclk_acquire(struct rp1_gpclk_file *context,
 		return result;
 	if (copy_to_user(user, &request, sizeof(request))) {
 		mutex_lock(&context->device->lock);
-		rp1_gpclk_revoke_operation_live(context, request.lease_id);
 		rp1_gpclk_core_release(&context->device->core, context->owner,
 			request.lease_id);
 		mutex_unlock(&context->device->lock);
@@ -244,60 +163,6 @@ static long rp1_gpclk_execution_error(int result)
 	return result;
 }
 
-static long rp1_gpclk_submit_wspr(struct rp1_gpclk_file *context,
-				  void __user *user)
-{
-	struct rp1_gpclk_submit_wspr request;
-	struct rp1_gpclk_tone *tones;
-	unsigned char *symbols;
-	long result;
-
-	if (copy_from_user(&request, user, sizeof(request)))
-		return -EFAULT;
-	if (!rp1_gpclk_header_valid(&request.header, sizeof(request)) ||
-	    request.reserved0 != 0 || request.reserved1 != 0 ||
-	    !rp1_gpclk_reserved_zero(request.reserved, 4))
-		return -EINVAL;
-	if (!rp1_gpclk_operation_live_eligible(context, request.lease_id))
-		return -EACCES;
-	if (request.tone_count != RP1_GPCLK_MAX_TONES ||
-	    request.symbol_count != RP1_GPCLK_WSPR_SYMBOLS)
-		return -EINVAL;
-	tones = memdup_user(u64_to_user_ptr(request.tones_ptr),
-			   sizeof(*tones) * request.tone_count);
-	if (IS_ERR(tones))
-		return PTR_ERR(tones);
-	symbols = memdup_user(u64_to_user_ptr(request.symbols_ptr),
-			     request.symbol_count);
-	if (IS_ERR(symbols)) {
-		result = PTR_ERR(symbols);
-		goto free_tones;
-	}
-	mutex_lock(&context->device->lock);
-	if (context->device->dead)
-		result = -ENODEV;
-	else
-		result = rp1_gpclk_execution_submit_wspr(context->device,
-			context->owner, &request, tones, symbols);
-	mutex_unlock(&context->device->lock);
-	if (!result && copy_to_user(user, &request, sizeof(request))) {
-		mutex_lock(&context->device->lock);
-		rp1_gpclk_execution_stop(context->device, context->owner,
-			request.lease_id, request.generation,
-			RP1_GPCLK_REASON_STOPPED);
-		mutex_unlock(&context->device->lock);
-		result = -EFAULT;
-	} else {
-		result = rp1_gpclk_execution_error(result);
-	}
-	if (!result)
-		rp1_gpclk_execution_activate(context->device);
-	kfree(symbols);
-free_tones:
-	kfree(tones);
-	return result;
-}
-
 static long rp1_gpclk_submit_events(struct rp1_gpclk_file *context,
 				    void __user *user)
 {
@@ -310,9 +175,10 @@ static long rp1_gpclk_submit_events(struct rp1_gpclk_file *context,
 		return -EFAULT;
 	if (!rp1_gpclk_header_valid(&request.header, sizeof(request)) ||
 	    request.reserved0 != 0 || request.reserved1 != 0 ||
+	    request.reserved2 != 0 ||
 	    !rp1_gpclk_reserved_zero(request.reserved, 4))
 		return -EINVAL;
-	if (!rp1_gpclk_operation_live_eligible(context, request.lease_id))
+	if (!rp1_gpclk_execution_allowed(context))
 		return -EACCES;
 	if (!request.tone_count || request.tone_count > RP1_GPCLK_MAX_TONES ||
 	    !request.event_count || request.event_count > RP1_GPCLK_MAX_EVENTS)
@@ -352,40 +218,6 @@ free_tones:
 	return result;
 }
 
-static long rp1_gpclk_submit_tone(struct rp1_gpclk_file *context,
-				  void __user *user)
-{
-	struct rp1_gpclk_submit_tone request;
-	long result;
-
-	if (copy_from_user(&request, user, sizeof(request)))
-		return -EFAULT;
-	if (!rp1_gpclk_header_valid(&request.header, sizeof(request)) ||
-	    request.reserved0 || !rp1_gpclk_reserved_zero(request.reserved, 4))
-		return -EINVAL;
-	if (!rp1_gpclk_operation_live_eligible(context, request.lease_id))
-		return -EACCES;
-	mutex_lock(&context->device->lock);
-	if (context->device->dead)
-		result = -ENODEV;
-	else
-		result = rp1_gpclk_execution_submit_tone(context->device,
-			context->owner, &request);
-	mutex_unlock(&context->device->lock);
-	if (!result && copy_to_user(user, &request, sizeof(request))) {
-		mutex_lock(&context->device->lock);
-		rp1_gpclk_execution_stop(context->device, context->owner,
-			request.lease_id, request.generation, RP1_GPCLK_REASON_STOPPED);
-		mutex_unlock(&context->device->lock);
-		result = -EFAULT;
-	} else {
-		result = rp1_gpclk_execution_error(result);
-	}
-	if (!result)
-		rp1_gpclk_execution_activate(context->device);
-	return result;
-}
-
 static long rp1_gpclk_stop(struct rp1_gpclk_file *context, void __user *user)
 {
 	struct rp1_gpclk_stop request;
@@ -401,9 +233,6 @@ static long rp1_gpclk_stop(struct rp1_gpclk_file *context, void __user *user)
 		result = context->device->dead ? -ENODEV :
 			rp1_gpclk_core_release(&context->device->core,
 				context->owner, request.lease_id);
-		if (result == RP1_GPCLK_CORE_OK)
-			rp1_gpclk_revoke_operation_live(context,
-				request.lease_id);
 		mutex_unlock(&context->device->lock);
 		return rp1_gpclk_core_error(result);
 	}
@@ -527,9 +356,7 @@ static long rp1_gpclk_get_snapshot(struct rp1_gpclk_file *context,
 	memset(&request, 0, sizeof(request));
 	request.header.size = sizeof(request);
 	request.route = device->route;
-	request.compatibility_state = device->live_eligible ?
-		RP1_GPCLK_COMPAT_EXPERIMENTAL :
-		RP1_GPCLK_COMPAT_COMPATIBLE_UNQUALIFIED;
+	request.compatibility_state = RP1_GPCLK_COMPAT_COMPATIBLE_UNQUALIFIED;
 	request.compatibility_reason = rp1_gpclk_compatibility_reason(device);
 	request.operation_state = core.state;
 	request.terminal_reason = core.terminal_reason;
@@ -541,10 +368,9 @@ static long rp1_gpclk_get_snapshot(struct rp1_gpclk_file *context,
 		RP1_GPCLK_OBSERVATION_TRUE : RP1_GPCLK_OBSERVATION_FALSE;
 	request.lease_present = core.lease_id ?
 		RP1_GPCLK_OBSERVATION_TRUE : RP1_GPCLK_OBSERVATION_FALSE;
-	request.live_output = (rp1_gpclk_live_output_enabled() ||
-		device->operation_live_lease) ?
+	request.output_inhibited = rp1_gpclk_output_inhibited() ?
 		RP1_GPCLK_OBSERVATION_TRUE : RP1_GPCLK_OBSERVATION_FALSE;
-	request.live_eligible = device->live_eligible ?
+	request.operational_ready = device->operational_ready ?
 		RP1_GPCLK_OBSERVATION_TRUE : RP1_GPCLK_OBSERVATION_FALSE;
 	if (core.state == RP1_GPCLK_STATE_DRAINING)
 		request.drain_state = RP1_GPCLK_DRAIN_ACTIVE;
@@ -567,13 +393,11 @@ static long rp1_gpclk_get_snapshot(struct rp1_gpclk_file *context,
 		request.dma_quiescent == RP1_GPCLK_OBSERVATION_TRUE) ?
 		RP1_GPCLK_OBSERVATION_TRUE : RP1_GPCLK_OBSERVATION_FALSE;
 	request.capabilities = RP1_GPCLK_CAPABILITIES;
-	if (device->live_eligible)
-		request.capabilities |= RP1_GPCLK_CAP_LIVE_ELIGIBLE;
 	request.generation = core.generation;
 	request.elapsed_ns = elapsed;
 	request.remaining_ns = remaining;
-	request.min_tone_duration_ns = RP1_GPCLK_TONE_DURATION_NS_MIN;
-	request.max_tone_duration_ns = RP1_GPCLK_TONE_DURATION_NS_MAX;
+	request.dma_chunk_duration_ns = RP1_GPCLK_DMA_CHUNK_DURATION_NS;
+	request.max_request_duration_ns = RP1_GPCLK_REQUEST_DURATION_NS_MAX;
 	strscpy(request.module_id, "rp1-gpclk-dkms",
 		sizeof(request.module_id));
 	strscpy(request.build_id, RP1_GPCLK_MODULE_VERSION,
@@ -592,6 +416,7 @@ static long rp1_gpclk_release_lease(struct rp1_gpclk_file *context,
 				    void __user *user)
 {
 	struct rp1_gpclk_release request;
+	bool idle_release = false;
 	int result;
 
 	if (copy_from_user(&request, user, sizeof(request)))
@@ -600,11 +425,21 @@ static long rp1_gpclk_release_lease(struct rp1_gpclk_file *context,
 	    !rp1_gpclk_reserved_zero(request.reserved, 4))
 		return -EINVAL;
 	mutex_lock(&context->device->lock);
-	result = context->device->dead ? -ENODEV :
-		rp1_gpclk_execution_stop(context->device, context->owner,
-			request.lease_id, request.generation,
+	if (context->device->dead) {
+		result = -ENODEV;
+	} else if (request.generation == 0 &&
+		   context->device->core.value.generation == 0) {
+		idle_release = true;
+		result = rp1_gpclk_core_release(&context->device->core,
+			context->owner, request.lease_id);
+	} else {
+		result = rp1_gpclk_execution_stop(context->device,
+			context->owner, request.lease_id, request.generation,
 			RP1_GPCLK_REASON_STOPPED);
+	}
 	mutex_unlock(&context->device->lock);
+	if (idle_release)
+		return rp1_gpclk_core_error(result);
 	if (result != RP1_GPCLK_CORE_OK &&
 	    !(result == RP1_GPCLK_CORE_STATE &&
 	      completion_done(&context->device->execution_done)))
@@ -621,8 +456,6 @@ static long rp1_gpclk_release_lease(struct rp1_gpclk_file *context,
 	mutex_lock(&context->device->lock);
 	result = rp1_gpclk_core_release(&context->device->core, context->owner,
 		request.lease_id);
-	if (result == RP1_GPCLK_CORE_OK)
-		rp1_gpclk_revoke_operation_live(context, request.lease_id);
 	mutex_unlock(&context->device->lock);
 	return rp1_gpclk_core_error(result);
 }
@@ -640,12 +473,8 @@ long rp1_gpclk_uapi_dispatch(struct file *file, unsigned int command,
 		return rp1_gpclk_acquire(context, user);
 	case RP1_GPCLK_IOC_RELEASE:
 		return rp1_gpclk_release_lease(context, user);
-	case RP1_GPCLK_IOC_SUBMIT_TONE:
-		return rp1_gpclk_submit_tone(context, user);
 	case RP1_GPCLK_IOC_GET_SNAPSHOT:
 		return rp1_gpclk_get_snapshot(context, user);
-	case RP1_GPCLK_IOC_SUBMIT_WSPR:
-		return rp1_gpclk_submit_wspr(context, user);
 	case RP1_GPCLK_IOC_SUBMIT_EVENTS:
 		return rp1_gpclk_submit_events(context, user);
 	case RP1_GPCLK_IOC_STOP:

@@ -7,15 +7,13 @@
 #define RP1_GPCLK_COMPATIBILITY_ARCH "aarch64"
 #define RP1_GPCLK_COMPATIBILITY_VERSION "0.9.0"
 #define RP1_GPCLK_GPIO4_COMPATIBILITY_ID \
-	"v0.9.0-pi5-gpio4"
+	"v0.9.0-rp1-gpio4"
 #define RP1_GPCLK_GPIO20_COMPATIBILITY_ID \
-	"v0.9.0-pi5-gpio20"
+	"v0.9.0-rp1-gpio20"
 
 bool rp1_gpclk_compatibility_allowed(__u32 route,
-				     const char *kernel_release,
 				     const char *architecture,
 				     const char *module_version,
-				     bool pi5_model_b,
 				     bool resources_validated);
 
 const char *rp1_gpclk_compatibility_id(__u32 route);

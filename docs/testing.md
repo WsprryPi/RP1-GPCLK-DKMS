@@ -20,11 +20,74 @@ development client that can open the endpoint and request output. It is never
 compiled or executed by an ordinary test target and requires separate,
 route-specific hardware authorization.
 
+Its `finite` operation submits one one-second event. The `cancel-start`,
+`cancel-middle`, and `cancel-boundary` operations each submit one
+maximum-duration logical event, then request cancellation immediately, halfway
+through the first one-second DMA chunk, or at its boundary. Each operation
+requires the opened endpoint to be a root-owned mode-`0600` character device,
+then requires a stable `COMPLETE/STOPPED` result with no cleanup fault. It polls
+passive snapshots to prove the module reports GPIO safety and clock/DMA
+quiescence and a completed bounded drain before release, and that owner and
+lease are absent afterward. A
+target campaign must additionally use independent physical observation to
+prove endpoint closure, absence of a successor, GPIO safety, clock and DMA
+quiescence, and terminal silence; the client result alone is not that proof.
+
+## Cancellation and fault evidence
+
+The ordinary host suite injects every core transaction fault and every
+execution-machine setup/cleanup operation. It proves lease and generation
+rollback, one terminal publication, one plan release, stage-specific failure
+reasons, cleanup-failure precedence, the persistent cleanup latch, and complete
+cleanup attempts after an earlier failure. Those mocks do not prove RP1
+hardware state.
+
+A target evidence campaign therefore repeats the three maximum-duration
+cancellation positions and injects failures at clock setup/enable, active and
+safe pinctrl selection, DMA preparation/submission/completion, divider readback,
+and cleanup restoration. Fault injection must be compiled into a separately
+identified test artifact or supplied by reviewed kernel fault facilities; it is
+not a production module parameter or UAPI command. After every case, capture
+the lease-scoped terminal reason followed by a passive snapshot proving stable
+terminal state, the expected owner/lease disposition, GPIO safety, clock and DMA
+quiescence, and cleanup-latch state. The authority observation is the immutable
+root-owned mode-`0600` endpoint; there is no kernel authorization credential to
+restore or clear.
+
+The maintained target cancellation client measures latency from issuance of
+`STOP` to observation of terminal state. It rejects latency above one fixed DMA
+chunk plus 500 ms of cleanup, scheduler, and polling allowance; total execution
+elapsed time is recorded separately because a boundary-race winner may have
+committed the next chunk immediately before `STOP` obtained the commit lock.
+
+The maintained compile-time target injector has stages 1 through 15 for clock
+rate setup, clock preparation, active pinctrl, clock enable, DMA preparation,
+DMA submission, DMA completion, readback, and each ordered cleanup operation. Build exactly one
+stage into an otherwise exact source tree with:
+
+```sh
+make KERNEL_BUILD="/lib/modules/$(uname -r)/build" \
+  RP1_TARGET_FAULT_STAGE=STAGE
+modinfo rp1_gpclk_dkms.ko | grep rp1_target_fault_stage
+```
+
+An injected artifact emits a prominent `TEST-ONLY` kernel warning and carries
+the `rp1_target_fault_stage` module-information field. The setting is a build
+variable only: it creates no module parameter and no UAPI control. Clean or use
+a separate build tree between stages and retain every artifact hash. Compile
+`development_fault_client.c` separately on the target; it requires the expected
+terminal reason and whether a cleanup latch is expected. It verifies retained
+terminal state twice, GPIO/clock/DMA quiescence, normal lease release for setup
+or execution failures, and deliberate `EUCLEAN` release refusal for cleanup
+faults. The administrator must unload each cleanup-latched test artifact and
+verify endpoint, lease authority, route, clock, DMA, and GPIO teardown before
+continuing.
+
 `development_frequency_sweep.cpp` is also target-only. Build it explicitly
 with `make development-frequency-sweep-client` on a target with SoapySDR
 development headers. Its default, hardware-free `--render-only` run requests
 16 uniformly spaced RF frequencies, inclusive, from 135.7 kHz through 148.0
-MHz. It uses finite two-second `GPIO20` tones at 2 mA only with explicit `--live`,
+MHz. It uses finite two-second generic `GPIO20` events at 2 mA only with explicit `--live`,
 and measures them with SDRplay serial `2404058C60`. With the selected
 `pll_sys` parent, frequencies through the provider's 100 MHz GPCLK0 output
 limit use the fundamental; higher requested frequencies measure the third

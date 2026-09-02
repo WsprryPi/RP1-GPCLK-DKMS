@@ -17,6 +17,7 @@ import runtime_deployment as deploy
 import runtime_controller_admin as admin
 import runtime_binding
 import runtime_activation
+KERNEL = '6.18.34+rpt-rpi-2712'
 from check_runtime_controller import Machine
 
 
@@ -94,16 +95,16 @@ def deployment_values(journals_none=False):
     value = {'schemaVersion':3, 'contract':runtime_binding.CONTRACT,
         'productVersion':runtime_binding.PRODUCT_VERSION,
         'compatibilityIdentities':runtime_binding.COMPATIBILITY,
-        'sourceCommit':'a'*40, 'kernel':admin.KERNEL,
+        'sourceCommit':'a'*40, 'kernel':KERNEL,
         'controllerNoteSha256':'a'*64, 'consumerNoteSha256':'b'*64,
         'files':{name:admin.digest(b'new') for name in deploy.INVENTORY},
         'modules': {name: {'name': name,
-            'path': f'/lib/modules/{admin.KERNEL}/updates/dkms/{name}.ko.xz',
+            'path': f'/lib/modules/{KERNEL}/updates/dkms/{name}.ko.xz',
             'installedFileSha256': ('1' if name == 'rp1_route_controller' else '2')*64,
             'decompressedElfSha256': ('3' if name == 'rp1_route_controller' else '4')*64,
             'compression': 'xz', 'buildNoteSha256':
                 ('a' if name == 'rp1_route_controller' else 'b')*64,
-            'version': runtime_binding.PRODUCT_VERSION, 'kernel': admin.KERNEL}
+            'version': runtime_binding.PRODUCT_VERSION, 'kernel': KERNEL}
             for name in ('rp1_route_controller', 'rp1_gpclk_dkms')},
         'externalFiles':{name:'c'*64 for name in runtime_binding.EXTERNAL_PATHS},
         'uapiSha256':{
@@ -259,16 +260,16 @@ class Tests(unittest.TestCase):
         value = {'schemaVersion':3, 'contract':runtime_binding.CONTRACT,
             'productVersion':runtime_binding.PRODUCT_VERSION,
             'compatibilityIdentities':runtime_binding.COMPATIBILITY,
-            'sourceCommit':'a'*40, 'kernel':admin.KERNEL,
+            'sourceCommit':'a'*40, 'kernel':KERNEL,
             'controllerNoteSha256':'a'*64, 'consumerNoteSha256':'b'*64,
             'files':{name:admin.digest(b'payload') for name in deploy.INVENTORY},
             'modules': {name: {'name': name,
-                'path': f'/lib/modules/{admin.KERNEL}/updates/dkms/{name}.ko.xz',
+                'path': f'/lib/modules/{KERNEL}/updates/dkms/{name}.ko.xz',
                 'installedFileSha256': ('1' if name == 'rp1_route_controller' else '2')*64,
                 'decompressedElfSha256': ('3' if name == 'rp1_route_controller' else '4')*64,
                 'compression': 'xz', 'buildNoteSha256':
                     ('a' if name == 'rp1_route_controller' else 'b')*64,
-                'version': runtime_binding.PRODUCT_VERSION, 'kernel': admin.KERNEL}
+                'version': runtime_binding.PRODUCT_VERSION, 'kernel': KERNEL}
                 for name in ('rp1_route_controller', 'rp1_gpclk_dkms')},
             'externalFiles':{name:'c'*64 for name in runtime_binding.EXTERNAL_PATHS},
             'uapiSha256':{
@@ -287,7 +288,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(values[deploy.BINDING], raw)
 
     def test_invalid_binding_rejected_before_payload_reads(self):
-        for value in ([], {'files':None}, {'schemaVersion':True, 'kernel':admin.KERNEL,
+        for value in ([], {'files':None}, {'schemaVersion':True, 'kernel':KERNEL,
                 'files':{}, 'controllerNoteSha256':'a'*64, 'consumerNoteSha256':'b'*64}):
             with patch.object(deploy.os, 'open', return_value=9), \
                  patch.object(deploy.os, 'fstat', return_value=SimpleNamespace(st_mode=stat.S_IFDIR|0o700)), \
@@ -310,7 +311,7 @@ class Tests(unittest.TestCase):
              patch.object(admin, 'STATE', Path(directory)), \
              patch.object(admin, 'safe_directory'), \
              patch.object(deploy.os, 'geteuid', return_value=0), \
-             patch.object(deploy.os, 'uname', return_value=SimpleNamespace(release=admin.KERNEL)), \
+             patch.object(deploy.os, 'uname', return_value=SimpleNamespace(release=KERNEL)), \
              patch.object(deploy.os, 'fstat', return_value=SimpleNamespace(st_mode=stat.S_IFREG|0o600, st_uid=0)):
             with deploy.mutation_lock():
                 with self.assertRaises(BlockingIOError):

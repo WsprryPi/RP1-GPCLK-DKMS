@@ -103,7 +103,7 @@ def plan(spec: dict) -> dict:
                     "verify-target-kernel", "restore-config-by-digest", "remove-test-owned-artifacts",
                     "operator-notice", "reboot", "verify-original-kernel"],
         "trybootMutation": False, "historicalArtifactMutation": False,
-        "liveOutput": False, "readOnly": True,
+        "outputActive": False, "readOnly": True,
     }
 
 
@@ -132,7 +132,7 @@ def select(spec: dict, root: pathlib.Path) -> dict:
         "originalConfigSha256": spec["configSha256"], "backupConfigSha256": spec["configSha256"],
         "stagedKernelSha256": spec["sourceKernelSha256"],
         "stagedInitramfsSha256": spec["sourceInitramfsSha256"],
-        "trybootSha256": digest(tryboot), "liveOutput": False,
+        "trybootSha256": digest(tryboot), "outputActive": False,
     }
     atomic_bytes(state, (json.dumps(record, indent=2, sort_keys=True) + "\n").encode(), 0o600)
     atomic_bytes(backup, original, 0o600)
@@ -203,7 +203,7 @@ def verify_running(expected: str, *, running: str | None = None) -> dict:
     if actual != expected:
         raise ValueError(f"running kernel differs: expected {expected}, got {actual}")
     return {"runningKernel": actual, "verified": True, "readOnly": True,
-            "liveOutput": False}
+            "outputActive": False}
 
 
 def main() -> None:

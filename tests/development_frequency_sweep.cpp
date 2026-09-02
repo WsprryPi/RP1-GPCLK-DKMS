@@ -176,8 +176,9 @@ public:
 	{
 		rp1_gpclk_query query{};
 		rp1_gpclk_acquire acquire{};
-		rp1_gpclk_submit_tone submit{};
-		rp1_gpclk_state state{};
+		rp1_gpclk_submit_events submit{};
+		rp1_gpclk_event event{};
+		rp1_gpclk_state_request state{};
 		rp1_gpclk_release release{};
 		set_header(query.header, sizeof(query));
 		checked_ioctl(fd_, RP1_GPCLK_IOC_QUERY, &query, "QUERY");
@@ -186,23 +187,22 @@ public:
 			throw std::runtime_error("GPIO20 development identity unavailable");
 		set_header(acquire.header, sizeof(acquire));
 		acquire.expected_route = RP1_GPCLK_ROUTE_GPIO20;
-		acquire.authorization_flags = RP1_GPCLK_ACQUIRE_F_AUTHORIZE_LIVE;
-		acquire.required_capabilities = RP1_GPCLK_CAP_LIVE_ELIGIBLE |
-			RP1_GPCLK_CAP_OPERATION_LIVE_GATE | RP1_GPCLK_CAP_TONE_FINITE;
-		for (size_t i = 0; i < sizeof(acquire.authorization_digest); ++i)
-			acquire.authorization_digest[i] = static_cast<uint8_t>(0x5aU ^ i ^
-				static_cast<uint64_t>(llround(requested)));
+		acquire.required_capabilities = RP1_GPCLK_CAP_SUBMIT_EVENTS |
+			RP1_GPCLK_CAP_BOUNDED_DMA_CHUNKS;
 		checked_ioctl(fd_, RP1_GPCLK_IOC_ACQUIRE, &acquire, "ACQUIRE");
 		set_header(submit.header, sizeof(submit));
 		submit.lease_id = acquire.lease_id;
-		submit.tone = tone;
-		submit.duration_ns = kToneDurationNs;
-		submit.operation = RP1_GPCLK_TONE_OPERATION_FINITE;
-		submit.expected_route = RP1_GPCLK_ROUTE_GPIO20;
+		event.duration_ns = kToneDurationNs;
+		event.flags = RP1_GPCLK_EVENT_F_OUTPUT_ENABLED;
+		submit.tones_ptr = reinterpret_cast<uintptr_t>(&tone);
+		submit.events_ptr = reinterpret_cast<uintptr_t>(&event);
 		submit.fractional_bits = RP1_GPCLK_FRACTIONAL_BITS;
 		submit.tick_divider = RP1_GPCLK_TICK_DIVIDER;
+		submit.tone_count = 1;
+		submit.event_count = 1;
 		submit.drive_ma = RP1_GPCLK_DRIVE_MA_2;
-		checked_ioctl(fd_, RP1_GPCLK_IOC_SUBMIT_TONE, &submit, "SUBMIT_TONE");
+		submit.total_duration_ns = kToneDurationNs;
+		checked_ioctl(fd_, RP1_GPCLK_IOC_SUBMIT_EVENTS, &submit, "SUBMIT_EVENTS");
 		for (;;) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			state = {};

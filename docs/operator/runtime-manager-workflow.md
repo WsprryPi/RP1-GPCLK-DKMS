@@ -86,7 +86,7 @@ plan. Keep clocks and transmission disabled throughout.
    `activation-ensure`; it must match the installed binding exactly. Successful
    inspection reports `neutral_ready`, `administrationCompatible=true`,
    `administrationEligible=true`, `routeSelected=false`, and
-   `transmissionEligible=false`. The consumer stays unloaded, its endpoint stays
+   `executionReady=false`. The consumer stays unloaded, its endpoint stays
    absent, no overlay is applied and no reboot or output authorization occurs.
 
    After a clean reboot, `inspect` reports `activation_required` when the prior
@@ -174,7 +174,7 @@ Stable classifications and exit statuses are:
 The result includes installed and requested binding identities, source commit,
 product/compatibility/kernel/UAPI/artifact hashes, deployment digest and journal,
 requested/configured/persisted/active routes, module and endpoint observations,
-socket and service state, application restoration, and passive live-output,
+socket and service state, application restoration, and passive output-inhibition,
 owner, lease, GPIO, clock and DMA state. Omitted consumer route inputs remain
 `null`; callers should supply all three when deciding application eligibility.
 An exact repeated `ensure`, `activation-ensure`, or `route-ensure` reports

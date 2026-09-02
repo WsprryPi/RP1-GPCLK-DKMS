@@ -3,7 +3,7 @@
 # Module signing and key enrollment
 
 Signing is provenance and possible kernel-load evidence. It is not hardware
-compatibility, live-output enrollment, cleanup, timing, or RF evidence. Never
+compatibility, root-endpoint authority, cleanup, timing, or RF evidence. Never
 disable signature enforcement or select another physical backend after failure.
 
 ## Choose and protect the local identity
@@ -55,7 +55,7 @@ repeat the complete verification afterward.
 Rotate with overlap: select and validate the successor; enroll and verify its
 public certificate; configure DKMS to use it; rebuild, sign, and verify modules
 for every retained kernel; audit dependencies on the prior identity; then retire
-the old identity only when unused. An interruption leaves live eligibility
+the old identity only when unused. An interruption leaves operational readiness
 disabled.
 
 Uninstall removes package-owned policy and records only. It intentionally

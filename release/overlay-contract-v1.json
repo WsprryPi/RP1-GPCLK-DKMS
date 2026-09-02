@@ -26,5 +26,5 @@
   "activeState": {"function": "gpclk0", "driveStrengthMilliamp": 2},
   "identityVerification": ["sourceSha256", "dtboSha256", "compatible", "endpoint", "route", "pin", "clock", "dma", "resources", "pinctrl"],
   "conflictCheckTiming": "before-any-persistent-write-or-backup",
-  "routeChange": ["prove-idle", "disable-live-eligibility", "remove-old-binding-proven-cleanup", "verify-both-pins-safe", "select-new-overlay", "revalidate-entire-compatibility-identity", "renew-enrollment-if-policy-requires"]
+  "routeChange": ["prove-idle", "inhibit-application-output", "remove-old-binding-proven-cleanup", "verify-both-pins-safe", "select-new-overlay", "revalidate-entire-compatibility-identity"]
 }

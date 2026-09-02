@@ -486,8 +486,8 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
             raise Failure("route-neutral installation cannot select a GPIO route")
         if args.load:
             raise Failure("route-neutral installation cannot load the module")
-        if args.live_output != 0:
-            raise Failure("route-neutral installation requires live_output=0")
+        if args.output_inhibit != 1:
+            raise Failure("route-neutral development requires output_inhibit=1")
         if args.allow_dirty:
             raise Failure("route-neutral installation requires a clean exact source commit")
         neutral_before = route_neutral_observation()
@@ -573,12 +573,12 @@ def install(args: argparse.Namespace) -> dict[str, Any]:
         "installedModules": installed_modules, "route": args.route,
         "installationMode": "route-neutral" if route_neutral else "route-specific",
         "routeNeutralSafety": {"before": neutral_before, "after": neutral_after} if route_neutral else None,
-        "parameters": {"live_output": args.live_output}, "buildLogs": sorted(str(p) for p in evidence.glob("*.log")),
+        "parameters": {"output_inhibit": args.output_inhibit}, "buildLogs": sorted(str(p) for p in evidence.glob("*.log")),
         "dkmsStatus":run([tools["dkms"],"status","-m",PACKAGE,"-v",version],check=False).stdout.splitlines(),
         "rollbackRecord": str(rollback_path), "developmentState": "development-installed" if module else "development-built"})
     if args.load:
         if requested != platform.release(): raise Failure("cannot load a module built for a non-running kernel")
-        lifecycle_action("load", manifest_path, args.live_output)
+        lifecycle_action("load", manifest_path, args.output_inhibit)
         manifest = load_manifest(manifest_path)
     rollback["installedModules"] = installed_modules
     rollback["installedManifestSha256"] = sha256(manifest_path)
@@ -595,7 +595,7 @@ def sysfs_parameter(name: str) -> str | None:
     return path.read_text().strip() if path.is_file() else None
 
 
-def lifecycle_action(action: str, manifest_path: pathlib.Path, live_output: int | None = None) -> dict[str, Any]:
+def lifecycle_action(action: str, manifest_path: pathlib.Path, output_inhibit: int | None = None) -> dict[str, Any]:
     manifest = load_manifest(manifest_path); kernel = manifest.get("targetKernel")
     if not kernel: raise Failure("manifest has no target kernel")
     module = resolve_module(kernel, manifest["renderedVersion"])
@@ -608,17 +608,18 @@ def lifecycle_action(action: str, manifest_path: pathlib.Path, live_output: int 
         if action == "reload" and loaded: run([modprobe or "modprobe", "-r", CANONICAL_MODULE])
         elif loaded: raise Failure("module is already loaded; use reload")
         run([depmod or "depmod", "-a", kernel])
-        run([modprobe or "modprobe", CANONICAL_MODULE, f"live_output={int(live_output or 0)}"])
+        inhibited = 1 if output_inhibit is None else int(output_inhibit)
+        run([modprobe or "modprobe", CANONICAL_MODULE, f"output_inhibit={inhibited}"])
         loaded_version_path = root_path(f"/sys/module/{CANONICAL_MODULE}/version")
         loaded_version = loaded_version_path.read_text().strip() if loaded_version_path.is_file() else None
         if loaded_version is not None and loaded_version != manifest["renderedVersion"]:
             raise Failure(f"loaded module version mismatch: expected {manifest['renderedVersion']}, got {loaded_version}")
-        observed = sysfs_parameter("live_output")
-        expected = "Y" if live_output else "N"
-        if observed not in {expected, str(int(bool(live_output)))}:
-            raise Failure(f"loaded live_output mismatch: expected {expected}, got {observed}")
-        update_manifest(manifest_path, {"parameters": {"live_output": int(live_output or 0)},
-                                       "developmentState": "development-live-enabled" if live_output else "development-loaded"})
+        observed = sysfs_parameter("output_inhibit")
+        expected = "Y" if inhibited else "N"
+        if observed not in {expected, str(inhibited)}:
+            raise Failure(f"loaded output_inhibit mismatch: expected {expected}, got {observed}")
+        update_manifest(manifest_path, {"parameters": {"output_inhibit": inhibited},
+                                       "developmentState": "development-output-inhibited" if inhibited else "development-output-capable"})
     elif action == "unload":
         if loaded: run([modprobe or "modprobe", "-r", CANONICAL_MODULE])
         if root_path(f"/sys/module/{CANONICAL_MODULE}").exists(): raise Failure("module remains loaded")
@@ -644,15 +645,17 @@ def lifecycle_status(manifest_path: pathlib.Path) -> dict[str, Any]:
     loaded = root_path(f"/sys/module/{CANONICAL_MODULE}").exists()
     endpoint = endpoint_status()
     state = "development-endpoint-ready" if loaded and endpoint["present"] else "development-loaded" if loaded else "development-installed" if module_candidates(kernel) else "development-built"
-    if loaded and sysfs_parameter("live_output") in {"Y", "1"}: state = "development-live-enabled"
+    if loaded and sysfs_parameter("output_inhibit") in {"Y", "1"}: state = "development-output-inhibited"
+    elif loaded and sysfs_parameter("output_inhibit") in {"N", "0"}: state = "development-output-capable"
     module = None
     try: module = resolve_module(kernel, manifest["renderedVersion"])
     except Failure: pass
     return {"classification": "source-development", "releaseQualified": False, "developmentState": state,
             "nextAction": {"development-built":"install", "development-installed":"load", "development-loaded":"verify endpoint",
-                           "development-endpoint-ready":"separately authorize use", "development-live-enabled":"separately authorize operation"}.get(state),
+                           "development-endpoint-ready":"inspect output inhibit", "development-output-inhibited":"run lifecycle tests",
+                           "development-output-capable":"use root-owned endpoint"}.get(state),
             "sourceCommit": manifest["sourceCommit"], "sourceState": manifest["sourceState"], "renderedVersion": manifest["renderedVersion"],
-            "module": module, "loaded": loaded, "loadedParameters": {"live_output": sysfs_parameter("live_output")},
+            "module": module, "loaded": loaded, "loadedParameters": {"output_inhibit": sysfs_parameter("output_inhibit")},
             "moduleRefcount": root_path(f"/sys/module/{CANONICAL_MODULE}/refcnt").read_text().strip() if root_path(f"/sys/module/{CANONICAL_MODULE}/refcnt").is_file() else None,
             "endpoint": endpoint, "kernels": kernel_identities(kernel), "route": manifest.get("route"),
             "enrollment": enrollment_status(manifest_path), "manifest": str(manifest_path)}
@@ -778,12 +781,14 @@ def route_observation(manifest_path: pathlib.Path) -> dict[str, Any]:
     endpoint = endpoint_status()
     configured_route = configured[0] if len(configured) == 1 else "ambiguous" if configured else None
     active_route = active[0] if len(active) == 1 else "ambiguous" if active else None
-    live = (requested is not None and configured_route == active_route == requested and
-            module_route in {None, requested} and endpoint["present"] and enrollment["status"] == "current" and
-            sysfs_parameter("live_output") in {"Y", "1"})
+    operational = (requested is not None and configured_route == active_route == requested and
+                   module_route in {None, requested} and endpoint["present"])
+    inhibited = sysfs_parameter("output_inhibit") in {"Y", "1"}
     return {"requestedRoute": requested, "savedRoute": enrollment.get("record", {}).get("route"),
             "configuredRoute": configured_route, "overlayActiveRoute": active_route,
-            "moduleReportedRoute": module_route, "endpoint": endpoint, "liveEligibleRoute": requested if live else None,
+            "moduleReportedRoute": module_route, "endpoint": endpoint,
+            "operationalRoute": requested if operational else None,
+            "outputInhibited": inhibited,
             "classification": "Experimental", "releaseQualified": False,
             "rebootRequired": configured_route != active_route}
 
@@ -879,7 +884,7 @@ def parser_for(command: str) -> argparse.ArgumentParser:
         route = parser.add_mutually_exclusive_group(required=True)
         route.add_argument("--route", choices=ROUTES)
         route.add_argument("--route-neutral", action="store_true")
-        parser.add_argument("--live-output", type=int, choices=(0,1), required=True); parser.add_argument("--evidence-directory", required=True)
+        parser.add_argument("--output-inhibit", type=int, choices=(0,1), required=True); parser.add_argument("--evidence-directory", required=True)
         parser.add_argument("--build-only", action="store_true"); parser.add_argument("--install", action="store_true")
         parser.add_argument("--load", action="store_true")
         parser.add_argument("--keep-build", action="store_true"); parser.add_argument("--allow-dirty", action="store_true")
@@ -889,7 +894,7 @@ def parser_for(command: str) -> argparse.ArgumentParser:
         parser.add_argument("--kernel", required=True); parser.add_argument("--remove", action="store_true")
     elif command == "development-module":
         parser.add_argument("action", choices=("load","reload","status","unload")); parser.add_argument("--manifest", type=pathlib.Path, required=True)
-        parser.add_argument("--live-output", type=int, choices=(0,1), default=0)
+        parser.add_argument("--output-inhibit", type=int, choices=(0,1), default=1)
     elif command in {"development-status", "development-endpoint"}:
         parser.add_argument("--manifest", type=pathlib.Path, required=True); parser.add_argument("--json", action="store_true")
     elif command == "development-rollback": parser.add_argument("--record", type=pathlib.Path, required=True)
@@ -920,7 +925,7 @@ def main() -> int:
                   "versionSourceSha256":sha256(source / "include/rp1_gpclk/version.h")}
     elif command == "development-install": result = install(args)
     elif command == "development-enroll": result = enroll(args.manifest, args.route, args.kernel, args.remove)
-    elif command == "development-module": result = lifecycle_action(args.action, args.manifest, args.live_output)
+    elif command == "development-module": result = lifecycle_action(args.action, args.manifest, args.output_inhibit)
     elif command == "development-status": result = lifecycle_status(args.manifest)
     elif command == "development-endpoint": result = lifecycle_status(args.manifest)["endpoint"]
     elif command == "development-rollback": result = rollback(args.record)

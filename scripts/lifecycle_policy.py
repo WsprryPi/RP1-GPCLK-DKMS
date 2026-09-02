@@ -52,7 +52,7 @@ def evaluate_complete_removal(snapshot: dict) -> dict:
 
 
 def rollback_plan(state: dict) -> dict:
-    required = ("operation", "status", "liveOutput", "cleanupProven",
+    required = ("operation", "status", "outputActive", "cleanupProven",
                 "successorOwnershipKnown", "predecessorComplete",
                 "rollbackTargetsUnchanged", "administratorBytesUnchanged",
                 "predecessorRelease", "successorRelease")
@@ -63,7 +63,7 @@ def rollback_plan(state: dict) -> dict:
         raise ValueError("rollback safety fields must be known booleans")
     if state["operation"] != "upgrade" or state["status"] != "inactive-failed":
         raise ValueError("rollback requires one failed inactive successor")
-    if state["liveOutput"] or not all(state[field] for field in _exact_booleans[1:]):
+    if state["outputActive"] or not all(state[field] for field in _exact_booleans[1:]):
         raise ValueError("rollback safety or freshness is unproven")
     for field in ("predecessorRelease", "successorRelease"):
         if not isinstance(state[field], str) or not re.fullmatch(r"[0-9A-Za-z][0-9A-Za-z.+-]*", state[field]):
@@ -72,14 +72,14 @@ def rollback_plan(state: dict) -> dict:
         raise ValueError("rollback requires distinct releases")
     return {"operation": "rollback", "from": state["successorRelease"],
             "to": state["predecessorRelease"],
-            "steps": ["disable-live-eligibility", "verify-successor-inactive",
+            "steps": ["verify-successor-output-inhibited", "verify-successor-inactive",
                       "remove-exact-successor-owned-state", "restore-recorded-predecessor-bytes",
                       "verify-output-disabled", "audit-predecessor-and-preserved-bytes"],
-            "liveOutput": False, "automatic": False, "readOnly": True}
+            "outputActive": False, "automatic": False, "readOnly": True}
 
 
 def recovery_plan(state: dict) -> dict:
-    required = ("operation", "status", "checkpoint", "liveOutput",
+    required = ("operation", "status", "checkpoint", "outputActive",
                 "ownershipKnown", "cleanupLatch", "hardwareActivityAbsent")
     if set(state) != set(required):
         raise ValueError("recovery state fields are incomplete or unknown")
@@ -90,7 +90,7 @@ def recovery_plan(state: dict) -> dict:
         raise ValueError("unrecognized lifecycle operation")
     if state["status"] != "inactive-recovery-required" or state["checkpoint"] not in CHECKPOINTS:
         raise ValueError("transaction is not at a recognized recoverable checkpoint")
-    if state["liveOutput"] or not state["ownershipKnown"] or state["cleanupLatch"] or not state["hardwareActivityAbsent"]:
+    if state["outputActive"] or not state["ownershipKnown"] or state["cleanupLatch"] or not state["hardwareActivityAbsent"]:
         raise ValueError("recovery requires known inactive cleanup-safe state")
     return {"operation": "recovery", "interruptedOperation": state["operation"],
             "checkpoint": state["checkpoint"],

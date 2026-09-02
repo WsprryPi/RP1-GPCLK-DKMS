@@ -58,7 +58,7 @@ static int rp1_gpclk_tones_valid(const struct rp1_gpclk_tone *tones,
     if (!tones || count == 0 || count > RP1_GPCLK_MAX_TONES)
         return 0;
     for (index = 0; index < count; index++) {
-        __u32 sum;
+        __u64 sum;
 
         if (tones[index].lower_divider_q16 == RP1_GPCLK_CORE_U64_MAX ||
             tones[index].upper_divider_q16 !=
@@ -231,56 +231,6 @@ static int rp1_gpclk_submit_begin(struct rp1_gpclk_core *core, __u64 owner_id,
     return RP1_GPCLK_CORE_OK;
 }
 
-int rp1_gpclk_core_submit_wspr(
-    struct rp1_gpclk_core *core, __u64 owner_id,
-    struct rp1_gpclk_submit_wspr *request,
-    const struct rp1_gpclk_tone *tones, const unsigned char *symbols)
-{
-    __u32 index;
-    __u64 generation;
-    int result;
-
-    if (!core || !request || !symbols ||
-        !rp1_gpclk_header_valid(&request->header, sizeof(*request)) ||
-        request->reserved0 != 0 || request->reserved1 != 0 ||
-        !rp1_gpclk_reserved_zero(request->reserved, 4) ||
-        request->generation != 0 ||
-        request->fractional_bits != RP1_GPCLK_FRACTIONAL_BITS ||
-        request->tick_divider != RP1_GPCLK_TICK_DIVIDER ||
-        request->writes_per_symbol == 0 ||
-        request->writes_per_symbol >
-            RP1_GPCLK_WSPR_WRITES_PER_SYMBOL_MAX ||
-        request->tone_count != RP1_GPCLK_MAX_TONES ||
-        request->symbol_count != RP1_GPCLK_WSPR_SYMBOLS ||
-        !rp1_gpclk_drive_valid(request->drive_ma) ||
-        request->expected_frame_duration_ns == 0 ||
-        request->expected_frame_duration_ns >
-            RP1_GPCLK_REQUEST_DURATION_NS_MAX ||
-        !rp1_gpclk_tones_valid(tones, request->tone_count,
-                               request->writes_per_symbol))
-        return RP1_GPCLK_CORE_INVALID;
-    for (index = 0; index < request->symbol_count; index++) {
-        if (symbols[index] >= request->tone_count)
-            return RP1_GPCLK_CORE_INVALID;
-    }
-    generation = request->generation;
-    result = rp1_gpclk_submit_begin(core, owner_id, request->lease_id,
-                                    generation, request->symbol_count,
-                                    &request->generation);
-    if (result != RP1_GPCLK_CORE_OK)
-        return result;
-    core->plan_mode = RP1_GPCLK_MODE_WSPR;
-    core->plan_tone_count = request->tone_count;
-    core->plan_symbol_count = request->symbol_count;
-    core->plan_event_count = 0;
-    for (index = 0; index < request->tone_count; index++)
-        core->plan_tones[index] = tones[index];
-    for (index = 0; index < request->symbol_count; index++)
-        core->plan_symbols[index] = symbols[index];
-    core->value.plan_loaded = 1;
-    return RP1_GPCLK_CORE_OK;
-}
-
 int rp1_gpclk_core_submit_events(
     struct rp1_gpclk_core *core, __u64 owner_id,
     struct rp1_gpclk_submit_events *request,
@@ -294,11 +244,9 @@ int rp1_gpclk_core_submit_events(
     if (!core || !request || !events ||
         !rp1_gpclk_header_valid(&request->header, sizeof(*request)) ||
         request->reserved0 != 0 || request->reserved1 != 0 ||
+        request->reserved2 != 0 ||
         !rp1_gpclk_reserved_zero(request->reserved, 4) ||
         request->generation != 0 ||
-        (request->mode != RP1_GPCLK_MODE_QRSS &&
-         request->mode != RP1_GPCLK_MODE_FSKCW &&
-         request->mode != RP1_GPCLK_MODE_DFCW) ||
         request->fractional_bits != RP1_GPCLK_FRACTIONAL_BITS ||
         request->tick_divider != RP1_GPCLK_TICK_DIVIDER ||
         request->event_count == 0 ||
@@ -313,6 +261,8 @@ int rp1_gpclk_core_submit_events(
             (events[index].flags & ~RP1_GPCLK_EVENT_F_OUTPUT_ENABLED) != 0 ||
             ((events[index].flags & RP1_GPCLK_EVENT_F_OUTPUT_ENABLED) != 0 &&
              events[index].tone_index >= request->tone_count) ||
+            ((events[index].flags & RP1_GPCLK_EVENT_F_OUTPUT_ENABLED) == 0 &&
+             events[index].tone_index != 0) ||
             total > RP1_GPCLK_REQUEST_DURATION_NS_MAX -
                         events[index].duration_ns)
             return RP1_GPCLK_CORE_INVALID;
@@ -326,53 +276,12 @@ int rp1_gpclk_core_submit_events(
                                     &request->generation);
     if (result != RP1_GPCLK_CORE_OK)
         return result;
-    core->plan_mode = request->mode;
     core->plan_tone_count = request->tone_count;
     core->plan_event_count = request->event_count;
-    core->plan_symbol_count = 0;
     for (index = 0; index < request->tone_count; index++)
         core->plan_tones[index] = tones[index];
     for (index = 0; index < request->event_count; index++)
         core->plan_events[index] = events[index];
-    core->value.plan_loaded = 1;
-    return RP1_GPCLK_CORE_OK;
-}
-
-int rp1_gpclk_core_submit_tone(struct rp1_gpclk_core *core, __u64 owner_id,
-                              struct rp1_gpclk_submit_tone *request)
-{
-    int result;
-
-    if (!core || !request ||
-        !rp1_gpclk_header_valid(&request->header, sizeof(*request)) ||
-        request->generation != 0 ||
-        request->expected_route != core->value.route ||
-        request->fractional_bits != RP1_GPCLK_FRACTIONAL_BITS ||
-        request->tick_divider != RP1_GPCLK_TICK_DIVIDER ||
-        !rp1_gpclk_drive_valid(request->drive_ma) || request->reserved0 != 0 ||
-        !rp1_gpclk_reserved_zero(request->reserved, 4) ||
-        !rp1_gpclk_tones_valid(&request->tone, 1, 0))
-        return RP1_GPCLK_CORE_INVALID;
-    if (request->operation == RP1_GPCLK_TONE_OPERATION_CONTINUOUS) {
-        if (request->duration_ns != 0)
-            return RP1_GPCLK_CORE_INVALID;
-    } else if (request->operation == RP1_GPCLK_TONE_OPERATION_FINITE) {
-        if (request->duration_ns < RP1_GPCLK_TONE_DURATION_NS_MIN ||
-            request->duration_ns > RP1_GPCLK_TONE_DURATION_NS_MAX)
-            return RP1_GPCLK_CORE_INVALID;
-    } else {
-        return RP1_GPCLK_CORE_INVALID;
-    }
-    result = rp1_gpclk_submit_begin(core, owner_id, request->lease_id,
-                                    request->generation, 1,
-                                    &request->generation);
-    if (result != RP1_GPCLK_CORE_OK)
-        return result;
-    core->plan_mode = RP1_GPCLK_MODE_TONE;
-    core->plan_tone_count = 1;
-    core->plan_event_count = 0;
-    core->plan_symbol_count = 0;
-    core->plan_tones[0] = request->tone;
     core->value.plan_loaded = 1;
     return RP1_GPCLK_CORE_OK;
 }

@@ -75,7 +75,7 @@ def validate_removed_ledger(path:pathlib.Path,value:dict,prior:dict)->None:
     state=json.loads(path.read_text())
     candidate=value["candidate"]
     if (state.get("status")!="removed" or state.get("checkpoint")!="inactive-clean" or
-            state.get("recoveryRequired") is not False or state.get("liveOutput") is not False or
+            state.get("recoveryRequired") is not False or state.get("outputActive") is not False or
             state.get("package")!="rp1-gpclk-dkms" or state.get("release")!=candidate["release"] or
             state.get("predecessorRelease")!=candidate["release"]):
         raise ValueError("removed predecessor ledger state differs")
@@ -223,13 +223,13 @@ def validate(value: dict) -> dict:
         raise ValueError("invalid administrator transaction-state contract")
     prior = value.get("priorTerminalState")
     if schema in {3, 4, 5, 6, 7}:
-        prior_keys = {"path", "sha256", "status", "recoveryRequired", "liveOutput",
+        prior_keys = {"path", "sha256", "status", "recoveryRequired", "outputActive",
                       "ownerUid", "mode", "archivePath", "archiveMode"}
         if (not isinstance(prior, dict) or set(prior) != prior_keys or
                 prior.get("path") != administrator_state["path"] or
                 not SHA256.fullmatch(prior.get("sha256", "")) or
                 prior.get("status") not in ({"removed"} if schema == 7 else ({"complete"} if schema in {5, 6} else {"recovered"})) or prior.get("recoveryRequired") is not False or
-                prior.get("liveOutput") is not False or type(prior.get("ownerUid")) is not int or
+                prior.get("outputActive") is not False or type(prior.get("ownerUid")) is not int or
                 prior["ownerUid"] < 0 or prior.get("mode") != "0600" or
                 prior.get("archiveMode") != "0400"):
             raise ValueError("invalid prior terminal administrator state")
@@ -263,7 +263,7 @@ def validate(value: dict) -> dict:
         argv = value[field]
         if not isinstance(argv, list) or not argv or not all(isinstance(x, str) and x for x in argv):
             raise ValueError(f"invalid {field}")
-        if any(token in " ".join(argv) for token in ("live_output=1", "/dev/mem", "--force")):
+        if any(token in " ".join(argv) for token in ("output_inhibit=0", "/dev/mem", "--force")):
             raise ValueError(f"prohibited {field}")
     expected_install_prefix = ["/usr/bin/python3", value["administrator"]["path"], "install", "--execute"]
     if (value["argv"][:4] != expected_install_prefix or
@@ -275,8 +275,8 @@ def validate(value: dict) -> dict:
     if value["recoveryArgv"] != ["/usr/bin/python3", value["administrator"]["path"], "recover", "--execute"]:
         raise ValueError("pre-root recovery argv differs")
     baseline = {"moduleLoaded": False, "endpointPresent": False, "overlayActive": False,
-                "dkmsTestVersions": False, "liveOutput": False}
-    safety = {"outputDisabled": True, "liveOutput": False, "gpioAccess": False,
+                "dkmsTestVersions": False, "outputActive": False}
+    safety = {"outputDisabled": True, "outputActive": False, "gpioAccess": False,
               "clockEnabled": False, "dmaActive": False, "sdrActive": False, "rf": False}
     if value["expectedPreState"] != baseline or value["expectedPostState"] != baseline or value["safety"] != safety:
         raise ValueError("pre-root safety contract differs")
@@ -358,11 +358,11 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
         if not journal.exists() and not journal.is_symlink() and not root.exists() and not root.is_symlink():
             if probe() != value["expectedPreState"]:
                 raise ValueError("already-clean pre-root recovery baseline differs")
-            return {"operationId": value["operationId"], "status": "already-clean", "liveOutput": False}
+            return {"operationId": value["operationId"], "status": "already-clean", "outputActive": False}
         if journal.is_symlink() or not journal.is_file():
             raise ValueError("pre-root recovery journal is absent")
         old = json.loads(journal.read_text())
-        if (old.get("status") != "recovery-required" or old.get("liveOutput") is not False or
+        if (old.get("status") != "recovery-required" or old.get("outputActive") is not False or
                 type(old.get("administratorInvoked")) is not bool):
             raise ValueError("pre-root journal is not recoverable")
         validate_partial_root(value, root)
@@ -406,7 +406,7 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
         failure_journal.chmod(0o400)
         journal.unlink()
         return {"operationId": value["operationId"], "status": "recovered",
-                "liveOutput": False}
+                "outputActive": False}
     if journal.exists() or journal.is_symlink() or root.exists() or root.is_symlink():
         raise ValueError("pre-root transition is not fresh")
     parent = root.parent
@@ -428,7 +428,7 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
         prior_value = json.loads(administrator_state.read_text())
         if (prior_value.get("status") != prior_contract["status"] or
                 prior_value.get("recoveryRequired") is not prior_contract["recoveryRequired"] or
-                prior_value.get("liveOutput") is not prior_contract["liveOutput"]):
+                prior_value.get("outputActive") is not prior_contract["outputActive"]):
             raise ValueError("prior administrator state is not terminal recovered")
         if value["schemaVersion"]==7: validate_removed_ledger(administrator_state,value,prior_contract)
         if prior_archive is None or prior_archive.exists() or prior_archive.is_symlink():
@@ -436,7 +436,7 @@ def execute(value: dict, *, prefix: pathlib.Path, runner: Callable[[list[str]], 
     elif administrator_state.exists() or administrator_state.is_symlink():
         raise ValueError("administrator transaction state exists before invocation")
     state = {"operationId": value["operationId"], "status": "in-progress", "checkpoint": "preflight",
-             "liveOutput": False, "administratorInvoked": False}
+             "outputActive": False, "administratorInvoked": False}
     atomic_json(journal, state)
     try:
         if probe() != value["expectedPreState"]:

@@ -40,7 +40,7 @@ FILES = {
     "bootConfig": "/boot/firmware/config.txt",
     "loadedVersion": "/sys/module/rp1_gpclk_dkms/version",
     "loadedSourceVersion": "/sys/module/rp1_gpclk_dkms/srcversion",
-    "loadOutputGate": "/sys/module/rp1_gpclk_dkms/parameters/live_output",
+    "outputInhibit": "/sys/module/rp1_gpclk_dkms/parameters/output_inhibit",
     "moduleReferences": "/sys/module/rp1_gpclk_dkms/refcnt",
     "loadedBuildNote": "/sys/module/rp1_gpclk_dkms/notes/.note.gnu.build-id",
     "bootloaderVersion": "/sys/firmware/devicetree/base/chosen/bootloader/version",
@@ -51,7 +51,7 @@ FILES = {
     "gpio20Overlay": "/boot/firmware/overlays/rp1-gpclk-gpio20.dtbo",
     "developmentRecord": "/var/lib/rp1-gpclk-dkms/development/route-manager.json",
 }
-TEXT_FILES = {"bootId", "bootConfig", "loadedVersion", "loadedSourceVersion", "loadOutputGate",
+TEXT_FILES = {"bootId", "bootConfig", "loadedVersion", "loadedSourceVersion", "outputInhibit",
               "moduleReferences", "bootloaderVersion", "model", "developmentRecord"}
 
 
@@ -219,12 +219,12 @@ def assess(files: dict, commands: dict, runtime: dict, endpoints: dict) -> dict:
             blockers.append("boot-route-migration-review-required")
     if runtime.get("status") != "observed" or endpoints.get("status") != "observed":
         blockers.append("route-observation-incomplete")
-    if (files.get("loadOutputGate", {}).get("status") != "observed" or
-            files.get("loadOutputGate", {}).get("text") not in ("0", "N")):
-        blockers.append("immutable-output-gate-not-observed-disabled")
+    if (files.get("outputInhibit", {}).get("status") == "observed" and
+            files.get("outputInhibit", {}).get("text") not in ("0", "N", "1", "Y")):
+        blockers.append("output-inhibit-state-unknown")
     return {"mutationAvailable": False, "qualification": False,
             "bootSelectionInterpretation": boot_parse, "bootRouteCandidates": candidates,
-            "runtimeOwnership": "not-established", "operationLive": "unknown",
+            "runtimeOwnership": "not-established", "operationalReady": "unknown",
             "loadedBytesIdentity": "not-established", "blockers": blockers}
 
 

@@ -20,15 +20,16 @@ attempt binding.
 
 Diagnostics performs the canonical `QUERY` request and records the complete
 advertised capability mask, module/build/compatibility identities, and
-finite `TONE` bounds. There is no legacy query fallback or version negotiation.
+generic event limits and DMA chunk bounds. There is no legacy query fallback or version negotiation.
 
 Diagnostics also performs one read-only `GET_SNAPSHOT` request on a separately
 opened descriptor and closes that
 descriptor in all outcomes. The request never acquires an execution owner or
 lease and never exposes a lease token. It reports the route and compatibility
 identity, owner/lease presence, operation and drain state, retained terminal
-reason and generation, valid elapsed/remaining time, cleanup fault, live-output
-and live-eligibility observations, and tri-state GPIO/clock/DMA quiescence.
+reason and generation, valid elapsed/remaining time, cleanup fault,
+output-inhibition and operational-readiness observations, and tri-state
+GPIO/clock/DMA quiescence.
 `unknown` is preserved as unknown; it is never converted into a safe result.
 The descriptor open itself is passive but still counts as endpoint access and
 therefore requires separate target authorization before running diagnostics on

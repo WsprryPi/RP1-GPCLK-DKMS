@@ -25,7 +25,7 @@ EXECUTABLE = "/usr/libexec/rp1-gpclk-dkms/gate-d-outer"
 SHA = re.compile(r"[0-9a-f]{64}")
 SAFE_ID = re.compile(r"[a-z0-9][a-z0-9._-]+")
 ROUTES = {"gpio4", "gpio20", "route-neutral"}
-PROHIBITED = {"live_output=1", "/dev/mem", "rpi-update", "--force", "rf", "sdr"}
+PROHIBITED = {"output_inhibit=0", "/dev/mem", "rpi-update", "--force", "rf", "sdr"}
 
 ENVELOPE_BEFORE = (
     "create-evidence", "capture-preflight", "verify-input-hashes",
@@ -94,7 +94,7 @@ def expected_final(row: str) -> str:
 
 def lifecycle_safety() -> dict:
     false = {field: False for field in (
-        "liveOutput", "clockEnabled", "clockPrepared", "dmaActive", "gpioOutput",
+        "outputActive", "clockEnabled", "clockPrepared", "dmaActive", "gpioOutput",
         "transmitterActive", "sdrActive", "antennaConnected", "moduleLoaded",
         "platformBound", "endpointOpen", "ownerPresent", "workActive",
         "callbackPending", "cleanupLatched")}
@@ -500,7 +500,7 @@ def execute_fake(document: dict) -> dict:
     return {"status": "complete", "operationId": document["operationId"],
             "commands": state.commands, "evidenceSealed": True,
             "servicesRestored": state.services == state.original_services,
-            "liveOutput": False, "elapsedSeconds": state.elapsed}
+            "outputActive": False, "elapsedSeconds": state.elapsed}
 
 
 def write_bundle(output: pathlib.Path, documents: list[dict], tool_path: pathlib.Path,

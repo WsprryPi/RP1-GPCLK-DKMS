@@ -38,7 +38,7 @@ def capture(root: pathlib.Path, product_marker: str, qualification_marker: str,
     if product != ("rp1-gpclk-dkms/0.0.0-phase5.53" in dkms):
         raise ValueError("product marker and DKMS state differ")
     return {"product": product, "qualification": qualification,
-            "liveOutput": False}
+            "outputActive": False}
 
 
 def main() -> None:

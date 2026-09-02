@@ -4,10 +4,10 @@
 #include <linux/limits.h>
 #include <linux/module.h>
 #include <linux/of.h>
-#include <linux/of_fdt.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/stringify.h>
 #include <linux/utsname.h>
 
 #include "rp1_gpclk/bootstrap_policy.h"
@@ -16,6 +16,7 @@
 #include "rp1_gpclk/execution.h"
 #include "rp1_gpclk/kernel_api.h"
 #include "rp1_gpclk/lifetime.h"
+#include "rp1_gpclk/target_fault.h"
 #include "rp1_gpclk/uapi_dispatch.h"
 #include "rp1_gpclk/version.h"
 
@@ -24,19 +25,19 @@
 static bool route_cleanup_failed;
 #endif
 
-static bool live_output;
-module_param(live_output, bool, 0444);
-MODULE_PARM_DESC(live_output,
-	"Permit live GPCLK output for an exactly qualified compatibility identity");
+static bool output_inhibit;
+module_param(output_inhibit, bool, 0444);
+MODULE_PARM_DESC(output_inhibit,
+	"Disable output for clock-disabled development and lifecycle testing");
 
-bool rp1_gpclk_live_output_enabled(void)
+bool rp1_gpclk_output_inhibited(void)
 {
-	return live_output;
+	return output_inhibit;
 }
 
-bool rp1_gpclk_live_output_eligible(const struct rp1_gpclk_device *device)
+bool rp1_gpclk_operationally_ready(const struct rp1_gpclk_device *device)
 {
-	return live_output && device && device->live_eligible;
+	return device && device->operational_ready && !output_inhibit;
 }
 
 static bool rp1_gpclk_release_identity_allowed(
@@ -44,9 +45,8 @@ static bool rp1_gpclk_release_identity_allowed(
 {
 	return device &&
 		rp1_gpclk_compatibility_allowed(device->route,
-			utsname()->release, utsname()->machine,
+			utsname()->machine,
 			RP1_GPCLK_MODULE_VERSION,
-			of_machine_is_compatible("raspberrypi,5-model-b"),
 			device->clock && device->dma_chan &&
 			device->pinctrl &&
 			device->tick_dma0 && device->dma_tick0 &&
@@ -119,17 +119,6 @@ static int rp1_gpclk_release(struct inode *inode, struct file *file)
 	struct rp1_gpclk_file *context = file->private_data;
 
 	mutex_lock(&context->device->lock);
-	if (context->operation_live_lease &&
-	    context->device->operation_live_owner == context->owner &&
-	    context->device->operation_live_lease == context->operation_live_lease) {
-		context->device->operation_live_owner = 0;
-		context->device->operation_live_lease = 0;
-		memzero_explicit(context->device->operation_live_digest,
-			RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE);
-	}
-	context->operation_live_lease = 0;
-	memzero_explicit(context->operation_live_digest,
-		RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE);
 	if (rp1_gpclk_core_owner_close(&context->device->core,
 					context->owner) == RP1_GPCLK_CORE_OK)
 		rp1_gpclk_execution_request_stop(context->device,
@@ -205,11 +194,11 @@ static int rp1_gpclk_probe(struct platform_device *pdev)
 			      "DMA resource acquisition failed\n");
 		goto release_resources;
 	}
-	device->live_eligible = rp1_gpclk_release_identity_allowed(device);
-	if (live_output && !device->live_eligible) {
+	device->operational_ready = rp1_gpclk_release_identity_allowed(device);
+	if (!device->operational_ready) {
 		ret = -EOPNOTSUPP;
 		dev_err_probe(&pdev->dev, ret,
-			      "live output rejected by exact route compatibility policy\n");
+			      "RP1 route resources are not operationally supported\n");
 		goto release_resources;
 	}
 
@@ -515,8 +504,12 @@ static int __init rp1_gpclk_init(void)
 {
 	int ret;
 
+#ifdef RP1_GPCLK_TARGET_FAULT_STAGE
+	pr_warn("rp1-gpclk-dkms: TEST-ONLY fault artifact stage=%u\n",
+		RP1_GPCLK_TARGET_FAULT_STAGE);
+#endif
 #ifdef RP1_RUNTIME_CONTROLLER
-	ret = rp1_route_consumer_attach(live_output);
+	ret = rp1_route_consumer_attach();
 	if (ret)
 		return ret;
 #endif
@@ -573,6 +566,10 @@ MODULE_AUTHOR("Lee Bussy");
 MODULE_DESCRIPTION("Experimental RP1 GPCLK controlled-output provider");
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_VERSION(RP1_GPCLK_MODULE_VERSION);
+#ifdef RP1_GPCLK_TARGET_FAULT_STAGE
+MODULE_INFO(rp1_target_fault_stage,
+	    __stringify(RP1_GPCLK_TARGET_FAULT_STAGE));
+#endif
 #ifdef RP1_RUNTIME_CONTROLLER
 MODULE_INFO(rp1_runtime_controller, "1");
 #endif

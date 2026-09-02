@@ -43,7 +43,7 @@ unit or administrator mask is never overwritten. This is cooperative systemd
 inhibition, not isolation from privileged processes or alternative units.
 
 After normal consumer unload and controller-owned overlay removal/application,
-the consumer is loaded with `live_output=0`. A passive snapshot must confirm
+the consumer is loaded with default `output_inhibit=0`. A passive snapshot must confirm
 the selected route is idle. Only then does the companion atomically update
 `GPIO.Transmit Pin` and `Operation.Transmit=false`. It preserves other settings,
 including `Enable on Boot`, comments and file mode. The canonical installed

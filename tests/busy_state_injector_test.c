@@ -11,7 +11,7 @@
 #include "../tools/gate_d_busy_injector.h"
 
 struct fixture {
-	bool live;
+	bool not_inhibited;
 	bool wrong_build;
 	bool wrong_route;
 	int opens;
@@ -41,18 +41,24 @@ static int fake_ioctl(void *context, int fd, unsigned long request, void *argume
 			RP1_GPCLK_ROUTE_GPIO4;
 		query->capabilities = RP1_GPCLK_CAP_ROUTE_IDENTITY |
 			RP1_GPCLK_CAP_COMPAT_IDENTITY |
-			RP1_GPCLK_CAP_CLEANUP_FAULT_LATCH;
-		if (fixture->live)
-			query->capabilities |= RP1_GPCLK_CAP_LIVE_ELIGIBLE;
+			RP1_GPCLK_CAP_CLEANUP_FAULT_LATCH |
+			RP1_GPCLK_CAP_OUTPUT_INHIBIT;
 		strcpy(query->module_id, "rp1-gpclk-dkms");
 		strcpy(query->build_id, fixture->wrong_build ? "wrong" : "test-build");
+		return 0;
+	}
+	if (request == RP1_GPCLK_IOC_GET_SNAPSHOT) {
+		struct rp1_gpclk_snapshot *snapshot = argument;
+		snapshot->output_inhibited = fixture->not_inhibited ?
+			RP1_GPCLK_OBSERVATION_FALSE : RP1_GPCLK_OBSERVATION_TRUE;
+		snapshot->operational_ready = RP1_GPCLK_OBSERVATION_TRUE;
 		return 0;
 	}
 	if (request == RP1_GPCLK_IOC_ACQUIRE) {
 		struct rp1_gpclk_acquire *acquire = argument;
 		fixture->acquires++;
 		assert((acquire->required_capabilities &
-			(RP1_GPCLK_CAP_SUBMIT_WSPR | RP1_GPCLK_CAP_SUBMIT_EVENTS)) == 0);
+			RP1_GPCLK_CAP_SUBMIT_EVENTS) == 0);
 		acquire->lease_id = 42;
 		return 0;
 	}
@@ -146,9 +152,9 @@ int main(void)
 	stop = 0;
 
 	memset(&fixture, 0, sizeof(fixture));
-	fixture.live = true;
+	fixture.not_inhibited = true;
 	assert(run(GATE_D_BUSY_OWNER, &fixture, &stop, &result) == -1);
-	assert(result.live_eligible && fixture.acquires == 0 && fixture.closes == 1);
+	assert(!result.output_inhibited && fixture.acquires == 0 && fixture.closes == 1);
 
 	memset(&fixture, 0, sizeof(fixture));
 	fixture.wrong_build = true;

@@ -26,6 +26,7 @@ static void fail(const char *message)
 int main(int argc, char **argv)
 {
 	struct rp1_gpclk_query query = { 0 };
+	struct rp1_gpclk_snapshot snapshot = { 0 };
 	struct rp1_gpclk_acquire acquire = { 0 };
 	struct rp1_gpclk_release release = { 0 };
 	uint32_t route;
@@ -47,10 +48,18 @@ int main(int argc, char **argv)
 	if (query.header.size != sizeof(query) ||
 	    query.header.reserved != 0 || query.header.flags != 0 ||
 	    query.route != route ||
-	    (query.capabilities & RP1_GPCLK_CAP_LIVE_ELIGIBLE) != 0 ||
+	    (query.capabilities & RP1_GPCLK_CAP_OUTPUT_INHIBIT) == 0 ||
 	    strcmp(query.module_id, "rp1-gpclk-dkms") != 0 ||
 	    strcmp(query.build_id, argv[2]) != 0) {
-		fprintf(stderr, "query identity or output gate mismatch\n");
+		fprintf(stderr, "query identity or output-inhibit capability mismatch\n");
+		return EXIT_FAILURE;
+	}
+	snapshot.header.size = sizeof(snapshot);
+	if (ioctl(fd, RP1_GPCLK_IOC_GET_SNAPSHOT, &snapshot) != 0)
+		fail("RP1_GPCLK_IOC_GET_SNAPSHOT");
+	if (snapshot.output_inhibited != RP1_GPCLK_OBSERVATION_TRUE ||
+	    snapshot.operational_ready != RP1_GPCLK_OBSERVATION_TRUE) {
+		fprintf(stderr, "output is not inhibited or resources are not ready\n");
 		return EXIT_FAILURE;
 	}
 	acquire.header.size = sizeof(acquire);
@@ -65,6 +74,7 @@ int main(int argc, char **argv)
 		fail("RP1_GPCLK_IOC_RELEASE");
 	if (close(fd) != 0)
 		fail("close");
-	printf("route=%s build=%s live_eligible=0 released=1\n", argv[1], argv[2]);
+	printf("route=%s build=%s output_inhibit_supported=1 released=1\n",
+	       argv[1], argv[2]);
 	return EXIT_SUCCESS;
 }

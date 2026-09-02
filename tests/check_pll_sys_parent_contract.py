@@ -44,7 +44,8 @@ for name in ("rp1_gpclk_clock_setup", "rp1_gpclk_clock_restore"):
     assert "ops->parent_rate(context) != " in body
 assert "rp1_gpclk_clock_restore(&ops, device, initial_rate" in EXECUTION
 assert "clk_set_rate(device->clock, rate > 1 ? rate / 2 : 2)" in EXECUTION
-assert EXECUTION.count("return device->clock_cleanup_error;") == 2
+assert EXECUTION.count("return ret ?: device->clock_cleanup_error;") == 2
+assert "return device->clock_cleanup_error;" not in EXECUTION
 prepare = EXECUTION[EXECUTION.index("static int rp1_gpclk_machine_prepare"):]
 prepare = prepare[:prepare.index("static int rp1_gpclk_machine_select_active")]
 assert "rp1_gpclk_setup_parent_rate(device) != RP1_GPCLK_PARENT_RATE_HZ" in prepare

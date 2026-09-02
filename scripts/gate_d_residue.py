@@ -13,7 +13,7 @@ import stat
 
 SHA = __import__("re").compile(r"[0-9a-f]{64}")
 BASELINE = {"moduleLoaded": False, "endpointPresent": False, "overlayActive": False,
-            "dkmsTestVersions": False, "liveOutput": False}
+            "dkmsTestVersions": False, "outputActive": False}
 
 
 def digest(path: pathlib.Path) -> str:
@@ -49,7 +49,7 @@ def validate(value: dict) -> dict:
         raise ValueError("invalid residue-recovery administrator state")
     if value["expectedBaseline"] != BASELINE:
         raise ValueError("residue-recovery baseline differs")
-    safety = {"outputDisabled": True, "liveOutput": False, "gpioAccess": False,
+    safety = {"outputDisabled": True, "outputActive": False, "gpioAccess": False,
               "clockEnabled": False, "dmaActive": False, "sdrActive": False, "rf": False}
     if value["safety"] != safety:
         raise ValueError("residue-recovery safety differs")
@@ -104,7 +104,7 @@ def validate_evidence_retirement(value: dict) -> dict:
         raise ValueError("evidence-retirement failure boundary differs")
     if value["expectedBaseline"] != BASELINE:
         raise ValueError("evidence-retirement baseline differs")
-    safety = {"outputDisabled": True, "liveOutput": False, "gpioAccess": False,
+    safety = {"outputDisabled": True, "outputActive": False, "gpioAccess": False,
               "clockEnabled": False, "dmaActive": False, "sdrActive": False, "rf": False}
     if value["safety"] != safety:
         raise ValueError("evidence-retirement safety differs")
@@ -150,7 +150,7 @@ def execute_evidence_retirement(value: dict, *, prefix: pathlib.Path, probe,
     expected = value["expectedFailure"]
     records = state.get("records")
     if (state.get("status") != "inactive-recovery-required" or state.get("sealed") is not True or
-            state.get("recoveryRequired") is not True or state.get("liveOutput") is not False or
+            state.get("recoveryRequired") is not True or state.get("outputActive") is not False or
             state.get("operationId") != expected["operationId"] or
             state.get("documentSha256") != expected["documentSha256"] or
             state.get("indexSha256") != expected["indexSha256"] or
@@ -215,7 +215,7 @@ def validate_attempt_recovery(value: dict) -> dict:
         raise ValueError("attempt-recovery failure boundary differs")
     if value["expectedBaseline"] != BASELINE:
         raise ValueError("attempt-recovery baseline differs")
-    safety = {"outputDisabled": True, "liveOutput": False, "gpioAccess": False,
+    safety = {"outputDisabled": True, "outputActive": False, "gpioAccess": False,
               "clockEnabled": False, "dmaActive": False, "sdrActive": False, "rf": False}
     if value["safety"] != safety:
         raise ValueError("attempt-recovery safety differs")
@@ -250,7 +250,7 @@ def execute_attempt_recovery(value: dict, *, prefix: pathlib.Path, probe,
     expected = value["expectedFailure"]
     records = state.get("records")
     if (state.get("status") != "inactive-recovery-required" or state.get("sealed") is not True or
-            state.get("recoveryRequired") is not True or state.get("liveOutput") is not False or
+            state.get("recoveryRequired") is not True or state.get("outputActive") is not False or
             state.get("operationId") != expected["operationId"] or
             state.get("documentSha256") != expected["documentSha256"] or
             state.get("indexSha256") != expected["indexSha256"] or
@@ -268,7 +268,7 @@ def execute_attempt_recovery(value: dict, *, prefix: pathlib.Path, probe,
     result = {"SPDX-License-Identifier": "MIT", "schemaVersion": 1,
               "kind": "gate-d-failed-attempt-terminal-recovery-result",
               "operationId": value["operationId"], "status": "complete",
-              "recoveryRequired": False, "liveOutput": False,
+              "recoveryRequired": False, "outputActive": False,
               "source": {"operationId": state["operationId"],
                          "journalSha256": source["journalSha256"],
                          "manifestSha256": source["manifestSha256"]},
@@ -329,7 +329,7 @@ def live_probe() -> dict:
     return {"moduleLoaded": pathlib.Path("/sys/module/rp1_gpclk_dkms").exists(),
             "endpointPresent": pathlib.Path("/dev/rp1-gpclk").exists(),
             "overlayActive": "rp1-gpclk" in overlays,
-            "dkmsTestVersions": "rp1-gpclk-dkms/" in dkms, "liveOutput": False}
+            "dkmsTestVersions": "rp1-gpclk-dkms/" in dkms, "outputActive": False}
 
 
 def main() -> None:

@@ -69,7 +69,7 @@ def evaluate(value: dict) -> dict:
         reason = "unsigned-accepted-by-nonenforcing-kernel-policy"
     return {"state": "Compatible-unqualified" if accepted else "Unavailable",
             "signaturePolicyAccepted": accepted, "loadPermittedBySigningPolicy": accepted,
-            "liveEligible": False, "reason": reason, "fallbackPermitted": False,
+            "operationalReady": False, "reason": reason, "fallbackPermitted": False,
             "readOnly": True}
 
 

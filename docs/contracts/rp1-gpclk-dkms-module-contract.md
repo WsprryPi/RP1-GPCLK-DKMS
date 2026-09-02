@@ -58,7 +58,7 @@ authorization, or qualification by themselves.
 - persisted `GPIO4` or `GPIO20` selection;
 - scheduling and application integration;
 - installation orchestration for explicitly compatible tagged releases;
-- operator enrollment, warnings, diagnostics, and recovery workflow; and
+- operator warnings, diagnostics, authorization workflow, and recovery; and
 - product qualification and release decisions.
 
 The repositories coordinate only through tagged artifacts, the canonical UAPI,
@@ -91,7 +91,7 @@ kernel internals, arbitrary physical addresses, or another transmitter backend.
 The stock `clk-rp1` provider remains authoritative for ordinary clock
 operations. Resources are derived from device tree and exported kernel APIs.
 Provider identity, resource layout, DMA translation, pinctrl state, clock state,
-and route must pass runtime validation before live use can become eligible.
+and route must pass runtime validation before the endpoint becomes operational.
 
 The module supplies GPCLK0 and the RP1 200 MHz `pll_sys` output as distinct
 named clock resources. An output operation explicitly selects the
@@ -190,13 +190,15 @@ durations, zero reserved fields, and explicit capability checks. Userspace
 pointers are copied once into bounded kernel-owned storage. Unknown commands,
 flags, values, routes, capabilities, or structure variants fail closed.
 
-One open file may own one opaque lease. `WSPR`, keyed events, and finite `TONE`
-work are bounded; continuous `TONE` is an explicit operation with no
-hidden duration and remains owned by its lease until cancellation. Every
-submission has a strictly increasing generation. Cancellation prevents a
-successor and uses a bounded drain. Stale callbacks are rejected. Terminal
-outcomes are stable and specific. A cleanup fault remains latched and cannot be
-cleared by releasing a lease.
+One open file may own one opaque lease. The only submission primitive is a
+finite sequence of generic tone/gap events; the module contains no product-mode
+or band semantics. Every submission has a strictly increasing generation. A
+logical request may span signed 64-bit nanoseconds, but execution materializes
+at most one fixed one-second coherent DMA chunk. Timing remainders and dither
+state carry across chunk boundaries. Cancellation prevents every successor and
+drains at most the current chunk before cleanup. Stale callbacks are rejected.
+Terminal outcomes are stable and specific. A cleanup fault remains latched and
+cannot be cleared by releasing a lease.
 
 ### Stable UAPI and endpoint identity
 
@@ -205,9 +207,11 @@ interface is `include/uapi/linux/rp1_gpclk.h`; `uapi-identity.json` records its
 SHA-256. The unreleased interface has one current set of ioctl identities,
 sizes, routes, lease semantics, submission semantics, terminal states, and
 cleanup meanings. No legacy layouts or compatibility commands are retained.
-Submission remains unavailable unless a recognized compatibility identity for
-the selected route permits it and either the immutable load-time output gate or
-an operation-scoped authorization permits the exact lease.
+The root-owned, root-only mode-`0600` endpoint is production execution
+authority. There is no authorization flag, digest, enrollment credential, or
+mode-specific admission in the module. The immutable `output_inhibit=1` load
+option is reserved for clock-disabled development and lifecycle tests and
+rejects submission while retaining administrative and cleanup paths.
 
 Changing the endpoint or canonical UAPI requires coordinated updates to the
 module, consumers, diagnostics, tests, and exact header digest. The complete
@@ -241,7 +245,11 @@ Process death, interruption, timeout, unbind, and cleanup failure must converge
 to a safe terminal state or an explicit fault that prevents further use.
 `STOP` and close cancellation do not synthesize DMA completion or force-abort an
 active RP1 paced descriptor. They reject every successor and allow only the
-current kernel-bounded descriptor to drain before cleanup.
+current kernel-bounded descriptor to drain before cleanup. Cancellation and the
+worker's final descriptor check-and-issue boundary are serialized: a descriptor
+committed first is the permitted current drain, while cancellation committed
+first prevents that descriptor from being issued. No successor can be issued
+after `STOP` returns.
 
 On the validated Pi 5 firmware baseline, TICK_DMA0 may be enabled and running
 at 50 reference cycles while the downstream DMA_TICK0 handshake is disabled.
@@ -259,35 +267,31 @@ when the entire descriptor completes. A DMA deadline remains a failure even when
 
 ## Compatibility
 
-Compatibility is deny-by-default for unknown product versions, architectures,
-hardware families, routes, UAPI contracts, resources, ownership and cleanup
-state. The compatibility ID binds the module version, Pi 5 family and route. It
-does not encode a kernel release or act as a per-kernel permission list.
+Compatibility is deny-by-default for unknown module versions, architectures,
+routes, UAPI contracts, resources, ownership, and cleanup state. Hardware
+eligibility is structural rather than a marketing-model allowlist: the active
+endpoint, clock provider, DMA provider, and their ancestry must identify one RP1
+instance and expose the exact required resources. This permits Raspberry Pi 5
+and future Pi-5-like systems that retain the contracted RP1 topology, while
+rejecting lookalike names, missing resources, ambiguous routes, and non-RP1
+platforms.
 
-The exact kernel, configuration, firmware and device tree remain build,
-diagnostic and evidence observations. For `Experimental` use, an operator may
-explicitly enroll a `0.9.0` module built by DKMS for another stock Raspberry Pi
-kernel. Eligibility still requires the aarch64 Pi 5 Model B boundary, an
-allowlisted route, validated provider/resources, current module/UAPI/artifact
-identity, applicable signing policy, explicit operator authorization and clean
-runtime state. Unknown, missing, ambiguous, or mismatched mandatory runtime
-state disables live eligibility.
+The compatibility ID binds module version, RP1 route, and resource contract. It
+does not encode a board model or kernel release and is not an authorization
+credential. Exact kernel, configuration, firmware, device tree, and board model
+remain build, diagnostic, and evidence observations.
 
-A successful module build establishes build compatibility only. `Experimental`
-enrollment permits an operator-controlled attempt but does not qualify loading,
-binding, GPIO output, timing, cleanup, coexistence, transmission, RF behavior,
-or a different system. `Qualified` claims remain tied to the exact system and
-evidence on which they were established.
+A successful module build establishes build compatibility only. Structural
+acceptance permits a bounded experiment; it does not qualify timing, cleanup,
+coexistence, transmission, waveform, spectral, or RF behavior. `Qualified`
+claims remain tied to the exact systems and evidence on which they were
+established. Product policy and operator authorization remain in WsprryPi.
 
-The module contains independent `GPIO4` and `GPIO20` `Experimental` entries for the
-Raspberry Pi 5 Model B / BCM2712 / aarch64 target class. The unique active
-device-tree route selects which entry can pass; the other route is absent. Zero
-active route overlays provides no endpoint. Both overlays present is ambiguous and
-must fail closed; overlay order never selects a route. There is no fallback,
-substitution, or evidence transfer between `GPIO4` and `GPIO20`. These entries
-permit bounded development testing only and are reported as `Experimental`;
-they are not completed qualification or normal product live eligibility.
-Hostname and kernel release are retained in target evidence and are not
+The module contains independent `GPIO4` and `GPIO20` compatibility identities.
+The unique active device-tree route selects one; zero routes provides no
+endpoint and both routes are ambiguous. Overlay order never selects a route.
+There is no fallback, substitution, or evidence transfer between routes.
+Hostname, board model, and kernel release are retained in evidence and are not
 compatibility-ID components.
 
 ## Packaging and administration
@@ -334,7 +338,7 @@ journals do not establish that current proof.
 
 While that exact-source binding is active, passive query also returns a nested
 `state.safety` snapshot containing authenticated endpoint ownership, endpoint
-open state, the observed immutable `live_output` gate, and bounded service
+open state, the observed immutable `output_inhibit` value, and bounded service
 states. The snapshot remains observational and cannot acquire the endpoint,
 change the module gate, or authorize an operation.
 
@@ -343,20 +347,21 @@ change the module gate, or authorize an operation.
 The opt-in [clock-disabled runtime controller](runtime-controller.md) is a
 separate development implementation using exported stock-kernel overlay APIs.
 It owns overlay IDs and error results, interlocks the consumer's module lifetime,
-rejects output-enabled loads, and supplies concrete inhibited administration and
-same-boot crash recovery. It also permits digest-bound neutral reactivation after
-a clean reboot only from exact inactive state backed by a valid terminal
-prior-boot journal. It adds a separate administrative UAPI, not transmission
-commands. It is excluded from default packaging and has no target qualification.
-Deployment and hardware tests remain separately authorized gates. It does not
-enable mutation through the packaged or `source-development` manager.
+and supplies concrete route administration and same-boot crash recovery. Test
+workflows load the consumer with `output_inhibit=1`; production loads the default
+output-capable module only while the application is inhibited and restores the
+captured application state after the transition. Digest-bound route plans protect
+the administrative transaction but are not kernel execution credentials. It
+adds a separate administrative UAPI, not transmission commands, and has no
+target qualification. Deployment and hardware tests remain separately
+authorized gates.
 
 A bounded read-only inventory collector does not provide a write adapter or
 deployment path. Snapshot observations and offline tests do not establish
 exclusion, post-removal success, kernel lifetime safety, or hardware readiness.
 
 The canonical [userspace interface](uapi.md) includes passive snapshots and
-operation-scoped live authorization. The passive snapshot exposes presence and tri-state
+root-only execution authority. The passive snapshot exposes presence and tri-state
 observations without granting ownership or disclosing lease tokens. Terminal
 generation, reason, and completed-unit state remain observable after lease
 release until the next successful acquire.
@@ -371,19 +376,20 @@ device, driver link, probe result, and canonical character device as separate
 facts. A loaded module or matching OF modalias alone is not binding evidence.
 
 Target tests require inspection of the exact test implementation and explicit
-authorization for their system effects. Output-disabled administration, live
+authorization for their system effects. Output-inhibited administration, live
 GPIO behavior, timing, transmission, and RF are separate evidence classes and
 must not be inferred from one another.
 
-For the `0.9.0` dual-route development identity, live compatibility also requires
+For the `0.9.0` dual-route development identity, structural compatibility also requires
 the route-specific endpoint node name emitted by the corresponding current
 overlay: `rp1-gpclk-dkms-gpio4` for route `1` or
 `rp1-gpclk-dkms-gpio20` for route `2`. Any other endpoint name is rejected even
 when its remaining properties are otherwise valid.
 
-The operation-scoped build reports the route-specific `0.9.0` development IDs
-in the [development identity contract](development-identity.md). Its exact Pi 5,
-kernel, architecture, module-version, resource, and route checks apply together.
+The development build reports the route-specific `0.9.0` identities in the
+[development identity contract](development-identity.md). Its exact RP1
+topology, kernel, architecture, module-version, resource, and route observations
+apply together.
 Only the current exact identities can satisfy this contract; immutable
 module/UAPI/overlay hashes remain mandatory evidence.
 
@@ -404,7 +410,7 @@ Version `0.9.0` is the current pre-release development baseline. Debian version
 is `0.9.0-1`; the exact UAPI header and current protocol schemas are coordinated
 with that source. The
 [identity and downgrade contract](development-identity.md) defines source,
-package, diagnostics, compatibility, enrollment and recovery relationships.
+package, diagnostics, compatibility, authority, and recovery relationships.
 Release metadata is absent from the development baseline and will be generated
 only when the canonical release pipeline is reviewed. No final source, package,
 or qualification identity is frozen by the development version.
@@ -426,8 +432,9 @@ release status, or hardware qualification. Application/browser adaptation remain
 owned and reviewed in WsprryPi.
 
 Runtime-owned routes can use the canonical operation lease through the
-[application reconciliation extension](runtime-output.md). Global output stays
-disabled; this does not add qualification or change the kernel ownership contract.
+[application reconciliation extension](runtime-output.md). Application output
+stays inhibited during reconciliation; this does not add qualification or
+change the kernel ownership contract.
 
 The canonical installer-facing entry point for this profile is
 `/usr/lib/rp1-gpclk-dkms/runtime_provider.py`. Its versioned JSON contract
@@ -441,7 +448,7 @@ socket, selected route, application restoration, and passive output state.
 `exact_ready` is unavailable unless the active route is singular and aligned,
 the application restoration is terminal and safe, both endpoints and the socket
 are attributable, the consumer endpoint is closed, and passive UAPI state proves
-`live_output=0`, no owner or lease, no authorization, and stable clock/GPIO/DMA
+`output_inhibit=0`, no owner or lease, operational resource readiness, and stable clock/GPIO/DMA
 quiescence. Unknown or mixed identity fails closed.
 
 The facade composes the existing deployment and route-manager implementations;

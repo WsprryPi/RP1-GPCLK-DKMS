@@ -133,7 +133,7 @@ case "$field" in name) echo rp1_gpclk_dkms;; version) echo 0.9.0;; vermagic) ech
 if [ "${1:-}" = -r ]; then rm -rf "$RP1_GPCLK_DEVELOPMENT_ROOT/sys/module/rp1_gpclk_dkms"; exit 0; fi
 mkdir -p "$RP1_GPCLK_DEVELOPMENT_ROOT/sys/module/rp1_gpclk_dkms/parameters"
 echo 0.9.0 >"$RP1_GPCLK_DEVELOPMENT_ROOT/sys/module/rp1_gpclk_dkms/version"
-case "$2" in live_output=1) echo Y;; *) echo N;; esac >"$RP1_GPCLK_DEVELOPMENT_ROOT/sys/module/rp1_gpclk_dkms/parameters/live_output"
+case "$2" in output_inhibit=1) echo Y;; *) echo N;; esac >"$RP1_GPCLK_DEVELOPMENT_ROOT/sys/module/rp1_gpclk_dkms/parameters/output_inhibit"
 ''')
         environment={**os.environ,"RP1_GPCLK_DEVELOPMENT_ROOT":str(fake_root),"RP1_GPCLK_DEVELOPMENT_TEST_ROOT":"1","RP1_TEST_KERNEL":kernel,
             "RP1_GPCLK_TOOL_DKMS":str(tools/"dkms"),"RP1_GPCLK_TOOL_MODINFO":str(tools/"modinfo"),
@@ -141,17 +141,17 @@ case "$2" in live_output=1) echo Y;; *) echo N;; esac >"$RP1_GPCLK_DEVELOPMENT_R
 
         def neutral(name, *extra):
             return command(str(source/"scripts/development-install"), "--source", str(source), "--kernel", kernel,
-                "--route-neutral", "--live-output", "0", "--install",
+                "--route-neutral", "--output-inhibit", "1", "--install",
                 "--evidence-directory", str(base/name), *extra, cwd=source, env=environment)
 
-        live = command(str(source/"scripts/development-install"), "--source", str(source), "--kernel", kernel,
-            "--route-neutral", "--live-output", "1", "--install",
-            "--evidence-directory", str(base/"neutral-live"), cwd=source, env=environment)
-        assert live.returncode == 2 and "live_output=0" in live.stderr and not (base/"neutral-live").exists()
+        capable = command(str(source/"scripts/development-install"), "--source", str(source), "--kernel", kernel,
+            "--route-neutral", "--output-inhibit", "0", "--install",
+            "--evidence-directory", str(base/"neutral-capable"), cwd=source, env=environment)
+        assert capable.returncode == 2 and "output_inhibit=1" in capable.stderr and not (base/"neutral-capable").exists()
         loaded = neutral("neutral-load", "--load")
         assert loaded.returncode == 2 and "cannot load" in loaded.stderr and not (base/"neutral-load").exists()
         both = command(str(source/"scripts/development-install"), "--source", str(source), "--kernel", kernel,
-            "--route-neutral", "--route", "gpio4", "--live-output", "0",
+            "--route-neutral", "--route", "gpio4", "--output-inhibit", "1",
             "--evidence-directory", str(base/"neutral-both"), cwd=source, env=environment)
         assert both.returncode == 2 and not (base/"neutral-both").exists()
 
@@ -202,7 +202,7 @@ case "$2" in live_output=1) echo Y;; *) echo N;; esac >"$RP1_GPCLK_DEVELOPMENT_R
         assert neutral_result.returncode == 0, neutral_result.stderr
         neutral_manifest = json.loads((neutral_evidence/"rendered-source/DEVELOPMENT_MANIFEST.json").read_text())
         assert neutral_manifest["route"] is None and neutral_manifest["installationMode"] == "route-neutral"
-        assert neutral_manifest["parameters"]["live_output"] == 0
+        assert neutral_manifest["parameters"]["output_inhibit"] == 1
         assert neutral_manifest["installedModule"]["kernel"] == kernel
         assert neutral_manifest["routeNeutralSafety"] == {
             "before": {"activeRoutes": [], "configuredRoutes": [], "endpointPresent": False,
@@ -218,12 +218,12 @@ case "$2" in live_output=1) echo Y;; *) echo N;; esac >"$RP1_GPCLK_DEVELOPMENT_R
         assert not (fake_root/"sys/module/rp1_gpclk_dkms").exists()
 
         evidence=base/"evidence"
-        result=command(str(source/"scripts/development-install"),"--source",str(source),"--kernel",kernel,"--route","gpio4","--live-output","0","--load","--evidence-directory",str(evidence),cwd=source,env=environment)
+        result=command(str(source/"scripts/development-install"),"--source",str(source),"--kernel",kernel,"--route","gpio4","--output-inhibit","1","--load","--evidence-directory",str(evidence),cwd=source,env=environment)
         assert result.returncode==0,result.stderr
         manifest=evidence/"rendered-source/DEVELOPMENT_MANIFEST.json"; value=json.loads(manifest.read_text())
-        assert value["developmentState"]=="development-loaded" and value["installedModule"]["moduleName"]=="rp1_gpclk_dkms"
+        assert value["developmentState"]=="development-output-inhibited" and value["installedModule"]["moduleName"]=="rp1_gpclk_dkms"
         replacement=base/"replacement-evidence"
-        replaced=command(str(source/"scripts/development-install"),"--source",str(source),"--kernel",kernel,"--route","gpio4","--live-output","0","--load","--evidence-directory",str(replacement),cwd=source,env=environment)
+        replaced=command(str(source/"scripts/development-install"),"--source",str(source),"--kernel",kernel,"--route","gpio4","--output-inhibit","1","--load","--evidence-directory",str(replacement),cwd=source,env=environment)
         assert replaced.returncode==0,replaced.stderr
         assert (replacement/"dkms-remove.log").is_file() and (replacement/"module-unload-for-replace.log").is_file()
         backup = json.loads((replacement/"ROLLBACK.json").read_text())
@@ -236,7 +236,7 @@ case "$2" in live_output=1) echo Y;; *) echo N;; esac >"$RP1_GPCLK_DEVELOPMENT_R
         manifest=replacement/"rendered-source/DEVELOPMENT_MANIFEST.json"
         assert (replacement.stat().st_mode & 0o777)==0o755
         status=command(str(source/"scripts/development-status"),"--manifest",str(manifest),"--json",env=environment)
-        assert status.returncode==0 and json.loads(status.stdout)["developmentState"]=="development-loaded"
+        assert status.returncode==0 and json.loads(status.stdout)["developmentState"]=="development-output-inhibited"
         enrolled=command(str(source/"scripts/development-enroll"),"--manifest",str(manifest),"--route","gpio4","--kernel",kernel,env=environment)
         assert enrolled.returncode==0,enrolled.stderr
         enrollment=json.loads(enrolled.stdout)

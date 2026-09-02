@@ -34,7 +34,7 @@ struct gate_d_busy_result {
 	bool acquired;
 	bool released;
 	bool closed;
-	bool live_eligible;
+	bool output_inhibited;
 	uint64_t lease_id;
 	unsigned int elapsed_seconds;
 };

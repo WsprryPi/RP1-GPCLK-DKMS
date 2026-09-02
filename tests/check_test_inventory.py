@@ -13,7 +13,8 @@ RUNNERS = (
 
 # This validator requires an externally supplied module and kernel identity.
 PARAMETERIZED_UTILITIES = {"check_built_module.py"}
-TARGET_ONLY_C_CLIENTS = {"development_tone_client.c"}
+TARGET_ONLY_C_CLIENTS = {"development_fault_client.c",
+                         "development_tone_client.c"}
 TARGET_ONLY_CPP_CLIENTS = {"development_frequency_sweep.cpp"}
 
 checks = {path.name for path in TESTS.glob("check_*.py")}

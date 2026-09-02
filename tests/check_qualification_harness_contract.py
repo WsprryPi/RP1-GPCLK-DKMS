@@ -8,23 +8,23 @@ ROOT = Path(__file__).resolve().parents[1]
 contract = (ROOT / "docs/contracts/qualification-harness-integration.md").read_text()
 plain = contract.replace("`", "")
 
-for mode in ("WSPR", "TONE", "QRSS", "FSKCW", "DFCW"):
+for mode in ("WSPR", "QRSS", "FSKCW", "DFCW"):
     assert mode in plain
 for label in ("externally consumable", "hardware-free exercised",
               "live-plan ready", "not ready", "not applicable"):
     assert label in plain
 for state in ("requested", "persisted", "configured", "active-overlay",
-              "module-reported", "reconciled", "live-eligible"):
+              "module-reported", "reconciled", "operationalReady"):
     assert state in plain
 for boundary in ("fixture blockage", "semantic validator", "exactly one",
                  "immutable", "terminal-silence", "REQUIRED-BEFORE-LIVE"):
     assert boundary in plain
 for route_id in (
-    "v0.9.0-pi5-gpio4",
-    "v0.9.0-pi5-gpio20",
+    "v0.9.0-rp1-gpio4",
+    "v0.9.0-rp1-gpio20",
 ):
     assert route_id in (ROOT / "docs/contracts/development-identity.md").read_text()
-for prohibited in ("/dev/mem", "automatic fallback", "continuous TONE"):
+for prohibited in ("/dev/mem", "automatic fallback", "generic event"):
     assert prohibited in plain
 
 assert "does not authorize target execution" in plain

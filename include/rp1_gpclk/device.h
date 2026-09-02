@@ -17,6 +17,9 @@ struct rp1_gpclk_device {
 	struct device *dev;
 	struct kref refcount;
 	struct mutex lock;
+	/* Serializes cancellation with the last check before a DMA chunk is
+	 * activated. This cannot be lock because UAPI cancellation holds lock. */
+	struct mutex execution_commit_lock;
 	bool dead;
 	bool misc_registered;
 	bool endpoint_claimed;
@@ -44,6 +47,7 @@ struct rp1_gpclk_device {
 	struct completion execution_done;
 	atomic_t stop_requested;
 	__u32 stop_reason;
+	__u32 execution_failure_reason;
 	__u64 execution_owner;
 	__u64 execution_lease;
 	__u64 execution_generation;
@@ -56,10 +60,7 @@ struct rp1_gpclk_device {
 	bool clock_enabled;
 	bool parent_selected;
 	bool pins_active_selected;
-	bool live_eligible;
-	__u64 operation_live_owner;
-	__u64 operation_live_lease;
-	__u8 operation_live_digest[RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE];
+	bool operational_ready;
 	bool tick_state_captured;
 	unsigned long initial_rate;
 	int clock_cleanup_error;
@@ -77,8 +78,6 @@ struct rp1_gpclk_device {
 struct rp1_gpclk_file {
 	struct rp1_gpclk_device *device;
 	__u64 owner;
-	__u64 operation_live_lease;
-	__u8 operation_live_digest[RP1_GPCLK_OPERATION_AUTHORIZATION_DIGEST_SIZE];
 };
 
 #endif /* RP1_GPCLK_DEVICE_H */

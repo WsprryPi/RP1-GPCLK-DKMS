@@ -2,129 +2,128 @@
 
 # RP1 GPCLK userspace interface
 
-## Authority and identity
+## Authority and scope
 
-The canonical endpoint is `/dev/rp1-gpclk`. The byte-authoritative interface
-is `include/uapi/linux/rp1_gpclk.h`; `uapi-identity.json` records its exact
-SHA-256 digest. This repository has no released transmission interface and
-therefore carries no legacy layouts, compatibility commands, version
-negotiation, or fallback behavior. The module, consumers, diagnostics, tests,
-and exact-header digest must change together whenever this interface changes.
+The canonical endpoint is `/dev/rp1-gpclk`. It is owned by root with mode
+`0600`; possession of an open descriptor is the production execution
+authority. The kernel does not interpret product modes, application policy,
+operator acknowledgements, or authorization digests. Non-root access requires
+a separately reviewed change to the endpoint ownership boundary.
 
-The interface exposes bounded GPCLK operations only. It never exposes physical
-addresses, DMA channels, register offsets, arbitrary divider programs, or
-route-changing operations.
+The byte-authoritative interface is `include/uapi/linux/rp1_gpclk.h` and
+`uapi-identity.json` records its exact SHA-256 digest. The current interface is
+unreleased and has no legacy layouts, negotiation, or fallback behavior. The
+module, consumers, diagnostics, tests, and identity digest change together.
+
+The interface exposes a bounded sequence of generic clock events. It never
+exposes physical addresses, DMA channels, register offsets, arbitrary register
+writes, route mutation, or an unbounded program.
 
 ## Common validation
 
-Every request supplies the exact structure `size`, a zero header `reserved`
-field, zero header `flags`, and zero structure-specific reserved fields.
-Unknown commands, flags, enum values, routes, modes, capability bits, nonzero
-reserved bytes, malformed sizes, or non-NUL-terminated identity strings fail
-closed. Output structures are zero-initialized before fields are filled.
+Every request supplies the exact structure `size`, zero header flags and
+reserved fields, and zero structure-specific reserved fields. Unknown commands,
+flags, enum values, routes, capabilities, malformed sizes, nonzero reserved
+bytes, or unterminated identity strings fail closed. Output structures are
+zero-initialized before fields are populated.
 
-Counts and duration sums use checked arithmetic before allocation or copy.
-User pointers are copied once into bounded kernel-owned storage and are never
-retained. A nonzero `lease_id` belongs to one open file. Generations are
-nonzero, strictly increase within that lease, and are rejected when stale or
-associated with another lease.
+Counts, pointer ranges, and duration sums use checked arithmetic. User arrays
+are copied once into bounded kernel-owned plan storage and user pointers are
+never retained. One open file may own one nonzero lease. Generations are
+nonzero, strictly increase within a lease, and are rejected when stale or held
+by another file.
 
 ## Operations
 
 | Command | Contract |
 | --- | --- |
-| `RP1_GPCLK_IOC_QUERY` | Reports the active route, compatibility state and reason, capability limits, duration limits, and exact module/build/compatibility identities. It never selects a route. |
-| `RP1_GPCLK_IOC_ACQUIRE` | Acquires one exclusive lease for the exact route and required capabilities. Optional operation-scoped live authorization requires `RP1_GPCLK_ACQUIRE_F_AUTHORIZE_LIVE`, `RP1_GPCLK_CAP_LIVE_ELIGIBLE`, `RP1_GPCLK_CAP_OPERATION_LIVE_GATE`, and a nonzero 32-byte authorization digest. |
-| `RP1_GPCLK_IOC_SUBMIT_WSPR` | Submits exactly four tones and 162 `WSPR` symbol indexes with bounded pacing and duration. |
-| `RP1_GPCLK_IOC_SUBMIT_EVENTS` | Submits bounded `QRSS`, `FSKCW`, or `DFCW` events. |
-| `RP1_GPCLK_IOC_SUBMIT_TONE` | Submits one continuous or finite tone. |
-| `RP1_GPCLK_IOC_STOP` | Prevents a successor and starts generation-specific bounded drain and cleanup. |
+| `RP1_GPCLK_IOC_QUERY` | Reports route, compatibility, generic capabilities and limits, DMA chunk duration, and exact identities. It never selects a route. |
+| `RP1_GPCLK_IOC_ACQUIRE` | Acquires one exclusive lease for the exact route and required generic capabilities. |
+| `RP1_GPCLK_IOC_SUBMIT_EVENTS` | Submits a finite generic event sequence under one lease and generation. |
+| `RP1_GPCLK_IOC_STOP` | Rejects every successor and begins generation-specific bounded drain and cleanup. |
 | `RP1_GPCLK_IOC_GET_STATE` | Returns lease-scoped state without changing it. |
-| `RP1_GPCLK_IOC_RELEASE` | Releases an idle lease when `generation` is zero, or stops, drains, and releases the named generation. |
-| `RP1_GPCLK_IOC_GET_SNAPSHOT` | Returns one coherent passive, non-owning observation without disclosing owner or lease tokens. |
+| `RP1_GPCLK_IOC_RELEASE` | Releases an idle lease, or stops, drains, and releases the named generation. |
+| `RP1_GPCLK_IOC_GET_SNAPSHOT` | Returns one coherent passive, non-owning observation without exposing owner or lease tokens. |
 
-`QUERY.capabilities` describes implemented operations. The
-`RP1_GPCLK_CAP_LIVE_ELIGIBLE` bit appears only when the recognized route
-identity and current runtime checks permit a live attempt. Capability presence
-does not itself authorize installation, loading, GPIO output, transmission, or
-RF activity.
+An acquired lease has generation zero until its first successful submission.
+`RELEASE` with generation zero releases only that never-submitted idle lease; it
+cannot release a lease that has retained or active generation state. After a
+submission, callers name the exact returned generation.
 
-## Acquisition and live authorization
+Capabilities describe implemented mechanics: event submission, stop/drain,
+stable state, route and compatibility identity, cleanup-fault latching,
+load-time output inhibition, passive snapshot, and bounded DMA chunks. They are
+not product-mode permissions or qualification claims.
 
-Clock-disabled ownership uses zero `authorization_flags`, a zero authorization
-digest, and no live-gate capability requirement. It can inspect and serialize
-the endpoint but cannot authorize output.
+## Output inhibition
 
-Operation-scoped live acquisition requires the exact active route, current
-`Experimental` eligibility, both live-gate capabilities, the single authorize
-flag, and a nonzero digest. The digest binds an application-reviewed request
-and plan identity; the kernel does not interpret its contents or treat nonzero
-bytes as operator authority. Endpoint permissions, application policy,
-compatibility enrollment, physical topology, and operator authorization remain
-separate requirements.
-
-A successful authorized acquire binds output authorization to its owner and
-lease. Submission verifies that binding. Release, owner close, copyout failure,
-provider removal, and teardown revoke it. A later lease requires a fresh
-authorization. The immutable module-load output gate is a separate current
-development path and never bypasses route, resource, ownership, or cleanup
-checks.
+`output_inhibit` is an immutable load-time administrative switch. Its default
+is `0`, the production model in which the root-only endpoint can execute valid
+requests. `output_inhibit=1` is reserved for clock-disabled development and
+lifecycle tests: query, acquire, snapshot, stop, release, bind, unbind, and
+cleanup remain testable, while every submission is rejected before output
+setup. The switch cannot be changed after load and cannot bypass route,
+resource, ownership, duration, cancellation, or cleanup checks.
 
 ## Tone and event representation
 
 Each tone contains adjacent unsigned Q16 divider values and two nonzero dither
-counts. Their checked sum cannot exceed
-`RP1_GPCLK_DITHER_PERIOD_MAX`; the upper divider equals the lower divider plus
-one. Provider and resource validation further restrict divider acceptance.
+counts. Their checked sum cannot exceed `RP1_GPCLK_DITHER_PERIOD_MAX`; the upper
+divider equals the lower divider plus one. Provider and resource validation
+further restrict divider acceptance.
 
-`SUBMIT_WSPR` requires four tones, 162 one-byte symbols, 16 fractional bits,
-tick divider 511, and a nonzero `writes_per_symbol` no greater than 66,792.
-Every symbol is below `tone_count`; every tone count sum equals
-`writes_per_symbol`; and the expected duration is within the request limit.
+`SUBMIT_EVENTS` accepts 1 through 64 tones and 1 through 512 events. Every
+event has a nonzero duration. `RP1_GPCLK_EVENT_F_OUTPUT_ENABLED` is the only
+event flag. Enabled events name a valid tone; disabled events ignore the tone
+index and create a quiescent gap. The checked event-duration sum must equal
+`total_duration_ns` and cannot exceed signed 64-bit nanoseconds. The interface
+contains no WSPR, QRSS, FSKCW, DFCW, carrier, band, or scheduling semantics;
+userspace translates those policies into generic finite events.
 
-`SUBMIT_EVENTS` accepts 1–4 tones and 1–512 events for `QRSS`, `FSKCW`, or
-`DFCW`. Each event has a bounded nonzero duration and only
-`RP1_GPCLK_EVENT_F_OUTPUT_ENABLED` may be set. Enabled events name a valid tone;
-disabled events ignore the tone index. The checked event-duration sum equals
-`total_duration_ns` and stays within the request limit.
+The logical request is not materialized as one duration-sized DMA program.
+Execution advances through fixed coherent storage holding at most one
+one-second DMA chunk. Divider-write remainders and per-tone dither accumulators
+carry across chunk boundaries so chunking does not change aggregate timing or
+dither distribution. Disabled gaps reset the duration-conversion remainder.
+Consequently a 20-minute event remains one lease and generation while coherent
+memory stays constant with respect to duration.
 
-`SUBMIT_TONE` accepts one inline tone. `CONTINUOUS` requires
-`duration_ns == 0` and runs until an explicit stop, release, owner close,
-provider removal, or failure. Kernel-bounded DMA chunks bound cancellation and
-do not create an operator-visible duration. `FINITE` requires 1,000,000 through
-120,000,000,000 ns inclusive and completes automatically after cleanup.
-
-## State, drain, cleanup, and release
+## Cancellation, state, and cleanup
 
 The observable progression is `IDLE` to `RUNNING`, optionally `DRAINING`, then
-`COMPLETE` or `FAILED`. `DEAD` means the provider is removed or permanently
+`COMPLETE` or `FAILED`. `DEAD` means the provider was removed or is permanently
 unavailable. Terminal states retain one stable terminal reason. A cleanup
 failure latches `FAILED` with `CLEANUP_FAILED` and prevents further use.
 
-`STOP` is generation-specific. It prevents successors, drains only the current
-kernel-bounded descriptor, disables pacing and output, restores safe pinctrl
-and clock state, verifies cleanup, and then publishes the terminal state.
-`GET_STATE` never changes state. `RELEASE` with a nonzero generation follows
-the same stop-and-drain path before relinquishing the lease; a zero generation
-releases only an idle or terminal lease. Owner close converges on the same
-bounded cleanup rules.
+`STOP` is generation-specific. It prevents a successor immediately, lets at
+most the current fixed chunk drain, disables pacing and output, restores safe
+pinctrl and clock state, verifies cleanup, and publishes terminal state.
+Cancellation latency is therefore bounded by the one-second chunk plus bounded
+cleanup and scheduling allowance, independent of the logical request duration.
+Cancellation and the worker's final check-and-issue boundary are serialized. A
+chunk committed before `STOP` obtains that boundary is the one permitted drain;
+after `STOP` returns, no later chunk can be issued.
+The post-event divider readback uses the same cancellation commit boundary and
+explicitly starts its separately configured DMA descriptor. Cancellation that
+commits first suppresses readback issue and proceeds directly to cleanup.
+Release, owner close, unbind, provider removal, and module teardown converge on
+the same no-successor and bounded-drain rules. A DMA deadline remains failure
+even if cancellation was also requested.
 
 ## Passive snapshot
 
-`GET_SNAPSHOT` does not acquire ownership, allocate or return a lease token,
-advance a generation, submit work, change output state, or clear retained
-terminal state. It returns one mutex-serialized observation of route and
-identity, compatibility, output eligibility, owner/lease presence, generation,
-operation state, terminal reason, current event, drain state, cleanup fault,
-timing, and resource quiescence.
+`GET_SNAPSHOT` does not acquire ownership, allocate a lease, advance a
+generation, submit work, change output state, or clear retained terminal state.
+It reports route and identities, compatibility, output inhibition, operational
+resource readiness, owner/lease presence, operation and terminal state, timing,
+drain state, cleanup fault, and resource quiescence.
 
-`current_event`, `elapsed_ns`, and `remaining_ns` are meaningful only when the
-corresponding `RP1_GPCLK_SNAPSHOT_F_*_VALID` bit is present. GPIO safety, clock
-quiescence, DMA quiescence, and related observations use `UNKNOWN`, `FALSE`,
-and `TRUE`. `stable == TRUE` requires idle or terminal state, completed worker
-and plan cleanup, no cleanup fault, and all three resource observations true.
-A snapshot describes one instant and is not proof of future state.
+Timing values are meaningful only with their corresponding snapshot-valid bit.
+Observations use `UNKNOWN`, `FALSE`, and `TRUE`. `stable == TRUE` requires idle
+or terminal state, completed worker and plan cleanup, no cleanup fault, and safe
+GPIO plus quiescent clock and DMA observations. A snapshot describes one instant
+and is not proof of future state.
 
-`GPIO4` and `GPIO20` remain separate administrative routes. Querying or acquiring
-one route never remuxes it, substitutes the other route, or transfers evidence
-or eligibility between them.
+`GPIO4` and `GPIO20` remain separate administrative routes. Querying or
+acquiring one route never remuxes it, substitutes another route, or transfers
+evidence between routes.

@@ -48,38 +48,17 @@ static void setup_events(struct rp1_gpclk_submit_events *request,
     memset(tones, 0, sizeof(*tones) * RP1_GPCLK_MAX_TONES);
     memset(events, 0, sizeof(*events) * count);
     request->header.size = sizeof(*request);
-    request->mode = RP1_GPCLK_MODE_QRSS;
     request->fractional_bits = RP1_GPCLK_FRACTIONAL_BITS;
     request->tick_divider = RP1_GPCLK_TICK_DIVIDER;
     request->tone_count = 1;
     request->event_count = count;
     request->drive_ma = RP1_GPCLK_DRIVE_MA_2;
-    request->total_duration_ns = count;
+    request->total_duration_ns = (__u64)count * RP1_GPCLK_EVENT_DURATION_NS_MIN;
     fill_tones(tones, 1, 2);
     for (index = 0; index < count; index++) {
-        events[index].duration_ns = 1;
+        events[index].duration_ns = RP1_GPCLK_EVENT_DURATION_NS_MIN;
         events[index].flags = RP1_GPCLK_EVENT_F_OUTPUT_ENABLED;
     }
-}
-
-static void setup_wspr(struct rp1_gpclk_submit_wspr *request,
-                       struct rp1_gpclk_tone *tones, unsigned char *symbols)
-{
-    __u32 index;
-
-    memset(request, 0, sizeof(*request));
-    memset(tones, 0, sizeof(*tones) * RP1_GPCLK_MAX_TONES);
-    request->header.size = sizeof(*request);
-    request->fractional_bits = RP1_GPCLK_FRACTIONAL_BITS;
-    request->tick_divider = RP1_GPCLK_TICK_DIVIDER;
-    request->writes_per_symbol = 2;
-    request->tone_count = RP1_GPCLK_MAX_TONES;
-    request->symbol_count = RP1_GPCLK_WSPR_SYMBOLS;
-    request->drive_ma = RP1_GPCLK_DRIVE_MA_4;
-    request->expected_frame_duration_ns = 1;
-    fill_tones(tones, RP1_GPCLK_MAX_TONES, 2);
-    for (index = 0; index < RP1_GPCLK_WSPR_SYMBOLS; index++)
-        symbols[index] = index % RP1_GPCLK_MAX_TONES;
 }
 
 static __u64 acquire(struct rp1_gpclk_core *core, __u64 owner)
@@ -209,55 +188,28 @@ static void test_validation(void)
 {
     struct rp1_gpclk_core core;
     struct rp1_gpclk_submit_events events_request;
-    struct rp1_gpclk_submit_wspr wspr_request;
     struct rp1_gpclk_tone tones[RP1_GPCLK_MAX_TONES];
     struct rp1_gpclk_event events[2];
-    unsigned char symbols[RP1_GPCLK_WSPR_SYMBOLS];
     struct rp1_gpclk_core before;
     __u64 lease;
 
     rp1_gpclk_core_init(&core);
     lease = acquire(&core, OWNER_A);
-    setup_wspr(&wspr_request, tones, symbols);
-    wspr_request.lease_id = lease;
-    symbols[161] = 4;
-    before = core;
-    CHECK(rp1_gpclk_core_submit_wspr(&core, OWNER_A, &wspr_request, tones,
-                                     symbols) == RP1_GPCLK_CORE_INVALID);
-    CHECK(memcmp(&before, &core, sizeof(core)) == 0);
-    symbols[161] = 0;
-    CHECK(rp1_gpclk_core_submit_wspr(&core, OWNER_A, &wspr_request, tones,
-                                     symbols) == RP1_GPCLK_CORE_OK);
-    CHECK(wspr_request.generation == 1);
-    while (core.value.state == RP1_GPCLK_STATE_RUNNING)
-        CHECK(rp1_gpclk_core_progress(&core, OWNER_A, lease,
-                                      wspr_request.generation) ==
-              RP1_GPCLK_CORE_OK);
-    CHECK(core.value.state == RP1_GPCLK_STATE_COMPLETE);
-    CHECK(core.value.terminal_reason == RP1_GPCLK_REASON_COMPLETE);
-    CHECK(core.value.terminal_publications == 1);
-    CHECK(core.value.plan_loaded == 0);
-    CHECK(core.value.plan_releases == 1);
-
     setup_events(&events_request, tones, events, 2);
     events_request.lease_id = lease;
-    events_request.mode = RP1_GPCLK_MODE_WSPR;
+    events[0].duration_ns = RP1_GPCLK_EVENT_DURATION_NS_MAX;
+    events_request.total_duration_ns = RP1_GPCLK_EVENT_DURATION_NS_MAX;
     before = core;
     CHECK(rp1_gpclk_core_submit_events(&core, OWNER_A, &events_request, tones,
                                        events) == RP1_GPCLK_CORE_INVALID);
     CHECK(memcmp(&before, &core, sizeof(core)) == 0);
-    events_request.mode = RP1_GPCLK_MODE_DFCW;
-    events[0].duration_ns = RP1_GPCLK_EVENT_DURATION_NS_MAX;
-    events[1].duration_ns = 1;
-    events_request.total_duration_ns =
-        RP1_GPCLK_EVENT_DURATION_NS_MAX + 1;
-    CHECK(rp1_gpclk_core_submit_events(&core, OWNER_A, &events_request, tones,
-                                       events) == RP1_GPCLK_CORE_INVALID);
-    events[0].duration_ns = 1;
-    events_request.total_duration_ns = 2;
+    events[0].duration_ns = 1200000000000ULL;
+    events[1].duration_ns = RP1_GPCLK_EVENT_DURATION_NS_MIN;
+    events_request.total_duration_ns = events[0].duration_ns +
+        events[1].duration_ns;
     CHECK(rp1_gpclk_core_submit_events(&core, OWNER_A, &events_request, tones,
                                        events) == RP1_GPCLK_CORE_OK);
-    CHECK(events_request.generation == 2);
+    CHECK(events_request.generation == 1);
 }
 
 static void test_validation_matrix(void)
@@ -265,10 +217,8 @@ static void test_validation_matrix(void)
     struct rp1_gpclk_core core;
     struct rp1_gpclk_core before;
     struct rp1_gpclk_submit_events request;
-    struct rp1_gpclk_submit_wspr wspr;
     struct rp1_gpclk_tone tones[RP1_GPCLK_MAX_TONES];
     struct rp1_gpclk_event events[2];
-    unsigned char symbols[RP1_GPCLK_WSPR_SYMBOLS];
     __u64 lease;
 
     rp1_gpclk_core_init(&core);
@@ -290,9 +240,10 @@ static void test_validation_matrix(void)
     EXPECT_EVENT_INVALID(request.header.reserved++);
     EXPECT_EVENT_INVALID(request.header.flags = 1);
     EXPECT_EVENT_INVALID(request.reserved0 = 1);
+    EXPECT_EVENT_INVALID(request.reserved1 = 1);
+    EXPECT_EVENT_INVALID(request.reserved2 = 1);
     EXPECT_EVENT_INVALID(request.reserved[3] = 1);
     EXPECT_EVENT_INVALID(request.generation = 1);
-    EXPECT_EVENT_INVALID(request.mode = RP1_GPCLK_MODE_WSPR);
     EXPECT_EVENT_INVALID(request.fractional_bits--);
     EXPECT_EVENT_INVALID(request.tick_divider--);
     EXPECT_EVENT_INVALID(request.event_count = 0);
@@ -303,37 +254,10 @@ static void test_validation_matrix(void)
     EXPECT_EVENT_INVALID(events[0].flags = 2);
     EXPECT_EVENT_INVALID(events[0].tone_index = 1);
     EXPECT_EVENT_INVALID(events[0].duration_ns = 0);
+    EXPECT_EVENT_INVALID(events[0].flags = 0; events[0].tone_index = 1);
     EXPECT_EVENT_INVALID(request.total_duration_ns++);
 
 #undef EXPECT_EVENT_INVALID
-
-#define EXPECT_WSPR_INVALID(change)                                           \
-    do {                                                                      \
-        setup_wspr(&wspr, tones, symbols);                                    \
-        wspr.lease_id = lease;                                                \
-        change;                                                               \
-        before = core;                                                        \
-        CHECK(rp1_gpclk_core_submit_wspr(&core, OWNER_A, &wspr, tones,        \
-                                         symbols) ==                          \
-              RP1_GPCLK_CORE_INVALID);                                        \
-        CHECK(memcmp(&before, &core, sizeof(core)) == 0);                     \
-    } while (0)
-
-    EXPECT_WSPR_INVALID(wspr.header.flags = 1);
-    EXPECT_WSPR_INVALID(wspr.reserved1 = 1);
-    EXPECT_WSPR_INVALID(wspr.reserved[0] = 1);
-    EXPECT_WSPR_INVALID(wspr.generation = 1);
-    EXPECT_WSPR_INVALID(wspr.writes_per_symbol = 0);
-    EXPECT_WSPR_INVALID(wspr.writes_per_symbol =
-                            RP1_GPCLK_WSPR_WRITES_PER_SYMBOL_MAX + 1);
-    EXPECT_WSPR_INVALID(wspr.tone_count--);
-    EXPECT_WSPR_INVALID(wspr.symbol_count--);
-    EXPECT_WSPR_INVALID(wspr.expected_frame_duration_ns = 0);
-    EXPECT_WSPR_INVALID(wspr.expected_frame_duration_ns =
-                            RP1_GPCLK_REQUEST_DURATION_NS_MAX + 1);
-    EXPECT_WSPR_INVALID(symbols[0] = RP1_GPCLK_MAX_TONES);
-
-#undef EXPECT_WSPR_INVALID
 }
 
 static void test_stop_and_exactly_one(void)
@@ -517,10 +441,8 @@ static void test_limit_boundaries(void)
 {
     struct rp1_gpclk_core core;
     struct rp1_gpclk_submit_events request;
-    struct rp1_gpclk_submit_wspr wspr;
     struct rp1_gpclk_tone tones[RP1_GPCLK_MAX_TONES];
     struct rp1_gpclk_event events[RP1_GPCLK_MAX_EVENTS];
-    unsigned char symbols[RP1_GPCLK_WSPR_SYMBOLS];
     struct rp1_gpclk_core before;
     __u64 lease;
     __u64 generation;
@@ -557,16 +479,6 @@ static void test_limit_boundaries(void)
     CHECK(rp1_gpclk_core_progress(&core, OWNER_A, lease,
                                   request.generation) == RP1_GPCLK_CORE_OK);
 
-    setup_wspr(&wspr, tones, symbols);
-    wspr.lease_id = lease;
-    wspr.writes_per_symbol = RP1_GPCLK_WSPR_WRITES_PER_SYMBOL_MAX;
-    wspr.expected_frame_duration_ns = RP1_GPCLK_REQUEST_DURATION_NS_MAX;
-    fill_tones(tones, RP1_GPCLK_MAX_TONES,
-               RP1_GPCLK_WSPR_WRITES_PER_SYMBOL_MAX);
-    CHECK(rp1_gpclk_core_submit_wspr(&core, OWNER_A, &wspr, tones, symbols) ==
-          RP1_GPCLK_CORE_OK);
-    CHECK(core.value.total_units == RP1_GPCLK_WSPR_SYMBOLS);
-    CHECK(core.value.plan_loaded == 1);
 }
 
 static void test_terminal_precedence_and_dead(void)
@@ -733,110 +645,6 @@ static void test_fault_points(void)
     }
 }
 
-static void setup_tone(struct rp1_gpclk_submit_tone *request,
-		       __u64 lease, __u32 operation, __u64 duration_ns)
-{
-	memset(request, 0, sizeof(*request));
-	request->header.size = sizeof(*request);
-	request->lease_id = lease;
-	request->operation = operation;
-	request->expected_route = RP1_GPCLK_ROUTE_GPIO4;
-	request->fractional_bits = RP1_GPCLK_FRACTIONAL_BITS;
-	request->tick_divider = RP1_GPCLK_TICK_DIVIDER;
-	request->drive_ma = RP1_GPCLK_DRIVE_MA_2;
-	request->duration_ns = duration_ns;
-	fill_tones(&request->tone, 1, 2);
-}
-
-static void test_tone_continuous_lifecycle(void)
-{
-	struct rp1_gpclk_submit_tone request;
-	struct rp1_gpclk_core core;
-	__u64 lease;
-
-	rp1_gpclk_core_init(&core);
-	lease = acquire(&core, OWNER_A);
-	setup_tone(&request, lease, RP1_GPCLK_TONE_OPERATION_CONTINUOUS, 0);
-	CHECK(rp1_gpclk_core_submit_tone(&core, OWNER_A, &request) ==
-	      RP1_GPCLK_CORE_OK);
-	CHECK(request.generation == 1);
-	CHECK(core.value.state == RP1_GPCLK_STATE_RUNNING);
-	CHECK(core.value.completed_units == 0);
-	CHECK(core.value.total_units == 1);
-	CHECK(rp1_gpclk_core_release(&core, OWNER_A, lease) ==
-	      RP1_GPCLK_CORE_BUSY);
-	CHECK(rp1_gpclk_core_stop(&core, OWNER_A, lease, request.generation) ==
-	      RP1_GPCLK_CORE_OK);
-	CHECK(core.value.state == RP1_GPCLK_STATE_DRAINING);
-	CHECK(rp1_gpclk_core_progress(&core, OWNER_A, lease,
-				      request.generation) == RP1_GPCLK_CORE_OK);
-	CHECK(core.value.state == RP1_GPCLK_STATE_COMPLETE);
-	CHECK(core.value.terminal_reason == RP1_GPCLK_REASON_STOPPED);
-}
-
-static void test_tone_finite_boundaries_and_completion(void)
-{
-	struct rp1_gpclk_submit_tone request;
-	struct rp1_gpclk_core core;
-	struct rp1_gpclk_core before;
-	__u64 lease;
-
-	rp1_gpclk_core_init(&core);
-	lease = acquire(&core, OWNER_A);
-	setup_tone(&request, lease, RP1_GPCLK_TONE_OPERATION_FINITE, 0);
-	before = core;
-	CHECK(rp1_gpclk_core_submit_tone(&core, OWNER_A, &request) ==
-	      RP1_GPCLK_CORE_INVALID);
-	CHECK(memcmp(&before, &core, sizeof(core)) == 0);
-	setup_tone(&request, lease, RP1_GPCLK_TONE_OPERATION_FINITE,
-		   RP1_GPCLK_TONE_DURATION_NS_MAX + 1);
-	CHECK(rp1_gpclk_core_submit_tone(&core, OWNER_A, &request) ==
-	      RP1_GPCLK_CORE_INVALID);
-	setup_tone(&request, lease, RP1_GPCLK_TONE_OPERATION_CONTINUOUS, 1);
-	CHECK(rp1_gpclk_core_submit_tone(&core, OWNER_A, &request) ==
-	      RP1_GPCLK_CORE_INVALID);
-	setup_tone(&request, lease, RP1_GPCLK_TONE_OPERATION_FINITE,
-		   RP1_GPCLK_TONE_DURATION_NS_MIN);
-	CHECK(rp1_gpclk_core_submit_tone(&core, OWNER_A, &request) ==
-	      RP1_GPCLK_CORE_OK);
-	CHECK(rp1_gpclk_core_progress(&core, OWNER_A, lease,
-				      request.generation) == RP1_GPCLK_CORE_OK);
-	CHECK(core.value.state == RP1_GPCLK_STATE_COMPLETE);
-	CHECK(core.value.terminal_reason == RP1_GPCLK_REASON_COMPLETE);
-}
-
-static void test_tone_fail_closed_matrix(void)
-{
-	struct rp1_gpclk_submit_tone request;
-	struct rp1_gpclk_core core;
-	struct rp1_gpclk_core before;
-	__u64 lease;
-
-	rp1_gpclk_core_init(&core);
-	lease = acquire(&core, OWNER_A);
-#define EXPECT_TONE_INVALID(change) do { \
-	setup_tone(&request, lease, RP1_GPCLK_TONE_OPERATION_FINITE, 1000000000ULL); \
-	change; before = core; \
-	CHECK(rp1_gpclk_core_submit_tone(&core, OWNER_A, &request) == RP1_GPCLK_CORE_INVALID); \
-	CHECK(memcmp(&before, &core, sizeof(core)) == 0); \
-} while (0)
-	EXPECT_TONE_INVALID(request.header.size--);
-	EXPECT_TONE_INVALID(request.header.reserved = 1);
-	EXPECT_TONE_INVALID(request.header.flags = 1);
-	EXPECT_TONE_INVALID(request.operation = RP1_GPCLK_TONE_OPERATION_INVALID);
-	EXPECT_TONE_INVALID(request.expected_route = RP1_GPCLK_ROUTE_GPIO20);
-	EXPECT_TONE_INVALID(request.drive_ma = 3);
-	EXPECT_TONE_INVALID(request.reserved0 = 1);
-	EXPECT_TONE_INVALID(request.reserved[0] = 1);
-	EXPECT_TONE_INVALID(request.generation = 1);
-	EXPECT_TONE_INVALID(request.tone.upper_divider_q16++);
-#undef EXPECT_TONE_INVALID
-	setup_tone(&request, lease + 1, RP1_GPCLK_TONE_OPERATION_FINITE,
-		   1000000000ULL);
-	CHECK(rp1_gpclk_core_submit_tone(&core, OWNER_A, &request) ==
-	      RP1_GPCLK_CORE_STALE);
-}
-
 int main(void)
 {
     RUN(test_initial_and_acquire);
@@ -858,9 +666,6 @@ int main(void)
     RUN(test_failure_reason_matrix);
     RUN(test_central_terminal_guard);
     RUN(test_fault_points);
-    RUN(test_tone_continuous_lifecycle);
-    RUN(test_tone_finite_boundaries_and_completion);
-    RUN(test_tone_fail_closed_matrix);
     printf("lifecycle core: PASS (%u groups)\n", tests_run);
     return 0;
 }

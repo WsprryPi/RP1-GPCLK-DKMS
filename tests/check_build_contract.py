@@ -49,6 +49,10 @@ if missing:
     raise SystemExit("missing DKMS settings: " + ", ".join(missing))
 if "obj-m += rp1_gpclk_dkms.o" not in kbuild:
     raise SystemExit("Kbuild module identity differs from DKMS")
+for token in ("ifneq ($(strip $(RP1_TARGET_FAULT_STAGE)),)",
+              "-DRP1_GPCLK_TARGET_FAULT_STAGE=$(RP1_TARGET_FAULT_STAGE)"):
+    if token not in kbuild:
+        raise SystemExit("target fault build is not explicit and compile-time only")
 kbuild_objects = set(re.findall(r"src/([a-z0-9_]+)\.o", kbuild))
 source_objects = {path.stem for path in (ROOT / "src").glob("*.c")}
 if kbuild_objects != source_objects:

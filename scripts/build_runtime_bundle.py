@@ -5,14 +5,14 @@ import argparse
 import json
 from pathlib import Path
 from build_runtime_binding import build, module_payload, ROOT
-from runtime_controller_admin import digest, KERNEL
+from runtime_controller_admin import digest
 from runtime_layout import INVENTORY
 from build_runtime_controller import generate
 
 
-def bundle(modules, output, application_companion):
+def bundle(modules, output, application_companion, kernel=None):
     generate(ROOT / "build/runtime-controller")
-    binding = build(modules, application_companion)
+    binding = build(modules, application_companion, kernel)
     # Reject an ordinary consumer and mismatched kernel before producing a bundle.
     consumer = module_payload(modules / Path(
         binding['modules']['rp1_gpclk_dkms']['path']).name)[0]
@@ -23,7 +23,8 @@ def bundle(modules, output, application_companion):
     if b'alias=of:' in consumer:
         raise ValueError('runtime consumer must not autoload from OF aliases')
     for data in (consumer, controller):
-        if not data.startswith(b'\x7fELF\x02\x01') or b'vermagic='+KERNEL.encode()+b' ' not in data:
+        if (not data.startswith(b'\x7fELF\x02\x01') or
+                b'vermagic='+binding['kernel'].encode()+b' ' not in data):
             raise ValueError('exact-kernel ELF64 module required')
     for route in ('gpio4', 'gpio20'):
         if (ROOT / 'build/runtime-controller' / (route+'.dtbo')).read_bytes() not in controller:
@@ -48,5 +49,6 @@ if __name__ == '__main__':
     parser.add_argument('modules', type=Path)
     parser.add_argument('output', type=Path)
     parser.add_argument('--application-companion', required=True, type=Path)
+    parser.add_argument('--kernel')
     args = parser.parse_args()
-    bundle(args.modules, args.output, args.application_companion)
+    bundle(args.modules, args.output, args.application_companion, args.kernel)

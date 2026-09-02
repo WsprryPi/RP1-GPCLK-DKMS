@@ -28,7 +28,7 @@ static int valid_identity(const struct rp1_gpclk_query *query,
 		query->header.reserved == 0 &&
 		query->header.flags == 0 &&
 		query->route == config->route &&
-		(query->capabilities & RP1_GPCLK_CAP_LIVE_ELIGIBLE) == 0 &&
+		(query->capabilities & RP1_GPCLK_CAP_OUTPUT_INHIBIT) != 0 &&
 		memchr(query->module_id, '\0', sizeof(query->module_id)) != NULL &&
 		memchr(query->build_id, '\0', sizeof(query->build_id)) != NULL &&
 		strcmp(query->module_id, "rp1-gpclk-dkms") == 0 &&
@@ -41,6 +41,7 @@ int gate_d_busy_run(const struct gate_d_busy_config *config,
 		    const volatile sig_atomic_t *stop_requested)
 {
 	struct rp1_gpclk_query query = { 0 };
+	struct rp1_gpclk_snapshot snapshot = { 0 };
 	struct rp1_gpclk_acquire acquire = { 0 };
 	struct rp1_gpclk_release release = { 0 };
 	int fd = -1;
@@ -66,9 +67,18 @@ int gate_d_busy_run(const struct gate_d_busy_config *config,
 	if (ops->ioctl_endpoint(ops->context, fd, RP1_GPCLK_IOC_QUERY,
 				&query) != 0)
 		goto out;
-	result->live_eligible =
-		(query.capabilities & RP1_GPCLK_CAP_LIVE_ELIGIBLE) != 0;
 	if (!valid_identity(&query, config)) {
+		errno = EPERM;
+		goto out;
+	}
+	snapshot.header.size = sizeof(snapshot);
+	if (ops->ioctl_endpoint(ops->context, fd, RP1_GPCLK_IOC_GET_SNAPSHOT,
+				&snapshot) != 0)
+		goto out;
+	result->output_inhibited =
+		snapshot.output_inhibited == RP1_GPCLK_OBSERVATION_TRUE;
+	if (!result->output_inhibited ||
+	    snapshot.operational_ready != RP1_GPCLK_OBSERVATION_TRUE) {
 		errno = EPERM;
 		goto out;
 	}
@@ -151,7 +161,7 @@ static int system_notify(void *context, enum gate_d_busy_mode mode,
 {
 	(void)context;
 	if (printf("{\"event\":\"ready\",\"mode\":\"%s\",\"route\":\"%s\","
-		   "\"liveEligible\":false,\"acquired\":%s}\n",
+		   "\"outputInhibited\":true,\"acquired\":%s}\n",
 		   mode == GATE_D_BUSY_OPEN_ONLY ? "open" : "owner",
 		   route == RP1_GPCLK_ROUTE_GPIO4 ? "gpio4" : "gpio20",
 		   acquired ? "true" : "false") < 0)
@@ -208,10 +218,10 @@ int main(int argc, char **argv)
 	}
 	rc = gate_d_busy_run(&config, &ops, &result, &stop_requested);
 	printf("{\"mode\":\"%s\",\"route\":\"%s\",\"ready\":%s,"
-	       "\"liveEligible\":%s,\"acquired\":%s,\"released\":%s,"
+	       "\"outputInhibited\":%s,\"acquired\":%s,\"released\":%s,"
 	       "\"closed\":%s,\"elapsedSeconds\":%u}\n",
 	       argv[1], argv[2], result.ready ? "true" : "false",
-	       result.live_eligible ? "true" : "false",
+	       result.output_inhibited ? "true" : "false",
 	       result.acquired ? "true" : "false",
 	       result.released ? "true" : "false",
 	       result.closed ? "true" : "false", result.elapsed_seconds);

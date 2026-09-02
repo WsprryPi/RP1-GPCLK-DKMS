@@ -29,8 +29,8 @@ this opt-in build: the administrator explicitly
 loads it after APPLY, avoiding an automatic load racing that step. Its driver
 retains the OF match table for explicit binding. The default build retains its
 autoload alias. The consumer version follows the same development identity contract;
-changed bytes do not inherit qualification. Output-enabled consumer
-loads are unconditionally rejected by the interlock. Default builds do not link
+changed bytes do not inherit qualification. The interlock constrains overlay
+ownership and consumer lifetime, not output policy. Default builds do not link
 the controller or change their administration interface. The ordinary package and
 DKMS profile remains unchanged. Exact-source orchestration may explicitly select
 the `runtime-controller` DKMS profile; that one DKMS instance builds, installs,
@@ -39,8 +39,10 @@ module artifacts as external prerequisites and never installs a second copy.
 Changing build modes requires clean isolated build
 directories; never reuse an opt-in object as a default artifact.
 
-The controller admits only the reviewed Pi 5 Model B / aarch64 /
-6.18.34+rpt-rpi-2712 combination and requires a neutral live tree at initialization.
+The controller requires exactly one available `raspberrypi,rp1` device-tree
+identity and a neutral live tree at initialization. Kernel, architecture, board,
+firmware, and compiled-module identities remain bound by the reviewed runtime
+deployment rather than compiled into a board-model allowlist.
 Existing compatible endpoints or canonical endpoint/pinctrl node names reject
 admission, including disabled/foreign nodes. It never adopts a firmware overlay.
 These checks do not replace coherent deployment or target firmware/resource
@@ -80,8 +82,8 @@ module references.
 The consumer attaches before topology discovery/driver registration and detaches
 only after complete device/driver/notifier teardown, including init failures.
 Controller mutations reject while attached; consumer admission uses trylock to
-avoid a recursive wait from synchronous OF work. Admission refuses live_output=1,
-no route, existing consumer or fault. Open transmission files already pin the
+avoid a recursive wait from synchronous OF work. Admission refuses no route,
+an existing consumer, or a fault. Open transmission files already pin the
 consumer, so ordinary non-forced removal cannot outrun their lifetime.
 
 Failed consumer initialization or observed cleanup faults latch a separate
@@ -135,12 +137,13 @@ Foreign unit files and administrator masks are preserved. Failures and crashes
 retain inhibition. The low-level transaction never starts the application; the
 runtime manager restores it only after successful route completion. This covers the named service only, not arbitrary root-launched
 processes, alternate units or other applications. Operators must exclude those
-entry points. The consumer load parameter stays disabled; operation-scoped output
-is a separate existing path, as clarified in [runtime output reconciliation](runtime-output.md).
+entry points. Production loads the consumer with its default
+`output_inhibit=0`; the root-only endpoint is then the execution authority, as
+clarified in [runtime output reconciliation](runtime-output.md).
 
 The tool unloads only the exact checked consumer with non-forced rmmod, checks
 absence and controller detachment, removes the owned overlay, then applies the
-new fixed overlay and loads the checked consumer with `live_output=0` using its
+new fixed overlay and loads the checked consumer with default `output_inhibit=0` using its
 exact DKMS module name after verifying that `modinfo` resolves it to the bound
 path. No modprobe install/remove hook or dependency removal is used for effects.
 Each stage rechecks inhibition and boot identity. Completion
@@ -189,8 +192,8 @@ protocols. Exact bindings include the entire runtime software inventory;
 incomplete bindings must be regenerated and reviewed. Deployment and
 administration share one lock,
 and an unfinished deployment blocks administration. The [output reconciliation extension](runtime-output.md) connects application
-startup to existing UAPI operation authorization and adds explicit mask resumption.
-Route switching never authorizes output. Application restoration releases only
+startup to the root-owned consumer endpoint and adds explicit mask resumption.
+Route switching never submits output. Application restoration releases only
 owned inhibition after the required idle-state checks.
 
 `runtime_provider.py` is the single installer facade over these components. Its

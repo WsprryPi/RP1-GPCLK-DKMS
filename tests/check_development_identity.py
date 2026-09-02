@@ -27,11 +27,11 @@ def rejected(action, message):
 assert '#define RP1_GPCLK_MODULE_VERSION "0.9.0"' in (ROOT / 'include/rp1_gpclk/version.h').read_text()
 assert 'MODULE_VERSION("0.9.0")' in (ROOT / 'controller/main.c').read_text()
 assert (ROOT / 'debian/changelog').read_text().startswith('rp1-gpclk-dkms (0.9.0-1) UNRELEASED;')
-assert dev.sha256(ROOT / 'include/uapi/linux/rp1_gpclk.h') == 'd40b48c817bdcb0b72d0fca624e1fe43e37cd924dd799c82dc6e94244614d082'
+assert dev.sha256(ROOT / 'include/uapi/linux/rp1_gpclk.h') == '4af14cdf60471ac4b318b10d7d70824a63c74029c2934e86bbdcd1b7f06cf633'
 assert json.loads((ROOT / 'uapi-identity.json').read_text())['sha256'] == \
        dev.sha256(ROOT / 'include/uapi/linux/rp1_gpclk.h')
 for route in ('gpio4', 'gpio20'):
-    identifier = f'v0.9.0-pi5-{route}'
+    identifier = f'v0.9.0-rp1-{route}'
     assert identifier in (ROOT / 'include/rp1_gpclk/compatibility.h').read_text()
     assert identifier in (ROOT / 'scripts/development_route_manager.py').read_text()
 assert 'RP1_GPCLK_ROUTE_CANDIDATE' not in (ROOT / 'include/rp1_gpclk/compatibility.h').read_text()

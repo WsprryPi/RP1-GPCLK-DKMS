@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include <linux/errno.h>
 
 #include "rp1_gpclk/execution_policy.h"
 
@@ -17,6 +20,13 @@ int main(void)
 {
     struct rp1_gpclk_tone tones[RP1_GPCLK_MAX_TONES] = { 0 };
     __u32 words[8] = { 0 };
+    __u32 whole[8] = { 0 };
+    __u32 split[8] = { 0 };
+    struct rp1_gpclk_chunk_cursor cursor;
+    __u64 accumulator = 0;
+    __u64 duration = 0;
+    __u64 total_writes = 0;
+    __u64 whole_writes = 0;
     size_t writes = 0;
     unsigned int index;
 
@@ -107,6 +117,72 @@ int main(void)
     CHECK(rp1_gpclk_execution_fill_words(&tones[0], words, 0) != 0);
     CHECK(rp1_gpclk_execution_fill_words(NULL, words, 1) != 0);
 
-    puts("execution policy: PASS (divider envelope, pacing, packing)");
+    CHECK(rp1_gpclk_execution_fill_words(&tones[0], whole, 8) == 0);
+    CHECK(rp1_gpclk_execution_fill_words_stateful(
+              &tones[0], split, 3, &accumulator) == 0);
+    CHECK(rp1_gpclk_execution_fill_words_stateful(
+              &tones[0], split + 3, 5, &accumulator) == 0);
+    CHECK(memcmp(whole, split, sizeof(whole)) == 0);
+
+    CHECK(rp1_gpclk_chunk_cursor_init(&cursor, 1200000000000ULL) == 0);
+    while (rp1_gpclk_chunk_cursor_next(&cursor, &duration, &writes) > 0) {
+        CHECK(duration <= RP1_GPCLK_DMA_CHUNK_DURATION_NS);
+        CHECK(writes <= 97848);
+        total_writes += writes;
+    }
+    CHECK(cursor.remaining_ns == 0);
+    CHECK(rp1_gpclk_execution_event_writes(1200000000000ULL,
+                                            &writes) == 0);
+    whole_writes = writes;
+    CHECK(total_writes == whole_writes);
+
+    total_writes = 0;
+    CHECK(rp1_gpclk_chunk_cursor_init(&cursor, 683000000ULL) == 0);
+    CHECK(rp1_gpclk_chunk_cursor_next(&cursor, &duration, &writes) == 1);
+    total_writes += writes;
+    accumulator = cursor.timing_remainder;
+    CHECK(rp1_gpclk_chunk_cursor_init(&cursor, 683000000ULL) == 0);
+    cursor.timing_remainder = accumulator;
+    CHECK(rp1_gpclk_chunk_cursor_next(&cursor, &duration, &writes) == 1);
+    total_writes += writes;
+    CHECK(rp1_gpclk_execution_event_writes(1366000000ULL, &writes) == 0);
+    CHECK(total_writes == writes);
+
+    CHECK(rp1_gpclk_chunk_cursor_init(
+              &cursor, RP1_GPCLK_DMA_CHUNK_DURATION_NS + 1) == 0);
+    CHECK(rp1_gpclk_chunk_cursor_next(&cursor, &duration, &writes) == 1);
+    CHECK(duration == RP1_GPCLK_DMA_CHUNK_DURATION_NS + 1 -
+          RP1_GPCLK_EVENT_DURATION_NS_MIN);
+    CHECK(rp1_gpclk_chunk_cursor_next(&cursor, &duration, &writes) == 1);
+    CHECK(duration == RP1_GPCLK_EVENT_DURATION_NS_MIN);
+    CHECK(rp1_gpclk_chunk_cursor_next(&cursor, &duration, &writes) == 0);
+
+    /* Cancellation at the start of a maximum-duration logical event. */
+    CHECK(rp1_gpclk_chunk_cursor_init(
+              &cursor, RP1_GPCLK_EVENT_DURATION_NS_MAX) == 0);
+    CHECK(cursor.remaining_ns == RP1_GPCLK_EVENT_DURATION_NS_MAX);
+    rp1_gpclk_chunk_cursor_cancel(&cursor);
+    CHECK(rp1_gpclk_chunk_cursor_next(&cursor, &duration, &writes) ==
+          -ECANCELED);
+
+    /* Inject a cursor observation at the logical midpoint. The cursor never
+     * derives allocation size from this remaining duration. */
+    CHECK(rp1_gpclk_chunk_cursor_init(
+              &cursor, RP1_GPCLK_EVENT_DURATION_NS_MAX) == 0);
+    cursor.remaining_ns = RP1_GPCLK_EVENT_DURATION_NS_MAX / 2;
+    rp1_gpclk_chunk_cursor_cancel(&cursor);
+    CHECK(rp1_gpclk_chunk_cursor_next(&cursor, &duration, &writes) ==
+          -ECANCELED);
+
+    /* Cancellation at the completion boundary still admits no successor. */
+    CHECK(rp1_gpclk_chunk_cursor_init(
+              &cursor, RP1_GPCLK_EVENT_DURATION_NS_MAX) == 0);
+    cursor.remaining_ns = 0;
+    CHECK(cursor.remaining_ns == 0);
+    rp1_gpclk_chunk_cursor_cancel(&cursor);
+    CHECK(rp1_gpclk_chunk_cursor_next(&cursor, &duration, &writes) ==
+          -ECANCELED);
+
+    puts("execution policy: PASS (bounded chunks, conserved pacing and packing)");
     return 0;
 }

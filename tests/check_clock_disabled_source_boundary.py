@@ -52,11 +52,18 @@ for label, pattern in forbidden.items():
     if re.search(pattern, all_source):
         raise SystemExit(f"clock-disabled source contains {label}")
 
-for token in ("static bool live_output;",
-              "module_param(live_output, bool, 0444)",
-              "rp1_gpclk_live_output_enabled"):
+for token in ("static bool output_inhibit;",
+              "module_param(output_inhibit, bool, 0444)",
+              "rp1_gpclk_output_inhibited"):
     if token not in main:
-        raise SystemExit(f"Phase 4A output-inhibit gate is missing {token}")
+        raise SystemExit(f"output-inhibit control is missing {token}")
+
+if dispatch.count("if (!rp1_gpclk_execution_allowed(context))") != 1:
+    raise SystemExit("output inhibit does not guard every submission path")
+for token in ("authorization_digest", "authorization_flags",
+              "operation_live", "live_output"):
+    if token in main + dispatch:
+        raise SystemExit(f"obsolete output authorization remains: {token}")
 
 release = api[api.index("void rp1_gpclk_resources_release"):]
 ordered = ["dma_release_channel", "pinctrl_put", "device->parent_clock",

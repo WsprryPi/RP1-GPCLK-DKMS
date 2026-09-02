@@ -13,8 +13,8 @@
           "route": {"const": null},
           "parameters": {
             "type": "object",
-            "required": ["live_output"],
-            "properties": {"live_output": {"const": 0}}
+            "required": ["output_inhibit"],
+            "properties": {"output_inhibit": {"const": 1}}
           }
         }
       }
@@ -46,8 +46,8 @@
     "targetKernel": {"type": "string", "minLength": 1},
     "parameters": {
       "type": "object",
-      "required": ["live_output"],
-      "properties": {"live_output": {"enum": [0, 1]}}
+      "required": ["output_inhibit"],
+      "properties": {"output_inhibit": {"enum": [0, 1]}}
     },
     "uapiIdentity": {
       "type": "object",

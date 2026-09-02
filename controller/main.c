@@ -8,7 +8,6 @@
 #include <linux/of.h>
 #include <linux/random.h>
 #include <linux/uaccess.h>
-#include <linux/utsname.h>
 #include <linux/rp1_route_admin.h>
 #include "consumer.h"
 #include "state.h"
@@ -51,7 +50,54 @@ static bool foreign_route_nodes(void)
 	return false;
 }
 
-int rp1_route_consumer_attach(bool output_enabled)
+static struct device_node *single_available_compatible(const char *compatible)
+{
+	struct device_node *node = NULL;
+	struct device_node *match = NULL;
+
+	while ((node = of_find_compatible_node(node, NULL, compatible))) {
+		if (!of_device_is_available(node))
+			continue;
+		if (match) {
+			of_node_put(match);
+			of_node_put(node);
+			return NULL;
+		}
+		match = of_node_get(node);
+	}
+	return match;
+}
+
+static bool single_rp1_present(void)
+{
+	struct device_node *clocks, *gpio, *clocks_parent, *gpio_parent, *dma;
+	bool valid = false;
+
+	/* Stock firmware describes the RP1 bus as a simple-bus, not with a
+	 * marketing-model or rp1-compatible string. Identify one RP1 topology by
+	 * its unique clock and GPIO providers and a sibling DMA provider.
+	 */
+	clocks = single_available_compatible("raspberrypi,rp1-clocks");
+	gpio = single_available_compatible("raspberrypi,rp1-gpio");
+	if (!clocks || !gpio)
+		goto out;
+	clocks_parent = of_get_parent(clocks);
+	gpio_parent = of_get_parent(gpio);
+	if (!clocks_parent || !gpio_parent || clocks_parent != gpio_parent)
+		goto put_parents;
+	dma = of_get_compatible_child(clocks_parent, "snps,axi-dma-1.01a");
+	valid = dma != NULL;
+	of_node_put(dma);
+put_parents:
+	of_node_put(gpio_parent);
+	of_node_put(clocks_parent);
+out:
+	of_node_put(gpio);
+	of_node_put(clocks);
+	return valid;
+}
+
+int rp1_route_consumer_attach(void)
 {
 	int ret = 0;
 
@@ -60,7 +106,7 @@ int rp1_route_consumer_attach(bool output_enabled)
 	 */
 	if (!mutex_trylock(&route_lock))
 		return -EBUSY;
-	if (output_enabled || consumer || state.fault || state.id <= 0)
+	if (consumer || state.fault || state.id <= 0)
 		ret = -EPERM;
 	else
 		consumer = true;
@@ -182,9 +228,7 @@ static struct miscdevice route_device = {
 static int __init route_init(void)
 {
 	if (!IS_ENABLED(CONFIG_OF_OVERLAY) ||
-	    !of_machine_is_compatible("raspberrypi,5-model-b") ||
-	    strcmp(utsname()->release, "6.18.34+rpt-rpi-2712") ||
-	    strcmp(utsname()->machine, "aarch64") || foreign_route_nodes())
+	    !single_rp1_present() || foreign_route_nodes())
 		return -EOPNOTSUPP;
 	do {
 		session = get_random_u64();
