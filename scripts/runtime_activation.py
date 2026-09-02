@@ -30,6 +30,7 @@ PENDING = ('activation-intent', 'controller-load-intent', 'socket-start-intent',
            'manager-query-intent', 'application-restore-intent', 'rollback-intent',
            'activation-failed', 'rollback-failed')
 TERMINAL = ('complete-neutral', 'recovered-inhibited')
+PLAN_CONTEXTS = ('initial', 'recovered', 'idempotent', 'post-reboot')
 
 
 def canonical(value):
@@ -41,11 +42,14 @@ def plan_digest(value):
 
 
 def validate_plan(value):
-    required = {'version', 'operation', 'bindingSha256', 'artifactSetSha256',
-                'bootId', 'lastDeploymentSha256', 'application',
-                'socketWasActive', 'alreadyReady', 'previousActivationSha256'}
+    base = {'version', 'operation', 'bindingSha256', 'artifactSetSha256',
+            'bootId', 'lastDeploymentSha256', 'application',
+            'socketWasActive', 'alreadyReady', 'previousActivationSha256'}
+    version = value.get('version') if isinstance(value, dict) else None
+    required = (base if version == 1 else
+                base | {'activationContext', 'applicationInhibited'})
     if (not isinstance(value, dict) or set(value) != required or
-            type(value.get('version')) is not int or value['version'] != 1 or
+            type(version) is not int or version not in (1, 2) or
             value.get('operation') != 'neutral-activation' or
             any(not isinstance(value.get(name), str) or
                 not re.fullmatch('[0-9a-f]{64}', value[name])
@@ -58,6 +62,18 @@ def validate_plan(value):
              (not isinstance(value['previousActivationSha256'], str) or
               not re.fullmatch('[0-9a-f]{64}', value['previousActivationSha256'])))):
         raise ValueError('neutral activation plan schema')
+    if version == 2 and (value.get('activationContext') not in PLAN_CONTEXTS or
+                         type(value.get('applicationInhibited')) is not bool):
+        raise ValueError('neutral activation plan context')
+    if version == 2:
+        context = value['activationContext']
+        previous = value['previousActivationSha256']
+        if ((context == 'idempotent') != value['alreadyReady'] or
+                (context == 'initial') != (previous is None) or
+                (context in ('initial', 'recovered') and
+                 not value['applicationInhibited']) or
+                (context == 'post-reboot' and value['socketWasActive'])):
+            raise ValueError('neutral activation plan context is inconsistent')
     uuid.UUID(value['bootId'])
     application.validate_neutral_capture(value['application'])
     return value
@@ -279,6 +295,9 @@ class Linux:
     def inhibit_application(self):
         application.neutral_inhibit()
 
+    def capture_application(self):
+        return application.neutral_capture()
+
 
 def observe(system):
     raw, binding = system.binding()
@@ -335,14 +354,74 @@ def restored_application_matches(journal, observed):
     return observed.get('MainPID') == '0'
 
 
+def completed_journal_matches_installation(journal, observed):
+    """Require complete prior-boot evidence before it may be superseded."""
+    if journal['phase'] != 'complete-neutral':
+        return False
+    plan = journal['plan']
+    if (plan['bindingSha256'] != observed['bindingSha256'] or
+            plan['artifactSetSha256'] != observed['artifactSetSha256'] or
+            plan['lastDeploymentSha256'] != observed['lastDeploymentSha256'] or
+            plan['bootId'] == observed['bootId']):
+        return False
+    controller = journal.get('controller')
+    manager = journal.get('manager')
+    outcome = journal.get('application')
+    capture = plan['application']
+    manager_state = manager.get('state') if isinstance(manager, dict) else None
+    outcome_service = outcome.get('service') if isinstance(outcome, dict) else None
+    expected_phase = ('restored' if capture['wasActive'] else
+        'administrator-masked' if capture['administratorMasked'] else 'stopped')
+    if not isinstance(outcome_service, dict):
+        return False
+    historical_capture = dict(capture)
+    historical_capture['service'] = outcome_service
+    try:
+        application.validate_neutral_capture(historical_capture)
+    except (ValueError, TypeError, KeyError):
+        return False
+    return bool(isinstance(controller, dict) and
+        not any(controller[name] for name in
+            ('generation', 'id', 'error', 'route', 'flags')) and
+        isinstance(manager, dict) and manager.get('status') == 'ok' and
+        isinstance(manager_state, dict) and manager_state.get('activeRoute') is None and
+        manager_state.get('controller') == controller and
+        manager_state.get('bindingSha256') == observed['bindingSha256'] and
+        isinstance(outcome, dict) and outcome.get('phase') == expected_phase and
+        isinstance(outcome.get('companion'), dict) and
+        outcome['companion'].get('transmit') is False)
+
+
+def post_reboot_reactivation_state(observed):
+    """Return whether exact inactive state may start a new boot transaction."""
+    journal = observed['activationJournal']
+    if journal is None or journal['phase'] != 'complete-neutral':
+        return False
+    if not completed_journal_matches_installation(journal, observed):
+        raise ValueError('neutral activation evidence differs; explicit recovery or investigation required')
+    if (observed['controller']['status'] != 'absent' or
+            observed['consumer']['status'] != 'absent' or
+            observed['controllerEndpoint']['status'] != 'absent' or
+            observed['consumerEndpoint']['status'] != 'absent' or
+            observed['socket'].get('active') == 'active' or
+            observed['managerSocket'].get('status') != 'absent' or
+            any(value is not None for value in observed['transactions'].values())):
+        raise ValueError('prior-boot neutral activation did not reach an inactive current boot')
+    if observed['inhibited']:
+        if observed['applicationService'].get('active') not in ('inactive', 'failed'):
+            raise ValueError('post-reboot inhibition did not stop the application')
+    return True
+
+
 def neutral_ready(observation):
     journal = observation['activationJournal']
     return bool(journal and journal['phase'] == 'complete-neutral' and
         journal['plan']['bindingSha256'] == observation['bindingSha256'] and
         journal['plan']['artifactSetSha256'] == observation['artifactSetSha256'] and
         journal['plan']['bootId'] == observation['bootId'] and
-        observation['controller'] == {'status': 'loaded',
-            'buildNoteSha256': observation['controller']['buildNoteSha256'], 'exact': True} and
+        observation['controller'].get('status') == 'loaded' and
+        observation['controller'].get('exact') is True and
+        isinstance(observation['controller'].get('buildNoteSha256'), str) and
         observation['consumer']['status'] == 'absent' and
         observation['controllerEndpoint'].get('status') == 'owned' and
         observation['controllerEndpoint'].get('open') is False and
@@ -368,8 +447,11 @@ def activation_plan(system):
     observed = observe(system)
     already = neutral_ready(observed)
     journal = observed['activationJournal']
+    post_reboot = False
     if journal is not None and not already and journal['phase'] != 'recovered-inhibited':
-        raise ValueError('neutral activation journal requires explicit recovery')
+        post_reboot = post_reboot_reactivation_state(observed)
+        if not post_reboot:
+            raise ValueError('neutral activation journal requires explicit recovery')
     if any(value is not None for value in observed['transactions'].values()):
         raise ValueError('deployment, route, manager, or application transaction is pending')
     if observed['consumer']['status'] != 'absent' or observed['consumerEndpoint']['status'] != 'absent':
@@ -395,18 +477,41 @@ def activation_plan(system):
             observed['socket'].get('active') != 'active' and
             observed['managerSocket'].get('status') != 'absent'):
         raise ValueError('manager socket identity conflict')
-    if not already and not observed['inhibited']:
+    if not already and not post_reboot and not observed['inhibited']:
         raise ValueError('reviewed deployment inhibition is absent')
-    if not already and observed['applicationService'].get('active') not in ('inactive', 'failed'):
+    if (not already and not post_reboot and
+            observed['applicationService'].get('active') not in ('inactive', 'failed')):
         raise ValueError('application is not stopped behind deployment inhibition')
-    return {'version': 1, 'operation': 'neutral-activation',
+    if already:
+        context = 'idempotent'
+    elif post_reboot:
+        context = 'post-reboot'
+    elif journal is not None:
+        context = 'recovered'
+    else:
+        context = 'initial'
+    activation_application = observed['application']
+    if post_reboot:
+        current_application = system.capture_application()
+        prior_application = journal['plan']['application']
+        if (observed['inhibited'] and
+                (current_application['wasActive'] or
+                 current_application['administratorMasked'] !=
+                 prior_application['administratorMasked'] or
+                 current_application['companion'] != prior_application['companion'])):
+            raise ValueError('post-reboot application capture differs from prior neutral intent')
+        if not observed['inhibited']:
+            activation_application = current_application
+    return {'version': 2, 'operation': 'neutral-activation',
         'bindingSha256': observed['bindingSha256'],
         'artifactSetSha256': observed['artifactSetSha256'],
         'bootId': observed['bootId'],
         'lastDeploymentSha256': observed['lastDeploymentSha256'],
-        'application': observed['application'],
+        'application': activation_application,
         'socketWasActive': observed['socket'].get('active') == 'active',
         'alreadyReady': already,
+        'activationContext': context,
+        'applicationInhibited': observed['inhibited'],
         'previousActivationSha256': (admin.digest(canonical(journal))
                                      if journal is not None else None)}
 
@@ -430,8 +535,42 @@ def ensure(system, reviewed, approved, lock=deployment.mutation_lock):
                 return {'status': 'idempotent-no-change', 'journal': system.read_record(JOURNAL)}
             previous = system.read_record(JOURNAL)
             if previous is not None:
-                if previous['phase'] != 'recovered-inhibited':
+                if (current['activationContext'] == 'post-reboot' and
+                        not current['applicationInhibited']):
+                    system.inhibit_application()
+                    observed = observe(system)
+                    inhibited_application = system.capture_application()
+                    if (not observed['inhibited'] or
+                            observed['applicationService'].get('active') not in
+                            ('inactive', 'failed') or
+                            inhibited_application['wasActive'] or
+                            inhibited_application['administratorMasked'] !=
+                            current['application']['administratorMasked'] or
+                            inhibited_application['companion'] !=
+                            current['application']['companion'] or
+                            observed['controller']['status'] != 'absent' or
+                            observed['consumer']['status'] != 'absent' or
+                            observed['controllerEndpoint']['status'] != 'absent' or
+                            observed['consumerEndpoint']['status'] != 'absent' or
+                            observed['socket'].get('active') == 'active' or
+                            observed['managerSocket'].get('status') != 'absent' or
+                            any(value is not None
+                                for value in observed['transactions'].values()) or
+                            observed['bindingSha256'] != current['bindingSha256'] or
+                            observed['artifactSetSha256'] != current['artifactSetSha256'] or
+                            observed['lastDeploymentSha256'] != current['lastDeploymentSha256'] or
+                            observed['bootId'] != current['bootId'] or
+                            observed['activationJournal'] is None or
+                            admin.digest(canonical(observed['activationJournal'])) !=
+                            current['previousActivationSha256']):
+                        raise ValueError('post-reboot inhibition did not establish exact inactive state')
+                if (previous['phase'] != 'recovered-inhibited' and
+                        current['activationContext'] != 'post-reboot'):
                     raise ValueError('activation journal is not restartable')
+                if (current['activationContext'] == 'post-reboot' and
+                        admin.digest(canonical(previous)) !=
+                        current['previousActivationSha256']):
+                    raise ValueError('prior activation changed before archival')
                 system.archive_journal(previous)
             record = {'version': 1, 'plan': current, 'planSha256': approved,
                 'requestId': str(uuid.uuid4()), 'phase': 'activation-intent',

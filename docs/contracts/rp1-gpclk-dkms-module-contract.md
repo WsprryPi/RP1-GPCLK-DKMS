@@ -344,7 +344,9 @@ The opt-in [clock-disabled runtime controller](runtime-controller.md) is a
 separate development implementation using exported stock-kernel overlay APIs.
 It owns overlay IDs and error results, interlocks the consumer's module lifetime,
 rejects output-enabled loads, and supplies concrete inhibited administration and
-same-boot crash recovery. It adds a separate administrative UAPI, not transmission
+same-boot crash recovery. It also permits digest-bound neutral reactivation after
+a clean reboot only from exact inactive state backed by a valid terminal
+prior-boot journal. It adds a separate administrative UAPI, not transmission
 commands. It is excluded from default packaging and has no target qualification.
 Deployment and hardware tests remain separately authorized gates. It does not
 enable mutation through the packaged or `source-development` manager.
@@ -450,7 +452,9 @@ zero-route state, then restore the application according to its captured service
 intent. The consumer remains unloaded and `/dev/rp1-gpclk` remains absent.
 Neutral activation is neither route selection nor transmission eligibility.
 None of these operations authorizes output. Exact repeated execution is
-idempotent. A pending deployment, activation, controller fault, incomplete route
-journal, or failed application restoration is reported as `recovery_required`;
+idempotent. A completed prior-boot neutral activation may be superseded only
+after its exact evidence and the inactive current-boot state are validated and
+the application is inhibited. A pending deployment, activation, controller
+fault, incomplete route journal, or failed application restoration is reported as `recovery_required`;
 foreign, substituted, mixed, unsafe, open, or contradictory state is `conflict`.
 The source-development manager remains passive-query-only.

@@ -145,6 +145,21 @@ class System:
     def inhibit_application(self):
         self.events.append('inhibit-application'); self.inhibited = True
         self.application_active = False
+        if self.fail == 'inhibit-after':
+            raise ValueError('inhibition interrupted after service stop')
+        if self.fail == 'journal-drift-after-inhibit':
+            self.journal['requestId'] = '00000000-0000-0000-0000-000000000099'
+        if self.fail == 'transaction-after-inhibit':
+            self.records['transaction.json'] = {'pending': True}
+
+    def capture_application(self):
+        result = copy.deepcopy(self.app)
+        result['wasActive'] = self.application_active
+        result['service']['ActiveState'] = ('active' if self.application_active
+                                            else 'inactive')
+        result['service']['MainPID'] = (self.app['service']['MainPID']
+                                        if self.application_active else '0')
+        return result
 
 
 def lock():
@@ -238,6 +253,135 @@ class Tests(unittest.TestCase):
         result = activation.ensure(system, repeated, activation.plan_digest(repeated), lock)
         self.assertEqual(result['status'], 'idempotent-no-change')
         self.assertEqual(system.events, before)
+
+    def test_completed_neutral_activation_can_restart_after_clean_reboot(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        prior = copy.deepcopy(system.journal)
+        system.boot_id = '00000000-0000-0000-0000-000000000002'
+        system.controller = False
+        system.socket_active = False
+        plan = activation.activation_plan(system)
+        self.assertEqual(plan['version'], 2)
+        self.assertEqual(plan['activationContext'], 'post-reboot')
+        self.assertFalse(plan['applicationInhibited'])
+        self.assertEqual(plan['previousActivationSha256'],
+                         admin.digest(activation.canonical(prior)))
+        result = activation.ensure(system, plan, activation.plan_digest(plan), lock)
+        self.assertEqual(result['status'], 'activated-neutral')
+        self.assertEqual(system.archives, [prior])
+        self.assertTrue(activation.neutral_ready(activation.observe(system)))
+        self.assertFalse(system.consumer)
+
+    def test_post_reboot_inhibition_interruption_is_safely_retryable(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        prior = copy.deepcopy(system.journal)
+        system.boot_id = '00000000-0000-0000-0000-000000000002'
+        system.controller = False
+        system.socket_active = False
+        system.fail = 'inhibit-after'
+        plan = activation.activation_plan(system)
+        with self.assertRaisesRegex(ValueError, 'inhibition interrupted'):
+            activation.ensure(system, plan, activation.plan_digest(plan), lock)
+        self.assertTrue(system.inhibited)
+        self.assertFalse(system.application_active)
+        self.assertEqual(system.journal, prior)
+        system.fail = None
+        retry = activation.activation_plan(system)
+        self.assertEqual(retry['activationContext'], 'post-reboot')
+        self.assertTrue(retry['applicationInhibited'])
+        activation.ensure(system, retry, activation.plan_digest(retry), lock)
+        self.assertTrue(activation.neutral_ready(activation.observe(system)))
+
+    def test_post_reboot_inhibition_rechecks_journal_and_transactions(self):
+        for failure in ('journal-drift-after-inhibit', 'transaction-after-inhibit'):
+            with self.subTest(failure=failure):
+                system = System(); initial = activation.activation_plan(system)
+                activation.ensure(system, initial, activation.plan_digest(initial), lock)
+                system.boot_id = '00000000-0000-0000-0000-000000000002'
+                system.controller = False
+                system.socket_active = False
+                plan = activation.activation_plan(system)
+                system.fail = failure
+                with self.assertRaisesRegex(ValueError, 'exact inactive state'):
+                    activation.ensure(system, plan, activation.plan_digest(plan), lock)
+                self.assertFalse(system.controller or system.socket_active)
+                self.assertEqual(system.archives, [])
+
+    def test_post_reboot_reactivation_rejects_unsafe_or_changed_state(self):
+        def rebooted():
+            system = System(); plan = activation.activation_plan(system)
+            activation.ensure(system, plan, activation.plan_digest(plan), lock)
+            system.boot_id = '00000000-0000-0000-0000-000000000002'
+            system.controller = False
+            system.socket_active = False
+            return system
+
+        mutations = (
+            lambda value: setattr(value, 'consumer', True),
+            lambda value: setattr(value, 'consumer_endpoint', True),
+            lambda value: setattr(value, 'controller', True),
+            lambda value: setattr(value, 'socket_active', True),
+            lambda value: value.records.update({'transaction.json': {'pending': True}}),
+            lambda value: value.journal['manager']['state'].update(bindingSha256='0' * 64),
+            lambda value: value.journal['application'].pop('service'),
+        )
+        for mutate in mutations:
+            with self.subTest(mutate=mutate):
+                system = rebooted(); mutate(system)
+                with self.assertRaises(ValueError):
+                    activation.activation_plan(system)
+
+    def test_post_reboot_plan_preserves_current_stopped_service_intent(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        system.boot_id = '00000000-0000-0000-0000-000000000002'
+        system.controller = False
+        system.socket_active = False
+        system.application_active = False
+        plan = activation.activation_plan(system)
+        self.assertFalse(plan['application']['wasActive'])
+        activation.ensure(system, plan, activation.plan_digest(plan), lock)
+        self.assertFalse(system.application_active)
+        self.assertTrue(activation.neutral_ready(activation.observe(system)))
+
+    def test_same_boot_terminal_activation_still_requires_recovery(self):
+        system = System(); plan = activation.activation_plan(system)
+        activation.ensure(system, plan, activation.plan_digest(plan), lock)
+        system.controller = False
+        system.socket_active = False
+        system.application_active = False
+        system.inhibited = True
+        with self.assertRaisesRegex(ValueError, 'evidence differs'):
+            activation.activation_plan(system)
+
+    def test_version_one_activation_plan_remains_valid(self):
+        plan = activation.activation_plan(System())
+        legacy = {name: value for name, value in plan.items()
+                  if name not in ('activationContext', 'applicationInhibited')}
+        legacy['version'] = 1
+        self.assertEqual(activation.validate_plan(legacy), legacy)
+
+    def test_version_two_activation_context_must_be_consistent(self):
+        plan = activation.activation_plan(System())
+        for field, value in (('activationContext', 'idempotent'),
+                             ('applicationInhibited', False),
+                             ('previousActivationSha256', '0' * 64)):
+            with self.subTest(field=field):
+                changed = copy.deepcopy(plan); changed[field] = value
+                with self.assertRaisesRegex(ValueError, 'context'):
+                    activation.validate_plan(changed)
+
+    def test_malformed_completed_manager_evidence_fails_closed(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        system.boot_id = '00000000-0000-0000-0000-000000000002'
+        system.controller = False
+        system.socket_active = False
+        system.journal['manager']['state'] = []
+        with self.assertRaisesRegex(ValueError, 'evidence differs'):
+            activation.activation_plan(system)
 
     def test_digest_and_plan_drift_fail_before_effects(self):
         system = System(); plan = activation.activation_plan(system)

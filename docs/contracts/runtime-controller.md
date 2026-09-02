@@ -215,6 +215,19 @@ post-deployment inhibited state without removing foreign objects. A non-neutral
 controller, changed boot, substituted endpoint or failed unload remains a durable
 recovery fault.
 
+A terminal `complete-neutral` journal may seed a new current-boot activation
+only after a clean reboot has removed both modules, both endpoints and the
+manager socket. The prior journal must validate completely and bind the same
+binding, artifact set and deployment record. The current application must yield
+a valid neutral capture, and that current stopped/running/masked intent is
+preserved. The version-2 activation plan digest binds the `post-reboot` context,
+current boot, current application capture and whether the owned inhibitor is
+already established. Approved execution establishes the
+inhibitor first, archives the prior terminal journal under its digest, and then
+uses the ordinary controller/socket/route-zero/restoration sequence. Existing
+version-1 plans remain valid historical journal content. Pending, failed,
+same-boot divergent or identity-drifted journals are not post-reboot admission.
+
 ### Runtime overlay export policy
 
 Exporting runtime overlay labels adds properties to the base `/__symbols__`

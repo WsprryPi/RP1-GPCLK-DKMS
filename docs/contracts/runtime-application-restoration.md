@@ -105,6 +105,15 @@ transaction remains inhibited but retains the original application intent for a
 subsequent reviewed activation or coherent deployment. Prior activation evidence
 is archived before a recovered transaction is restarted.
 
+After a clean reboot, a valid terminal neutral journal can be superseded only by
+a reviewed post-reboot activation. The current service state and disabled
+companion configuration are captured as the new restoration intent. Execution
+writes and verifies the owned inhibitor and stops the application before it
+archives the old journal or loads the controller. If inhibition is interrupted
+after the service stops, the still-terminal prior journal plus exact inhibitor
+permits a newly reviewed retry. A running service behind an inhibitor, changed
+service intent, or nonterminal prior-boot journal remains a stop condition.
+
 The installer-facing runtime-provider contract classifies a failed restoration
 as `recovery_required` and directs the caller to `restore --execute`; it never
 converts a route-only success into application readiness.

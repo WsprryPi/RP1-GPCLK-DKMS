@@ -209,6 +209,45 @@ class Tests(unittest.TestCase):
         host._manager = {'status': 'absent'}
         self.assertEqual(self.inspect(host)['result'], 'activation_required')
 
+    def test_restartable_post_reboot_activation_is_reported_explicitly(self):
+        host = Host()
+        host._modules = {name: {'status': 'absent'} for name in host._modules}
+        host._endpoints = {name: {'status': 'absent', 'open': False}
+                           for name in host._endpoints}
+        host._socket = {'status': 'absent'}
+        host._manager = {'status': 'absent'}
+        host._activation = {'status': 'observed', 'value': {
+            'bootId': '00000000-0000-0000-0000-000000000002',
+            'activationJournal': {'phase': 'complete-neutral', 'plan': {
+                'bootId': '00000000-0000-0000-0000-000000000001'}}}}
+        with patch.object(provider.activation, 'neutral_ready', return_value=False), \
+             patch.object(provider.activation, 'post_reboot_reactivation_state',
+                          return_value=True):
+            result = self.inspect(host)
+        self.assertEqual(result['result'], 'activation_required')
+        self.assertTrue(result['reboot']['occurred'])
+        self.assertIn('post-reboot neutral reactivation', result['remediation'][0])
+
+    def test_unproven_post_reboot_activation_requires_investigation(self):
+        host = Host()
+        host._modules = {name: {'status': 'absent'} for name in host._modules}
+        host._endpoints = {name: {'status': 'absent', 'open': False}
+                           for name in host._endpoints}
+        host._socket = {'status': 'absent'}
+        host._manager = {'status': 'absent'}
+        host._activation = {'status': 'observed', 'value': {
+            'bootId': '00000000-0000-0000-0000-000000000002',
+            'activationJournal': {'phase': 'complete-neutral', 'plan': {
+                'bootId': '00000000-0000-0000-0000-000000000001'}}}}
+        with patch.object(provider.activation, 'neutral_ready', return_value=False), \
+             patch.object(provider.activation, 'post_reboot_reactivation_state',
+                          side_effect=ValueError('identity drift')):
+            result = self.inspect(host)
+        self.assertEqual(result['result'], 'recovery_required')
+        self.assertTrue(result['reboot']['occurred'])
+        self.assertIn('Preserve the prior-boot activation evidence',
+                      result['remediation'][0])
+
     def test_reviewed_removal_is_limited_to_inactive_activation_required_state(self):
         host = Host()
         host._modules = {name: {'status': 'absent'} for name in host._modules}

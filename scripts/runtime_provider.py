@@ -394,6 +394,23 @@ def classify(result):
                         controller.get('error') == 0 and controller.get('route') in (1, 2))
     neutral = (activation_observation.get('status') == 'observed' and
         activation.neutral_ready(activation_observation['value']))
+    post_reboot_restartable = False
+    post_reboot_blocked = False
+    if activation_observation.get('status') == 'observed' and not neutral:
+        observed_activation = activation_observation['value']
+        prior_activation = observed_activation.get('activationJournal')
+        if (isinstance(prior_activation, dict) and
+                prior_activation.get('phase') == 'complete-neutral'):
+            prior_plan = prior_activation.get('plan', {})
+            if prior_plan.get('bootId') != observed_activation.get('bootId'):
+                result['reboot']['occurred'] = True
+                try:
+                    post_reboot_restartable = (
+                        activation.post_reboot_reactivation_state(observed_activation))
+                except (OSError, ValueError, TypeError, KeyError):
+                    post_reboot_blocked = True
+            else:
+                post_reboot_blocked = True
     if neutral:
         result['safety'].update({'liveOutput': False, 'owner': False,
             'lease': False, 'authorization': False, 'clock': 'quiescent',
@@ -412,9 +429,13 @@ def classify(result):
     if conflicts:
         classification = 'conflict'
         result['remediation'].append('Preserve the conflicting state and use its owning migration or removal workflow.')
-    elif unresolved:
+    elif unresolved or post_reboot_blocked:
         classification = 'recovery_required'
-        result['remediation'].append('Use the existing deployment recover, route recover, or application restore verb indicated by the retained journal.')
+        if post_reboot_blocked:
+            result['remediation'].append(
+                'Preserve the prior-boot activation evidence and investigate the state mismatch; do not delete the journal or force activation.')
+        else:
+            result['remediation'].append('Use the existing deployment recover, route recover, or application restore verb indicated by the retained journal.')
     elif (artifacts_ready and modules_ready and endpoints_ready and closed and socket_ready and services_ready and
           controller_ready and application_ready and aligned and output_ready):
         classification = 'exact_ready'
@@ -425,7 +446,11 @@ def classify(result):
         result['remediation'].append('Build and review an exact runtime bundle, then approve its deployment plan digest.')
     elif artifacts_ready and modules['rp1_route_controller'].get('status') == 'absent' and modules['rp1_gpclk_dkms'].get('status') == 'absent':
         classification = 'activation_required'
-        result['remediation'].append('Review and execute neutral activation before any explicit route selection.')
+        if post_reboot_restartable:
+            result['remediation'].append(
+                'Review and execute digest-bound post-reboot neutral reactivation before any explicit route selection.')
+        else:
+            result['remediation'].append('Review and execute neutral activation before any explicit route selection.')
     else:
         classification = 'deployment_required'
         result['remediation'].append('Complete the explicit deployment step; installation alone does not activate administration or select a route.')

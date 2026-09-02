@@ -88,6 +88,17 @@ plan. Keep clocks and transmission disabled throughout.
    `administrationEligible=true`, `routeSelected=false`, and
    `transmissionEligible=false`. The consumer stays unloaded, its endpoint stays
    absent, no overlay is applied and no reboot or output authorization occurs.
+
+   After a clean reboot, `inspect` reports `activation_required` when the prior
+   terminal neutral journal, installed binding, complete artifact set,
+   deployment record, absent modules/endpoints and inactive socket still agree.
+   Review a new `activation-plan` and execute its digest in the same way. The
+   plan identifies `post-reboot`, binds whether
+   the application inhibitor is already present, and captures the current
+   neutral application intent. Execution establishes and verifies the
+   owned inhibitor before loading the controller, archives the prior terminal
+   journal by digest, and creates a new current-boot journal. It still selects
+   no route and grants no output authorization.
 6. Only after a separate operator route decision, inspect and plan the exact route:
 
    ```sh
@@ -148,7 +159,7 @@ Stable classifications and exit statuses are:
 | `deployment_required` | 11 | The exact filesystem deployment is incomplete |
 | `recovery_required` | 12 | A retained deployment, controller, route or restoration record requires its explicit recovery verb |
 | `conflict` | 13 | Foreign, changed, mixed, unsafe, open, ambiguous or contradictory state requires reviewed remediation |
-| `activation_required` | 14 | Exact runtime files are deployed and inhibited; explicit neutral activation remains |
+| `activation_required` | 14 | Exact runtime files are deployed; explicit initial or safely admitted post-reboot neutral activation remains |
 | `neutral_ready` | 0 | Exact controller and manager administration are ready at route zero; no consumer or transmission eligibility exists |
 
 The result includes installed and requested binding identities, source commit,
@@ -162,6 +173,13 @@ idempotent readiness without repeating effects. Neutral idempotency does not
 reload the controller, restart systemd, rewrite a journal, change the application
 or allocate a new request/generation. Any identity drift is not the same
 installation.
+
+A completed prior-boot neutral journal is restartable only from exact inactive
+current-boot state. Changed binding, artifacts or deployment identity, active
+modules/endpoints/socket, or another transaction changes the classification to
+`recovery_required` and requires investigation. An incomplete
+activation remains same-boot recovery evidence and is never adopted after a
+reboot. Do not delete a journal or force-load a module to bypass either result.
 
 Systemd observations parse named `key=value` properties rather than depending
 on output order. The manager service template is inspected through the fixed
@@ -238,9 +256,10 @@ then explicitly switch. `restore` retries only application completion for a
 successfully selected current route; it does not repeat overlay effects.
 Previously stopped services remain stopped and administrator masks are preserved.
 
-After reboot, load the reviewed controller and explicitly recover before
-switching. A completely empty new controller can establish a current neutral
-record; nonempty or faulted state is not silently adopted. Unknown completion,
+After reboot, review and execute the digest-bound neutral activation plan before
+switching. It loads only the reviewed controller after establishing application
+inhibition, then creates a current neutral record; nonempty or faulted state is
+not silently adopted. Unknown completion,
 removal errors, owner/lease presence, stale identities or cleanup faults are
 stop conditions. Preserve the journals and investigate; never force unload,
 delete a pending record or add a second overlay to hide uncertainty.
