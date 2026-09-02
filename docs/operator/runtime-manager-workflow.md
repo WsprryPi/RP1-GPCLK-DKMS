@@ -121,6 +121,15 @@ eligible for update. The deployment journal retains prior evidence while
 clearing current route/manager/activation journals for the new binding. It never
 adopts an old session into a new controller session.
 
+An authenticated updater may use the newly selected provider's
+`activation-retire-plan`/`activation-retire` pair when a clean reboot has already
+left an older, exactly bound deployment with only its terminal
+`complete-neutral` activation journal. The reviewed digest binds that journal
+and the complete installed identity. The updater must preserve the exact journal
+outside the deployment before execution retires it without loading either
+module. This is an owned source-migration operation, not an adoption or cleanup
+command for an unowned installation.
+
 For an interrupted or deliberately reversed neutral activation, retain the
 inhibitor and journal, then run:
 
@@ -221,8 +230,9 @@ binding-aware deployment/removal workflow. It never deletes the state directory
 or a journal merely to bypass recovery.
 
 For an exact deployment that stopped before neutral activation created any
-activation journal, `runtime_provider.py remove-plan` returns the digest and
-fixed destination inventory for the retained `last-deployment.json` inverse.
+activation journal, or after candidate-owned retirement of a qualifying
+prior-boot terminal journal, `runtime_provider.py remove-plan` returns the digest
+and fixed destination inventory for the retained `last-deployment.json` inverse.
 `remove --plan-sha256 DIGEST` is admitted only with absent modules, endpoints,
 manager socket, route, and pending transaction. It restores every reviewed
 predeployment byte and the captured application state, then removes only empty

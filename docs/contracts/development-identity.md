@@ -67,13 +67,15 @@ unpublished development artifacts, not release qualification.
    enrollment/manager/runtime state block replacement. It retains `prior-source`
    and original installed/compressed module files in the new evidence directory,
    with hashes and DKMS status in `ROLLBACK.json`, before removing the instance.
-3. **Any non-current installation:** no compatibility or automated migration is
-   claimed. Package and source workflows fail closed on non-current or foreign
+3. **Any non-current installation:** no general compatibility, adoption or
+   automated migration is claimed. Package and source workflows fail closed on non-current or foreign
    DKMS, source, module, overlay, enrollment, manager, or runtime state. A
    maintainer must separately inventory ownership, quiesce the application,
    prove output/clock/DMA/GPIO cleanup, preserve a recovery point, and use the
    owning workflow to remove only attributable state before a clean install.
-   There is no force flag or version-normalization bypass.
+   The candidate-provider retirement of an exact prior-boot terminal activation
+   journal is one bounded WsprryPi-owned runtime migration, not a general
+   exception. There is no force flag or version-normalization bypass.
 
 No transition command grants host, system, GPIO, transmission, or RF authority.
 Actual-host installation, removal, and recovery require a reviewed host-specific

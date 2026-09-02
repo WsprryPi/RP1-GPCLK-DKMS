@@ -227,6 +227,12 @@ class Host:
     def activation_recover(self, value, approved):
         return activation.ensure_recovery(activation.Linux(), value, approved)
 
+    def activation_retirement_plan(self):
+        return activation.retirement_plan(activation.Linux())
+
+    def activation_retire(self, value, approved):
+        return activation.retire(activation.Linux(), value, approved)
+
 
 def inspect(host, bundle=None, requested=None, configured=None, persisted=None):
     binding = host.binding()
@@ -502,7 +508,8 @@ def main(host=None):
     parser.add_argument('operation', choices=('inspect', 'plan', 'ensure',
         'remove-plan', 'remove',
         'activation-plan', 'activation-ensure', 'activation-recover-plan',
-        'activation-recover', 'route-plan', 'route-ensure'))
+        'activation-recover', 'activation-retire-plan', 'activation-retire',
+        'route-plan', 'route-ensure'))
     parser.add_argument('--bundle', type=Path)
     parser.add_argument('--plan-sha256')
     parser.add_argument('--route', choices=ROUTES)
@@ -576,6 +583,31 @@ def main(host=None):
         if args.plan_sha256 != digest:
             raise ValueError('reviewed deployment removal plan digest required')
         reply = host.deployment_remove(selected, digest)
+        emit({'schemaVersion': SCHEMA_VERSION, 'contract': CONTRACT,
+              'operation': args.operation, 'planSha256': digest,
+              'response': reply})
+        return 0
+    if args.operation in ('activation-retire-plan', 'activation-retire'):
+        if (result['result'] != 'activation_required' or
+                result.get('reboot', {}).get('occurred') is not True or
+                result['routeSelected'] or
+                any(value.get('status') != 'absent'
+                    for value in result['modules'].values()) or
+                any(value.get('status') != 'absent'
+                    for value in result['endpoints'].values()) or
+                result['managerSocket'].get('status') != 'absent'):
+            emit(result)
+            return EXIT[result['result']]
+        selected = host.activation_retirement_plan()
+        digest = activation.plan_digest(selected)
+        if args.operation == 'activation-retire-plan':
+            emit({'schemaVersion': SCHEMA_VERSION, 'contract': CONTRACT,
+                  'operation': args.operation, 'planSha256': digest,
+                  'plan': selected})
+            return 0
+        if args.plan_sha256 != digest:
+            raise ValueError('reviewed post-reboot activation retirement digest required')
+        reply = host.activation_retire(selected, digest)
         emit({'schemaVersion': SCHEMA_VERSION, 'contract': CONTRACT,
               'operation': args.operation, 'planSha256': digest,
               'response': reply})

@@ -150,6 +150,14 @@ class Linux:
             except FileNotFoundError:
                 pass
 
+    def retire_journal(self, expected):
+        current = self.read_record(JOURNAL)
+        if current != expected:
+            raise ValueError('prior activation changed before retirement')
+        path = Path(JOURNAL)
+        path.unlink()
+        admin.fsync_dir(path.parent)
+
     def boot(self):
         value = admin.read_regular('/proc/sys/kernel/random/boot_id').decode().strip()
         uuid.UUID(value)
@@ -411,6 +419,38 @@ def post_reboot_reactivation_state(observed):
         if observed['applicationService'].get('active') not in ('inactive', 'failed'):
             raise ValueError('post-reboot inhibition did not stop the application')
     return True
+
+
+def retirement_plan(system):
+    """Bind retirement of exact terminal activation evidence from an older boot."""
+    observed = observe(system)
+    if not post_reboot_reactivation_state(observed):
+        raise ValueError('no prior-boot terminal activation evidence to retire')
+    journal = observed['activationJournal']
+    return {'version': 1, 'operation': 'retire-post-reboot-activation',
+        'bindingSha256': observed['bindingSha256'],
+        'artifactSetSha256': observed['artifactSetSha256'],
+        'bootId': observed['bootId'],
+        'lastDeploymentSha256': observed['lastDeploymentSha256'],
+        'activationJournalSha256': admin.digest(canonical(journal))}
+
+
+def retire(system, reviewed, approved, lock=deployment.mutation_lock):
+    required = {'version', 'operation', 'bindingSha256', 'artifactSetSha256',
+        'bootId', 'lastDeploymentSha256', 'activationJournalSha256'}
+    if (not isinstance(reviewed, dict) or set(reviewed) != required or
+            reviewed.get('version') != 1 or
+            reviewed.get('operation') != 'retire-post-reboot-activation' or
+            plan_digest(reviewed) != approved):
+        raise ValueError('reviewed post-reboot activation retirement required')
+    with lock():
+        current = retirement_plan(system)
+        if current != reviewed:
+            raise ValueError('post-reboot activation retirement changed since review')
+        journal = system.read_record(JOURNAL)
+        system.retire_journal(journal)
+    return {'status': 'retired-post-reboot-activation',
+        'activationJournalSha256': reviewed['activationJournalSha256']}
 
 
 def neutral_ready(observation):

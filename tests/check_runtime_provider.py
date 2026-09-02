@@ -107,6 +107,13 @@ class Host:
         self.removal = {'version': 2, 'files': {'/fixed': {
             'before': None, 'after': provider.deployment.encode(b'exact')}}}
         self.removed = False
+        self.retirement = {'version': 1,
+            'operation': 'retire-post-reboot-activation',
+            'bindingSha256': 'a' * 64, 'artifactSetSha256': 'b' * 64,
+            'bootId': '00000000-0000-0000-0000-000000000002',
+            'lastDeploymentSha256': 'c' * 64,
+            'activationJournalSha256': 'd' * 64}
+        self.retired = False
         if not ready:
             self.make_absent()
 
@@ -149,6 +156,13 @@ class Host:
             raise ValueError('removal identity')
         self.removed = True
         return {'status': 'removed-exact-deployment'}
+    def activation_retirement_plan(self): return copy.deepcopy(self.retirement)
+    def activation_retire(self, value, approved):
+        if value != self.retirement or approved != provider.activation.plan_digest(value):
+            raise ValueError('retirement identity')
+        self.retired = True
+        return {'status': 'retired-post-reboot-activation',
+                'activationJournalSha256': value['activationJournalSha256']}
 
 
 class Tests(unittest.TestCase):
@@ -268,6 +282,34 @@ class Tests(unittest.TestCase):
                 '--plan-sha256', digest]), contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(provider.main(host), 0)
         self.assertTrue(host.removed)
+
+    def test_reviewed_post_reboot_activation_retirement(self):
+        host = Host()
+        host._modules = {name: {'status': 'absent'} for name in host._modules}
+        host._endpoints = {name: {'status': 'absent', 'open': False}
+                           for name in host._endpoints}
+        host._socket = {'status': 'absent'}
+        host._manager = {'status': 'absent'}
+        host._activation = {'status': 'observed', 'value': {
+            'bootId': '00000000-0000-0000-0000-000000000002',
+            'activationJournal': {'phase': 'complete-neutral', 'plan': {
+                'bootId': '00000000-0000-0000-0000-000000000001'}}}}
+        digest = provider.activation.plan_digest(host.retirement)
+        with patch.object(provider.activation, 'neutral_ready', return_value=False), \
+             patch.object(provider.activation, 'post_reboot_reactivation_state',
+                          return_value=True), \
+             patch.object(sys, 'argv', ['runtime_provider.py',
+                          'activation-retire-plan']), \
+             contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(provider.main(host), 0)
+        with patch.object(provider.activation, 'neutral_ready', return_value=False), \
+             patch.object(provider.activation, 'post_reboot_reactivation_state',
+                          return_value=True), \
+             patch.object(sys, 'argv', ['runtime_provider.py', 'activation-retire',
+                          '--plan-sha256', digest]), \
+             contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(provider.main(host), 0)
+        self.assertTrue(host.retired)
 
     def test_neutral_ready_is_administration_only(self):
         host = Host()

@@ -81,6 +81,11 @@ class System:
         activation.validate_journal(value)
         self.journal = copy.deepcopy(value); self.events.append('journal:' + value['phase'])
     def archive_journal(self, value): self.archives.append(copy.deepcopy(value))
+    def retire_journal(self, expected):
+        if self.journal != expected:
+            raise ValueError('prior activation changed before retirement')
+        self.events.append('retire-activation')
+        self.journal = None
     def boot(self): return self.boot_id
     def binding(self): return self.raw, copy.deepcopy(self.binding_value)
     def last_deployment(self, raw):
@@ -272,6 +277,45 @@ class Tests(unittest.TestCase):
         self.assertEqual(system.archives, [prior])
         self.assertTrue(activation.neutral_ready(activation.observe(system)))
         self.assertFalse(system.consumer)
+
+    def test_prior_boot_terminal_activation_can_be_retired_for_migration(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        for name in ('activationContext', 'applicationInhibited'):
+            system.journal['plan'].pop(name)
+        system.journal['plan']['version'] = 1
+        system.journal['planSha256'] = activation.plan_digest(system.journal['plan'])
+        prior = copy.deepcopy(system.journal)
+        system.boot_id = '00000000-0000-0000-0000-000000000002'
+        system.controller = False
+        system.socket_active = False
+        plan = activation.retirement_plan(system)
+        self.assertEqual(plan['operation'], 'retire-post-reboot-activation')
+        self.assertEqual(plan['activationJournalSha256'],
+                         admin.digest(activation.canonical(prior)))
+        result = activation.retire(system, plan, activation.plan_digest(plan), lock)
+        self.assertEqual(result['status'], 'retired-post-reboot-activation')
+        self.assertEqual(system.archives, [])
+        self.assertIsNone(system.journal)
+
+    def test_post_reboot_retirement_rejects_drift_before_effects(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        system.boot_id = '00000000-0000-0000-0000-000000000002'
+        system.controller = False
+        system.socket_active = False
+        plan = activation.retirement_plan(system)
+        system.journal['requestId'] = '00000000-0000-0000-0000-000000000099'
+        with self.assertRaisesRegex(ValueError, 'changed since review'):
+            activation.retire(system, plan, activation.plan_digest(plan), lock)
+        self.assertNotIn('retire-activation', system.events)
+        self.assertEqual(system.archives, [])
+
+    def test_same_boot_terminal_activation_cannot_be_retired(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        with self.assertRaises(ValueError):
+            activation.retirement_plan(system)
 
     def test_post_reboot_inhibition_interruption_is_safely_retryable(self):
         system = System(); initial = activation.activation_plan(system)

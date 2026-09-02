@@ -228,6 +228,18 @@ uses the ordinary controller/socket/route-zero/restoration sequence. Existing
 version-1 plans remain valid historical journal content. Pending, failed,
 same-boot divergent or identity-drifted journals are not post-reboot admission.
 
+For replacement of an exact owned deployment, current candidate code may retire
+that same prior-boot terminal journal without first reactivating the controller.
+`activation-retire-plan` binds the installed binding, artifact set, retained
+deployment, current boot and exact journal digest. `activation-retire` repeats
+the complete inactive-state observation under the shared mutation lock and
+removes only the current activation journal after the owning updater has
+preserved it. It does not create dynamic residue inside the deployment being
+removed.
+It does not load a module, start a socket, select a route, change application
+intent or authorize output. The operation is unavailable for same-boot,
+nonterminal, incomplete, active or identity-drifted state.
+
 ### Runtime overlay export policy
 
 Exporting runtime overlay labels adds properties to the base `/__symbols__`
