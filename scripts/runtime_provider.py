@@ -461,6 +461,7 @@ def classify(result):
         activation.neutral_ready(activation_observation['value']))
     post_reboot_restartable = False
     post_reboot_blocked = False
+    current_route_ancestry = False
     if activation_observation.get('status') == 'observed' and not neutral:
         observed_activation = activation_observation['value']
         prior_activation = observed_activation.get('activationJournal')
@@ -475,7 +476,13 @@ def classify(result):
                 except (OSError, ValueError, TypeError, KeyError):
                     post_reboot_blocked = True
             else:
-                post_reboot_blocked = True
+                try:
+                    current_route_ancestry = (
+                        activation.routed_from_current_neutral(observed_activation))
+                except (OSError, ValueError, TypeError, KeyError):
+                    post_reboot_blocked = True
+                if not current_route_ancestry:
+                    post_reboot_blocked = True
     if neutral:
         result['safety'].update({'outputInhibited': False, 'operationalReady': False,
             'owner': False, 'lease': False, 'clock': 'quiescent',

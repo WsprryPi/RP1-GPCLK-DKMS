@@ -718,6 +718,31 @@ class Tests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     activation.recovered_route_retirement(system)
 
+    def test_completed_route_descends_from_current_neutral_activation(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        self.recovered_route(system)
+        system.state.update(generation=1, id=9, route=1,
+                            flags=admin.CONSUMER | admin.PINNED)
+        route = system.records['transaction.json']
+        route['phase'] = 'complete-inhibited'
+        route['observation'] = copy.deepcopy(system.state)
+        manager = system.records['manager.json']
+        manager['controller'] = copy.deepcopy(system.state)
+        manager['response']['operation'] = 'switch'
+        manager['response']['status'] = 'complete-inhibited'
+        manager['response']['state']['controller'] = copy.deepcopy(system.state)
+        manager['response']['state']['pendingTransaction'] = copy.deepcopy(route)
+        application_record = system.records['application.json']
+        application_record.update(
+            phase='restored', controller=copy.deepcopy(system.state),
+            requestId=manager['requestId'], fingerprint=manager['fingerprint'])
+        self.assertTrue(activation.routed_from_current_neutral(
+            activation.observe(system)))
+        application_record['controller']['generation'] = 0
+        with self.assertRaisesRegex(ValueError, 'application route ancestry'):
+            activation.routed_from_current_neutral(activation.observe(system))
+
     def test_nonzero_neutral_recovery_evidence_drift_fails_before_unload(self):
         mutations = (
             lambda value: value.records.pop('transaction.json'),

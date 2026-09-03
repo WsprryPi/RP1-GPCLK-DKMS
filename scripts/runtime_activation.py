@@ -893,6 +893,60 @@ def _validate_same_boot_recovered_route(transactions, controller, boot, binding)
     return {name: transactions.get(name) for name in RETIREMENT_TRANSACTIONS}
 
 
+def routed_from_current_neutral(observed):
+    """Validate a current-boot neutral activation as ancestry of an active route."""
+    journal = observed['activationJournal']
+    if journal is None or journal.get('phase') != 'complete-neutral':
+        return False
+    validate_journal(journal)
+    plan = journal['plan']
+    if (plan['bootId'] != observed['bootId'] or
+            plan['bindingSha256'] != observed['bindingSha256'] or
+            plan['artifactSetSha256'] != observed['artifactSetSha256'] or
+            plan['lastDeploymentSha256'] != observed['lastDeploymentSha256']):
+        raise ValueError('neutral activation ancestry differs from the installation')
+    origin = journal.get('controller')
+    controller = observed.get('controllerState')
+    if not isinstance(origin, dict) or not isinstance(controller, dict):
+        raise ValueError('neutral activation ancestry lacks controller identity')
+    admin.validate_observation(origin)
+    admin.validate_observation(controller)
+    if (any(origin[name] for name in ('generation', 'id', 'error', 'route', 'flags')) or
+            controller['session'] != origin['session'] or
+            controller['generation'] <= origin['generation'] or
+            controller['id'] <= 0 or controller['error'] != 0 or
+            controller['route'] not in (1, 2) or
+            controller['flags'] != admin.CONSUMER | admin.PINNED):
+        raise ValueError('active controller does not descend from neutral activation')
+    transactions = observed['transactions']
+    if transactions.get('deployment-pending.json') is not None:
+        raise ValueError('pending deployment blocks neutral route ancestry')
+    route = transactions.get('transaction.json')
+    manager = transactions.get('manager.json')
+    application_record = transactions.get('application.json')
+    if route is None or manager is None or application_record is None:
+        raise ValueError('neutral route ancestry lacks its completed journal chain')
+    _validate_prior_route_transaction(
+        route, observed['bootId'], observed['bindingSha256'])
+    if (route['phase'] != 'complete-inhibited' or
+            route['observation'] != controller or
+            route['target'] != controller['route']):
+        raise ValueError('active route transaction differs from its controller')
+    _validate_prior_manager(manager, route, observed['bootId'],
+                            observed['bindingSha256'])
+    application.validate_journal(application_record)
+    expected_route = {1: 'gpio4', 2: 'gpio20'}[controller['route']]
+    if (application_record.get('phase') not in application.TERMINAL or
+            application_record.get('boot') != observed['bootId'] or
+            application_record.get('binding') != observed['bindingSha256'] or
+            application_record.get('route') != expected_route or
+            application_record.get('controller') != controller or
+            application_record.get('requestId') != manager['requestId'] or
+            application_record.get('fingerprint') != manager['fingerprint']):
+        raise ValueError('active application route ancestry is inconsistent')
+    return True
+
+
 def _same_boot_route_recovery(observed):
     """Return exact journals that attribute a nonzero neutral generation."""
     controller = observed['controllerState']

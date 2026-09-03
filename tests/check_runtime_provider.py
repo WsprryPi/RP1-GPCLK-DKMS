@@ -252,6 +252,21 @@ class Tests(unittest.TestCase):
         self.assertTrue(result['reboot']['occurred'])
         self.assertIn('post-reboot neutral reactivation', result['remediation'][0])
 
+    def test_current_boot_neutral_ancestry_allows_exact_active_route(self):
+        host = Host()
+        host._activation = {'status': 'observed', 'value': {
+            'bootId': '00000000-0000-0000-0000-000000000001',
+            'activationJournal': {'phase': 'complete-neutral', 'plan': {
+                'bootId': '00000000-0000-0000-0000-000000000001'}}}}
+        with patch.object(provider.activation, 'neutral_ready', return_value=False), \
+             patch.object(provider.activation, 'routed_from_current_neutral',
+                          return_value=True):
+            self.assertEqual(self.inspect(host)['result'], 'exact_ready')
+        with patch.object(provider.activation, 'neutral_ready', return_value=False), \
+             patch.object(provider.activation, 'routed_from_current_neutral',
+                          side_effect=ValueError('ancestry drift')):
+            self.assertEqual(self.inspect(host)['result'], 'recovery_required')
+
     def test_unproven_post_reboot_activation_requires_investigation(self):
         host = Host()
         host._modules = {name: {'status': 'absent'} for name in host._modules}
