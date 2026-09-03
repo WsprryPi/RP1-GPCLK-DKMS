@@ -243,16 +243,23 @@ class Files:
         return application.neutral_restore(capture)
 
     def prune_removed_directories(self, expected_uid=0):
-        lock = admin.STATE / 'lock'
-        try:
-            info = lock.lstat()
-            if (not stat.S_ISREG(info.st_mode) or info.st_uid != expected_uid or
-                    stat.S_IMODE(info.st_mode) != 0o600):
-                raise ValueError('deployment lock identity changed during removal')
+        locks = []
+        for name in ('lock', 'application-lock'):
+            lock = admin.STATE / name
+            try:
+                info = lock.lstat()
+                if (not stat.S_ISREG(info.st_mode) or info.st_uid != expected_uid or
+                        stat.S_IMODE(info.st_mode) != 0o600 or info.st_nlink != 1):
+                    raise ValueError(name + ' identity changed during removal')
+                locks.append((lock, info.st_dev, info.st_ino))
+            except FileNotFoundError:
+                pass
+        for lock, device, inode in locks:
+            current = lock.lstat()
+            if (current.st_dev, current.st_ino) != (device, inode):
+                raise ValueError(lock.name + ' changed before removal')
             lock.unlink()
             admin.fsync_dir(admin.STATE)
-        except FileNotFoundError:
-            pass
         archives = []
         try:
             admin.safe_directory(admin.STATE)

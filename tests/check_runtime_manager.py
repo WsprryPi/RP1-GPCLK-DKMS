@@ -374,6 +374,8 @@ class Tests(unittest.TestCase):
             root = Path(directory)
             state = root/'state'; state.mkdir(); lock = state/'lock'
             lock.write_bytes(b''); lock.chmod(0o600)
+            application_lock = state/'application-lock'
+            application_lock.write_bytes(b''); application_lock.chmod(0o600)
             archive = b'{"phase":"complete-neutral"}'
             archive_path = state/('prior-activation-' + admin.digest(archive) + '.json')
             archive_path.write_bytes(archive + b'\n'); archive_path.chmod(0o600)
@@ -387,6 +389,24 @@ class Tests(unittest.TestCase):
                  patch.object(admin, 'fsync_dir'):
                 files.prune_removed_directories(expected_uid=os.geteuid())
             self.assertFalse(state.exists() or library.exists())
+
+    def test_removed_directory_pruning_rejects_unowned_application_lock(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state = root/'state'; state.mkdir()
+            lock = state/'lock'; lock.write_bytes(b''); lock.chmod(0o600)
+            application_lock = state/'application-lock'
+            application_lock.write_bytes(b'foreign'); application_lock.chmod(0o644)
+            library = root/'runtime'; library.mkdir()
+            with patch.object(admin, 'STATE', state), \
+                 patch.object(deploy, 'RUNTIME_LIBRARY', library), \
+                 patch.object(admin, 'safe_directory'), \
+                 patch.object(admin, 'fsync_dir'):
+                with self.assertRaisesRegex(ValueError, 'application-lock identity'):
+                    deploy.Files().prune_removed_directories(
+                        expected_uid=os.geteuid())
+            self.assertTrue(application_lock.exists())
+            self.assertTrue(lock.exists())
 
     def test_removed_directory_pruning_rejects_unowned_activation_archive(self):
         with tempfile.TemporaryDirectory() as directory:
