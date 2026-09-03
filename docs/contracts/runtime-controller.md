@@ -235,10 +235,12 @@ For replacement of an exact owned deployment, current candidate code may retire
 that same prior-boot terminal journal without first reactivating the controller.
 A coherent terminal route, manager and application journal set from the same
 prior boot and binding may be retired with it. `activation-retire-plan` binds the
-installed binding, artifact set, retained deployment, current boot and exact
-digest of every present journal. `activation-retire` repeats the complete
+installed binding, artifact set, retained deployment, current boot, exact
+digest of every present journal, and any application-owned idle override.
+`activation-retire` repeats the complete
 inactive-state observation under the shared mutation lock and removes dependent
-application, manager and route journals before the activation journal after the
+idle-override removal while the application journal proves ownership, then
+removes application, manager and route journals before the activation journal after the
 owning updater has preserved it. This order leaves every interrupted prefix
 eligible for an exact retry and creates no dynamic residue inside the deployment
 being removed.

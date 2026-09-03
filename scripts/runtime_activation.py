@@ -168,11 +168,30 @@ class Linux:
         for name in RETIREMENT_TRANSACTIONS:
             if self.read_record(admin.STATE / name) != expected[name]:
                 raise ValueError('prior transaction changed before retirement: ' + name)
+        if expected['application.json'] is not None:
+            application.remove_idle(expected['application.json'])
         for name in RETIREMENT_TRANSACTIONS:
             if expected[name] is not None:
                 path = admin.STATE / name
                 path.unlink()
                 admin.fsync_dir(path.parent)
+
+    def retirement_idle(self, record):
+        path = application.unit_file(application.IDLE_DROPIN)
+        try:
+            self.trusted_file(path, 0o644)
+            installed = admin.read_regular(path)
+        except FileNotFoundError:
+            return None
+        if record is None:
+            raise ValueError('prior idle override lacks application ownership')
+        owners = [application.idle_bytes(record)]
+        if record.get('previousIdle'):
+            owners.append(application.idle_bytes(dict(
+                record, token=record['previousIdle'])))
+        if installed not in owners:
+            raise ValueError('prior idle override differs from application ownership')
+        return admin.digest(installed)
 
     def boot(self):
         value = admin.read_regular('/proc/sys/kernel/random/boot_id').decode().strip()
@@ -559,6 +578,8 @@ def retirement_plan(system):
         'bootId': observed['bootId'],
         'lastDeploymentSha256': observed['lastDeploymentSha256'],
         'activationJournalSha256': admin.digest(canonical(journal)),
+        'applicationIdleSha256': system.retirement_idle(
+            transactions['application.json']),
         'transactionJournalSha256': {name: (None if value is None else
             admin.digest(canonical(value))) for name, value in transactions.items()}}
 
@@ -566,10 +587,13 @@ def retirement_plan(system):
 def retire(system, reviewed, approved, lock=deployment.mutation_lock):
     required = {'version', 'operation', 'bindingSha256', 'artifactSetSha256',
         'bootId', 'lastDeploymentSha256', 'activationJournalSha256',
-        'transactionJournalSha256'}
+        'applicationIdleSha256', 'transactionJournalSha256'}
     if (not isinstance(reviewed, dict) or set(reviewed) != required or
             reviewed.get('version') != 2 or
             reviewed.get('operation') != 'retire-post-reboot-activation' or
+            (reviewed.get('applicationIdleSha256') is not None and
+             (not isinstance(reviewed['applicationIdleSha256'], str) or
+              not re.fullmatch('[0-9a-f]{64}', reviewed['applicationIdleSha256']))) or
             not isinstance(reviewed.get('transactionJournalSha256'), dict) or
             set(reviewed['transactionJournalSha256']) != set(RETIREMENT_TRANSACTIONS) or
             any(value is not None and
@@ -584,8 +608,10 @@ def retire(system, reviewed, approved, lock=deployment.mutation_lock):
         journal = system.read_record(JOURNAL)
         transactions = {name: system.read_record(admin.STATE / name)
                         for name in RETIREMENT_TRANSACTIONS}
+        idle = system.retirement_idle(transactions['application.json'])
         if (journal is None or admin.digest(canonical(journal)) !=
                 reviewed['activationJournalSha256'] or
+                idle != reviewed['applicationIdleSha256'] or
                 any((None if value is None else admin.digest(canonical(value))) !=
                     reviewed['transactionJournalSha256'][name]
                     for name, value in transactions.items())):

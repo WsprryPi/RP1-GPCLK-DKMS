@@ -74,6 +74,7 @@ class System:
         self.socket_unsafe = False
         self.unit_drift = False
         self.note_drift = False
+        self.idle = None
 
     def read_record(self, path):
         return copy.deepcopy(self.journal if Path(path).name == 'activation.json'
@@ -92,9 +93,15 @@ class System:
                   for name in activation.RETIREMENT_TRANSACTIONS}
         if actual != expected:
             raise ValueError('prior transactions changed before retirement')
+        if expected['application.json'] is not None:
+            self.idle = None
         for name in activation.RETIREMENT_TRANSACTIONS:
             self.records.pop(name, None)
             self.events.append('retire:' + name)
+    def retirement_idle(self, record):
+        if self.idle is not None and record is None:
+            raise ValueError('idle ownership')
+        return None if self.idle is None else admin.digest(self.idle)
     def boot(self): return self.boot_id
     def binding(self): return self.raw, copy.deepcopy(self.binding_value)
     def last_deployment(self, raw):
@@ -304,6 +311,7 @@ class Tests(unittest.TestCase):
                          admin.digest(activation.canonical(prior)))
         self.assertEqual(plan['transactionJournalSha256'], {
             name: None for name in activation.RETIREMENT_TRANSACTIONS})
+        self.assertIsNone(plan['applicationIdleSha256'])
         result = activation.retire(system, plan, activation.plan_digest(plan), lock)
         self.assertEqual(result['status'], 'retired-post-reboot-activation')
         self.assertEqual(system.archives, [])
@@ -339,6 +347,7 @@ class Tests(unittest.TestCase):
         system.records.update({'transaction.json': route,
                                'manager.json': manager,
                                'application.json': application_record})
+        system.idle = __import__('runtime_application').idle_bytes(application_record)
         system.boot_id = '00000000-0000-0000-0000-000000000002'
         system.controller = False
         system.socket_active = False
@@ -346,10 +355,13 @@ class Tests(unittest.TestCase):
         self.assertEqual(plan['transactionJournalSha256'], {
             name: admin.digest(activation.canonical(system.records[name]))
             for name in activation.RETIREMENT_TRANSACTIONS})
+        self.assertEqual(plan['applicationIdleSha256'], admin.digest(system.idle))
         for count in range(len(activation.RETIREMENT_TRANSACTIONS) + 1):
             interrupted = copy.deepcopy(system)
             for name in activation.RETIREMENT_TRANSACTIONS[:count]:
                 interrupted.records.pop(name)
+                if name == 'application.json':
+                    interrupted.idle = None
             retry = activation.retirement_plan(interrupted)
             self.assertEqual(retry['transactionJournalSha256'], {
                 name: (None if name not in interrupted.records else
@@ -359,6 +371,7 @@ class Tests(unittest.TestCase):
         self.assertIsNone(system.journal)
         self.assertFalse(any(name in system.records
                              for name in activation.RETIREMENT_TRANSACTIONS))
+        self.assertIsNone(system.idle)
         self.assertLess(system.events.index('retire:transaction.json'),
                         system.events.index('retire-activation'))
 

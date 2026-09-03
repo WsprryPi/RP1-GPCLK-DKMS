@@ -126,8 +126,10 @@ An authenticated updater may use the newly selected provider's
 left an older, exactly bound deployment with its terminal `complete-neutral`
 activation journal and either no route journals or a coherent terminal
 prior-boot route/manager/application journal set. The reviewed digest binds every
-present journal and the complete installed identity. Execution revalidates the
-inactive current boot and removes dependent application, manager and route
+present journal, any application-owned idle override, and the complete installed
+identity. Execution revalidates the inactive current boot, removes the exact
+idle override while its application journal still proves ownership, and removes
+dependent application, manager and route
 journals before removing the activation journal, so interruption remains
 retryable without loading either module. The updater must preserve the exact
 activation journal outside the deployment first. This is an owned
