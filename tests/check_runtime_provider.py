@@ -267,6 +267,37 @@ class Tests(unittest.TestCase):
                           side_effect=ValueError('ancestry drift')):
             self.assertEqual(self.inspect(host)['result'], 'recovery_required')
 
+    def test_current_boot_recovered_route_is_activation_recovery_not_conflict(self):
+        host = Host()
+        neutral = controller(0, 0)
+        host._modules['rp1_gpclk_dkms'] = {'status': 'absent'}
+        host._endpoints['/dev/rp1-gpclk'] = {'status': 'absent', 'open': False}
+        host._manager['query']['state'].update(
+            activeRoute=None, controller=neutral,
+            pendingTransaction={'phase': 'recovered-inhibited'},
+            application={'phase': 'route-recovered'})
+        host._manager.pop('idle')
+        host._journals['activation.json'] = {'status': 'present',
+            'value': {'phase': 'complete-neutral'}}
+        host._activation = {'status': 'observed', 'value': {
+            'bootId': 'boot', 'activationJournal': {
+                'phase': 'complete-neutral', 'plan': {'bootId': 'boot'}}}}
+        host.activation_recovery_plan = lambda: {
+            'routeRecoverySha256': {'transaction.json': 'a' * 64}}
+        with patch.object(provider.activation, 'neutral_ready', return_value=False):
+            result = self.inspect(host)
+        self.assertEqual(result['result'], 'recovery_required')
+        self.assertEqual(result['conflicts'], [])
+        self.assertNotIn('loaded-controller-without-completed-activation',
+                         result['conflicts'])
+        host.activation_recovery_plan = lambda: (_ for _ in ()).throw(
+            ValueError('route recovery ancestry drift'))
+        with patch.object(provider.activation, 'neutral_ready', return_value=False):
+            drifted = self.inspect(host)
+        self.assertEqual(drifted['result'], 'conflict')
+        self.assertIn('loaded-controller-without-completed-activation',
+                      drifted['conflicts'])
+
     def test_unproven_post_reboot_activation_requires_investigation(self):
         host = Host()
         host._modules = {name: {'status': 'absent'} for name in host._modules}

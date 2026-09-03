@@ -328,11 +328,12 @@ def inspect(host, bundle=None, requested=None, configured=None, persisted=None):
             'owner': 'unknown', 'lease': 'unknown', 'clock': 'unknown', 'gpio': 'unknown',
             'dma': 'unknown', 'endpointOpen': endpoints['consumer'].get('open', 'unknown')},
         'conflicts': [], 'remediation': []}
-    classify(result)
+    classify(result, (host.activation_recovery_plan
+                      if hasattr(host, 'activation_recovery_plan') else None))
     return result, plan
 
 
-def classify(result):
+def classify(result, activation_recovery_plan=None):
     conflicts = result['conflicts']
     binding = result['identities']['installedBinding']
     expected = result['identities']['expectedBinding']
@@ -462,6 +463,7 @@ def classify(result):
     post_reboot_restartable = False
     post_reboot_blocked = False
     current_route_ancestry = False
+    current_route_recovery = False
     if activation_observation.get('status') == 'observed' and not neutral:
         observed_activation = activation_observation['value']
         prior_activation = observed_activation.get('activationJournal')
@@ -477,11 +479,19 @@ def classify(result):
                     post_reboot_blocked = True
             else:
                 try:
-                    current_route_ancestry = (
-                        activation.routed_from_current_neutral(observed_activation))
+                    if active in ROUTES:
+                        current_route_ancestry = (
+                            activation.routed_from_current_neutral(observed_activation))
+                    else:
+                        if activation_recovery_plan is None:
+                            raise ValueError('neutral recovery planner is unavailable')
+                        recovery = activation_recovery_plan()
+                        current_route_recovery = (
+                            isinstance(recovery.get('routeRecoverySha256'), dict)
+                            and bool(recovery['routeRecoverySha256']))
                 except (OSError, ValueError, TypeError, KeyError):
                     post_reboot_blocked = True
-                if not current_route_ancestry:
+                if active in ROUTES and not current_route_ancestry:
                     post_reboot_blocked = True
     if neutral:
         result['safety'].update({'outputInhibited': False, 'operationalReady': False,
@@ -490,7 +500,7 @@ def classify(result):
         result['reboot']['occurred'] = False
     if (modules['rp1_route_controller'].get('status') == 'loaded' and
             modules['rp1_gpclk_dkms'].get('status') == 'absent' and not neutral and
-            not activation_pending):
+            not activation_pending and not current_route_recovery):
         conflicts.append('loaded-controller-without-completed-activation')
 
     residue = (binding.get('status') != 'absent' or artifacts or
@@ -501,7 +511,7 @@ def classify(result):
     if conflicts:
         classification = 'conflict'
         result['remediation'].append('Preserve the conflicting state and use its owning migration or removal workflow.')
-    elif unresolved or post_reboot_blocked:
+    elif unresolved or post_reboot_blocked or current_route_recovery:
         classification = 'recovery_required'
         if post_reboot_blocked:
             result['remediation'].append(

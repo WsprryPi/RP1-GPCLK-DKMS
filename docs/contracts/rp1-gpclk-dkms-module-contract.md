@@ -467,7 +467,11 @@ None of these operations authorizes output. Exact repeated execution is
 idempotent. A same-boot completed route remains attributable to its neutral
 activation only when the binding, boot, controller session, increasing
 generation, route transaction, manager response, and restored application
-journal form one exact chain. A completed prior-boot neutral activation may be superseded only
+journal form one exact chain. If that route is subsequently recovered to a
+nonzero neutral controller generation, the facade reports `recovery_required`
+instead of a generic conflict only when the digest-bound activation recovery
+planner validates the complete same-boot route, manager, and application
+journal chain. A completed prior-boot neutral activation may be superseded only
 after its exact evidence, any coherent terminal route journal set, and the
 inactive current-boot state are validated and the application is inhibited.
 Candidate-owned retirement binds every present journal and application-owned
