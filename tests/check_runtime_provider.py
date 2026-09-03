@@ -120,6 +120,7 @@ class Host:
             'bootId': '00000000-0000-0000-0000-000000000002',
             'lastDeploymentSha256': 'c' * 64,
             'activationJournalSha256': 'd' * 64,
+            'applicationIdleSha256': None,
             'transactionJournalSha256': {
                 name: None for name in provider.activation.RETIREMENT_TRANSACTIONS}}
         self.retired = False
