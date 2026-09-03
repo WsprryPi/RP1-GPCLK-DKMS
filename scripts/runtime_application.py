@@ -109,10 +109,8 @@ def neutral_inhibit():
         raise ValueError('application still active after neutral inhibition')
 
 
-def load(system):
-    record = system.read_record('application.json')
-    if record is None:
-        return None
+def validate_journal(record):
+    """Validate one already-read application restoration journal."""
     required = {'version', 'boot', 'binding', 'requestId', 'fingerprint', 'route',
                 'token', 'wasActive', 'administratorMasked', 'phase', 'controller',
                 'ready', 'previousIdle'}
@@ -142,6 +140,11 @@ def load(system):
             type(ready['pid']) is not int or ready['pid'] <= 0 or ready['route'] != record['route']):
         raise ValueError('invalid application readiness journal')
     return record
+
+
+def load(system):
+    record = system.read_record('application.json')
+    return None if record is None else validate_journal(record)
 
 
 def unit_file(name):

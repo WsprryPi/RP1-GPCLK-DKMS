@@ -493,7 +493,7 @@ def _validate_prior_manager(value, route, boot, binding):
         raise ValueError('prior manager response is inconsistent')
 
 
-def _prior_boot_retirement_transactions(system, observed):
+def _prior_boot_retirement_transactions(observed):
     transactions = observed['transactions']
     if transactions.get('deployment-pending.json') is not None:
         raise ValueError('pending deployment cannot be retired as route evidence')
@@ -510,7 +510,7 @@ def _prior_boot_retirement_transactions(system, observed):
             raise ValueError('prior manager transaction lacks its route journal')
         _validate_prior_manager(manager, route, prior_boot, binding)
     if application_record is not None:
-        if route is None or application.load(system) != application_record:
+        if route is None or application.validate_journal(application_record) != application_record:
             raise ValueError('prior application transaction lacks its route journal')
         expected_route = {1: 'gpio4', 2: 'gpio20'}[route['target']]
         if (application_record.get('boot') != prior_boot or
@@ -524,7 +524,7 @@ def _prior_boot_retirement_transactions(system, observed):
     return {name: transactions.get(name) for name in RETIREMENT_TRANSACTIONS}
 
 
-def post_reboot_retirement_state(system, observed):
+def post_reboot_retirement_state(observed):
     """Validate exact inactive state and attributable prior-boot journals."""
     journal = observed['activationJournal']
     if journal is None or journal['phase'] != 'complete-neutral':
@@ -543,13 +543,13 @@ def post_reboot_retirement_state(system, observed):
     if (observed['inhibited'] and
             observed['applicationService'].get('active') not in ('inactive', 'failed')):
         raise ValueError('post-reboot inhibition did not stop the application')
-    return _prior_boot_retirement_transactions(system, observed)
+    return _prior_boot_retirement_transactions(observed)
 
 
 def retirement_plan(system):
     """Bind retirement of exact terminal activation evidence from an older boot."""
     observed = observe(system)
-    transactions = post_reboot_retirement_state(system, observed)
+    transactions = post_reboot_retirement_state(observed)
     if transactions is None:
         raise ValueError('no prior-boot terminal activation evidence to retire')
     journal = observed['activationJournal']
