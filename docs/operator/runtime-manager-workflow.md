@@ -146,7 +146,9 @@ python3 /usr/lib/rp1-gpclk-dkms/runtime_provider.py activation-recover \
 ```
 
 Recovery unloads only an exact neutral controller and stops the socket only when
-the activation transaction started it. It does not remove an overlay, consumer,
+the activation transaction started it. A nonzero neutral generation is accepted
+only when the reviewed recovery plan binds the terminal same-boot route-manager
+evidence that produced it. Recovery does not remove an active overlay, consumer,
 foreign socket or administrator state. Boot change, a nonzero controller route,
 fault, consumer presence or uncertain unload retains `recovery_required`.
 

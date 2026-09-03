@@ -188,6 +188,42 @@ def lock():
 
 
 class Tests(unittest.TestCase):
+    def recovered_route(self, system, *, with_application=True):
+        binding = admin.digest(system.raw)
+        predecessor = {'session': system.state['session'], 'generation': 1,
+            'id': 9, 'error': 0, 'route': 1,
+            'flags': admin.CONSUMER | admin.PINNED}
+        system.state = {'session': system.state['session'], 'generation': 2,
+            'id': 0, 'error': 0, 'route': 0, 'flags': 0}
+        route = {'version': 1, 'boot': system.boot_id,
+            'session': system.state['session'], 'binding': binding,
+            'request': '00000000-0000-0000-0000-000000000010',
+            'target': 1, 'phase': 'recovered-inhibited',
+            'observation': copy.deepcopy(system.state)}
+        response = {'schemaVersion': 3,
+            'contract': 'rp1-gpclk-route-manager-runtime',
+            'operation': 'recover', 'status': 'recovered-inhibited',
+            'state': {'bootId': system.boot_id, 'bindingSha256': binding,
+                'controller': copy.deepcopy(system.state),
+                'pendingTransaction': copy.deepcopy(route)}}
+        manager = {'requestId': 'recovery-0001', 'actor': 'offline.test',
+            'fingerprint': 'f' * 64, 'complete': True,
+            'controller': copy.deepcopy(system.state), 'boot': system.boot_id,
+            'binding': binding, 'response': response}
+        system.records.update({'transaction.json': route,
+                               'manager.json': manager})
+        if with_application:
+            system.records['application.json'] = {
+                'version': 1, 'boot': system.boot_id, 'binding': binding,
+                'requestId': 'switch-request-0001', 'fingerprint': 'e' * 64,
+                'route': 'gpio4',
+                'token': '00000000-0000-0000-0000-000000000011',
+                'wasActive': True, 'administratorMasked': False,
+                'phase': 'route-recovered', 'controller': predecessor,
+                'ready': {'pid': 42, 'route': 'gpio4'}, 'previousIdle': None}
+        system.inhibited = True
+        system.application_active = False
+
     def test_linux_controller_status_uses_and_requires_reserved0_zero(self):
         system = activation.Linux()
         def ioctl(fd, command, data, mutate):
@@ -606,6 +642,36 @@ class Tests(unittest.TestCase):
         self.assertEqual(result['status'], 'recovered-inhibited')
         self.assertFalse(system.controller)
         self.assertTrue(system.inhibited)
+
+    def test_recovery_unloads_nonzero_neutral_controller_only_with_exact_route_evidence(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        self.recovered_route(system)
+        reviewed = activation.recovery_plan(system)
+        self.assertEqual(reviewed['version'], 2)
+        self.assertEqual(reviewed['controllerState'], system.state)
+        self.assertEqual(set(reviewed['routeRecoverySha256']),
+                         set(activation.RETIREMENT_TRANSACTIONS))
+        result = activation.ensure_recovery(
+            system, reviewed, activation.plan_digest(reviewed), lock)
+        self.assertEqual(result['status'], 'recovered-inhibited')
+        self.assertFalse(system.controller)
+
+    def test_nonzero_neutral_recovery_evidence_drift_fails_before_unload(self):
+        mutations = (
+            lambda value: value.records.pop('transaction.json'),
+            lambda value: value.records['manager.json']['response'].update(status='error'),
+            lambda value: value.records['application.json']['controller'].update(generation=0),
+            lambda value: value.state.update(generation=3),
+        )
+        for mutate in mutations:
+            with self.subTest(mutate=mutate):
+                system = System(); initial = activation.activation_plan(system)
+                activation.ensure(system, initial, activation.plan_digest(initial), lock)
+                self.recovered_route(system); mutate(system)
+                with self.assertRaises(ValueError):
+                    activation.recovery_plan(system)
+                self.assertTrue(system.controller)
 
     def test_recovery_rejects_active_route_and_boot_change(self):
         system = System(); system.fail = 'manager'; plan = activation.activation_plan(system)

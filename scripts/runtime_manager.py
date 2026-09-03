@@ -128,7 +128,9 @@ def _dispatch(value, factory=admin.Linux):
         try:
             state = admin.execute(system, route={'gpio4':1,'gpio20':2}.get(request.get('route')),
                                   recover=operation == 'recover')
-            result = response(system, operation, state, 'complete-inhibited')
+            result = response(system, operation, state,
+                              'recovered-inhibited' if operation == 'recover'
+                              else 'complete-inhibited')
         except (OSError, ValueError) as error:
             # Do not retry effects. A busy/unknown status is itself a blocker.
             state = system.call()

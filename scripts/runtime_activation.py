@@ -501,11 +501,14 @@ def _validate_prior_manager(value, route, boot, binding):
         raise ValueError('prior manager controller differs from route transaction')
     response = value['response']
     state = response.get('state', {}) if isinstance(response, dict) else {}
+    expected_status = ({'recovered-inhibited', 'complete-inhibited'}
+                       if route['phase'] == 'recovered-inhibited'
+                       else {'complete-inhibited'})
     if (response.get('schemaVersion') != 3 or
             response.get('contract') != 'rp1-gpclk-route-manager-runtime' or
             response.get('operation') != ('switch' if route['phase'] ==
                 'complete-inhibited' else 'recover') or
-            response.get('status') != route['phase'] or
+            response.get('status') not in expected_status or
             state.get('bootId') != boot or state.get('bindingSha256') != binding or
             state.get('controller') != value['controller'] or
             state.get('pendingTransaction') != route):
@@ -854,6 +857,48 @@ def ensure(system, reviewed, approved, lock=deployment.mutation_lock):
         raise
 
 
+def _same_boot_route_recovery(observed):
+    """Return exact journals that attribute a nonzero neutral generation."""
+    controller = observed['controllerState']
+    if controller is None or controller['generation'] == 0:
+        return None
+    admin.validate_observation(controller)
+    if any(controller[name] for name in ('id', 'error', 'route', 'flags')):
+        return None
+    transactions = observed['transactions']
+    if transactions.get('deployment-pending.json') is not None:
+        raise ValueError('pending deployment blocks route recovery attribution')
+    route = transactions.get('transaction.json')
+    manager = transactions.get('manager.json')
+    application_record = transactions.get('application.json')
+    if route is None or manager is None:
+        return None
+    boot = observed['bootId']
+    binding = observed['bindingSha256']
+    _validate_prior_route_transaction(route, boot, binding)
+    if route['phase'] != 'recovered-inhibited' or route['observation'] != controller:
+        raise ValueError('route recovery does not match the neutral controller')
+    _validate_prior_manager(manager, route, boot, binding)
+    if application_record is not None:
+        application.validate_journal(application_record)
+        predecessor = application_record.get('controller')
+        target = {1: 'gpio4', 2: 'gpio20'}[route['target']]
+        if (application_record.get('phase') != 'route-recovered' or
+                application_record.get('boot') != boot or
+                application_record.get('binding') != binding or
+                application_record.get('route') != target or
+                not isinstance(predecessor, dict)):
+            raise ValueError('application route recovery is inconsistent')
+        admin.validate_observation(predecessor)
+        if (predecessor['session'] != controller['session'] or
+                predecessor['generation'] + 1 != controller['generation'] or
+                predecessor['error'] != 0 or predecessor['id'] <= 0 or
+                predecessor['route'] != route['target'] or
+                predecessor['flags'] != admin.CONSUMER | admin.PINNED):
+            raise ValueError('application predecessor does not lead to recovered controller')
+    return {name: transactions.get(name) for name in RETIREMENT_TRANSACTIONS}
+
+
 def recovery_plan(system):
     observed = observe(system)
     journal = observed['activationJournal']
@@ -869,10 +914,19 @@ def recovery_plan(system):
     if (observed['controller']['status'] == 'loaded' and
             observed['controller'].get('exact') is not True):
         raise ValueError('foreign or mismatched controller blocks neutral recovery')
-    return {'version': 1, 'operation': 'neutral-activation-recovery',
+    controller = observed['controllerState']
+    route_recovery = _same_boot_route_recovery(observed)
+    if (controller and controller['generation'] != 0 and
+            route_recovery is None):
+        raise ValueError('nonzero neutral controller lacks exact route recovery evidence')
+    return {'version': 2, 'operation': 'neutral-activation-recovery',
         'activationJournalSha256': admin.digest(canonical(journal)),
         'bindingSha256': observed['bindingSha256'], 'bootId': observed['bootId'],
         'controllerLoaded': observed['controller']['status'] == 'loaded',
+        'controllerState': controller,
+        'routeRecoverySha256': (None if route_recovery is None else {
+            name: admin.digest(canonical(value)) if value is not None else None
+            for name, value in route_recovery.items()}),
         'socketWasActive': journal['plan']['socketWasActive'],
         'alreadyRecovered': journal['phase'] == 'recovered-inhibited'}
 
@@ -894,7 +948,11 @@ def ensure_recovery(system, reviewed, approved, lock=deployment.mutation_lock):
                 raise ValueError('consumer state blocks neutral recovery')
             if observed['controller']['status'] == 'loaded':
                 state = observed['controllerState']
-                if not state or any(state[name] for name in ('generation', 'id', 'error', 'route', 'flags')):
+                if (state != reviewed['controllerState'] or
+                        any(state[name] for name in ('id', 'error', 'route', 'flags')) or
+                        (state['generation'] != 0 and
+                         recovery_plan(system)['routeRecoverySha256'] !=
+                         reviewed['routeRecoverySha256'])):
                     raise ValueError('non-neutral controller blocks unload')
                 system.unload_controller()
             if not reviewed['socketWasActive']:

@@ -137,6 +137,7 @@ class Tests(unittest.TestCase):
         result = manager._dispatch({'schemaVersion':3,'operation':'recover','execute':True,
             'requestId':'recover-0001','actor':'offline.test'}, lambda:system)
         self.assertIsNone(result['state']['activeRoute'])
+        self.assertEqual(result['status'], 'recovered-inhibited')
         self.assertTrue(system.mask)
 
     def test_error_ownership_preserved(self):

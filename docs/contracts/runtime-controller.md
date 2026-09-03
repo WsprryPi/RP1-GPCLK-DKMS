@@ -216,7 +216,11 @@ WsprryPi owns its service, configuration and companion; administrator masks are
 preserved. `activation-recover-plan`/`activation-recover` restore the provable
 post-deployment inhibited state without removing foreign objects. A non-neutral
 controller, changed boot, substituted endpoint or failed unload remains a durable
-recovery fault.
+recovery fault. A neutral controller with a nonzero generation is unloadable
+only when the same-boot terminal route, manager, and optional application
+journals form an exact recovery chain to that controller observation. The
+version-2 recovery plan binds the controller state and every retained
+route-recovery journal digest; missing or changed evidence remains a fault.
 
 A terminal `complete-neutral` journal may seed a new current-boot activation
 only after a clean reboot has removed both modules, both endpoints and the
