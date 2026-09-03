@@ -227,6 +227,7 @@ class Host:
                 raise ValueError('reviewed deployment removal plan changed before mutation')
             system = activation.Linux()
             journal = system.read_record(activation.JOURNAL)
+            transactions = None
             if journal is not None and journal.get('phase') == 'recovered-inhibited':
                 record = value['files'].get(str(activation.JOURNAL))
                 if not isinstance(record, dict) or deployment.decode(record.get('after')) is not None:
@@ -234,8 +235,18 @@ class Host:
                 recovery = activation.recovery_plan(system)
                 if recovery.get('alreadyRecovered') is not True:
                     raise ValueError('activation journal is not exactly recovered')
+                transactions = activation.recovered_route_retirement(system)
                 system.archive_journal(journal)
+                if transactions is not None:
+                    system.retire_transactions(transactions)
                 system.retire_journal(journal)
+            elif journal is None:
+                # WsprryPi may already have archived and retired the recovered
+                # activation journal. The remaining route journals are still
+                # removable only as an exact, inactive, same-boot chain.
+                transactions = activation.recovered_route_retirement(system)
+                if transactions is not None:
+                    system.retire_transactions(transactions)
             deployment.remove(self.files, value, approved)
         self.files.prune_removed_directories()
         return {'status': 'removed-exact-deployment'}

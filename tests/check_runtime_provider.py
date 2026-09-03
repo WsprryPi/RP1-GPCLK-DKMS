@@ -303,7 +303,9 @@ class Tests(unittest.TestCase):
         system = SimpleNamespace(
             read_record=lambda path: journal,
             archive_journal=lambda current: events.append(('archive', current)),
-            retire_journal=lambda current: events.append(('retire', current)))
+            retire_journal=lambda current: events.append(('retire', current)),
+            retire_transactions=lambda current: events.append(
+                ('retire-transactions', current)))
         files = SimpleNamespace(prune_removed_directories=lambda: events.append(('prune', None)))
         host = provider.Host.__new__(provider.Host)
         host.files = files
@@ -314,11 +316,41 @@ class Tests(unittest.TestCase):
                           side_effect=lambda *args: events.append(('remove', None))), \
              patch.object(provider.activation, 'Linux', return_value=system), \
              patch.object(provider.activation, 'recovery_plan',
-                          return_value={'alreadyRecovered': True}):
+                          return_value={'alreadyRecovered': True}), \
+             patch.object(provider.activation, 'recovered_route_retirement',
+                          return_value=None):
             self.assertEqual(host.deployment_remove(value, digest),
                              {'status': 'removed-exact-deployment'})
         self.assertEqual([event[0] for event in events],
                          ['archive', 'retire', 'remove', 'prune'])
+
+    def test_real_host_retires_orphaned_exact_route_journals_before_removal(self):
+        transactions = {name: {'name': name}
+                        for name in provider.activation.RETIREMENT_TRANSACTIONS}
+        value = {'version': 2, 'files': {}}
+        digest = provider.deployment.plan_hash(value)
+        events = []
+        system = SimpleNamespace(
+            read_record=lambda path: None,
+            retire_transactions=lambda current: events.append(
+                ('retire-transactions', current)))
+        host = provider.Host.__new__(provider.Host)
+        host.files = SimpleNamespace(
+            prune_removed_directories=lambda: events.append(('prune', None)))
+        with patch.object(provider.deployment, 'mutation_lock',
+                          return_value=contextlib.nullcontext()), \
+             patch.object(provider.deployment, 'removal_plan', return_value=value), \
+             patch.object(provider.deployment, 'remove',
+                          side_effect=lambda *args: events.append(('remove', None))), \
+             patch.object(provider.activation, 'Linux', return_value=system), \
+             patch.object(provider.activation, 'recovered_route_retirement',
+                          return_value=transactions):
+            self.assertEqual(host.deployment_remove(value, digest),
+                             {'status': 'removed-exact-deployment'})
+        self.assertEqual(events, [
+            ('retire-transactions', transactions),
+            ('remove', None), ('prune', None),
+        ])
 
     def test_real_host_does_not_retire_recovery_on_unreviewed_removal(self):
         journal = {'version': 1, 'phase': 'recovered-inhibited'}

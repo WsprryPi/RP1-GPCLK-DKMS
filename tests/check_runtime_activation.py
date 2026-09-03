@@ -657,6 +657,67 @@ class Tests(unittest.TestCase):
         self.assertEqual(result['status'], 'recovered-inhibited')
         self.assertFalse(system.controller)
 
+    def test_inactive_recovered_route_journals_are_retirement_eligible(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        self.recovered_route(system)
+        reviewed = activation.recovery_plan(system)
+        activation.ensure_recovery(
+            system, reviewed, activation.plan_digest(reviewed), lock)
+        system.journal = None
+        transactions = activation.recovered_route_retirement(system)
+        self.assertEqual(transactions, {
+            name: system.records.get(name)
+            for name in activation.RETIREMENT_TRANSACTIONS})
+        system.retire_transactions(transactions)
+        self.assertIsNone(activation.recovered_route_retirement(system))
+
+    def test_inactive_recovered_route_retirement_accepts_only_ordered_suffixes(self):
+        for removed in range(len(activation.RETIREMENT_TRANSACTIONS) + 1):
+            with self.subTest(removed=removed):
+                system = System(); initial = activation.activation_plan(system)
+                activation.ensure(system, initial, activation.plan_digest(initial), lock)
+                self.recovered_route(system); reviewed = activation.recovery_plan(system)
+                activation.ensure_recovery(
+                    system, reviewed, activation.plan_digest(reviewed), lock)
+                system.journal = None
+                for name in activation.RETIREMENT_TRANSACTIONS[:removed]:
+                    system.records.pop(name)
+                remaining = activation.recovered_route_retirement(system)
+                if removed == len(activation.RETIREMENT_TRANSACTIONS):
+                    self.assertIsNone(remaining)
+                else:
+                    self.assertEqual(remaining, {
+                        name: system.records.get(name)
+                        for name in activation.RETIREMENT_TRANSACTIONS})
+
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        self.recovered_route(system); reviewed = activation.recovery_plan(system)
+        activation.ensure_recovery(
+            system, reviewed, activation.plan_digest(reviewed), lock)
+        system.journal = None
+        system.records.pop('manager.json')
+        with self.assertRaisesRegex(ValueError, 'lacks its manager journal'):
+            activation.recovered_route_retirement(system)
+
+    def test_inactive_recovered_route_retirement_rejects_drift(self):
+        mutations = (
+            lambda value: value.records['manager.json']['response'].update(status='error'),
+            lambda value: value.records['application.json']['controller'].update(generation=0),
+            lambda value: setattr(value, 'inhibited', False),
+        )
+        for mutate in mutations:
+            with self.subTest(mutate=mutate):
+                system = System(); initial = activation.activation_plan(system)
+                activation.ensure(system, initial, activation.plan_digest(initial), lock)
+                self.recovered_route(system); reviewed = activation.recovery_plan(system)
+                activation.ensure_recovery(
+                    system, reviewed, activation.plan_digest(reviewed), lock)
+                system.journal = None; mutate(system)
+                with self.assertRaises(ValueError):
+                    activation.recovered_route_retirement(system)
+
     def test_nonzero_neutral_recovery_evidence_drift_fails_before_unload(self):
         mutations = (
             lambda value: value.records.pop('transaction.json'),

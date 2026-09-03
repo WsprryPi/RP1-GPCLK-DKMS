@@ -473,4 +473,9 @@ and removes dependent journals before activation evidence so interruption is ret
 pending deployment, activation, controller
 fault, incomplete route journal, or failed application restoration is reported as `recovery_required`;
 foreign, substituted, mixed, unsafe, open, or contradictory state is `conflict`.
+During an exact inverse deployment, a same-boot `recovered-inhibited` route
+journal chain may likewise be retired after the modules, endpoints, manager
+socket, and application are all verified inactive and inhibited. This remains
+retryable if WsprryPi already archived the recovered activation journal or if
+an earlier retirement removed only an ordered prefix of dependent journals.
 The source-development manager remains passive-query-only.
