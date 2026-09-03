@@ -12,7 +12,8 @@ int rp1_gpclk_execution_submit_events(
 	struct rp1_gpclk_submit_events *request,
 	const struct rp1_gpclk_tone *tones,
 	const struct rp1_gpclk_event *events);
-void rp1_gpclk_execution_activate(struct rp1_gpclk_device *device);
+void rp1_gpclk_execution_activate(struct rp1_gpclk_device *device,
+				  __u64 generation);
 int rp1_gpclk_execution_stop(struct rp1_gpclk_device *device, __u64 owner,
 			     __u64 lease, __u64 generation, __u32 reason);
 void rp1_gpclk_execution_request_stop(struct rp1_gpclk_device *device,

@@ -117,6 +117,32 @@ quiesce_stop = e[e.index('void rp1_gpclk_execution_request_stop'):]
 assert quiesce_stop.index('mutex_lock(&device->execution_commit_lock)') < \
        quiesce_stop.index('atomic_set(&device->stop_requested, 1)') < \
        quiesce_stop.index('mutex_unlock(&device->execution_commit_lock)')
+assert ('if (READ_ONCE(device->worker))\n'
+        '\t\twake_up_process(device->worker);') not in e
+wake = e[e.index('static void rp1_gpclk_wake_worker_locked'):
+         e.index('static int rp1_gpclk_execution_thread')]
+assert wake.count('wake_up_process(worker);') == 1
+assert wake.index('worker = device->worker;') < wake.index('wake_up_process(worker);')
+assert wake.index('worker = device->worker;') < wake.index('get_task_struct(worker);')
+activate = e[e.index('void rp1_gpclk_execution_activate'):
+             e.index('int rp1_gpclk_execution_submit_events')]
+assert activate.index('mutex_lock(&device->execution_commit_lock)') < \
+       activate.index('generation == device->execution_generation') < \
+       activate.index('rp1_gpclk_wake_worker_locked(device)') < \
+       activate.index('mutex_unlock(&device->execution_commit_lock)')
+assert 'rp1_gpclk_execution_activate(context->device,\n\t\t\trequest.generation);' in d
+retire = wake[wake.index('static void rp1_gpclk_retire_worker'):]
+assert retire.index('mutex_lock(&device->lock)') < \
+       retire.index('mutex_lock(&device->execution_commit_lock)') < \
+       retire.index('device->execution_plan = NULL') < \
+       retire.index('WRITE_ONCE(device->worker, NULL)') < \
+       retire.index('complete_all(&device->execution_done)')
+assert e.count('rp1_gpclk_retire_worker(device);') == 2
+quiesce = e[e.index('void rp1_gpclk_execution_quiesce'):
+            e.index('void rp1_gpclk_execution_request_stop')]
+assert quiesce.index('worker = rp1_gpclk_get_worker(device);') < \
+       quiesce.index('kthread_stop(worker);') < \
+       quiesce.index('put_task_struct(worker);')
 release_dispatch = d[d.index('static long rp1_gpclk_release_lease'):
                      d.index('long rp1_gpclk_uapi_dispatch')]
 assert 'request.generation == 0 &&' in release_dispatch

@@ -211,7 +211,8 @@ static long rp1_gpclk_submit_events(struct rp1_gpclk_file *context,
 		result = rp1_gpclk_execution_error(result);
 	}
 	if (!result)
-		rp1_gpclk_execution_activate(context->device);
+		rp1_gpclk_execution_activate(context->device,
+			request.generation);
 	kfree(events);
 free_tones:
 	kfree(tones);

@@ -10,6 +10,7 @@
 #include <linux/math64.h>
 #include <linux/ktime.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/sched/task.h>
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
 #include <linux/wait.h>
@@ -713,6 +714,42 @@ static void rp1_gpclk_publish_failure(struct rp1_gpclk_device *device,
 	mutex_unlock(&device->lock);
 }
 
+static void rp1_gpclk_wake_worker_locked(struct rp1_gpclk_device *device)
+{
+	struct task_struct *worker = device->worker;
+
+	if (worker)
+		wake_up_process(worker);
+}
+
+static struct task_struct *
+rp1_gpclk_get_worker(struct rp1_gpclk_device *device)
+{
+	struct task_struct *worker;
+
+	mutex_lock(&device->execution_commit_lock);
+	worker = device->worker;
+	if (worker)
+		get_task_struct(worker);
+	mutex_unlock(&device->execution_commit_lock);
+	return worker;
+}
+
+static void rp1_gpclk_retire_worker(struct rp1_gpclk_device *device)
+{
+	/* Match submission's device -> execution_commit lock order. Publishing
+	 * completion while both shared pointers are retired prevents a successor
+	 * from reinitializing the completion before this generation is finished.
+	 */
+	mutex_lock(&device->lock);
+	mutex_lock(&device->execution_commit_lock);
+	device->execution_plan = NULL;
+	WRITE_ONCE(device->worker, NULL);
+	complete_all(&device->execution_done);
+	mutex_unlock(&device->execution_commit_lock);
+	mutex_unlock(&device->lock);
+}
+
 static int rp1_gpclk_execution_thread(void *argument)
 {
 	struct rp1_gpclk_device *device = argument;
@@ -871,9 +908,7 @@ static int rp1_gpclk_execution_thread(void *argument)
 		 cleanup_ret, ret);
 	dma_free_coherent(dma_device, maximum * sizeof(*words), words, words_dma);
 	kfree_sensitive(plan);
-	device->execution_plan = NULL;
-	WRITE_ONCE(device->worker, NULL);
-	complete_all(&device->execution_done);
+	rp1_gpclk_retire_worker(device);
 	return 0;
 
 fail:
@@ -892,9 +927,7 @@ fail_without_buffer:
 	rp1_gpclk_publish_failure(device, ret, false);
 release_plan:
 	kfree_sensitive(plan);
-	device->execution_plan = NULL;
-	WRITE_ONCE(device->worker, NULL);
-	complete_all(&device->execution_done);
+	rp1_gpclk_retire_worker(device);
 	return 0;
 
 cancelled_before_buffer:
@@ -950,16 +983,19 @@ static int rp1_gpclk_start_thread(struct rp1_gpclk_device *device,
 		complete_all(&device->execution_done);
 		return PTR_ERR(worker);
 	}
+	mutex_lock(&device->execution_commit_lock);
 	WRITE_ONCE(device->worker, worker);
+	mutex_unlock(&device->execution_commit_lock);
 	return 0;
 }
 
-void rp1_gpclk_execution_activate(struct rp1_gpclk_device *device)
+void rp1_gpclk_execution_activate(struct rp1_gpclk_device *device,
+				  __u64 generation)
 {
-	struct task_struct *worker = READ_ONCE(device->worker);
-
-	if (worker)
-		wake_up_process(worker);
+	mutex_lock(&device->execution_commit_lock);
+	if (generation == device->execution_generation)
+		rp1_gpclk_wake_worker_locked(device);
+	mutex_unlock(&device->execution_commit_lock);
 }
 
 int rp1_gpclk_execution_submit_events(
@@ -1031,9 +1067,8 @@ int rp1_gpclk_execution_stop(struct rp1_gpclk_device *device, __u64 owner,
 	mutex_lock(&device->execution_commit_lock);
 	device->stop_reason = reason;
 	atomic_set(&device->stop_requested, 1);
+	rp1_gpclk_wake_worker_locked(device);
 	mutex_unlock(&device->execution_commit_lock);
-	if (READ_ONCE(device->worker))
-		wake_up_process(device->worker);
 	return RP1_GPCLK_CORE_OK;
 }
 
@@ -1051,9 +1086,11 @@ void rp1_gpclk_execution_quiesce(struct rp1_gpclk_device *device,
 				msecs_to_jiffies(RP1_GPCLK_COMPLETION_SLACK_MS))) {
 			dev_crit(device->dev,
 				 "forced execution teardown after bounded drain failure\n");
-			worker = READ_ONCE(device->worker);
-			if (worker)
+			worker = rp1_gpclk_get_worker(device);
+			if (worker) {
 				kthread_stop(worker);
+				put_task_struct(worker);
+			}
 		}
 	}
 }
@@ -1064,7 +1101,6 @@ void rp1_gpclk_execution_request_stop(struct rp1_gpclk_device *device,
 	mutex_lock(&device->execution_commit_lock);
 	device->stop_reason = reason;
 	atomic_set(&device->stop_requested, 1);
+	rp1_gpclk_wake_worker_locked(device);
 	mutex_unlock(&device->execution_commit_lock);
-	if (READ_ONCE(device->worker))
-		wake_up_process(device->worker);
 }

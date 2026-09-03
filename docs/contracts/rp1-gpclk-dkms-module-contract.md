@@ -243,6 +243,10 @@ acquire.
 
 Process death, interruption, timeout, unbind, and cleanup failure must converge
 to a safe terminal state or an explicit fault that prevents further use.
+Worker publication, wakeup, retirement, and completion are serialized. A
+self-exiting worker retires its task and plan pointers and publishes completion
+before a successor can be admitted; forced-stop fallback pins the task while it
+acts on that worker.
 `STOP` and close cancellation do not synthesize DMA completion or force-abort an
 active RP1 paced descriptor. They reject every successor and allow only the
 current kernel-bounded descriptor to drain before cleanup. Cancellation and the
