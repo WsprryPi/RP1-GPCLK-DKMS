@@ -87,6 +87,14 @@ class System:
             raise ValueError('prior activation changed before retirement')
         self.events.append('retire-activation')
         self.journal = None
+    def retire_transactions(self, expected):
+        actual = {name: self.records.get(name)
+                  for name in activation.RETIREMENT_TRANSACTIONS}
+        if actual != expected:
+            raise ValueError('prior transactions changed before retirement')
+        for name in activation.RETIREMENT_TRANSACTIONS:
+            self.records.pop(name, None)
+            self.events.append('retire:' + name)
     def boot(self): return self.boot_id
     def binding(self): return self.raw, copy.deepcopy(self.binding_value)
     def last_deployment(self, raw):
@@ -294,10 +302,75 @@ class Tests(unittest.TestCase):
         self.assertEqual(plan['operation'], 'retire-post-reboot-activation')
         self.assertEqual(plan['activationJournalSha256'],
                          admin.digest(activation.canonical(prior)))
+        self.assertEqual(plan['transactionJournalSha256'], {
+            name: None for name in activation.RETIREMENT_TRANSACTIONS})
         result = activation.retire(system, plan, activation.plan_digest(plan), lock)
         self.assertEqual(result['status'], 'retired-post-reboot-activation')
         self.assertEqual(system.archives, [])
         self.assertIsNone(system.journal)
+
+    def test_prior_boot_route_journals_are_digest_bound_and_retired(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        prior_boot = system.boot_id
+        binding = admin.digest(system.raw)
+        state = {'session': 7, 'generation': 1, 'id': 9, 'error': 0,
+                 'route': 1, 'flags': 6}
+        route = {'version': 1, 'boot': prior_boot, 'session': 7,
+                 'binding': binding,
+                 'request': '00000000-0000-0000-0000-000000000001',
+                 'target': 1, 'phase': 'complete-inhibited',
+                 'observation': state}
+        application_record = {'version': 1, 'boot': prior_boot,
+            'binding': binding, 'requestId': 'request-0001',
+            'fingerprint': 'f' * 64, 'route': 'gpio4',
+            'token': '00000000-0000-0000-0000-000000000002',
+            'wasActive': True, 'administratorMasked': False,
+            'phase': 'restoration-failed', 'controller': state, 'ready': None,
+            'previousIdle': None, 'error': 'readiness not acknowledged'}
+        response = {'schemaVersion': 3,
+            'contract': 'rp1-gpclk-route-manager-runtime',
+            'operation': 'switch', 'status': 'complete-inhibited',
+            'state': {'bootId': prior_boot, 'bindingSha256': binding,
+                      'controller': state, 'pendingTransaction': route}}
+        manager = {'requestId': 'request-0001', 'actor': 'offline.test',
+            'fingerprint': 'f' * 64, 'complete': True, 'controller': state,
+            'boot': prior_boot, 'binding': binding, 'response': response}
+        system.records.update({'transaction.json': route,
+                               'manager.json': manager,
+                               'application.json': application_record})
+        system.boot_id = '00000000-0000-0000-0000-000000000002'
+        system.controller = False
+        system.socket_active = False
+        plan = activation.retirement_plan(system)
+        self.assertEqual(plan['transactionJournalSha256'], {
+            name: admin.digest(activation.canonical(system.records[name]))
+            for name in activation.RETIREMENT_TRANSACTIONS})
+        for count in range(len(activation.RETIREMENT_TRANSACTIONS) + 1):
+            interrupted = copy.deepcopy(system)
+            for name in activation.RETIREMENT_TRANSACTIONS[:count]:
+                interrupted.records.pop(name)
+            retry = activation.retirement_plan(interrupted)
+            self.assertEqual(retry['transactionJournalSha256'], {
+                name: (None if name not in interrupted.records else
+                    admin.digest(activation.canonical(interrupted.records[name])))
+                for name in activation.RETIREMENT_TRANSACTIONS})
+        activation.retire(system, plan, activation.plan_digest(plan), lock)
+        self.assertIsNone(system.journal)
+        self.assertFalse(any(name in system.records
+                             for name in activation.RETIREMENT_TRANSACTIONS))
+        self.assertLess(system.events.index('retire:transaction.json'),
+                        system.events.index('retire-activation'))
+
+    def test_prior_boot_route_retirement_rejects_identity_drift(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        system.boot_id = '00000000-0000-0000-0000-000000000002'
+        system.controller = False
+        system.socket_active = False
+        system.records['transaction.json'] = {'pending': True}
+        with self.assertRaisesRegex(ValueError, 'not attributable'):
+            activation.retirement_plan(system)
 
     def test_post_reboot_retirement_rejects_drift_before_effects(self):
         system = System(); initial = activation.activation_plan(system)
@@ -311,6 +384,28 @@ class Tests(unittest.TestCase):
             activation.retire(system, plan, activation.plan_digest(plan), lock)
         self.assertNotIn('retire-activation', system.events)
         self.assertEqual(system.archives, [])
+
+    def test_post_reboot_retirement_rejects_journal_race_after_replan(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        system.boot_id = '00000000-0000-0000-0000-000000000002'
+        system.controller = False
+        system.socket_active = False
+        plan = activation.retirement_plan(system)
+        original = system.read_record
+        activation_reads = 0
+        def raced(path):
+            nonlocal activation_reads
+            if Path(path).name == 'activation.json':
+                activation_reads += 1
+                if activation_reads == 2:
+                    system.journal['requestId'] = (
+                        '00000000-0000-0000-0000-000000000099')
+            return original(path)
+        system.read_record = raced
+        with self.assertRaisesRegex(ValueError, 'changed after retirement review'):
+            activation.retire(system, plan, activation.plan_digest(plan), lock)
+        self.assertNotIn('retire-activation', system.events)
 
     def test_same_boot_terminal_activation_cannot_be_retired(self):
         system = System(); initial = activation.activation_plan(system)

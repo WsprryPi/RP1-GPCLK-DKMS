@@ -31,6 +31,9 @@ PENDING = ('activation-intent', 'controller-load-intent', 'socket-start-intent',
            'activation-failed', 'rollback-failed')
 TERMINAL = ('complete-neutral', 'recovered-inhibited')
 PLAN_CONTEXTS = ('initial', 'recovered', 'idempotent', 'post-reboot')
+# Delete in dependency order so every interrupted prefix remains valid for retry:
+# application depends on manager, and manager depends on the route transaction.
+RETIREMENT_TRANSACTIONS = ('application.json', 'manager.json', 'transaction.json')
 
 
 def canonical(value):
@@ -157,6 +160,19 @@ class Linux:
         path = Path(JOURNAL)
         path.unlink()
         admin.fsync_dir(path.parent)
+
+    def retire_transactions(self, expected):
+        """Remove an exact prior-boot journal set, leaving activation until last."""
+        if set(expected) != set(RETIREMENT_TRANSACTIONS):
+            raise ValueError('fixed retirement transaction inventory required')
+        for name in RETIREMENT_TRANSACTIONS:
+            if self.read_record(admin.STATE / name) != expected[name]:
+                raise ValueError('prior transaction changed before retirement: ' + name)
+        for name in RETIREMENT_TRANSACTIONS:
+            if expected[name] is not None:
+                path = admin.STATE / name
+                path.unlink()
+                admin.fsync_dir(path.parent)
 
     def boot(self):
         value = admin.read_regular('/proc/sys/kernel/random/boot_id').decode().strip()
@@ -421,26 +437,144 @@ def post_reboot_reactivation_state(observed):
     return True
 
 
+def _validate_prior_route_transaction(value, boot, binding):
+    required = {'version', 'boot', 'session', 'binding', 'request', 'target',
+                'phase', 'observation'}
+    if (not isinstance(value, dict) or set(value) != required or
+            type(value.get('version')) is not int or value['version'] != 1 or
+            value.get('boot') != boot or value.get('binding') != binding or
+            type(value.get('session')) is not int or
+            value.get('target') not in (1, 2) or
+            value.get('phase') not in ('complete-inhibited', 'recovered-inhibited')):
+        raise ValueError('prior route transaction is not attributable and terminal')
+    if not isinstance(value.get('request'), str):
+        raise ValueError('prior route transaction request identity is invalid')
+    uuid.UUID(value['request'])
+    admin.validate_observation(value['observation'])
+    observation = value['observation']
+    complete = value['phase'] == 'complete-inhibited'
+    if (observation['session'] != value['session'] or
+            observation['error'] != 0 or
+            (complete and (observation['route'] != value['target'] or
+                           observation['id'] <= 0 or
+                           observation['flags'] != admin.CONSUMER | admin.PINNED)) or
+            (not complete and (observation['route'] != 0 or
+                               observation['id'] != 0 or
+                               observation['flags'] != 0))):
+        raise ValueError('prior route transaction observation is inconsistent')
+
+
+def _validate_prior_manager(value, route, boot, binding):
+    required = {'requestId', 'actor', 'fingerprint', 'complete', 'controller',
+                'boot', 'binding', 'response'}
+    if (not isinstance(value, dict) or set(value) != required or
+            value.get('boot') != boot or value.get('binding') != binding or
+            value.get('complete') is not True or
+            not isinstance(value.get('requestId'), str) or
+            not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{7,63}', value['requestId']) or
+            not isinstance(value.get('actor'), str) or
+            not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._:@/-]{1,127}', value['actor']) or
+            not isinstance(value.get('fingerprint'), str) or
+            not re.fullmatch('[0-9a-f]{64}', value['fingerprint'])):
+        raise ValueError('prior manager transaction is not attributable and complete')
+    admin.validate_observation(value['controller'])
+    if value['controller'] != route['observation']:
+        raise ValueError('prior manager controller differs from route transaction')
+    response = value['response']
+    state = response.get('state', {}) if isinstance(response, dict) else {}
+    if (response.get('schemaVersion') != 3 or
+            response.get('contract') != 'rp1-gpclk-route-manager-runtime' or
+            response.get('operation') != ('switch' if route['phase'] ==
+                'complete-inhibited' else 'recover') or
+            response.get('status') != route['phase'] or
+            state.get('bootId') != boot or state.get('bindingSha256') != binding or
+            state.get('controller') != value['controller'] or
+            state.get('pendingTransaction') != route):
+        raise ValueError('prior manager response is inconsistent')
+
+
+def _prior_boot_retirement_transactions(system, observed):
+    transactions = observed['transactions']
+    if transactions.get('deployment-pending.json') is not None:
+        raise ValueError('pending deployment cannot be retired as route evidence')
+    journal = observed['activationJournal']
+    prior_boot = journal['plan']['bootId']
+    binding = observed['bindingSha256']
+    route = transactions.get('transaction.json')
+    manager = transactions.get('manager.json')
+    application_record = transactions.get('application.json')
+    if route is not None:
+        _validate_prior_route_transaction(route, prior_boot, binding)
+    if manager is not None:
+        if route is None:
+            raise ValueError('prior manager transaction lacks its route journal')
+        _validate_prior_manager(manager, route, prior_boot, binding)
+    if application_record is not None:
+        if route is None or application.load(system) != application_record:
+            raise ValueError('prior application transaction lacks its route journal')
+        expected_route = {1: 'gpio4', 2: 'gpio20'}[route['target']]
+        if (application_record.get('boot') != prior_boot or
+                application_record.get('binding') != binding or
+                application_record.get('route') != expected_route or
+                application_record.get('controller') not in (None, route['observation']) or
+                (manager is not None and
+                 (application_record.get('requestId') != manager['requestId'] or
+                  application_record.get('fingerprint') != manager['fingerprint']))):
+            raise ValueError('prior application transaction is inconsistent')
+    return {name: transactions.get(name) for name in RETIREMENT_TRANSACTIONS}
+
+
+def post_reboot_retirement_state(system, observed):
+    """Validate exact inactive state and attributable prior-boot journals."""
+    journal = observed['activationJournal']
+    if journal is None or journal['phase'] != 'complete-neutral':
+        return None
+    if not completed_journal_matches_installation(journal, observed):
+        raise ValueError('neutral activation evidence differs; preserve and investigate')
+    if journal['plan']['bootId'] == observed['bootId']:
+        raise ValueError('same-boot terminal activation cannot be retired')
+    if (observed['controller']['status'] != 'absent' or
+            observed['consumer']['status'] != 'absent' or
+            observed['controllerEndpoint']['status'] != 'absent' or
+            observed['consumerEndpoint']['status'] != 'absent' or
+            observed['socket'].get('active') == 'active' or
+            observed['managerSocket'].get('status') != 'absent'):
+        raise ValueError('prior-boot retirement requires an inactive current boot')
+    if (observed['inhibited'] and
+            observed['applicationService'].get('active') not in ('inactive', 'failed')):
+        raise ValueError('post-reboot inhibition did not stop the application')
+    return _prior_boot_retirement_transactions(system, observed)
+
+
 def retirement_plan(system):
     """Bind retirement of exact terminal activation evidence from an older boot."""
     observed = observe(system)
-    if not post_reboot_reactivation_state(observed):
+    transactions = post_reboot_retirement_state(system, observed)
+    if transactions is None:
         raise ValueError('no prior-boot terminal activation evidence to retire')
     journal = observed['activationJournal']
-    return {'version': 1, 'operation': 'retire-post-reboot-activation',
+    return {'version': 2, 'operation': 'retire-post-reboot-activation',
         'bindingSha256': observed['bindingSha256'],
         'artifactSetSha256': observed['artifactSetSha256'],
         'bootId': observed['bootId'],
         'lastDeploymentSha256': observed['lastDeploymentSha256'],
-        'activationJournalSha256': admin.digest(canonical(journal))}
+        'activationJournalSha256': admin.digest(canonical(journal)),
+        'transactionJournalSha256': {name: (None if value is None else
+            admin.digest(canonical(value))) for name, value in transactions.items()}}
 
 
 def retire(system, reviewed, approved, lock=deployment.mutation_lock):
     required = {'version', 'operation', 'bindingSha256', 'artifactSetSha256',
-        'bootId', 'lastDeploymentSha256', 'activationJournalSha256'}
+        'bootId', 'lastDeploymentSha256', 'activationJournalSha256',
+        'transactionJournalSha256'}
     if (not isinstance(reviewed, dict) or set(reviewed) != required or
-            reviewed.get('version') != 1 or
+            reviewed.get('version') != 2 or
             reviewed.get('operation') != 'retire-post-reboot-activation' or
+            not isinstance(reviewed.get('transactionJournalSha256'), dict) or
+            set(reviewed['transactionJournalSha256']) != set(RETIREMENT_TRANSACTIONS) or
+            any(value is not None and
+                (not isinstance(value, str) or not re.fullmatch('[0-9a-f]{64}', value))
+                for value in reviewed['transactionJournalSha256'].values()) or
             plan_digest(reviewed) != approved):
         raise ValueError('reviewed post-reboot activation retirement required')
     with lock():
@@ -448,6 +582,15 @@ def retire(system, reviewed, approved, lock=deployment.mutation_lock):
         if current != reviewed:
             raise ValueError('post-reboot activation retirement changed since review')
         journal = system.read_record(JOURNAL)
+        transactions = {name: system.read_record(admin.STATE / name)
+                        for name in RETIREMENT_TRANSACTIONS}
+        if (journal is None or admin.digest(canonical(journal)) !=
+                reviewed['activationJournalSha256'] or
+                any((None if value is None else admin.digest(canonical(value))) !=
+                    reviewed['transactionJournalSha256'][name]
+                    for name, value in transactions.items())):
+            raise ValueError('post-reboot journals changed after retirement review')
+        system.retire_transactions(transactions)
         system.retire_journal(journal)
     return {'status': 'retired-post-reboot-activation',
         'activationJournalSha256': reviewed['activationJournalSha256']}

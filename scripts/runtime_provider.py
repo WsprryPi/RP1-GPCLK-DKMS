@@ -636,7 +636,7 @@ def main(host=None):
               'response': reply})
         return 0
     if args.operation in ('activation-retire-plan', 'activation-retire'):
-        if (result['result'] != 'activation_required' or
+        if (result['result'] not in ('activation_required', 'recovery_required') or
                 result.get('reboot', {}).get('occurred') is not True or
                 result['routeSelected'] or
                 any(value.get('status') != 'absent'

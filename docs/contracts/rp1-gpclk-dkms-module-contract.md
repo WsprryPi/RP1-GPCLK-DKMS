@@ -465,8 +465,11 @@ intent. The consumer remains unloaded and `/dev/rp1-gpclk` remains absent.
 Neutral activation is neither route selection nor transmission eligibility.
 None of these operations authorizes output. Exact repeated execution is
 idempotent. A completed prior-boot neutral activation may be superseded only
-after its exact evidence and the inactive current-boot state are validated and
-the application is inhibited. A pending deployment, activation, controller
+after its exact evidence, any coherent terminal route journal set, and the
+inactive current-boot state are validated and the application is inhibited.
+Candidate-owned retirement binds every present journal by digest and removes
+dependent journals before activation evidence so interruption is retryable. A
+pending deployment, activation, controller
 fault, incomplete route journal, or failed application restoration is reported as `recovery_required`;
 foreign, substituted, mixed, unsafe, open, or contradictory state is `conflict`.
 The source-development manager remains passive-query-only.

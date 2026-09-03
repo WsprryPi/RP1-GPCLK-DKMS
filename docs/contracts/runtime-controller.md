@@ -233,12 +233,15 @@ same-boot divergent or identity-drifted journals are not post-reboot admission.
 
 For replacement of an exact owned deployment, current candidate code may retire
 that same prior-boot terminal journal without first reactivating the controller.
-`activation-retire-plan` binds the installed binding, artifact set, retained
-deployment, current boot and exact journal digest. `activation-retire` repeats
-the complete inactive-state observation under the shared mutation lock and
-removes only the current activation journal after the owning updater has
-preserved it. It does not create dynamic residue inside the deployment being
-removed.
+A coherent terminal route, manager and application journal set from the same
+prior boot and binding may be retired with it. `activation-retire-plan` binds the
+installed binding, artifact set, retained deployment, current boot and exact
+digest of every present journal. `activation-retire` repeats the complete
+inactive-state observation under the shared mutation lock and removes dependent
+application, manager and route journals before the activation journal after the
+owning updater has preserved it. This order leaves every interrupted prefix
+eligible for an exact retry and creates no dynamic residue inside the deployment
+being removed.
 It does not load a module, start a socket, select a route, change application
 intent or authorize output. The operation is unavailable for same-boot,
 nonterminal, incomplete, active or identity-drifted state.

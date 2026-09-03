@@ -123,12 +123,16 @@ adopts an old session into a new controller session.
 
 An authenticated updater may use the newly selected provider's
 `activation-retire-plan`/`activation-retire` pair when a clean reboot has already
-left an older, exactly bound deployment with only its terminal
-`complete-neutral` activation journal. The reviewed digest binds that journal
-and the complete installed identity. The updater must preserve the exact journal
-outside the deployment before execution retires it without loading either
-module. This is an owned source-migration operation, not an adoption or cleanup
-command for an unowned installation.
+left an older, exactly bound deployment with its terminal `complete-neutral`
+activation journal and either no route journals or a coherent terminal
+prior-boot route/manager/application journal set. The reviewed digest binds every
+present journal and the complete installed identity. Execution revalidates the
+inactive current boot and removes dependent application, manager and route
+journals before removing the activation journal, so interruption remains
+retryable without loading either module. The updater must preserve the exact
+activation journal outside the deployment first. This is an owned
+source-migration operation, not an adoption or cleanup command for an unowned
+installation.
 
 For an interrupted or deliberately reversed neutral activation, retain the
 inhibitor and journal, then run:

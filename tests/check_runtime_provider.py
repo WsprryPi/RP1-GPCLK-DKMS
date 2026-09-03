@@ -114,12 +114,14 @@ class Host:
         self.removal = {'version': 2, 'files': {'/fixed': {
             'before': None, 'after': provider.deployment.encode(b'exact')}}}
         self.removed = False
-        self.retirement = {'version': 1,
+        self.retirement = {'version': 2,
             'operation': 'retire-post-reboot-activation',
             'bindingSha256': 'a' * 64, 'artifactSetSha256': 'b' * 64,
             'bootId': '00000000-0000-0000-0000-000000000002',
             'lastDeploymentSha256': 'c' * 64,
-            'activationJournalSha256': 'd' * 64}
+            'activationJournalSha256': 'd' * 64,
+            'transactionJournalSha256': {
+                name: None for name in provider.activation.RETIREMENT_TRANSACTIONS}}
         self.retired = False
         if not ready:
             self.make_absent()
@@ -357,6 +359,35 @@ class Tests(unittest.TestCase):
         with patch.object(provider.activation, 'neutral_ready', return_value=False), \
              patch.object(provider.activation, 'post_reboot_reactivation_state',
                           return_value=True), \
+             patch.object(sys, 'argv', ['runtime_provider.py', 'activation-retire',
+                          '--plan-sha256', digest]), \
+             contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(provider.main(host), 0)
+        self.assertTrue(host.retired)
+
+    def test_reviewed_post_reboot_retirement_accepts_recovery_classification(self):
+        host = Host()
+        host._modules = {name: {'status': 'absent'} for name in host._modules}
+        host._endpoints = {name: {'status': 'absent', 'open': False}
+                           for name in host._endpoints}
+        host._socket = {'status': 'absent'}
+        host._manager = {'status': 'absent'}
+        host._activation = {'status': 'observed', 'value': {
+            'bootId': '00000000-0000-0000-0000-000000000002',
+            'activationJournal': {'phase': 'complete-neutral', 'plan': {
+                'bootId': '00000000-0000-0000-0000-000000000001'}}}}
+        host._journals['transaction.json'] = {'status': 'present', 'value': {}}
+        digest = provider.activation.plan_digest(host.retirement)
+        with patch.object(provider.activation, 'neutral_ready', return_value=False), \
+             patch.object(provider.activation, 'post_reboot_reactivation_state',
+                          side_effect=ValueError('prior transactions')), \
+             patch.object(sys, 'argv', ['runtime_provider.py',
+                          'activation-retire-plan']), \
+             contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(provider.main(host), 0)
+        with patch.object(provider.activation, 'neutral_ready', return_value=False), \
+             patch.object(provider.activation, 'post_reboot_reactivation_state',
+                          side_effect=ValueError('prior transactions')), \
              patch.object(sys, 'argv', ['runtime_provider.py', 'activation-retire',
                           '--plan-sha256', digest]), \
              contextlib.redirect_stdout(io.StringIO()):
