@@ -21,6 +21,7 @@ import runtime_binding
 import runtime_activation as activation
 import runtime_controller_admin as admin
 import runtime_deployment as deployment
+import runtime_output
 import runtime_route_client as client
 
 CONTRACT = 'rp1-gpclk-runtime-readiness-v1'
@@ -40,6 +41,25 @@ def record_error(error):
 def canonical_digest(value):
     return admin.digest(json.dumps(value, sort_keys=True,
         separators=(',', ':')).encode())
+
+
+def validate_idle(query, idle):
+    if (not isinstance(query, dict) or not isinstance(idle, dict) or
+            idle.get('schemaVersion') != 3 or
+            idle.get('contract') != client.CONTRACT or
+            idle.get('operation') != 'idle' or idle.get('status') != 'ok' or
+            not isinstance(idle.get('state'), dict)):
+        raise ValueError('runtime idle response schema')
+    state = query.get('state')
+    output = idle['state'].get('outputLifecycle')
+    runtime_output.validate_lifecycle(output)
+    if (not isinstance(state, dict) or
+            output.get('route') != state.get('activeRoute') or
+            output.get('controller') != state.get('controller') or
+            output.get('bootId') != state.get('bootId') or
+            output.get('bindingSha256') != state.get('bindingSha256')):
+        raise ValueError('runtime idle response identity mismatch')
+    return output
 
 
 class Host:
@@ -180,8 +200,10 @@ class Host:
             result = {'status': 'observed', 'query': query}
             route = query.get('state', {}).get('activeRoute')
             if route in ROUTES:
-                result['idle'] = client.exchange({'schemaVersion': 3,
+                idle = client.exchange({'schemaVersion': 3,
                     'operation': 'idle', 'route': route})
+                validate_idle(query, idle)
+                result['idle'] = idle
             return result
         except (OSError, ValueError, KeyError, json.JSONDecodeError) as error:
             return record_error(error)
@@ -373,6 +395,14 @@ def classify(result):
         route_journal.get('boot') == state.get('bootId'))
     if active in ROUTES and not transaction_valid:
         conflicts.append('runtime-transaction-identity-invalid')
+    idle = manager.get('idle', {}) if manager.get('status') == 'observed' else {}
+    output = idle.get('state', {}).get('outputLifecycle', {}) if isinstance(idle, dict) else {}
+    snapshot = output.get('snapshot', {}) if isinstance(output, dict) else {}
+    if active in ROUTES:
+        try:
+            validate_idle(query, idle)
+        except ValueError:
+            conflicts.append('output-lifecycle-invalid')
     partial = (binding.get('status') == 'valid' and
                any(value.get('status') == 'absent' for value in artifacts.values()))
     activation_pending = (activation_journal.get('status') == 'present' and
@@ -386,9 +416,6 @@ def classify(result):
         (active in ROUTES and phase is not None and phase not in
          ('restored', 'stopped', 'administrator-masked')))
 
-    idle = manager.get('idle', {}) if manager.get('status') == 'observed' else {}
-    output = idle.get('state', {}).get('outputLifecycle', {}) if isinstance(idle, dict) else {}
-    snapshot = output.get('snapshot', {}) if isinstance(output, dict) else {}
     if snapshot:
         result['safety'].update({'outputInhibited': snapshot.get('outputInhibited') == 2,
             'operationalReady': snapshot.get('operationalReady') == 2,
@@ -412,6 +439,7 @@ def classify(result):
     modules_ready = all(value.get('status') == 'loaded' for value in modules.values())
     application_ready = phase in ('restored', 'stopped', 'administrator-masked')
     output_ready = (output.get('ready') is True and
+        output.get('executionAuthorized') is False and
         output.get('productionAuthority') == 'root-owned-endpoint' and
         snapshot and snapshot.get('route') in (1, 2) and
         all(snapshot.get(key) == 1 for key in ('fault', 'owner', 'lease', 'outputInhibited')) and

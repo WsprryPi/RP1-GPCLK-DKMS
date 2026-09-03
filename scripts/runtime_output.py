@@ -48,6 +48,46 @@ def require_idle(value, route):
         raise ValueError('consumer is not operationally ready, closed and quiescent')
 
 
+def require_current(value, route):
+    if (not isinstance(value, dict) or type(value.get('route')) is not int or
+            value['route'] != route or value.get('compatibility') != 3):
+        raise ValueError('consumer lifecycle route or compatibility is mismatched')
+
+
+def execution_authorized(value):
+    """Return current lease authority, rejecting ambiguous lifecycle evidence."""
+    if not isinstance(value, dict):
+        raise ValueError('passive snapshot object required')
+    owner = value.get('owner')
+    lease = value.get('lease')
+    operation = value.get('operation')
+    terminal = value.get('terminal')
+    if (type(owner) is not int or owner not in (1, 2) or
+            type(lease) is not int or lease not in (1, 2) or owner != lease or
+            type(operation) is not int or operation not in range(6) or
+            type(terminal) is not int or terminal not in range(16)):
+        raise ValueError('execution authorization evidence is indeterminate')
+    if operation == 5:
+        raise ValueError('dead lifecycle cannot establish execution authorization')
+    if operation in (1, 2) and owner != 2:
+        raise ValueError('active operation has no execution authorization')
+    if operation == 0 and terminal != 0:
+        raise ValueError('idle lifecycle has a terminal reason')
+    if (operation == 3 and terminal not in (1, 2, 3)):
+        raise ValueError('completed lifecycle has an invalid terminal reason')
+    if operation == 4 and terminal not in range(5, 16):
+        raise ValueError('failed lifecycle has an invalid terminal reason')
+    return owner == 2
+
+
+def validate_lifecycle(value):
+    if not isinstance(value, dict) or type(value.get('executionAuthorized')) is not bool:
+        raise ValueError('output lifecycle requires boolean executionAuthorized')
+    if value['executionAuthorized'] is not execution_authorized(value.get('snapshot')):
+        raise ValueError('output lifecycle authorization disagrees with snapshot')
+    return value
+
+
 def ready(system, state, route):
     admin.validate_observation(state)
     journal = system.read_journal()
@@ -57,16 +97,24 @@ def ready(system, state, route):
             journal.get('session') != state['session'] or journal.get('observation') != state):
         raise ValueError('runtime route is unresolved or mismatched')
     observed = system.output_snapshot()
-    require_idle(observed, route)
+    require_current(observed, route)
     return observed
 
 
 def dispatch(system, request, state):
     route = {'gpio4': 1, 'gpio20': 2}[request['route']]
     observed = ready(system, state, route)
-    result = {'ready': True, 'productionAuthority': 'root-owned-endpoint', 'route': request['route'],
+    authorized = execution_authorized(observed)
+    result = {'ready': False, 'executionAuthorized': authorized,
+              'productionAuthority': 'root-owned-endpoint', 'route': request['route'],
               'controller': state, 'bootId': system.boot, 'bindingSha256': system.binding_hash,
               'snapshot': observed}
+    if authorized:
+        if request['operation'] == 'resume':
+            raise ValueError('cannot resume application inhibition while execution is authorized')
+        return result
+    require_idle(observed, route)
+    result['ready'] = True
     if request['operation'] == 'idle':
         return result
     if request['operation'] == 'resume':

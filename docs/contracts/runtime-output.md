@@ -25,7 +25,13 @@ The runtime manager supports `idle` and `reconcile-output` for an explicit
 boot/session/binding, a completed route journal agreeing with controller
 readback, and a passive consumer snapshot reporting the selected route,
 `outputInhibited=false`, `operationalReady=true`, no owner or lease, no cleanup
-fault, and stable GPIO/clock/DMA quiescence. Busy and unknown observations fail.
+fault, and stable GPIO/clock/DMA quiescence. The response always includes the
+strict boolean `executionAuthorized`, derived from the same coherent snapshot:
+matching present owner and lease observations report `true`, while matching
+absent observations report `false` only for verified idle or terminal lifecycle
+state. Missing, unknown, malformed, contradictory, stale, or identity-mismatched
+evidence fails closed. An active authorization is reported with `ready=false`;
+it is not mistaken for idle readiness.
 The result is evidence that a root client may proceed to ordinary UAPI
 acquisition; reconciliation is not a transmission or RF qualification.
 

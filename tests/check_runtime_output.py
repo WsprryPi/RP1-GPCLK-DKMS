@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Offline tests for runtime reconciliation; no target effects."""
 import copy
+import json
 from pathlib import Path
 import struct
 import sys
@@ -32,9 +33,50 @@ class Tests(unittest.TestCase):
         for operation in ('idle','reconcile-output'):
             result = self.request(machine, operation)['state']['outputLifecycle']
             self.assertTrue(result['ready'])
+            self.assertIs(result['executionAuthorized'], False)
+            self.assertIs(type(result['executionAuthorized']), bool)
             self.assertEqual(result['productionAuthority'], 'root-owned-endpoint')
             self.assertEqual(machine.value, before)
             self.assertTrue(machine.mask)
+    def test_active_authorization_is_reported_without_claiming_idle_readiness(self):
+        machine = Machine()
+        machine.snapshot.update(owner=2, lease=2, operation=1, stable=1,
+                                gpio=1, clock=1, dma=1)
+        result = self.request(machine)['state']['outputLifecycle']
+        self.assertIs(result['executionAuthorized'], True)
+        self.assertIs(result['ready'], False)
+        self.assertTrue(machine.mask)
+        with self.assertRaises(ValueError):
+            self.request(machine, 'resume', execute=True)
+    def test_authorization_evidence_is_strict_and_coherent(self):
+        changes = (
+            {'owner': 2}, {'lease': 2}, {'owner': 0, 'lease': 0},
+            {'owner': True, 'lease': True}, {'owner': '1', 'lease': '1'},
+            {'owner': None, 'lease': None}, {'operation': 1},
+            {'operation': 0, 'terminal': 1}, {'operation': 3, 'terminal': 0},
+            {'operation': 3, 'terminal': 5}, {'operation': 4, 'terminal': 1},
+            {'operation': 5})
+        for change in changes:
+            with self.subTest(change=change):
+                machine = Machine(); machine.snapshot.update(change)
+                with self.assertRaises(ValueError): self.request(machine)
+    def test_active_authorization_requires_current_route_and_compatibility(self):
+        for change in ({'route': 1}, {'route': '2'}, {'compatibility': 0},
+                       {'compatibility': '3'}):
+            with self.subTest(change=change):
+                machine = Machine()
+                machine.snapshot.update(owner=2, lease=2, operation=1, **change)
+                with self.assertRaises(ValueError): self.request(machine)
+    def test_lifecycle_serialization_preserves_required_boolean(self):
+        lifecycle = self.request(Machine())['state']['outputLifecycle']
+        decoded = json.loads(json.dumps(lifecycle))
+        self.assertIn('executionAuthorized', decoded)
+        self.assertIs(type(decoded['executionAuthorized']), bool)
+        self.assertIs(output.validate_lifecycle(decoded), decoded)
+        for value in (None, 0, 1, 'false', 'true'):
+            changed = copy.deepcopy(decoded)
+            changed['executionAuthorized'] = value
+            with self.assertRaises(ValueError): output.validate_lifecycle(changed)
     def test_busy_fault_unknown_and_route_mismatch(self):
         for key in ('fault','owner','lease','outputInhibited','operationalReady',
                     'gpio','clock','dma','stable','route','compatibility'):
@@ -49,6 +91,7 @@ class Tests(unittest.TestCase):
         with self.assertRaises(ValueError): self.request(machine, 'resume')
         result = self.request(machine, 'resume', execute=True)
         self.assertFalse(result['state']['applicationInhibited'])
+        self.assertIs(result['state']['outputLifecycle']['executionAuthorized'], False)
         self.assertEqual(result['state']['outputLifecycle']['productionAuthority'],
                          'root-owned-endpoint')
         self.assertEqual(machine.value, before)

@@ -452,7 +452,8 @@ socket, selected route, application restoration, and passive output state.
 `exact_ready` is unavailable unless the active route is singular and aligned,
 the application restoration is terminal and safe, both endpoints and the socket
 are attributable, the consumer endpoint is closed, and passive UAPI state proves
-`output_inhibit=0`, no owner or lease, operational resource readiness, and stable clock/GPIO/DMA
+`output_inhibit=0`, `executionAuthorized=false` from matching absent owner and
+lease observations, operational resource readiness, and stable clock/GPIO/DMA
 quiescence. Unknown or mixed identity fails closed.
 
 The facade composes the existing deployment and route-manager implementations;

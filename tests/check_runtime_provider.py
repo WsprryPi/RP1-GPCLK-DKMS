@@ -72,13 +72,16 @@ def manager_ready(route='gpio4'):
         'pendingTransaction': transaction,
         'application': {'phase': 'restored'}, 'applicationRestoration': True,
         'outputEnabled': False, 'qualification': False}}
-    snapshot = {'route': number, 'compatibility': 3, 'fault': 1, 'owner': 1,
+    snapshot = {'route': number, 'compatibility': 3, 'operation': 0,
+        'terminal': 0, 'fault': 1, 'owner': 1,
         'lease': 1, 'outputInhibited': 1, 'operationalReady': 2,
         'gpio': 2, 'clock': 2, 'dma': 2, 'stable': 2}
     idle = {'schemaVersion': 3, 'contract': 'rp1-gpclk-route-manager-runtime',
         'operation': 'idle', 'status': 'ok', 'state': {'outputLifecycle': {
-        'ready': True, 'productionAuthority': 'root-owned-endpoint',
-        'snapshot': snapshot}}}
+        'ready': True, 'executionAuthorized': False,
+        'productionAuthority': 'root-owned-endpoint',
+        'route': route, 'controller': state, 'bootId': 'boot',
+        'bindingSha256': 'e'*64, 'snapshot': snapshot}}}
     return {'status': 'observed', 'query': query, 'idle': idle}
 
 
@@ -421,6 +424,51 @@ class Tests(unittest.TestCase):
         host = Host()
         host._manager['idle']['state']['outputLifecycle']['snapshot']['owner'] = 2
         self.assertEqual(self.inspect(host)['result'], 'conflict')
+
+    def test_provider_rejects_missing_mistyped_or_disagreeing_authorization(self):
+        for mutation in ('missing', 'string', 'disagree'):
+            with self.subTest(mutation=mutation):
+                host = Host()
+                lifecycle = host._manager['idle']['state']['outputLifecycle']
+                if mutation == 'missing':
+                    lifecycle.pop('executionAuthorized')
+                elif mutation == 'string':
+                    lifecycle['executionAuthorized'] = 'false'
+                else:
+                    lifecycle['executionAuthorized'] = True
+                result = self.inspect(host)
+                self.assertEqual(result['result'], 'conflict')
+                self.assertIn('output-lifecycle-invalid', result['conflicts'])
+
+    def test_real_provider_forwarding_requires_boolean_authorization(self):
+        query = manager_ready()['query']
+        for mutation in ('missing', 'string', 'disagree'):
+            idle = manager_ready()['idle']
+            lifecycle = idle['state']['outputLifecycle']
+            if mutation == 'missing':
+                lifecycle.pop('executionAuthorized')
+            elif mutation == 'string':
+                lifecycle['executionAuthorized'] = 'false'
+            else:
+                lifecycle['executionAuthorized'] = True
+            with self.subTest(mutation=mutation), \
+                 patch.object(provider.client, 'exchange', side_effect=[query, idle]):
+                self.assertEqual(provider.Host().manager()['status'], 'error')
+
+    def test_provider_rejects_stale_lifecycle_identities_and_error_envelope(self):
+        for field, value in (('route', 'gpio20'), ('controller', controller(2)),
+                             ('bootId', 'stale'), ('bindingSha256', 'f'*64)):
+            with self.subTest(field=field):
+                host = Host()
+                host._manager['idle']['state']['outputLifecycle'][field] = value
+                result = self.inspect(host)
+                self.assertEqual(result['result'], 'conflict')
+                self.assertIn('output-lifecycle-invalid', result['conflicts'])
+        host = Host()
+        host._manager['idle']['status'] = 'error'
+        result = self.inspect(host)
+        self.assertEqual(result['result'], 'conflict')
+        self.assertIn('output-lifecycle-invalid', result['conflicts'])
 
     def test_malformed_runtime_transaction_conflicts(self):
         host = Host()

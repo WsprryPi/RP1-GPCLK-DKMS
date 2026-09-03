@@ -30,6 +30,7 @@ class System(Machine):
         self.started = 0
         self.fail = None
         self.pid = 321
+        self.pre_ack = None
 
     def __enter__(self):
         assert not self.locked, 'startup would deadlock on manager lock'
@@ -55,7 +56,8 @@ class System(Machine):
         assert app.unit_file(app.DROPIN).read_bytes() == app.INHIBIT
     def inhibited(self): return app.unit_file(app.DROPIN).exists() and not self.active
     def output_snapshot(self):
-        return dict(route=self.value['route'], compatibility=3, fault=1, owner=1,
+        return dict(route=self.value['route'], compatibility=3, operation=0,
+                    terminal=0, fault=1, owner=1,
                     lease=1, outputInhibited=1, operationalReady=2,
                     gpio=2, clock=2, dma=2, stable=2)
     def observation(self):
@@ -79,7 +81,11 @@ class System(Machine):
             record = self.read_record('application.json')
             # An independent startup connection exercises public dispatch while
             # the mutation workflow is alive but its controller lock is released.
-            manager.dispatch(dict(schemaVersion=3, operation='idle', route=self.configured), lambda:self)
+            self.pre_ack = manager.dispatch(
+                dict(schemaVersion=3, operation='idle', route=self.configured),
+                lambda:self)
+            assert self.read_record('application.json')['phase'] == 'start-intent'
+            assert self.pre_ack['state']['outputLifecycle']['executionAuthorized'] is False
             manager.dispatch(dict(schemaVersion=3, operation='application-ready', route=self.configured,
                 token=record['token'], pid=self.pid, transmit=False), lambda:self)
         return ''
@@ -130,6 +136,8 @@ class Tests(unittest.TestCase):
         self.assertTrue(self.system.active)
         self.assertEqual(self.system.configured, 'gpio20')
         self.assertEqual(self.system.started, 1)
+        self.assertIs(self.system.pre_ack['state']['outputLifecycle']['ready'], True)
+        self.assertIs(self.system.pre_ack['state']['outputLifecycle']['executionAuthorized'], False)
         self.assertFalse(app.unit_file(app.DROPIN).exists())
         self.assertFalse(app.unit_file(app.IDLE_DROPIN).exists())
         self.assertEqual(self.dispatch(dict(schemaVersion=3,operation='query'))['state']['application']['phase'], 'restored')
