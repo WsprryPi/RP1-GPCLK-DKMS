@@ -464,6 +464,7 @@ def classify(result, activation_recovery_plan=None):
     post_reboot_blocked = False
     current_route_ancestry = False
     current_route_recovery = False
+    route_recovery = None
     if activation_observation.get('status') == 'observed' and not neutral:
         observed_activation = activation_observation['value']
         prior_activation = observed_activation.get('activationJournal')
@@ -486,14 +487,56 @@ def classify(result, activation_recovery_plan=None):
                         if activation_recovery_plan is None:
                             raise ValueError('neutral recovery planner is unavailable')
                         recovery = activation_recovery_plan()
+                        route_recovery = recovery.get('routeRecoverySha256')
                         current_route_recovery = (
-                            isinstance(recovery.get('routeRecoverySha256'), dict)
-                            and bool(recovery['routeRecoverySha256']))
+                            isinstance(route_recovery, dict) and
+                            set(route_recovery) == set(activation.RETIREMENT_TRANSACTIONS) and
+                            all(isinstance(value, str) and len(value) == 64 and
+                                not set(value)-set('0123456789abcdef')
+                                for value in route_recovery.values()))
                 except (OSError, ValueError, TypeError, KeyError):
                     post_reboot_blocked = True
                 if active in ROUTES and not current_route_ancestry:
                     post_reboot_blocked = True
-    if neutral:
+    application_journal = journals['application.json']
+    transaction_journal = journals['transaction.json']
+    application_service = result['services'].get('wsprrypi.service', {})
+    restored_service = (phase == 'neutral-restored' and
+        application_service.get('load') == 'loaded' and
+        application_service.get('active') == 'active')
+    stopped_service = (phase == 'neutral-stopped' and
+        application_service.get('load') == 'loaded' and
+        application_service.get('active') in ('inactive', 'failed') and
+        application_service.get('enabled') not in ('masked', 'masked-runtime'))
+    masked_service = (phase == 'neutral-administrator-masked' and
+        (application_service.get('load') == 'masked' or
+         application_service.get('enabled') in ('masked', 'masked-runtime')) and
+        application_service.get('active') in ('inactive', 'failed'))
+    neutral_endpoints_ready = (
+        result['endpoints']['controller'].get('status') == 'owned' and
+        result['endpoints']['controller'].get('open') is False and
+        result['endpoints']['consumer'].get('status') == 'absent' and closed)
+    completed_removal = (current_route_recovery and active is None and
+        state.get('configuredRoute') is None and
+        state.get('applicationInhibited') is False and
+        state.get('outputEnabled') is False and
+        isinstance(controller, dict) and controller.get('generation', 0) > 0 and
+        all(controller.get(name) == 0 for name in ('id', 'error', 'route', 'flags')) and
+        isinstance(application, dict) and
+        application.get('operation') == 'remove' and
+        application.get('controller') is None and
+        application.get('ready') is None and
+        application_journal.get('status') == 'present' and
+        application_journal.get('value') == application and
+        transaction_journal.get('status') == 'present' and
+        transaction_journal.get('value') == route_journal and
+        (restored_service or stopped_service or masked_service) and
+        artifacts_ready and
+        modules['rp1_route_controller'].get('status') == 'loaded' and
+        modules['rp1_gpclk_dkms'].get('status') == 'absent' and
+        neutral_endpoints_ready and socket_ready and services_ready)
+    administration_neutral = neutral or completed_removal
+    if administration_neutral:
         result['safety'].update({'outputInhibited': False, 'operationalReady': False,
             'owner': False, 'lease': False, 'clock': 'quiescent',
             'gpio': 'quiescent', 'dma': 'quiescent', 'endpointOpen': False})
@@ -511,7 +554,8 @@ def classify(result, activation_recovery_plan=None):
     if conflicts:
         classification = 'conflict'
         result['remediation'].append('Preserve the conflicting state and use its owning migration or removal workflow.')
-    elif unresolved or post_reboot_blocked or current_route_recovery:
+    elif (unresolved or post_reboot_blocked or
+          (current_route_recovery and not completed_removal)):
         classification = 'recovery_required'
         if post_reboot_blocked:
             result['remediation'].append(
@@ -521,7 +565,7 @@ def classify(result, activation_recovery_plan=None):
     elif (artifacts_ready and modules_ready and endpoints_ready and closed and socket_ready and services_ready and
           controller_ready and application_ready and aligned and output_ready):
         classification = 'exact_ready'
-    elif neutral:
+    elif administration_neutral:
         classification = 'neutral_ready'
     elif not residue:
         classification = 'absent'

@@ -279,6 +279,12 @@ then explicitly switch. `restore` retries only application completion for a
 successfully selected current route; it does not repeat overlay effects.
 Previously stopped services remain stopped and administrator masks are preserved.
 
+After a completed `remove`, the exact same-boot neutral controller and removal
+journals remain attributable evidence. The provider accepts that state for a
+new read-only `route-plan`; the manager then revalidates the terminal removal
+and current service state during preflight. Incomplete recovery or failed
+application restoration remains `recovery_required`.
+
 After reboot, review and execute the digest-bound neutral activation plan before
 switching. It loads only the reviewed controller after establishing application
 inhibition, then creates a current neutral record; nonempty or faulted state is
