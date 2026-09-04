@@ -188,7 +188,7 @@ def lock():
 
 
 class Tests(unittest.TestCase):
-    def recovered_route(self, system, *, with_application=True):
+    def recovered_route(self, system, *, with_application=True, removal=False):
         binding = admin.digest(system.raw)
         predecessor = {'session': system.state['session'], 'generation': 1,
             'id': 9, 'error': 0, 'route': 1,
@@ -213,7 +213,7 @@ class Tests(unittest.TestCase):
         system.records.update({'transaction.json': route,
                                'manager.json': manager})
         if with_application:
-            system.records['application.json'] = {
+            record = {
                 'version': 1, 'boot': system.boot_id, 'binding': binding,
                 'requestId': 'switch-request-0001', 'fingerprint': 'e' * 64,
                 'route': 'gpio4',
@@ -221,8 +221,16 @@ class Tests(unittest.TestCase):
                 'wasActive': True, 'administratorMasked': False,
                 'phase': 'route-recovered', 'controller': predecessor,
                 'ready': {'pid': 42, 'route': 'gpio4'}, 'previousIdle': None}
-        system.inhibited = True
-        system.application_active = False
+            if removal:
+                record.update(requestId=manager['requestId'], operation='remove',
+                              phase='neutral-restored', controller=None,
+                              ready=None)
+                captured = copy.deepcopy(record)
+                captured['phase'] = 'captured'
+                response['state']['application'] = captured
+            system.records['application.json'] = record
+        system.inhibited = not removal
+        system.application_active = removal
 
     def test_linux_controller_status_uses_and_requires_reserved0_zero(self):
         system = activation.Linux()
@@ -656,6 +664,26 @@ class Tests(unittest.TestCase):
             system, reviewed, activation.plan_digest(reviewed), lock)
         self.assertEqual(result['status'], 'recovered-inhibited')
         self.assertFalse(system.controller)
+
+    def test_recovery_accepts_exact_completed_route_removal(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        self.recovered_route(system, removal=True)
+        reviewed = activation.recovery_plan(system)
+        self.assertEqual(set(reviewed['routeRecoverySha256']),
+                         set(activation.RETIREMENT_TRANSACTIONS))
+        result = activation.ensure_recovery(
+            system, reviewed, activation.plan_digest(reviewed), lock)
+        self.assertEqual(result['status'], 'recovered-inhibited')
+        self.assertFalse(system.controller)
+
+    def test_recovery_rejects_removal_terminal_that_differs_from_capture(self):
+        system = System(); initial = activation.activation_plan(system)
+        activation.ensure(system, initial, activation.plan_digest(initial), lock)
+        self.recovered_route(system, removal=True)
+        system.records['application.json']['wasActive'] = False
+        with self.assertRaisesRegex(ValueError, 'differs from its capture'):
+            activation.recovery_plan(system)
 
     def test_inactive_recovered_route_journals_are_retirement_eligible(self):
         system = System(); initial = activation.activation_plan(system)

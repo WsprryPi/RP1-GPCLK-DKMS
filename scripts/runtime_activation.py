@@ -877,19 +877,35 @@ def _validate_same_boot_recovered_route(transactions, controller, boot, binding)
         application.validate_journal(application_record)
         predecessor = application_record.get('controller')
         target = {1: 'gpio4', 2: 'gpio20'}[route['target']]
-        if (application_record.get('phase') != 'route-recovered' or
-                application_record.get('boot') != boot or
+        if (application_record.get('boot') != boot or
                 application_record.get('binding') != binding or
-                application_record.get('route') != target or
-                not isinstance(predecessor, dict)):
+                application_record.get('route') != target):
             raise ValueError('application route recovery is inconsistent')
-        admin.validate_observation(predecessor)
-        if (predecessor['session'] != controller['session'] or
-                predecessor['generation'] + 1 != controller['generation'] or
-                predecessor['error'] != 0 or predecessor['id'] <= 0 or
-                predecessor['route'] != route['target'] or
-                predecessor['flags'] != admin.CONSUMER | admin.PINNED):
-            raise ValueError('application predecessor does not lead to recovered controller')
+        if application_record.get('phase') == 'route-recovered':
+            if not isinstance(predecessor, dict):
+                raise ValueError('application route recovery lacks its predecessor')
+            admin.validate_observation(predecessor)
+            if (predecessor['session'] != controller['session'] or
+                    predecessor['generation'] + 1 != controller['generation'] or
+                    predecessor['error'] != 0 or predecessor['id'] <= 0 or
+                    predecessor['route'] != route['target'] or
+                    predecessor['flags'] != admin.CONSUMER | admin.PINNED):
+                raise ValueError('application predecessor does not lead to recovered controller')
+        elif application_record.get('phase') in application.REMOVAL_TERMINAL:
+            response_state = manager.get('response', {}).get('state', {})
+            captured = response_state.get('application')
+            application.validate_journal(captured)
+            if (application_record.get('operation') != 'remove' or
+                    captured.get('operation') != 'remove' or
+                    captured.get('phase') != 'captured' or
+                    application_record.get('requestId') != manager.get('requestId') or
+                    predecessor is not None or
+                    any(application_record.get(name) != captured.get(name)
+                        for name in set(application_record) | set(captured)
+                        if name != 'phase')):
+                raise ValueError('application removal terminal differs from its capture')
+        else:
+            raise ValueError('application route recovery is not terminal')
     return {name: transactions.get(name) for name in RETIREMENT_TRANSACTIONS}
 
 
