@@ -19,13 +19,13 @@ def parse(value):
         raise ValueError('request object/version required')
     operation = value.get('operation')
     fields = {'schemaVersion', 'operation'}
-    if value['schemaVersion'] != 3 or operation not in ('query', 'preflight', 'switch', 'recover'):
+    if value['schemaVersion'] != 3 or operation not in ('query', 'preflight', 'switch', 'remove', 'recover'):
         raise ValueError('runtime profile requires schemaVersion=3 and an explicit runtime operation')
-    if operation in ('preflight', 'switch'):
+    if operation in ('preflight', 'switch', 'remove'):
         fields.add('route')
         if value.get('route') not in ('gpio4', 'gpio20'):
             raise ValueError('unsupported route')
-    if operation in ('switch', 'recover'):
+    if operation in ('switch', 'remove', 'recover'):
         fields |= {'execute', 'requestId', 'actor'}
         if value.get('execute') is not True:
             raise ValueError('explicit execution required')
@@ -159,7 +159,7 @@ def dispatch(value, factory=admin.Linux):
             state = system.call()
             app.acknowledge(system, value, state)
             return response(system, operation, state)
-    if operation not in ('switch', 'recover', 'restore'):
+    if operation not in ('switch', 'remove', 'recover', 'restore'):
         return _dispatch(value, factory)
     if operation == 'restore':
         if value != {'schemaVersion':3, 'operation':'restore', 'execute':True}:
@@ -169,16 +169,51 @@ def dispatch(value, factory=admin.Linux):
     with app.mutation_lock():
         with factory() as system:
             record = app.load(system)
-            if operation == 'switch':
+            if operation in ('switch', 'remove'):
                 if record and record.get('requestId') == value['requestId']:
-                    if record.get('fingerprint') != admin.digest(json.dumps(value, sort_keys=True).encode()) or record['route'] != value['route'] or record['boot'] != system.boot or record['binding'] != system.binding_hash or (record.get('controller') and record['controller'] != system.call()):
+                    if record.get('fingerprint') != admin.digest(json.dumps(value, sort_keys=True).encode()) or record['route'] != value['route'] or record['boot'] != system.boot or record['binding'] != system.binding_hash:
                         raise ValueError('request ID conflict')
-                    result = response(system, operation, system.call(), record['phase'] if record['phase'] in app.TERMINAL else 'error')
-                    result['state']['application'] = record
-                    return result
-                if token(system, system.call(), value['route']) != value['preflightToken']:
+                    if operation == 'remove' and record['phase'] in app.REMOVAL_TERMINAL:
+                        app.verify_removal_terminal(system, record)
+                        result = response(system, operation, system.call(), record['phase'])
+                        result['state']['application'] = record
+                        return result
+                    if operation == 'switch':
+                        if record.get('controller') and record['controller'] != system.call():
+                            raise ValueError('request ID conflict')
+                        result = response(system, operation, system.call(),
+                            record['phase'] if record['phase'] in app.TERMINAL else 'error')
+                        result['state']['application'] = record
+                        return result
+                if operation == 'switch' and token(system, system.call(), value['route']) != value['preflightToken']:
                     raise ValueError('stale preflight; no mutation performed')
-                record = app.capture(system, value)
+                state = system.call()
+                active = {1:'gpio4', 2:'gpio20'}.get(state['route'])
+                if operation == 'remove' and active is None:
+                    if (not record or record['route'] != value['route'] or
+                            record['boot'] != system.boot or
+                            record['binding'] != system.binding_hash or
+                            record['phase'] not in ('captured', 'route-recovered', 'neutral-start-intent',
+                                'neutral-restoration-failed', *app.REMOVAL_TERMINAL)):
+                        raise ValueError('neutral route lacks matching removal restoration evidence')
+                    if record['phase'] == 'captured' and record.get('operation') != 'remove':
+                        raise ValueError('neutral route lacks bound removal intent')
+                    if record['phase'] in app.REMOVAL_TERMINAL:
+                        app.verify_removal_terminal(system, record)
+                        result = response(system, operation, state, record['phase'])
+                        result['state']['application'] = record
+                        return result
+                else:
+                    if operation == 'remove' and active != value['route']:
+                        raise ValueError('requested removal route is stale')
+                    resumable_removal = (operation == 'remove' and record and
+                        record.get('operation') == 'remove' and
+                        record['phase'] == 'captured' and
+                        record['route'] == value['route'] and
+                        record['boot'] == system.boot and
+                        record['binding'] == system.binding_hash)
+                    if not resumable_removal:
+                        record = app.capture(system, value)
             elif operation == 'restore':
                 if not record:
                     raise ValueError('no application transaction to restore')
@@ -196,7 +231,7 @@ def dispatch(value, factory=admin.Linux):
                     result = response(system, operation, system.call(), record['phase'])
                     result['state']['application'] = record
                     return result
-        if operation == 'recover':
+        if operation in ('remove', 'recover'):
             with factory() as system:
                 state = system.call()
                 capture_only = (record and record['phase'] == 'captured' and
@@ -205,13 +240,36 @@ def dispatch(value, factory=admin.Linux):
                 if capture_only:
                     system.inhibit()
                     result = response(system, operation, state, 'recovered-inhibited')
-            if not capture_only:
-                result = _dispatch(value, factory)
+            if not capture_only and (operation == 'recover' or state['route']):
+                recovery = (dict(value, operation='recover')
+                            if operation == 'remove' else value)
+                if operation == 'remove':
+                    recovery.pop('route', None)
+                result = _dispatch(recovery, factory)
+            elif not capture_only:
+                with factory() as system:
+                    state = system.call()
+                    journal = system.read_journal()
+                    if (not journal or journal.get('phase') != 'recovered-inhibited' or
+                            journal.get('observation') != state or not system.inhibited()):
+                        raise ValueError('neutral route is not in an exact recovered-inhibited state')
+                    result = response(system, operation, state, 'recovered-inhibited')
             if record and result['status'] != 'error':
                 with factory() as system:
                     app.remove_idle(record)
                     app.save(system, record, 'route-recovered')
                     result['state']['application'] = record
+            if operation == 'remove' and result['status'] != 'error':
+                try:
+                    record = app.finish_removal(factory, record)
+                    with factory() as system:
+                        result = response(system, operation, system.call(), record['phase'])
+                except (OSError, ValueError) as error:
+                    with factory() as system:
+                        app.failed_removal(system, record, error)
+                        result = response(system, operation, system.call(), 'error', error)
+                        result['error']['code'] = 'neutral-application-restoration-failed'
+                result['state']['application'] = record
             return result
         if operation == 'switch':
             result = _dispatch(value, factory)

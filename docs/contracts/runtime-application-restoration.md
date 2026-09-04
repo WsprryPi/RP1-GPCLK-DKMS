@@ -6,6 +6,10 @@ The runtime manager completes application restoration after successful route
 switching. The low-level overlay transaction ends at `complete-inhibited`;
 it does not itself start an application.
 
+An explicit `remove` operation composes exact route recovery with neutral
+application restoration. It is distinct from `recover`, whose fail-closed
+contract continues to end route-neutral with application inhibition retained.
+
 ## Ownership and sequence
 
 DKMS owns overlay/consumer lifecycle, its transaction journals, and temporary
@@ -80,6 +84,12 @@ controller observation. Application phases distinguish:
   ownership remain available separately from any subsequent inhibition error.
 - `route-recovered`: explicit recovery reached a neutral route; a new switch is
   needed before restoring application availability.
+- `neutral-restored`: explicit removal reached an exact neutral controller and
+  restored a service that was running before removal.
+- `neutral-stopped` and `neutral-administrator-masked`: removal reached neutral
+  state while preserving a previously stopped service or administrator mask.
+- `neutral-restoration-failed`: route recovery succeeded, but neutral service
+  restoration failed and the owned inhibitor was retained.
 
 Completed records describe the last transaction, not a promise that the service
 cannot subsequently stop. A stopped/masked application's idle startup override
@@ -92,6 +102,14 @@ repeat overlay effects. Interrupted route changes require `recover --execute`,
 then a new explicit switch. Recovery preserves the original service intent on
 the same boot. Prior-boot restoration never automatically starts an application
 or adopts stale overlay ownership; recover and explicitly select a new route.
+
+`runtime_route_client.py remove gpio4|gpio20 --execute` requires the requested
+route to match the active route, captures service intent, performs the existing
+recovery transaction, and restores that intent only after route zero, an exact
+`recovered-inhibited` journal, disabled output, and the owned inhibitor are
+verified. Repeating removal is idempotent only while boot, binding, controller,
+journal, companion configuration, and service outcome still match. A changed or
+foreign state fails closed.
 
 Failures retain owned inhibition where possible and report inhibition failure
 separately. Foreign drop-ins are preserved and reported. Requester disconnects

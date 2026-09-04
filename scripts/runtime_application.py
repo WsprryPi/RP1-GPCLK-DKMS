@@ -23,6 +23,8 @@ DROPIN = '90-rp1-route-inhibit.conf'
 IDLE_DROPIN = '91-rp1-route-idle.conf'
 INHIBIT = b'# Owned by rp1-gpclk runtime administration\n[Unit]\nConditionPathExists=/dev/null/rp1-route-inhibited\n'
 TERMINAL = ('restored', 'stopped', 'administrator-masked')
+REMOVAL_TERMINAL = ('neutral-restored', 'neutral-stopped',
+                    'neutral-administrator-masked')
 
 
 def neutral_capture():
@@ -115,13 +117,17 @@ def validate_journal(record):
                 'token', 'wasActive', 'administratorMasked', 'phase', 'controller',
                 'ready', 'previousIdle'}
     if (not isinstance(record, dict) or not required <= set(record) or
-            set(record)-required-{'error', 'inhibitionError', 'routeError'} or
+            set(record)-required-{'operation', 'error', 'inhibitionError', 'routeError'} or
             type(record['version']) is not int or record['version'] != 1 or
             type(record['wasActive']) is not bool or type(record['administratorMasked']) is not bool or
             record['route'] not in ('gpio4', 'gpio20') or
-            record['phase'] not in (*TERMINAL, 'captured', 'configure-intent', 'start-intent',
-                                   'route-failed', 'restoration-failed', 'route-recovered')):
+            record['phase'] not in (*TERMINAL, *REMOVAL_TERMINAL, 'captured',
+                                   'configure-intent', 'start-intent', 'route-failed',
+                                   'restoration-failed', 'route-recovered',
+                                   'neutral-start-intent', 'neutral-restoration-failed')):
         raise ValueError('invalid application journal; preserve service state')
+    if ('operation' in record and record['operation'] not in ('switch', 'remove')):
+        raise ValueError('invalid application operation; preserve service state')
     for name in ('token', 'boot', 'previousIdle'):
         value = record[name]
         if name == 'previousIdle' and value is None:
@@ -239,7 +245,8 @@ def mutation_lock():
 
 def capture(system, request):
     previous = load(system)
-    if previous and previous.get('phase') not in (*TERMINAL, 'route-recovered'):
+    if previous and previous.get('phase') not in (*TERMINAL, *REMOVAL_TERMINAL,
+                                                   'route-recovered'):
         raise ValueError('application restoration pending; use restore --execute')
     observed = service()
     if observed['ActiveState'] not in ('active', 'inactive', 'failed'):
@@ -262,6 +269,7 @@ def capture(system, request):
         was_active = previous['wasActive']
     record = dict(version=1, boot=system.boot, binding=system.binding_hash,
         requestId=request['requestId'], fingerprint=admin.digest(json.dumps(request, sort_keys=True).encode()), route=request['route'], token=str(uuid.uuid4()),
+        operation=request['operation'],
         wasActive=was_active, administratorMasked=masked,
         phase='captured', controller=None, ready=None,
         previousIdle=previous['token'] if previous and previous.get('phase') in TERMINAL else None)
@@ -363,3 +371,82 @@ def failed(system, record, error):
     except (OSError, ValueError) as cleanup:
         record['inhibitionError'] = str(cleanup)
     save(system, record, 'restoration-failed')
+
+
+def finish_removal(factory, record):
+    """Restore captured service intent only after exact neutral recovery."""
+    validate_journal(record)
+    with factory() as system:
+        state = system.call()
+        journal = system.read_journal()
+        if (record['boot'] != system.boot or record['binding'] != system.binding_hash or
+                any(state[name] for name in ('id', 'route', 'error', 'flags')) or
+                not journal or journal.get('phase') != 'recovered-inhibited' or
+                journal.get('observation') != state or not system.inhibited()):
+            raise ValueError('neutral recovery identity is not exact')
+        observed = service()
+        if observed['ActiveState'] not in ('inactive', 'failed') or observed['MainPID'] != '0':
+            raise ValueError('application is not stopped behind the owned inhibitor')
+        save(system, record, 'neutral-start-intent')
+        remove_owned(unit_file(DROPIN), INHIBIT)
+        admin.run(('/usr/bin/systemctl', 'daemon-reload'))
+    if record['wasActive']:
+        admin.run(('/usr/bin/systemctl', 'start', 'wsprrypi.service'))
+    with factory() as system:
+        state = system.call()
+        if (record['boot'] != system.boot or record['binding'] != system.binding_hash or
+                any(state[name] for name in ('id', 'route', 'error', 'flags'))):
+            raise ValueError('neutral controller changed during application restoration')
+        observed = service()
+        masked = observed['LoadState'] == 'masked' or observed['UnitFileState'] in (
+            'masked', 'masked-runtime')
+        if masked != record['administratorMasked']:
+            raise ValueError('administrator service mask changed during route removal')
+        if record['wasActive']:
+            if observed['ActiveState'] != 'active' or observed['MainPID'] == '0':
+                raise ValueError('previously active application did not restart after route removal')
+            phase = 'neutral-restored'
+        else:
+            if observed['ActiveState'] not in ('inactive', 'failed') or observed['MainPID'] != '0':
+                raise ValueError('previously stopped application unexpectedly started after route removal')
+            phase = ('neutral-administrator-masked' if record['administratorMasked']
+                     else 'neutral-stopped')
+        companion = helper('inspect-stopped' if masked else 'inspect')
+        if companion.get('transmit') is not False:
+            raise ValueError('application is not idle after route removal')
+        save(system, record, phase)
+        return record
+
+
+def verify_removal_terminal(system, record):
+    """Prove that a completed removal remains neutral and service-consistent."""
+    validate_journal(record)
+    state = system.call()
+    journal = system.read_journal()
+    if (record['phase'] not in REMOVAL_TERMINAL or
+            record['boot'] != system.boot or record['binding'] != system.binding_hash or
+            any(state[name] for name in ('id', 'route', 'error', 'flags')) or
+            not journal or journal.get('phase') != 'recovered-inhibited' or
+            journal.get('observation') != state or system.inhibited()):
+        raise ValueError('completed neutral removal identity changed')
+    observed = service()
+    expected_active = record['phase'] == 'neutral-restored'
+    masked = observed['LoadState'] == 'masked' or observed['UnitFileState'] in (
+        'masked', 'masked-runtime')
+    if ((expected_active and (observed['ActiveState'] != 'active' or observed['MainPID'] == '0')) or
+            (not expected_active and (observed['ActiveState'] not in ('inactive', 'failed') or observed['MainPID'] != '0')) or
+            masked != (record['phase'] == 'neutral-administrator-masked')):
+        raise ValueError('completed neutral removal service state changed')
+    companion = helper('inspect-stopped' if masked else 'inspect')
+    if companion.get('transmit') is not False:
+        raise ValueError('application is not idle after completed route removal')
+    return record
+
+
+def failed_removal(system, record, error):
+    record['error'] = str(error)
+    try:
+        neutral_inhibit()
+    except (OSError, ValueError) as cleanup:
+        record['inhibitionError'] = str(cleanup)
+    save(system, record, 'neutral-restoration-failed')

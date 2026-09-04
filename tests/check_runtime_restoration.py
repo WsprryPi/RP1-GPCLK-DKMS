@@ -79,6 +79,8 @@ class System(Machine):
             if self.fail == 'start': raise ValueError('injected start')
             self.active = True
             record = self.read_record('application.json')
+            if record['phase'] == 'neutral-start-intent':
+                return ''
             # An independent startup connection exercises public dispatch while
             # the mutation workflow is alive but its controller lock is released.
             self.pre_ack = manager.dispatch(
@@ -141,6 +143,111 @@ class Tests(unittest.TestCase):
         self.assertFalse(app.unit_file(app.DROPIN).exists())
         self.assertFalse(app.unit_file(app.IDLE_DROPIN).exists())
         self.assertEqual(self.dispatch(dict(schemaVersion=3,operation='query'))['state']['application']['phase'], 'restored')
+
+    def remove(self, route='gpio4', ident='remove-0001'):
+        return self.dispatch(dict(schemaVersion=3, operation='remove', route=route,
+            requestId=ident, actor='offline.test', execute=True))
+
+    def test_remove_restores_running_application_after_exact_neutral_proof(self):
+        self.switch('gpio4', 'setup-route-0001')
+        result = self.remove()
+        self.assertEqual(result['status'], 'neutral-restored')
+        self.assertTrue(self.system.active)
+        self.assertEqual(self.system.value['route'], 0)
+        self.assertFalse(app.unit_file(app.DROPIN).exists())
+        self.assertEqual(result['state']['application']['phase'], 'neutral-restored')
+
+    def test_remove_preserves_stopped_and_masked_service_intent(self):
+        for masked in (False, True):
+            with self.subTest(masked=masked):
+                self.tearDown(); self.setUp()
+                self.system.active = False
+                self.system.masked = masked
+                self.switch('gpio4', 'setup-route-0001')
+                result = self.remove(ident='remove-'+str(masked)+'-0001')
+                self.assertEqual(result['status'],
+                    'neutral-administrator-masked' if masked else 'neutral-stopped')
+                self.assertFalse(self.system.active)
+                self.assertEqual(self.system.started, 0)
+                self.assertEqual(self.system.masked, masked)
+                self.assertFalse(app.unit_file(app.DROPIN).exists())
+
+    def test_remove_restart_failure_retains_inhibitor_and_retries_without_route_effects(self):
+        self.switch('gpio4', 'setup-route-0001')
+        self.system.fail = 'start'
+        result = self.remove()
+        self.assertEqual(result['error']['code'], 'neutral-application-restoration-failed')
+        self.assertEqual(self.system.value['route'], 0)
+        self.assertTrue(app.unit_file(app.DROPIN).exists())
+        self.system.fail = None
+        result = self.remove(ident='remove-0002')
+        self.assertEqual(result['status'], 'neutral-restored')
+        self.assertTrue(self.system.active)
+
+    def test_remove_rejects_stale_route_without_effects(self):
+        self.switch('gpio4', 'setup-route-0001')
+        before = copy.deepcopy(self.system.value)
+        with self.assertRaisesRegex(ValueError, 'stale'):
+            self.remove('gpio20')
+        self.assertEqual(self.system.value, before)
+        self.assertTrue(self.system.active)
+
+    def test_remove_is_idempotent_for_same_and_new_request_ids(self):
+        self.switch('gpio4', 'setup-route-0001')
+        first = self.remove()
+        event_count = len(self.system.events)
+        self.assertEqual(self.remove(), first)
+        second = self.remove(ident='remove-0002')
+        self.assertEqual(second['status'], 'neutral-restored')
+        self.assertEqual(len(self.system.events), event_count)
+
+    def test_remove_completes_a_matching_prior_recovered_route(self):
+        self.switch('gpio4', 'setup-route-0001')
+        recovered = self.dispatch(dict(schemaVersion=3, operation='recover', execute=True,
+            requestId='recovery-0001', actor='offline.test'))
+        self.assertEqual(recovered['status'], 'recovered-inhibited')
+        self.assertFalse(self.system.active)
+        result = self.remove(ident='remove-after-recovery-0001')
+        self.assertEqual(result['status'], 'neutral-restored')
+        self.assertTrue(self.system.active)
+
+    def test_foreign_inhibitor_survives_failed_removal(self):
+        self.switch('gpio4', 'setup-route-0001')
+        app.unit_file(app.DROPIN).write_bytes(b'foreign')
+        with self.assertRaisesRegex(ValueError, 'inhibition'):
+            self.remove()
+        self.assertEqual(app.unit_file(app.DROPIN).read_bytes(), b'foreign')
+        self.assertTrue(self.system.active)
+
+    def test_remove_is_retryable_at_every_durable_journal_boundary(self):
+        class Crash(BaseException): pass
+        self.switch('gpio4', 'setup-route-0001')
+        writes = []
+        original = self.system.write_record
+        def trace(name, value):
+            original(name, value)
+            writes.append((name, value.get('phase')))
+        with patch.object(self.system, 'write_record', trace):
+            self.remove()
+        for boundary in range(1, len(writes)+1):
+            with self.subTest(boundary=boundary, write=writes[boundary-1]):
+                self.tearDown(); self.setUp()
+                self.switch('gpio4', 'setup-route-0001')
+                original = self.system.write_record
+                count = 0
+                def crash(name, value):
+                    nonlocal count
+                    original(name, value)
+                    count += 1
+                    if count == boundary:
+                        raise Crash()
+                with patch.object(self.system, 'write_record', crash):
+                    with self.assertRaises(Crash):
+                        self.remove()
+                result = self.remove(ident='remove-retry-'+str(boundary))
+                self.assertEqual(result['status'], 'neutral-restored')
+                self.assertTrue(self.system.active)
+                self.assertEqual(self.system.value['route'], 0)
     def test_stopped_and_administrator_masked_are_not_started(self):
         for masked in (False, True):
             with self.subTest(masked=masked):
@@ -276,6 +383,16 @@ class Tests(unittest.TestCase):
         before = list(self.system.events)
         with self.assertRaises(ValueError):
             self.dispatch(dict(schemaVersion=3,operation='restore',execute=True))
+        self.assertEqual(self.system.events, before)
+
+    def test_unbound_application_operation_is_not_used_for_removal(self):
+        self.switch('gpio4', 'setup-route-0001')
+        record = self.system.read_record('application.json')
+        record['operation'] = 'foreign'
+        self.system.write_record('application.json', record)
+        before = list(self.system.events)
+        with self.assertRaisesRegex(ValueError, 'application operation'):
+            self.remove()
         self.assertEqual(self.system.events, before)
 
     def test_process_exit_after_acknowledgement_is_not_reported_as_restored(self):

@@ -159,6 +159,13 @@ identity mismatches and failures stop without restart, automatic reboot or
 rollback to an unproven route. Interrupted kernel calls may still be pending;
 busy status stops recovery instead of assuming completion.
 
+The higher-level runtime-manager `remove` operation does not weaken this
+low-level recovery boundary. It first completes the same neutral inhibited
+transaction, verifies its exact journal and controller observation, and only
+then releases the owned application inhibitor to restore captured service
+intent. Any ambiguous controller, journal, application, or systemd state keeps
+the service inhibited.
+
 ## Boundaries and validation
 
 Cooperative privileged administration is a requirement. Root can load an old

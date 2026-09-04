@@ -435,6 +435,13 @@ profile does not change the packaged compatibility contract, transmission UAPI,
 release status, or hardware qualification. Application/browser adaptation remains
 owned and reviewed in WsprryPi.
 
+The runtime profile distinguishes fail-closed `recover` from operator-intended
+`remove`. Recovery always ends route-neutral and application-inhibited. Removal
+may restore the captured service intent only after the same recovery transaction
+proves an exact neutral controller, absent consumer route, disabled output, and
+matching durable evidence. It never starts a service that was previously stopped
+or administrator-masked.
+
 Runtime-owned routes can use the canonical operation lease through the
 [application reconciliation extension](runtime-output.md). Application output
 stays inhibited during reconciliation; this does not add qualification or
