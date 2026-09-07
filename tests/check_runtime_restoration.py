@@ -254,6 +254,27 @@ class Tests(unittest.TestCase):
         self.system.write_record('application.json', dict(original, error='retained failure'))
         self.assert_removal_ancestry()
 
+    def test_gpio20_removal_and_interrupted_restoration_use_only_gpio20_evidence(self):
+        class Crash(BaseException): pass
+        for active, masked in ((True, False), (False, False), (False, True)):
+            with self.subTest(active=active, masked=masked):
+                self.tearDown(); self.setUp()
+                self.system.active, self.system.masked = active, masked
+                self.switch('gpio20', 'setup-route-0020')
+                original = app.remove_owned
+                def interrupted(path, data):
+                    original(path, data)
+                    if path == app.unit_file(app.DROPIN): raise Crash()
+                with patch.object(app, 'remove_owned', interrupted):
+                    with self.assertRaises(Crash): self.remove('gpio20')
+                with self.assertRaisesRegex(ValueError, 'matching removal'):
+                    self.remove('gpio4', 'wrong-route-0004')
+                result = self.remove('gpio20', 'remove-retry-0020')
+                self.assertEqual(result['state']['application']['route'], 'gpio20')
+                self.assertEqual(self.system.read_journal()['target'], 2)
+                self.assertEqual(self.system.active, active)
+                self.assert_removal_ancestry()
+
     def test_remove_rejects_stale_route_without_effects(self):
         self.switch('gpio4', 'setup-route-0001')
         before = copy.deepcopy(self.system.value)
