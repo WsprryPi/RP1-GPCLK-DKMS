@@ -235,6 +235,44 @@ class Tests(unittest.TestCase):
         host._manager = {'status': 'absent'}
         self.assertEqual(self.inspect(host)['result'], 'activation_required')
 
+    def test_terminal_reboot_and_interrupted_retirement_use_public_activation_facade(self):
+        import check_runtime_activation as fixture
+        for gpio in (4, 20):
+            for interrupted in (False, True):
+                with self.subTest(gpio=gpio, interrupted=interrupted):
+                    system = fixture.Tests().rebooted_route(gpio)
+                    if interrupted:
+                        selected = provider.activation.activation_plan(system)
+                        system.fail = 'inhibit-after'
+                        with self.assertRaises(ValueError):
+                            provider.activation.ensure(system, selected,
+                                provider.activation.plan_digest(selected), fixture.lock)
+                        system.fail = None
+                    host = Host()
+                    host._modules = {name: {'status': 'absent'} for name in host._modules}
+                    host._endpoints = {name: {'status': 'absent', 'open': False} for name in host._endpoints}
+                    host._socket = {'status': 'absent'}
+                    host._manager = {'status': 'absent'}
+                    host._activation = {'status': 'observed', 'value': provider.activation.observe(system)}
+                    host._journals = {name: {'status': 'present', 'value': value} if value else
+                        {'status': 'absent'} for name, value in {
+                            'activation.json': system.journal,
+                            **provider.activation.observe(system)['transactions']}.items()}
+                    host.activation_plan = lambda: provider.activation.activation_plan(system)
+                    host.activation_ensure = lambda value, digest: provider.activation.ensure(system, value, digest, fixture.lock)
+                    before = copy.deepcopy(system.__dict__)
+                    self.assertEqual(self.inspect(host)['result'], 'activation_required')
+                    self.assertEqual(system.__dict__, before)
+                    output = io.StringIO()
+                    with patch.object(sys, 'argv', ['runtime_provider.py', 'activation-plan']), contextlib.redirect_stdout(output):
+                        self.assertEqual(provider.main(host), provider.EXIT['activation_required'])
+                    plan = json.loads(output.getvalue())['activationPlan']
+                    self.assertEqual(system.__dict__, before)
+                    with patch.object(sys, 'argv', ['runtime_provider.py', 'activation-ensure', '--plan-sha256', plan['planSha256']]), contextlib.redirect_stdout(io.StringIO()):
+                        self.assertEqual(provider.main(host), 0)
+                    self.assertTrue(provider.activation.neutral_ready(provider.activation.observe(system)))
+                    self.assertFalse(system.consumer)
+
     def test_restartable_post_reboot_activation_is_reported_explicitly(self):
         host = Host()
         host._modules = {name: {'status': 'absent'} for name in host._modules}

@@ -78,6 +78,11 @@ def validate_neutral_capture(record):
 def neutral_restore(record):
     """Release only the owned inhibitor and restore the captured service intent."""
     validate_neutral_capture(record)
+    current = neutral_capture()
+    if (current['administratorMasked'] != record['administratorMasked'] or
+            current['companion'] != record['companion'] or
+            (current['wasActive'] and not record['wasActive'])):
+        raise ValueError('application intent changed before neutral restoration')
     remove_owned(unit_file(DROPIN), INHIBIT)
     admin.run(('/usr/bin/systemctl', 'daemon-reload'))
     if record['wasActive']:

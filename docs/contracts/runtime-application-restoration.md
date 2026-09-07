@@ -100,8 +100,9 @@ remains until its first later startup acknowledges readiness. This avoids an
 on the same boot, deployment and successfully installed route. It does not
 repeat overlay effects. Interrupted route changes require `recover --execute`,
 then a new explicit switch. Recovery preserves the original service intent on
-the same boot. Prior-boot restoration never automatically starts an application
-or adopts stale overlay ownership; recover and explicitly select a new route.
+the same boot. Prior-boot route records never establish live ownership or authorize historical
+service intent. Ordinary reboot reconciliation uses the distinct neutral
+activation workflow below; interrupted routes require explicit recovery.
 
 `runtime_route_client.py remove gpio4|gpio20 --execute` requires the requested
 route to match the active route, captures service intent, performs the existing
@@ -132,14 +133,20 @@ transaction remains inhibited but retains the original application intent for a
 subsequent reviewed activation or coherent deployment. Prior activation evidence
 is archived before a recovered transaction is restarted.
 
-After a clean reboot, a valid terminal neutral journal can be superseded only by
-a reviewed post-reboot activation. The current service state and disabled
-companion configuration are captured as the new restoration intent. Execution
-writes and verifies the owned inhibitor and stops the application before it
-archives the old journal or loads the controller. If inhibition is interrupted
-after the service stops, the still-terminal prior journal plus exact inhibitor
-permits a newly reviewed retry. A running service behind an inhibitor, changed
-service intent, or nonterminal prior-boot journal remains a stop condition.
+After a clean reboot, an exact completed neutral activation and a full terminal
+route/manager/application chain may be superseded through a fresh version-3
+neutral activation plan. The plan binds the historical records and current
+application capture. A stopped or masked route that subsequently acknowledged
+an explicit start is terminal `restored` history; its original service capture
+is preserved as evidence and does not determine the new boot's service intent.
+`reboot-prepare` durably stores that capture before changing
+the owned inhibitor or retiring any dependent journal. Retries accept only an
+exact ordered suffix of the saved records behind that inhibitor. Historical
+records are retained as evidence in the plan and activation archive; their
+controller session, service state and transmission intent are never reused.
+Current masks and disabled companion configuration are rechecked before service
+restoration. A stopped service remains stopped. Reconciliation selects no route;
+WsprryPi separately owns startup orchestration and its persisted route decision.
 
 The installer-facing runtime-provider contract classifies a failed restoration
 as `recovery_required` and directs the caller to `restore --execute`; it never
