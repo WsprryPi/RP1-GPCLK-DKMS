@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import stat
 import sys
+import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -383,6 +384,50 @@ class Tests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'running kernel'):
                 system.binding()
         command.assert_not_called()
+
+    def test_reboot_archival_race_preserves_new_state_before_checkpoint(self):
+        system = self.rebooted_route(); plan = activation.activation_plan(system)
+        archive = system.archive_journal
+        def changed(value):
+            archive(value)
+            system.journal['requestId'] = '00000000-0000-0000-0000-000000000099'
+        with patch.object(system, 'archive_journal', changed):
+            with self.assertRaisesRegex(ValueError, 'changed during archival'):
+                activation.ensure(system, plan, activation.plan_digest(plan), lock)
+        self.assertEqual(system.journal['requestId'], '00000000-0000-0000-0000-000000000099')
+        self.assertFalse(system.inhibited)
+
+    def test_archive_publication_is_single_linked_and_retryable_after_interruption(self):
+        record = self.rebooted_route().journal
+        system = activation.Linux()
+        def trusted(path, mode):
+            info = Path(path).lstat()
+            if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != mode or info.st_nlink != 1:
+                raise ValueError('unsafe archive')
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(admin, 'STATE', Path(directory)), \
+             patch.object(system, 'trusted_file', trusted), \
+             patch.object(admin, 'read_regular', side_effect=lambda path, *unused: Path(path).read_bytes()), \
+             patch.object(admin, 'fsync_dir', side_effect=KeyboardInterrupt):
+            with self.assertRaises(KeyboardInterrupt): system.archive_journal(record)
+            paths = list(Path(directory).iterdir())
+            self.assertEqual(len(paths), 1)
+            self.assertEqual(paths[0].stat().st_nlink, 1)
+            system.archive_journal(record)
+            self.assertEqual(json.loads(paths[0].read_text()), record)
+
+    def test_competing_activation_is_rejected_while_manager_query_releases_lock(self):
+        system = self.rebooted_route(); plan = activation.activation_plan(system)
+        query = system.manager_query
+        def concurrent():
+            before = copy.deepcopy(system.__dict__)
+            with self.assertRaises(ValueError):
+                activation.ensure(system, plan, activation.plan_digest(plan), lock)
+            self.assertEqual(system.__dict__, before)
+            return query()
+        with patch.object(system, 'manager_query', concurrent):
+            activation.ensure(system, plan, activation.plan_digest(plan), lock)
+        self.assertTrue(activation.neutral_ready(activation.observe(system)))
 
     def recovered_route(self, system, *, with_application=True, removal=False):
         binding = admin.digest(system.raw)

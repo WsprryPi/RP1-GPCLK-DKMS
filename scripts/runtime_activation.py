@@ -899,6 +899,8 @@ def ensure(system, reviewed, approved, lock=deployment.mutation_lock):
                     if admin.digest(canonical(previous)) != current['previousActivationSha256']:
                         raise ValueError('prior activation changed before archival')
                     system.archive_journal(previous)
+                    if activation_plan(system) != current:
+                        raise ValueError('reboot state changed during archival')
                     preparation = {'version': 1, 'plan': current, 'planSha256': approved,
                         'requestId': str(uuid.uuid4()), 'phase': 'reboot-prepare',
                         'controller': None, 'manager': None, 'application': None, 'error': None}
