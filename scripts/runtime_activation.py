@@ -892,18 +892,8 @@ def _validate_same_boot_recovered_route(transactions, controller, boot, binding)
                     predecessor['flags'] != admin.CONSUMER | admin.PINNED):
                 raise ValueError('application predecessor does not lead to recovered controller')
         elif application_record.get('phase') in application.REMOVAL_TERMINAL:
-            response_state = manager.get('response', {}).get('state', {})
-            captured = response_state.get('application')
-            application.validate_journal(captured)
-            if (application_record.get('operation') != 'remove' or
-                    captured.get('operation') != 'remove' or
-                    captured.get('phase') != 'captured' or
-                    application_record.get('requestId') != manager.get('requestId') or
-                    predecessor is not None or
-                    any(application_record.get(name) != captured.get(name)
-                        for name in set(application_record) | set(captured)
-                        if name != 'phase')):
-                raise ValueError('application removal terminal differs from its capture')
+            application.validate_removal_capture(application_record, manager,
+                                                  route, controller, boot, binding)
         else:
             raise ValueError('application route recovery is not terminal')
     return {name: transactions.get(name) for name in RETIREMENT_TRANSACTIONS}

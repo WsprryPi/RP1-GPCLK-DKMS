@@ -106,6 +106,11 @@ def _dispatch(value, factory=admin.Linux):
                     raise ValueError('neutral activation identity mismatch')
             if previous and previous.get('phase') not in ('complete-inhibited', 'recovered-inhibited'):
                 raise ValueError('pending transaction requires recovery')
+            if previous and previous.get('phase') == 'recovered-inhibited':
+                import runtime_application as app
+                prior_application = app.load(system)
+                if prior_application and prior_application['phase'] in app.REMOVAL_TERMINAL:
+                    app.verify_removal_terminal(system, prior_application)
             result = response(system, operation, state)
             result['state']['preflightToken'] = token(system, state, request['route'])
             return result
@@ -203,6 +208,8 @@ def dispatch(value, factory=admin.Linux):
                         result = response(system, operation, state, record['phase'])
                         result['state']['application'] = record
                         return result
+                    if record['phase'] == 'route-recovered' and record.get('operation') != 'remove':
+                        record = app.capture(system, value)
                 else:
                     if operation == 'remove' and active != value['route']:
                         raise ValueError('requested removal route is stale')
@@ -232,6 +239,17 @@ def dispatch(value, factory=admin.Linux):
                     result['state']['application'] = record
                     return result
         if operation in ('remove', 'recover'):
+            if operation == 'remove' and record['phase'] == 'neutral-start-intent':
+                # The inhibitor may already have been removed and the service
+                # started. Resume its bound restoration without replaying recovery.
+                try:
+                    record = app.finish_removal(factory, record)
+                    with factory() as system:
+                        return response(system, operation, system.call(), record['phase'])
+                except (OSError, ValueError) as error:
+                    with factory() as system:
+                        app.failed_removal(system, record, error)
+                        return response(system, operation, system.call(), 'error', error)
             with factory() as system:
                 state = system.call()
                 capture_only = (record and record['phase'] == 'captured' and
@@ -240,7 +258,8 @@ def dispatch(value, factory=admin.Linux):
                 if capture_only:
                     system.inhibit()
                     result = response(system, operation, state, 'recovered-inhibited')
-            if not capture_only and (operation == 'recover' or state['route']):
+            if not capture_only and (operation == 'recover' or state['route'] or
+                    (operation == 'remove' and record['phase'] == 'captured')):
                 recovery = (dict(value, operation='recover')
                             if operation == 'remove' else value)
                 if operation == 'remove':

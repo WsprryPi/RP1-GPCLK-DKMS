@@ -111,6 +111,15 @@ verified. Repeating removal is idempotent only while boot, binding, controller,
 journal, companion configuration, and service outcome still match. A changed or
 foreign state fails closed.
 
+Removal retries retain the captured intent and validate it against the manager's
+recorded recovery response. `neutral-start-intent` permits restoration to resume
+after the owned inhibitor has been removed or the service has already started;
+it does not repeat overlay effects. Current masks and disabled application
+configuration are checked before restoration. Error text from failed attempts
+remains diagnostic evidence in the terminal record and does not replace the
+captured service intent or controller identity. A new removal request after
+explicit recovery records its own removal intent before completing restoration.
+
 Failures retain owned inhibition where possible and report inhibition failure
 separately. Foreign drop-ins are preserved and reported. Requester disconnects
 do not kill the independently systemd-owned manager worker; durable results

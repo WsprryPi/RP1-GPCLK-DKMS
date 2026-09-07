@@ -382,15 +382,29 @@ def finish_removal(factory, record):
         if (record['boot'] != system.boot or record['binding'] != system.binding_hash or
                 any(state[name] for name in ('id', 'route', 'error', 'flags')) or
                 not journal or journal.get('phase') != 'recovered-inhibited' or
-                journal.get('observation') != state or not system.inhibited()):
+                journal.get('observation') != state):
             raise ValueError('neutral recovery identity is not exact')
+        validate_removal_capture(record, system.read_manager_record(), journal,
+                                 state, system.boot, system.binding_hash)
         observed = service()
-        if observed['ActiveState'] not in ('inactive', 'failed') or observed['MainPID'] != '0':
+        resuming = record['phase'] == 'neutral-start-intent'
+        if not resuming and (not system.inhibited() or
+                observed['ActiveState'] not in ('inactive', 'failed') or
+                observed['MainPID'] != '0'):
             raise ValueError('application is not stopped behind the owned inhibitor')
+        masked = observed['LoadState'] == 'masked' or observed['UnitFileState'] in (
+            'masked', 'masked-runtime')
+        if (masked != record['administratorMasked'] or
+                observed['LoadState'] not in ('loaded', 'masked') or
+                observed['ActiveState'] not in ('active', 'inactive', 'failed') or
+                (not record['wasActive'] and observed['ActiveState'] == 'active')):
+            raise ValueError('service intent changed during removal restoration')
+        if helper('inspect-stopped' if masked else 'inspect').get('transmit') is not False:
+            raise ValueError('application is not idle before removal restoration')
         save(system, record, 'neutral-start-intent')
         remove_owned(unit_file(DROPIN), INHIBIT)
         admin.run(('/usr/bin/systemctl', 'daemon-reload'))
-    if record['wasActive']:
+    if record['wasActive'] and observed['ActiveState'] != 'active':
         admin.run(('/usr/bin/systemctl', 'start', 'wsprrypi.service'))
     with factory() as system:
         state = system.call()
@@ -418,6 +432,31 @@ def finish_removal(factory, record):
         return record
 
 
+def validate_removal_capture(record, manager, route, state, boot, binding):
+    """Bind removal restoration to its exact captured intent and neutral result."""
+    import runtime_activation as activation
+    validate_journal(record)
+    activation._validate_prior_route_transaction(route, boot, binding)
+    activation._validate_prior_manager(manager, route, boot, binding)
+    captured = manager['response']['state'].get('application')
+    validate_journal(captured)
+    # Error text is retained diagnostic evidence, not mutable service intent.
+    diagnostics = {'error', 'inhibitionError'}
+    terminal = ('neutral-restored' if record['wasActive'] else
+        'neutral-administrator-masked' if record['administratorMasked'] else 'neutral-stopped')
+    if (route['phase'] != 'recovered-inhibited' or route['observation'] != state or
+            record.get('operation') != 'remove' or captured.get('operation') != 'remove' or
+            captured['phase'] != 'captured' or
+            record['controller'] is not None or record['ready'] is not None or
+            (record['phase'] in REMOVAL_TERMINAL and record['phase'] != terminal) or
+            record['boot'] != boot or record['binding'] != binding or
+            record['route'] != {1:'gpio4', 2:'gpio20'}[route['target']] or
+            any(record.get(key) != captured.get(key)
+                for key in set(record) | set(captured) if key not in {'phase'} | diagnostics) or
+            any(key in record and not isinstance(record[key], str) for key in diagnostics)):
+        raise ValueError('application removal terminal differs from its capture')
+
+
 def verify_removal_terminal(system, record):
     """Prove that a completed removal remains neutral and service-consistent."""
     validate_journal(record)
@@ -429,6 +468,8 @@ def verify_removal_terminal(system, record):
             not journal or journal.get('phase') != 'recovered-inhibited' or
             journal.get('observation') != state or system.inhibited()):
         raise ValueError('completed neutral removal identity changed')
+    validate_removal_capture(record, system.read_manager_record(), journal,
+                             state, system.boot, system.binding_hash)
     observed = service()
     expected_active = record['phase'] == 'neutral-restored'
     masked = observed['LoadState'] == 'masked' or observed['UnitFileState'] in (
