@@ -487,6 +487,14 @@ service state during preflight before a reviewed route digest can be produced.
 A completed prior-boot neutral activation may be superseded only
 after its exact evidence, any coherent terminal route journal set, and the
 inactive current-boot state are validated and the application is inhibited.
+Normal reboot activation requires the full terminal chain, not the partial
+suffix permitted by explicit migration. Its version-3 digest binds prior-boot
+route evidence and current application intent; a durable `reboot-prepare`
+checkpoint precedes inhibition and dependency-ordered retirement. Exact retries
+retain that intent, and the new controller session must differ from the prior
+boot. WsprryPi must separately orchestrate activation and its persisted route
+through the public facade. Provider readiness alone does not implement normal
+application startup recovery.
 Candidate-owned retirement binds every present journal and application-owned
 idle override by digest, removes that override while ownership remains proven,
 and removes dependent journals before activation evidence so interruption is retryable. A

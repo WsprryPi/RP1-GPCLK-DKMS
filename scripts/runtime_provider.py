@@ -468,6 +468,14 @@ def classify(result, activation_recovery_plan=None):
     if activation_observation.get('status') == 'observed' and not neutral:
         observed_activation = activation_observation['value']
         prior_activation = observed_activation.get('activationJournal')
+        if isinstance(prior_activation, dict) and prior_activation.get('phase') == 'reboot-prepare':
+            result['reboot']['occurred'] = True
+            try:
+                post_reboot_restartable = activation.reboot_preparation_state(observed_activation)
+            except (OSError, ValueError, TypeError, KeyError):
+                post_reboot_blocked = True
+            if post_reboot_restartable:
+                unresolved = pending or partial or fault
         if (isinstance(prior_activation, dict) and
                 prior_activation.get('phase') == 'complete-neutral'):
             prior_plan = prior_activation.get('plan', {})

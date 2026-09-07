@@ -89,16 +89,29 @@ plan. Keep clocks and transmission disabled throughout.
    `executionReady=false`. The consumer stays unloaded, its endpoint stays
    absent, no overlay is applied and no reboot or output authorization occurs.
 
-   After a clean reboot, `inspect` reports `activation_required` when the prior
-   terminal neutral journal, installed binding, complete artifact set,
-   deployment record, absent modules/endpoints and inactive socket still agree.
-   Review a new `activation-plan` and execute its digest in the same way. The
-   plan identifies `post-reboot`, binds whether
-   the application inhibitor is already present, and captures the current
-   neutral application intent. Execution establishes and verifies the
-   owned inhibitor before loading the controller, archives the prior terminal
-   journal by digest, and creates a new current-boot journal. It still selects
-   no route and grants no output authorization.
+   After a clean reboot, `inspect` reports `activation_required` only when the
+   exact prior neutral activation and either no route journals or a complete
+   terminal route/manager/application chain remain attributable to the installed
+   binding, artifacts and deployment. Both modules and endpoints must be absent
+   and the socket inactive. Interrupted, partial, conflicting or failed prior
+   transactions still require explicit recovery or investigation.
+
+   A fresh version-3 `activation-plan` identifies `post-reboot` and binds the
+   prior boot/controller, complete historical journal set and owned idle override.
+   `activation-ensure` archives the old activation and durably captures the
+   **current** disabled application/service intent in `reboot-prepare` before
+   changing inhibition. It establishes the owned barrier, retires dependent
+   journals in order, and starts a new neutral controller with a fresh session.
+   An interrupted retirement is retryable with the retained digest only while
+   the exact remaining suffix, current boot, installation and application intent
+   still match. Inspection and planning do not perform those mutations.
+
+   Neutral activation selects no GPIO and grants no transmission authority.
+   WsprryPi owns automatic startup orchestration and persisted selection: its
+   worker must obtain fresh public activation and route plans and restore only
+   the explicitly selected route. A provider-only update does not install that
+   application integration. GPIO4 and GPIO20 use the same checks independently;
+   a completed removal never requests restoration of the removed route.
 6. Only after a separate operator route decision, inspect and plan the exact route:
 
    ```sh

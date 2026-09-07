@@ -26,7 +26,7 @@ SERVICE_UNIT = 'rp1-gpclk-route-manager@.service'
 APPLICATION_UNIT = 'wsprrypi.service'
 SOCKET_PATH = Path('/run/rp1-gpclk-dkms/route-manager.sock')
 MAX_RECORD = 4 * 1024 * 1024
-PENDING = ('activation-intent', 'controller-load-intent', 'socket-start-intent',
+PENDING = ('reboot-prepare', 'activation-intent', 'controller-load-intent', 'socket-start-intent',
            'manager-query-intent', 'application-restore-intent', 'rollback-intent',
            'activation-failed', 'rollback-failed')
 TERMINAL = ('complete-neutral', 'recovered-inhibited')
@@ -51,8 +51,10 @@ def validate_plan(value):
     version = value.get('version') if isinstance(value, dict) else None
     required = (base if version == 1 else
                 base | {'activationContext', 'applicationInhibited'})
+    if version == 3:
+        required |= {'rebootEvidence'}
     if (not isinstance(value, dict) or set(value) != required or
-            type(version) is not int or version not in (1, 2) or
+            type(version) is not int or version not in (1, 2, 3) or
             value.get('operation') != 'neutral-activation' or
             any(not isinstance(value.get(name), str) or
                 not re.fullmatch('[0-9a-f]{64}', value[name])
@@ -65,10 +67,10 @@ def validate_plan(value):
              (not isinstance(value['previousActivationSha256'], str) or
               not re.fullmatch('[0-9a-f]{64}', value['previousActivationSha256'])))):
         raise ValueError('neutral activation plan schema')
-    if version == 2 and (value.get('activationContext') not in PLAN_CONTEXTS or
+    if version in (2, 3) and (value.get('activationContext') not in PLAN_CONTEXTS or
                          type(value.get('applicationInhibited')) is not bool):
         raise ValueError('neutral activation plan context')
-    if version == 2:
+    if version in (2, 3):
         context = value['activationContext']
         previous = value['previousActivationSha256']
         if ((context == 'idempotent') != value['alreadyReady'] or
@@ -77,6 +79,12 @@ def validate_plan(value):
                  not value['applicationInhibited']) or
                 (context == 'post-reboot' and value['socketWasActive'])):
             raise ValueError('neutral activation plan context is inconsistent')
+    if version == 3:
+        if value['activationContext'] != 'post-reboot':
+            raise ValueError('reboot evidence requires post-reboot context')
+        validate_reboot_evidence(value['rebootEvidence'], value['bindingSha256'])
+        if value['rebootEvidence']['bootId'] == value['bootId']:
+            raise ValueError('reboot evidence must belong to an older boot')
     uuid.UUID(value['bootId'])
     application.validate_neutral_capture(value['application'])
     return value
@@ -140,12 +148,14 @@ class Linux:
                 stream.write(data)
                 stream.flush()
                 os.fsync(stream.fileno())
-            try:
-                os.link(temporary, path, follow_symlinks=False)
-            except FileExistsError:
+            # The shared mutation lock serializes publishers. Rename keeps
+            # the published archive single-linked even across process death.
+            if path.exists() or path.is_symlink():
                 self.trusted_file(path, 0o600)
                 if admin.read_regular(path, MAX_RECORD) != data:
                     raise ValueError('prior activation archive appeared with different bytes')
+            else:
+                os.replace(temporary, path)
             admin.fsync_dir(admin.STATE)
         finally:
             try:
@@ -202,6 +212,8 @@ class Linux:
         self.trusted_file(admin.BINDING, 0o644)
         raw = admin.read_regular(admin.BINDING)
         value = runtime_binding.validate(admin.strict_json(raw))
+        if value['kernel'] != os.uname().release:
+            raise ValueError('activation binding kernel differs from running kernel')
         for path, expected in {**value['files'], **value['externalFiles']}.items():
             mode = 0o755 if path == runtime_binding.APPLICATION else 0o644
             self.trusted_file(Path(path), mode)
@@ -295,7 +307,11 @@ class Linux:
 
     def inhibitor(self):
         try:
-            return admin.read_regular(application.unit_file(application.DROPIN)) == application.INHIBIT
+            path = application.unit_file(application.DROPIN)
+            self.trusted_file(path, 0o644)
+            if admin.read_regular(path) != application.INHIBIT:
+                raise ValueError('activation inhibitor ownership differs')
+            return True
         except FileNotFoundError:
             return False
 
@@ -446,14 +462,141 @@ def post_reboot_reactivation_state(observed):
             observed['consumer']['status'] != 'absent' or
             observed['controllerEndpoint']['status'] != 'absent' or
             observed['consumerEndpoint']['status'] != 'absent' or
-            observed['socket'].get('active') == 'active' or
+            observed['socket'].get('active') != 'inactive' or
             observed['managerSocket'].get('status') != 'absent' or
-            any(value is not None for value in observed['transactions'].values())):
+            observed['transactions'].get('deployment-pending.json') is not None):
         raise ValueError('prior-boot neutral activation did not reach an inactive current boot')
+    validate_reboot_evidence(reboot_evidence(observed), observed['bindingSha256'])
     if observed['inhibited']:
         if observed['applicationService'].get('active') not in ('inactive', 'failed'):
             raise ValueError('post-reboot inhibition did not stop the application')
     return True
+
+
+def reboot_evidence(observed, idle=None):
+    journal = observed['activationJournal']
+    return {'bootId': journal['plan']['bootId'], 'controller': journal['controller'],
+        'transactions': {name: observed['transactions'].get(name)
+                         for name in RETIREMENT_TRANSACTIONS},
+        'idleSha256': idle}
+
+
+def validate_reboot_evidence(evidence, binding):
+    """Full terminal ancestry only; migration's partial suffix is not admission."""
+    if (not isinstance(evidence, dict) or set(evidence) !=
+            {'bootId', 'controller', 'transactions', 'idleSha256'} or
+            not isinstance(evidence['transactions'], dict) or
+            set(evidence['transactions']) != set(RETIREMENT_TRANSACTIONS) or
+            (evidence['idleSha256'] is not None and
+             (not isinstance(evidence['idleSha256'], str) or
+              not re.fullmatch('[0-9a-f]{64}', evidence['idleSha256'])))):
+        raise ValueError('invalid reboot evidence')
+    uuid.UUID(evidence['bootId'])
+    origin = evidence['controller']
+    admin.validate_observation(origin)
+    if any(origin[name] for name in ('generation', 'id', 'error', 'route', 'flags')):
+        raise ValueError('reboot ancestry lacks its neutral origin')
+    tx = evidence['transactions']
+    if all(value is None for value in tx.values()):
+        if evidence['idleSha256'] is not None:
+            raise ValueError('neutral reboot has an unowned idle override')
+        return
+    if any(value is None for value in tx.values()):
+        raise ValueError('reboot requires a complete terminal journal chain')
+    route, manager, app = (tx[name] for name in
+                          ('transaction.json', 'manager.json', 'application.json'))
+    boot = evidence['bootId']
+    _validate_prior_route_transaction(route, boot, binding)
+    _validate_prior_manager(manager, route, boot, binding)
+    application.validate_journal(app)
+    state = route['observation']
+    if state['session'] != origin['session'] or state['generation'] <= 0:
+        raise ValueError('prior route does not descend from neutral origin')
+    if route['phase'] == 'recovered-inhibited':
+        application.validate_removal_capture(app, manager, route, state, boot, binding)
+        if app['phase'] not in application.REMOVAL_TERMINAL:
+            raise ValueError('prior removal did not finish restoration')
+        return
+    captured = manager['response']['state'].get('application')
+    application.validate_journal(captured)
+    mutable = {'phase', 'controller', 'ready', 'error', 'inhibitionError', 'routeError'}
+    response_state = manager['response']['state']
+    if (captured['phase'] != 'captured' or captured['controller'] is not None or
+            captured['ready'] is not None or
+            {key: value for key, value in captured.items() if key not in mutable} !=
+            {key: value for key, value in app.items() if key not in mutable} or
+            response_state.get('activeRoute') != app['route'] or
+            response_state.get('outputEnabled') is not False or
+            response_state.get('applicationInhibited') is not True or
+            response_state.get('applicationRestoration') is not True):
+        raise ValueError('prior restoration differs from captured route intent')
+    expected = ('restored' if app['wasActive'] else
+                'administrator-masked' if app['administratorMasked'] else 'stopped')
+    if (app['phase'] != expected or app.get('operation', 'switch') != 'switch' or
+            app['wasActive'] and app['administratorMasked'] or
+            (app['ready'] is not None) != app['wasActive'] or
+            app['controller'] != state or app['boot'] != boot or
+            app['binding'] != binding or app['route'] != {1: 'gpio4', 2: 'gpio20'}[route['target']] or
+            app['requestId'] != manager['requestId'] or
+            app['fingerprint'] != manager['fingerprint']):
+        raise ValueError('prior application is not an exact terminal route restoration')
+
+
+def reboot_preparation_state(observed):
+    """Validate an interrupted, journaled retirement without claiming live ownership."""
+    journal = observed['activationJournal']
+    if journal is None or journal['phase'] != 'reboot-prepare':
+        return False
+    plan = journal['plan']
+    if (plan['version'] != 3 or any(journal[name] is not None
+            for name in ('controller', 'manager', 'application', 'error')) or
+            any(plan[name] != observed[name] for name in
+                ('bindingSha256', 'artifactSetSha256', 'lastDeploymentSha256', 'bootId')) or
+            any(observed[name]['status'] != 'absent' for name in
+                ('controller', 'consumer', 'controllerEndpoint', 'consumerEndpoint')) or
+            observed['socket'].get('active') != 'inactive' or
+            observed['socket'].get('load') != 'loaded' or
+            observed['socket'].get('fragment') != '/usr/lib/systemd/system/rp1-gpclk-route-manager.socket' or
+            observed['managerService'].get('load') != 'loaded' or
+            observed['managerService'].get('fragment') != '/usr/lib/systemd/system/rp1-gpclk-route-manager@.service' or
+            observed['managerSocket']['status'] != 'absent' or
+            observed['transactions'].get('deployment-pending.json') is not None):
+        raise ValueError('reboot preparation differs from exact inactive state')
+    expected = plan['rebootEvidence']['transactions']
+    remaining = False
+    for name in RETIREMENT_TRANSACTIONS:
+        actual = observed['transactions'][name]
+        if actual is not None:
+            remaining = True
+            if actual != expected[name]:
+                raise ValueError('reboot transaction changed during retirement')
+        elif expected[name] is not None and (remaining or not observed['inhibited']):
+            raise ValueError('reboot retirement order or inhibition is inconsistent')
+    return True
+
+
+def revalidate_reboot_preparation(system, expected=None):
+    observed = observe(system)
+    if not reboot_preparation_state(observed):
+        raise ValueError('reboot preparation checkpoint is absent')
+    record = observed['activationJournal']
+    if expected is not None and record != expected:
+        raise ValueError('reboot preparation changed from exact inactive state')
+    plan = record['plan']
+    capture = system.capture_application()
+    application.validate_neutral_capture(capture)
+    if (capture['administratorMasked'] != plan['application']['administratorMasked'] or
+            capture['companion'] != plan['application']['companion'] or
+            ((not observed['inhibited'] or capture['wasActive']) and
+             capture != plan['application']) or
+            (observed['inhibited'] and capture['wasActive'] and
+             not plan['application']['wasActive'])):
+        raise ValueError('current application intent changed during reboot preparation')
+    evidence = plan['rebootEvidence']
+    idle = system.retirement_idle(evidence['transactions']['application.json'])
+    if idle != evidence['idleSha256'] and not (idle is None and observed['inhibited']):
+        raise ValueError('reboot idle override changed during retirement')
+    return plan, observed
 
 
 def _validate_prior_route_transaction(value, boot, binding):
@@ -463,7 +606,7 @@ def _validate_prior_route_transaction(value, boot, binding):
             type(value.get('version')) is not int or value['version'] != 1 or
             value.get('boot') != boot or value.get('binding') != binding or
             type(value.get('session')) is not int or
-            value.get('target') not in (1, 2) or
+            type(value.get('target')) is not int or value.get('target') not in (1, 2) or
             value.get('phase') not in ('complete-inhibited', 'recovered-inhibited')):
         raise ValueError('prior route transaction is not attributable and terminal')
     if not isinstance(value.get('request'), str):
@@ -500,7 +643,9 @@ def _validate_prior_manager(value, route, boot, binding):
     if value['controller'] != route['observation']:
         raise ValueError('prior manager controller differs from route transaction')
     response = value['response']
-    state = response.get('state', {}) if isinstance(response, dict) else {}
+    if not isinstance(response, dict) or not isinstance(response.get('state'), dict):
+        raise ValueError('prior manager response schema')
+    state = response['state']
     expected_status = ({'recovered-inhibited', 'complete-inhibited'}
                        if route['phase'] == 'recovered-inhibited'
                        else {'complete-inhibited'})
@@ -657,6 +802,8 @@ def neutral_ready(observation):
 
 def activation_plan(system):
     observed = observe(system)
+    if reboot_preparation_state(observed):
+        return revalidate_reboot_preparation(system)[0]
     already = neutral_ready(observed)
     journal = observed['activationJournal']
     post_reboot = False
@@ -664,7 +811,7 @@ def activation_plan(system):
         post_reboot = post_reboot_reactivation_state(observed)
         if not post_reboot:
             raise ValueError('neutral activation journal requires explicit recovery')
-    if any(value is not None for value in observed['transactions'].values()):
+    if not post_reboot and any(value is not None for value in observed['transactions'].values()):
         raise ValueError('deployment, route, manager, or application transaction is pending')
     if observed['consumer']['status'] != 'absent' or observed['consumerEndpoint']['status'] != 'absent':
         raise ValueError('transmission consumer must remain absent')
@@ -702,19 +849,12 @@ def activation_plan(system):
         context = 'recovered'
     else:
         context = 'initial'
-    activation_application = observed['application']
+    activation_application = observed['application'] if journal is None else journal['plan']['application']
     if post_reboot:
-        current_application = system.capture_application()
-        prior_application = journal['plan']['application']
-        if (observed['inhibited'] and
-                (current_application['wasActive'] or
-                 current_application['administratorMasked'] !=
-                 prior_application['administratorMasked'] or
-                 current_application['companion'] != prior_application['companion'])):
-            raise ValueError('post-reboot application capture differs from prior neutral intent')
-        if not observed['inhibited']:
-            activation_application = current_application
-    return {'version': 2, 'operation': 'neutral-activation',
+        # Historical service/transmission intent never authorizes this boot.
+        activation_application = system.capture_application()
+        application.validate_neutral_capture(activation_application)
+    result = {'version': 3 if post_reboot else 2, 'operation': 'neutral-activation',
         'bindingSha256': observed['bindingSha256'],
         'artifactSetSha256': observed['artifactSetSha256'],
         'bootId': observed['bootId'],
@@ -726,6 +866,12 @@ def activation_plan(system):
         'applicationInhibited': observed['inhibited'],
         'previousActivationSha256': (admin.digest(canonical(journal))
                                      if journal is not None else None)}
+
+    if post_reboot:
+        result['rebootEvidence'] = reboot_evidence(observed, system.retirement_idle(
+            observed['transactions'].get('application.json')))
+    validate_plan(result)
+    return result
 
 
 def _save(system, record, phase, **values):
@@ -746,48 +892,37 @@ def ensure(system, reviewed, approved, lock=deployment.mutation_lock):
             if current['alreadyReady']:
                 return {'status': 'idempotent-no-change', 'journal': system.read_record(JOURNAL)}
             previous = system.read_record(JOURNAL)
-            if previous is not None:
-                if (current['activationContext'] == 'post-reboot' and
-                        not current['applicationInhibited']):
-                    system.inhibit_application()
-                    observed = observe(system)
-                    inhibited_application = system.capture_application()
-                    if (not observed['inhibited'] or
-                            observed['applicationService'].get('active') not in
-                            ('inactive', 'failed') or
-                            inhibited_application['wasActive'] or
-                            inhibited_application['administratorMasked'] !=
-                            current['application']['administratorMasked'] or
-                            inhibited_application['companion'] !=
-                            current['application']['companion'] or
-                            observed['controller']['status'] != 'absent' or
-                            observed['consumer']['status'] != 'absent' or
-                            observed['controllerEndpoint']['status'] != 'absent' or
-                            observed['consumerEndpoint']['status'] != 'absent' or
-                            observed['socket'].get('active') == 'active' or
-                            observed['managerSocket'].get('status') != 'absent' or
-                            any(value is not None
-                                for value in observed['transactions'].values()) or
-                            observed['bindingSha256'] != current['bindingSha256'] or
-                            observed['artifactSetSha256'] != current['artifactSetSha256'] or
-                            observed['lastDeploymentSha256'] != current['lastDeploymentSha256'] or
-                            observed['bootId'] != current['bootId'] or
-                            observed['activationJournal'] is None or
-                            admin.digest(canonical(observed['activationJournal'])) !=
-                            current['previousActivationSha256']):
-                        raise ValueError('post-reboot inhibition did not establish exact inactive state')
-                if (previous['phase'] != 'recovered-inhibited' and
-                        current['activationContext'] != 'post-reboot'):
-                    raise ValueError('activation journal is not restartable')
-                if (current['activationContext'] == 'post-reboot' and
-                        admin.digest(canonical(previous)) !=
-                        current['previousActivationSha256']):
-                    raise ValueError('prior activation changed before archival')
-                system.archive_journal(previous)
-            record = {'version': 1, 'plan': current, 'planSha256': approved,
-                'requestId': str(uuid.uuid4()), 'phase': 'activation-intent',
-                'controller': None, 'manager': None, 'application': None, 'error': None}
-            system.write_journal(record)
+            if current['activationContext'] == 'post-reboot':
+                if previous['phase'] == 'reboot-prepare':
+                    preparation = previous
+                else:
+                    if admin.digest(canonical(previous)) != current['previousActivationSha256']:
+                        raise ValueError('prior activation changed before archival')
+                    system.archive_journal(previous)
+                    preparation = {'version': 1, 'plan': current, 'planSha256': approved,
+                        'requestId': str(uuid.uuid4()), 'phase': 'reboot-prepare',
+                        'controller': None, 'manager': None, 'application': None, 'error': None}
+                    # Persist current intent and all prior journals before the first effect.
+                    system.write_journal(preparation)
+                revalidate_reboot_preparation(system, preparation)
+                system.inhibit_application()
+                unused, observed = revalidate_reboot_preparation(system, preparation)
+                if not observed['inhibited'] or observed['applicationService']['active'] not in ('inactive', 'failed'):
+                    raise ValueError('reboot inhibition did not establish exact inactive state')
+                system.retire_transactions({name: observed['transactions'][name]
+                                            for name in RETIREMENT_TRANSACTIONS})
+                revalidate_reboot_preparation(system, preparation)
+                record = dict(preparation)
+                _save(system, record, 'activation-intent')
+            else:
+                if previous is not None:
+                    if previous['phase'] != 'recovered-inhibited':
+                        raise ValueError('activation journal is not restartable')
+                    system.archive_journal(previous)
+                record = {'version': 1, 'plan': current, 'planSha256': approved,
+                    'requestId': str(uuid.uuid4()), 'phase': 'activation-intent',
+                    'controller': None, 'manager': None, 'application': None, 'error': None}
+                system.write_journal(record)
             _save(system, record, 'controller-load-intent')
             system.load_controller()
             observed = observe(system)
@@ -795,7 +930,9 @@ def ensure(system, reviewed, approved, lock=deployment.mutation_lock):
             if (observed['controller'].get('exact') is not True or
                     observed['consumer']['status'] != 'absent' or
                     observed['consumerEndpoint']['status'] != 'absent' or
-                    not state or any(state[name] for name in ('generation', 'id', 'error', 'route', 'flags'))):
+                    not state or any(state[name] for name in ('generation', 'id', 'error', 'route', 'flags')) or
+                    (current.get('rebootEvidence') is not None and
+                     state['session'] == current['rebootEvidence']['controller']['session'])):
                 raise ValueError('controller did not establish exact neutral state')
             _save(system, record, 'socket-start-intent', controller=state)
             if not current['socketWasActive']:
@@ -847,6 +984,10 @@ def ensure(system, reviewed, approved, lock=deployment.mutation_lock):
         if record is not None:
             try:
                 with lock():
+                    retained = validate_journal(system.read_record(JOURNAL))
+                    if (retained['requestId'] != record['requestId'] or
+                            retained['plan'] != record['plan']):
+                        raise ValueError('activation ownership changed; retain competing evidence')
                     try:
                         system.inhibit_application()
                     except BaseException as inhibition_error:

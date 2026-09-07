@@ -209,7 +209,9 @@ class Tests(unittest.TestCase):
         response = dict(schemaVersion=3, contract='rp1-gpclk-route-manager-runtime',
             operation='switch', status='complete-inhibited', state=dict(
                 bootId=system.boot_id, bindingSha256=binding, controller=state,
-                pendingTransaction=route))
+                pendingTransaction=route, activeRoute=app['route'], outputEnabled=False,
+                applicationInhibited=True, applicationRestoration=True,
+                application=dict(app, phase='captured', controller=None, ready=None)))
         manager = dict(requestId=app['requestId'], actor='offline.test',
             fingerprint=app['fingerprint'], complete=True, controller=state,
             boot=system.boot_id, binding=binding, response=response)
@@ -219,6 +221,7 @@ class Tests(unittest.TestCase):
         system.controller = system.socket_active = False
         system.state['session'] = 8
         system.app['companion']['route'] = app['route']
+        system.records = copy.deepcopy(system.records)
         return system
 
     def test_normal_reboot_terminal_route_reactivation(self):
@@ -234,6 +237,152 @@ class Tests(unittest.TestCase):
                 self.assertEqual(system.state['session'], 8)
                 self.assertFalse(system.consumer)
                 self.assertFalse(system.records)
+
+    def test_reboot_admission_rejects_incomplete_conflicting_or_pending_history(self):
+        mutations = [lambda s, n=n: s.records.pop(n)
+                     for n in activation.RETIREMENT_TRANSACTIONS]
+        mutations += [
+            lambda s: s.records.update({'deployment-pending.json': {'pending': True}}),
+            lambda s: s.records['application.json'].update(phase='restoration-failed'),
+            lambda s: s.records['application.json'].update(route='gpio20'),
+            lambda s: s.records['application.json'].update(wasActive=False),
+            lambda s: s.records['manager.json'].update(complete=False),
+            lambda s: s.records['manager.json']['response']['state'].update(outputEnabled=True),
+            lambda s: s.records['manager.json']['response']['state'].update(activeRoute='gpio20'),
+            lambda s: s.records['application.json'].update(token='00000000-0000-0000-0000-000000000099'),
+            lambda s: s.records['manager.json'].update(binding='0'*64),
+            lambda s: s.records['transaction.json'].update(boot=s.boot_id),
+            lambda s: s.records['transaction.json'].update(session=99),
+            lambda s: setattr(s, 'raw', s.raw + b' '),
+            lambda s: setattr(s, 'deployment_raw', s.deployment_raw + b' '),
+            lambda s: s.binding_value.update(artifactSetSha256='0'*64),
+            lambda s: setattr(s, 'consumer', True),
+            lambda s: setattr(s, 'consumer_endpoint', True),
+            lambda s: setattr(s, 'controller', True),
+            lambda s: setattr(s, 'socket_active', True),
+        ]
+        for mutate in mutations:
+            with self.subTest(mutate=mutate):
+                system = self.rebooted_route(); mutate(system)
+                before = copy.deepcopy(system.__dict__)
+                with self.assertRaises(ValueError): activation.activation_plan(system)
+                self.assertEqual(system.__dict__, before)
+
+    def test_reboot_retirement_interruptions_preserve_current_intent_and_evidence(self):
+        # Stop after each durable journal/archive/inhibitor/retirement mutation.
+        for gpio in (4, 20):
+            for active, masked in ((True, False), (False, False), (False, True)):
+                for boundary in ('archive', 'prepare', 'inhibit', *activation.RETIREMENT_TRANSACTIONS):
+                    with self.subTest(gpio=gpio, active=active, masked=masked, boundary=boundary):
+                        system = self.rebooted_route(gpio)
+                        # Historical active intent differs from the current administrator choice.
+                        system.app = captured(active, masked)
+                        system.app['companion']['route'] = 'gpio'+str(gpio)
+                        system.application_active = active
+                        original = copy.deepcopy(system.records)
+                        plan = activation.activation_plan(system)
+                        archive, write, inhibit = system.archive_journal, system.write_journal, system.inhibit_application
+                        def after_archive(value):
+                            archive(value)
+                            if boundary == 'archive': raise KeyboardInterrupt()
+                        def after_write(value):
+                            write(value)
+                            if boundary == 'prepare' and value['phase'] == 'reboot-prepare': raise KeyboardInterrupt()
+                        def after_inhibit():
+                            inhibit()
+                            if boundary == 'inhibit': raise KeyboardInterrupt()
+                        def retire(expected):
+                            for name in activation.RETIREMENT_TRANSACTIONS:
+                                system.records.pop(name, None)
+                                if boundary == name: raise KeyboardInterrupt()
+                        with patch.object(system, 'archive_journal', after_archive), \
+                             patch.object(system, 'write_journal', after_write), \
+                             patch.object(system, 'inhibit_application', after_inhibit), \
+                             patch.object(system, 'retire_transactions', retire):
+                            with self.assertRaises(KeyboardInterrupt):
+                                activation.ensure(system, plan, activation.plan_digest(plan), lock)
+                        retry = activation.activation_plan(system)
+                        self.assertEqual(retry['application']['wasActive'], active)
+                        self.assertEqual(retry['application']['administratorMasked'], masked)
+                        activation.ensure(system, retry, activation.plan_digest(retry), lock)
+                        self.assertEqual(system.application_active, active)
+                        self.assertEqual(system.journal['plan']['rebootEvidence']['transactions'], original)
+                        self.assertTrue(activation.neutral_ready(activation.observe(system)))
+                        self.assertFalse(system.consumer)
+
+    def test_reboot_rejects_plan_and_checkpoint_races(self):
+        for phase in ('before', 'checkpoint'):
+            for mutate in (lambda s: s.records['application.json'].update(token='00000000-0000-0000-0000-000000000099'),
+                           lambda s: s.app['companion'].update(route='gpio20'),
+                           lambda s: s.app['companion'].update(transmit=True),
+                           lambda s: setattr(s, 'raw', s.raw+b' ')):
+                with self.subTest(phase=phase, mutate=mutate):
+                    system = self.rebooted_route(); plan = activation.activation_plan(system)
+                    if phase == 'checkpoint':
+                        system.fail = 'inhibit-after'
+                        with self.assertRaises(ValueError): activation.ensure(system, plan, activation.plan_digest(plan), lock)
+                        system.fail = None
+                    mutate(system)
+                    before = copy.deepcopy(system.__dict__)
+                    with self.assertRaises(ValueError): activation.ensure(system, plan, activation.plan_digest(plan), lock)
+                    self.assertEqual(system.__dict__, before)
+
+    def test_reboot_rejects_stale_controller_session_and_repeats_with_fresh_sessions(self):
+        system = self.rebooted_route()
+        system.state['session'] = 7
+        plan = activation.activation_plan(system)
+        with self.assertRaisesRegex(ValueError, 'exact neutral state'):
+            activation.ensure(system, plan, activation.plan_digest(plan), lock)
+        self.assertTrue(system.inhibited)
+        system = self.rebooted_route()
+        for index in range(3):
+            plan = activation.activation_plan(system)
+            activation.ensure(system, plan, activation.plan_digest(plan), lock)
+            repeated = activation.activation_plan(system)
+            self.assertEqual(activation.ensure(system, repeated, activation.plan_digest(repeated), lock)['status'],
+                             'idempotent-no-change')
+            self.assertTrue(activation.neutral_ready(activation.observe(system)))
+            system.boot_id = '00000000-0000-0000-0000-00000000000'+str(index+3)
+            system.state['session'] += 1
+            system.controller = system.socket_active = False
+
+    def test_reboot_activation_effect_interruptions_recover_with_current_intent(self):
+        for gpio in (4, 20):
+            for active, masked in ((True, False), (False, False), (False, True)):
+                for boundary in ('load_controller', 'start_socket', 'manager_query', 'restore_application'):
+                    with self.subTest(gpio=gpio, active=active, masked=masked, boundary=boundary):
+                        system = self.rebooted_route(gpio)
+                        system.app = captured(active, masked)
+                        system.app['companion']['route'] = 'gpio'+str(gpio)
+                        system.application_active = active
+                        plan = activation.activation_plan(system)
+                        effect = getattr(system, boundary)
+                        def interrupted(*args):
+                            effect(*args)
+                            raise KeyboardInterrupt()
+                        with patch.object(system, boundary, interrupted):
+                            with self.assertRaises(KeyboardInterrupt):
+                                activation.ensure(system, plan, activation.plan_digest(plan), lock)
+                        self.assertTrue(system.inhibited)
+                        recovery = activation.recovery_plan(system)
+                        activation.ensure_recovery(system, recovery, activation.plan_digest(recovery), lock)
+                        retry = activation.activation_plan(system)
+                        self.assertEqual(retry['application'], plan['application'])
+                        system.state['session'] += 1
+                        activation.ensure(system, retry, activation.plan_digest(retry), lock)
+                        self.assertEqual(system.application_active, active)
+                        self.assertFalse(system.consumer)
+                        self.assertTrue(activation.neutral_ready(activation.observe(system)))
+
+    def test_linux_binding_rejects_running_kernel_mismatch_before_module_effects(self):
+        system = activation.Linux()
+        with patch.object(system, 'trusted_file'), \
+             patch.object(admin, 'read_regular', return_value=b'{}'), \
+             patch.object(activation.runtime_binding, 'validate', return_value={'kernel': 'other-kernel'}), \
+             patch.object(admin, 'run') as command:
+            with self.assertRaisesRegex(ValueError, 'running kernel'):
+                system.binding()
+        command.assert_not_called()
 
     def recovered_route(self, system, *, with_application=True, removal=False):
         binding = admin.digest(system.raw)
@@ -373,8 +522,9 @@ class Tests(unittest.TestCase):
         system.boot_id = '00000000-0000-0000-0000-000000000002'
         system.controller = False
         system.socket_active = False
+        system.state['session'] = 8
         plan = activation.activation_plan(system)
-        self.assertEqual(plan['version'], 2)
+        self.assertEqual(plan['version'], 3)
         self.assertEqual(plan['activationContext'], 'post-reboot')
         self.assertFalse(plan['applicationInhibited'])
         self.assertEqual(plan['previousActivationSha256'],
@@ -396,6 +546,7 @@ class Tests(unittest.TestCase):
         system.boot_id = '00000000-0000-0000-0000-000000000002'
         system.controller = False
         system.socket_active = False
+        system.state['session'] = 8
         plan = activation.retirement_plan(system)
         self.assertEqual(plan['operation'], 'retire-post-reboot-activation')
         self.assertEqual(plan['activationJournalSha256'],
@@ -442,6 +593,7 @@ class Tests(unittest.TestCase):
         system.boot_id = '00000000-0000-0000-0000-000000000002'
         system.controller = False
         system.socket_active = False
+        system.state['session'] = 8
         plan = activation.retirement_plan(system)
         self.assertEqual(plan['transactionJournalSha256'], {
             name: admin.digest(activation.canonical(system.records[name]))
@@ -472,6 +624,7 @@ class Tests(unittest.TestCase):
         system.boot_id = '00000000-0000-0000-0000-000000000002'
         system.controller = False
         system.socket_active = False
+        system.state['session'] = 8
         system.records['transaction.json'] = {'pending': True}
         with self.assertRaisesRegex(ValueError, 'not attributable'):
             activation.retirement_plan(system)
@@ -482,6 +635,7 @@ class Tests(unittest.TestCase):
         system.boot_id = '00000000-0000-0000-0000-000000000002'
         system.controller = False
         system.socket_active = False
+        system.state['session'] = 8
         plan = activation.retirement_plan(system)
         system.journal['requestId'] = '00000000-0000-0000-0000-000000000099'
         with self.assertRaisesRegex(ValueError, 'changed since review'):
@@ -495,6 +649,7 @@ class Tests(unittest.TestCase):
         system.boot_id = '00000000-0000-0000-0000-000000000002'
         system.controller = False
         system.socket_active = False
+        system.state['session'] = 8
         plan = activation.retirement_plan(system)
         original = system.read_record
         activation_reads = 0
@@ -524,17 +679,20 @@ class Tests(unittest.TestCase):
         system.boot_id = '00000000-0000-0000-0000-000000000002'
         system.controller = False
         system.socket_active = False
+        system.state['session'] = 8
         system.fail = 'inhibit-after'
         plan = activation.activation_plan(system)
         with self.assertRaisesRegex(ValueError, 'inhibition interrupted'):
             activation.ensure(system, plan, activation.plan_digest(plan), lock)
         self.assertTrue(system.inhibited)
         self.assertFalse(system.application_active)
-        self.assertEqual(system.journal, prior)
+        self.assertEqual(system.journal['phase'], 'reboot-prepare')
+        self.assertEqual(system.archives, [prior])
         system.fail = None
         retry = activation.activation_plan(system)
         self.assertEqual(retry['activationContext'], 'post-reboot')
-        self.assertTrue(retry['applicationInhibited'])
+        self.assertEqual(retry, plan)
+        self.assertTrue(retry['application']['wasActive'])
         activation.ensure(system, retry, activation.plan_digest(retry), lock)
         self.assertTrue(activation.neutral_ready(activation.observe(system)))
 
@@ -548,10 +706,10 @@ class Tests(unittest.TestCase):
                 system.socket_active = False
                 plan = activation.activation_plan(system)
                 system.fail = failure
-                with self.assertRaisesRegex(ValueError, 'exact inactive state'):
+                with self.assertRaisesRegex(ValueError, 'exact inactive state|transaction changed'):
                     activation.ensure(system, plan, activation.plan_digest(plan), lock)
                 self.assertFalse(system.controller or system.socket_active)
-                self.assertEqual(system.archives, [])
+                self.assertEqual(len(system.archives), 1)
 
     def test_post_reboot_reactivation_rejects_unsafe_or_changed_state(self):
         def rebooted():
@@ -583,6 +741,7 @@ class Tests(unittest.TestCase):
         system.boot_id = '00000000-0000-0000-0000-000000000002'
         system.controller = False
         system.socket_active = False
+        system.state['session'] = 8
         system.application_active = False
         plan = activation.activation_plan(system)
         self.assertFalse(plan['application']['wasActive'])
@@ -595,6 +754,7 @@ class Tests(unittest.TestCase):
         activation.ensure(system, plan, activation.plan_digest(plan), lock)
         system.controller = False
         system.socket_active = False
+        system.state['session'] = 8
         system.application_active = False
         system.inhibited = True
         with self.assertRaisesRegex(ValueError, 'evidence differs'):
@@ -623,6 +783,7 @@ class Tests(unittest.TestCase):
         system.boot_id = '00000000-0000-0000-0000-000000000002'
         system.controller = False
         system.socket_active = False
+        system.state['session'] = 8
         system.journal['manager']['state'] = []
         with self.assertRaisesRegex(ValueError, 'evidence differs'):
             activation.activation_plan(system)
