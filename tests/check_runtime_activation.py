@@ -188,6 +188,53 @@ def lock():
 
 
 class Tests(unittest.TestCase):
+    def rebooted_route(self, gpio=4, active=True, masked=False):
+        """Minimal terminal chain matching the reproduced normal-reboot failure."""
+        system = System(captured(active, masked))
+        plan = activation.activation_plan(system)
+        activation.ensure(system, plan, activation.plan_digest(plan), lock)
+        binding = admin.digest(system.raw)
+        target = 1 if gpio == 4 else 2
+        state = dict(system.state, generation=1, id=1, route=target, flags=6)
+        route = dict(version=1, boot=system.boot_id, session=state['session'],
+            binding=binding, request='00000000-0000-0000-0000-000000000010',
+            target=target, phase='complete-inhibited', observation=state)
+        app = dict(version=1, boot=system.boot_id, binding=binding,
+            requestId='switch-request-0001', fingerprint='e'*64,
+            route='gpio'+str(gpio), token='00000000-0000-0000-0000-000000000011',
+            wasActive=active, administratorMasked=masked,
+            phase='restored' if active else 'administrator-masked' if masked else 'stopped',
+            controller=state, ready={'pid':42, 'route':'gpio'+str(gpio)} if active else None,
+            previousIdle=None)
+        response = dict(schemaVersion=3, contract='rp1-gpclk-route-manager-runtime',
+            operation='switch', status='complete-inhibited', state=dict(
+                bootId=system.boot_id, bindingSha256=binding, controller=state,
+                pendingTransaction=route))
+        manager = dict(requestId=app['requestId'], actor='offline.test',
+            fingerprint=app['fingerprint'], complete=True, controller=state,
+            boot=system.boot_id, binding=binding, response=response)
+        system.records.update({'transaction.json':route, 'manager.json':manager,
+                               'application.json':app})
+        system.boot_id = '00000000-0000-0000-0000-000000000002'
+        system.controller = system.socket_active = False
+        system.state['session'] = 8
+        system.app['companion']['route'] = app['route']
+        return system
+
+    def test_normal_reboot_terminal_route_reactivation(self):
+        for gpio in (4, 20):
+            with self.subTest(gpio=gpio):
+                system = self.rebooted_route(gpio)
+                before = copy.deepcopy(system.__dict__)
+                plan = activation.activation_plan(system)
+                self.assertEqual(system.__dict__, before, 'planning must be read-only')
+                self.assertEqual(plan['activationContext'], 'post-reboot')
+                activation.ensure(system, plan, activation.plan_digest(plan), lock)
+                self.assertTrue(activation.neutral_ready(activation.observe(system)))
+                self.assertEqual(system.state['session'], 8)
+                self.assertFalse(system.consumer)
+                self.assertFalse(system.records)
+
     def recovered_route(self, system, *, with_application=True):
         binding = admin.digest(system.raw)
         predecessor = {'session': system.state['session'], 'generation': 1,
