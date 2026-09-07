@@ -239,6 +239,31 @@ class Tests(unittest.TestCase):
                 self.assertFalse(system.consumer)
                 self.assertFalse(system.records)
 
+    def test_reboot_after_later_start_acknowledges_stopped_or_masked_route(self):
+        for gpio in (4, 20):
+            for masked in (False, True):
+                for current_active in (False, True):
+                    with self.subTest(gpio=gpio, masked=masked, active=current_active):
+                        system = self.rebooted_route(gpio, active=False, masked=masked)
+                        app = system.records['application.json']
+                        app.update(phase='restored', ready={'pid': 99, 'route': app['route']})
+                        # acknowledge() preserves the original capture even when
+                        # an explicit later start completes route readiness.
+                        system.app = captured(current_active, False)
+                        system.app['companion']['route'] = app['route']
+                        system.application_active = current_active
+                        plan = activation.activation_plan(system)
+                        self.assertEqual(plan['application']['wasActive'], current_active)
+                        activation.ensure(system, plan, activation.plan_digest(plan), lock)
+                        self.assertEqual(system.application_active, current_active)
+                        self.assertTrue(activation.neutral_ready(activation.observe(system)))
+
+    def test_reboot_rejects_restored_route_without_readiness_acknowledgement(self):
+        system = self.rebooted_route(active=False)
+        system.records['application.json']['phase'] = 'restored'
+        with self.assertRaisesRegex(ValueError, 'terminal route restoration'):
+            activation.activation_plan(system)
+
     def test_reboot_admission_rejects_incomplete_conflicting_or_pending_history(self):
         mutations = [lambda s, n=n: s.records.pop(n)
                      for n in activation.RETIREMENT_TRANSACTIONS]

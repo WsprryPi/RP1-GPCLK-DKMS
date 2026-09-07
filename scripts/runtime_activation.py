@@ -532,9 +532,13 @@ def validate_reboot_evidence(evidence, binding):
         raise ValueError('prior restoration differs from captured route intent')
     expected = ('restored' if app['wasActive'] else
                 'administrator-masked' if app['administratorMasked'] else 'stopped')
-    if (app['phase'] != expected or app.get('operation', 'switch') != 'switch' or
+    # A later explicit start can acknowledge a stopped or formerly masked
+    # route. acknowledge() keeps the immutable original service capture.
+    # The terminal readiness record proves completion, never current intent.
+    restored = app['phase'] == 'restored' and app['ready'] is not None
+    if ((app['phase'] != expected and not restored) or app.get('operation', 'switch') != 'switch' or
             app['wasActive'] and app['administratorMasked'] or
-            (app['ready'] is not None) != app['wasActive'] or
+            (app['ready'] is not None) != (app['phase'] == 'restored') or
             app['controller'] != state or app['boot'] != boot or
             app['binding'] != binding or app['route'] != {1: 'gpio4', 2: 'gpio20'}[route['target']] or
             app['requestId'] != manager['requestId'] or

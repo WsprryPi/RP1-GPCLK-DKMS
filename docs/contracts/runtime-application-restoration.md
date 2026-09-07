@@ -136,7 +136,10 @@ is archived before a recovered transaction is restarted.
 After a clean reboot, an exact completed neutral activation and a full terminal
 route/manager/application chain may be superseded through a fresh version-3
 neutral activation plan. The plan binds the historical records and current
-application capture. `reboot-prepare` durably stores that capture before changing
+application capture. A stopped or masked route that subsequently acknowledged
+an explicit start is terminal `restored` history; its original service capture
+is preserved as evidence and does not determine the new boot's service intent.
+`reboot-prepare` durably stores that capture before changing
 the owned inhibitor or retiring any dependent journal. Retries accept only an
 exact ordered suffix of the saved records behind that inhibitor. Historical
 records are retained as evidence in the plan and activation archive; their
