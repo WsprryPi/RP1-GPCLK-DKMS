@@ -147,7 +147,9 @@ class Host:
         'fragment': '/usr/lib/systemd/system/rp1-gpclk-route-manager.socket'},
         'rp1-gpclk-route-manager@.service': {'load': 'loaded', 'active': 'inactive',
         'enabled': 'static',
-        'fragment': '/usr/lib/systemd/system/rp1-gpclk-route-manager@.service'}}
+        'fragment': '/usr/lib/systemd/system/rp1-gpclk-route-manager@.service'},
+        'wsprrypi.service': {'load': 'loaded', 'active': 'active',
+        'enabled': 'enabled', 'fragment': '/etc/systemd/system/wsprrypi.service'}}
     def manager(self): return copy.deepcopy(self._manager)
     def activation_observation(self): return copy.deepcopy(self._activation)
     def deployment_plan(self, unused):
@@ -282,8 +284,10 @@ class Tests(unittest.TestCase):
         host._activation = {'status': 'observed', 'value': {
             'bootId': 'boot', 'activationJournal': {
                 'phase': 'complete-neutral', 'plan': {'bootId': 'boot'}}}}
-        host.activation_recovery_plan = lambda: {
-            'routeRecoverySha256': {'transaction.json': 'a' * 64}}
+        host.activation_recovery_plan = lambda: {'routeRecoverySha256': {
+            name: ('a' if index == 0 else 'b' if index == 1 else 'c') * 64
+            for index, name in enumerate(
+                provider.activation.RETIREMENT_TRANSACTIONS)}}
         with patch.object(provider.activation, 'neutral_ready', return_value=False):
             result = self.inspect(host)
         self.assertEqual(result['result'], 'recovery_required')
@@ -297,6 +301,104 @@ class Tests(unittest.TestCase):
         self.assertEqual(drifted['result'], 'conflict')
         self.assertIn('loaded-controller-without-completed-activation',
                       drifted['conflicts'])
+
+    def completed_removal(self, phase='neutral-restored'):
+        host = Host()
+        neutral = controller(0, 0)
+        application_record = {'phase': phase, 'operation': 'remove',
+            'controller': None, 'ready': None}
+        transaction = {'phase': 'recovered-inhibited'}
+        host._modules['rp1_gpclk_dkms'] = {'status': 'absent'}
+        host._endpoints['/dev/rp1-gpclk'] = {'status': 'absent', 'open': False}
+        host._manager['query']['state'].update(activeRoute=None,
+            configuredRoute=None, controller=neutral,
+            pendingTransaction=transaction, application=application_record,
+            applicationInhibited=False, outputEnabled=False)
+        host._manager.pop('idle')
+        host._journals['transaction.json'] = {
+            'status': 'present', 'value': copy.deepcopy(transaction)}
+        host._journals['application.json'] = {
+            'status': 'present', 'value': copy.deepcopy(application_record)}
+        host._journals['activation.json'] = {'status': 'present',
+            'value': {'phase': 'complete-neutral'}}
+        host._activation = {'status': 'observed', 'value': {
+            'bootId': 'boot', 'activationJournal': {
+                'phase': 'complete-neutral', 'plan': {'bootId': 'boot'}}}}
+        host.activation_recovery_plan = lambda: {'routeRecoverySha256': {
+            name: ('a' if index == 0 else 'b' if index == 1 else 'c') * 64
+            for index, name in enumerate(
+                provider.activation.RETIREMENT_TRANSACTIONS)}}
+        return host
+
+    def test_completed_route_removal_is_reusable_neutral_state(self):
+        for phase in ('neutral-restored', 'neutral-stopped',
+                      'neutral-administrator-masked'):
+            with self.subTest(phase=phase):
+                host = self.completed_removal(phase)
+                if phase == 'neutral-stopped':
+                    host.services = lambda: {**Host.services(host),
+                        'wsprrypi.service': {'load': 'loaded', 'active': 'inactive',
+                            'enabled': 'enabled'}}
+                elif phase == 'neutral-administrator-masked':
+                    host.services = lambda: {**Host.services(host),
+                        'wsprrypi.service': {'load': 'masked', 'active': 'inactive',
+                            'enabled': 'masked'}}
+                with patch.object(provider.activation, 'neutral_ready', return_value=False):
+                    result = self.inspect(host)
+                self.assertEqual(result['result'], 'neutral_ready')
+                self.assertTrue(result['administrationEligible'])
+                for route in ('gpio4', 'gpio20'):
+                    checked = {'status': 'ok', 'state': {
+                        'preflightToken': route[4] * 64,
+                        'controller': controller(0, 0)}}
+                    with patch.object(provider.client, 'exchange', return_value=checked):
+                        plan = provider.route_plan(result, route)
+                    self.assertFalse(plan['alreadyReady'])
+                    self.assertEqual(plan['route'], route)
+                rejected = {'status': 'error', 'state': {}}
+                with patch.object(provider.client, 'exchange', return_value=rejected):
+                    with self.assertRaisesRegex(ValueError,
+                            'route preflight failed'):
+                        provider.route_plan(result, 'gpio20')
+
+    def test_completed_removal_requires_every_identity_and_safety_fact(self):
+        mutations = (
+            lambda host: host._manager['query']['state'].update(configuredRoute='gpio20'),
+            lambda host: host._manager['query']['state'].update(applicationInhibited=True),
+            lambda host: host._manager['query']['state'].update(outputEnabled=True),
+            lambda host: host._manager['query']['state'].update(activeRoute='gpio20'),
+            lambda host: host._manager['query']['state']['controller'].update(route=2),
+            lambda host: host._manager['query']['state']['controller'].update(generation=0),
+            lambda host: host._manager['query']['state']['application'].update(operation='switch'),
+            lambda host: host._manager['query']['state']['application'].update(controller={}),
+            lambda host: host._manager['query']['state']['application'].update(ready={}),
+            lambda host: host._manager['query']['state']['application'].update(
+                phase='neutral-restoration-failed'),
+            lambda host: host._journals['application.json'].update(value={'phase': 'changed'}),
+            lambda host: host._journals['transaction.json'].update(value={'phase': 'changed'}),
+            lambda host: setattr(host, 'services', lambda: {
+                **Host.services(host), 'wsprrypi.service': {
+                    'load': 'loaded', 'active': 'inactive', 'enabled': 'enabled'}}),
+            lambda host: host._modules.update(rp1_gpclk_dkms={
+                'status': 'loaded', 'version': '0.9.0',
+                'buildNoteSha256': host.value['consumerNoteSha256']}),
+            lambda host: host._endpoints['/dev/rp1-gpclk'].update(status='owned'),
+            lambda host: setattr(host, 'activation_recovery_plan', lambda: {
+                'routeRecoverySha256': {'transaction.json': 'a' * 64}}),
+            lambda host: setattr(host, 'activation_recovery_plan', lambda: {
+                'routeRecoverySha256': {name: 'z' * 64 for name in
+                    provider.activation.RETIREMENT_TRANSACTIONS}}),
+        )
+        for mutate in mutations:
+            with self.subTest(mutate=mutate):
+                host = self.completed_removal()
+                mutate(host)
+                with patch.object(provider.activation, 'neutral_ready', return_value=False):
+                    result = self.inspect(host)
+                self.assertNotEqual(result['result'], 'neutral_ready')
+                with self.assertRaisesRegex(ValueError,
+                        'runtime state is not eligible for route planning'):
+                    provider.route_plan(result, 'gpio20')
 
     def test_unproven_post_reboot_activation_requires_investigation(self):
         host = Host()

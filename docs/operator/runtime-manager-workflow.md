@@ -263,16 +263,27 @@ The following commands mutate target state and require the authorized window:
 ```sh
 python3 /usr/lib/rp1-gpclk-dkms/runtime_route_client.py switch gpio4 --execute
 python3 /usr/lib/rp1-gpclk-dkms/runtime_route_client.py switch gpio20 --execute
+python3 /usr/lib/rp1-gpclk-dkms/runtime_route_client.py remove gpio4 --execute
+python3 /usr/lib/rp1-gpclk-dkms/runtime_route_client.py remove gpio20 --execute
 python3 /usr/lib/rp1-gpclk-dkms/runtime_route_client.py recover --execute
 python3 /usr/lib/rp1-gpclk-dkms/runtime_route_client.py restore --execute
 ```
 
 `switch` performs preflight, selects one route, and attempts application
-restoration. `recover` reaches `none` with application inhibition retained;
+restoration. `remove` verifies the named active route, reaches `none`, and
+restores a previously running Wsprry Pi only after exact neutral-state proof;
+stopped and administrator-masked services remain stopped. `recover` reaches
+`none` with application inhibition retained;
 there is no `switch none` command. Use recovery for an interrupted route change,
 then explicitly switch. `restore` retries only application completion for a
 successfully selected current route; it does not repeat overlay effects.
 Previously stopped services remain stopped and administrator masks are preserved.
+
+After a completed `remove`, the exact same-boot neutral controller and removal
+journals remain attributable evidence. The provider accepts that state for a
+new read-only `route-plan`; the manager then revalidates the terminal removal
+and current service state during preflight. Incomplete recovery or failed
+application restoration remains `recovery_required`.
 
 After reboot, review and execute the digest-bound neutral activation plan before
 switching. It loads only the reviewed controller after establishing application

@@ -435,6 +435,13 @@ profile does not change the packaged compatibility contract, transmission UAPI,
 release status, or hardware qualification. Application/browser adaptation remains
 owned and reviewed in WsprryPi.
 
+The runtime profile distinguishes fail-closed `recover` from operator-intended
+`remove`. Recovery always ends route-neutral and application-inhibited. Removal
+may restore the captured service intent only after the same recovery transaction
+proves an exact neutral controller, absent consumer route, disabled output, and
+matching durable evidence. It never starts a service that was previously stopped
+or administrator-masked.
+
 Runtime-owned routes can use the canonical operation lease through the
 [application reconciliation extension](runtime-output.md). Application output
 stays inhibited during reconciliation; this does not add qualification or
@@ -471,7 +478,13 @@ journal form one exact chain. If that route is subsequently recovered to a
 nonzero neutral controller generation, the facade reports `recovery_required`
 instead of a generic conflict only when the digest-bound activation recovery
 planner validates the complete same-boot route, manager, and application
-journal chain. A completed prior-boot neutral activation may be superseded only
+journal chain. An exact operator-requested removal is the narrow exception:
+after its matching neutral application restoration is terminal and the current
+service state, controller, journals, endpoints, socket, artifacts, boot, and
+binding still agree, the facade reports `neutral_ready` and permits a new
+read-only route plan. The manager revalidates the completed removal and live
+service state during preflight before a reviewed route digest can be produced.
+A completed prior-boot neutral activation may be superseded only
 after its exact evidence, any coherent terminal route journal set, and the
 inactive current-boot state are validated and the application is inhibited.
 Candidate-owned retirement binds every present journal and application-owned
