@@ -63,7 +63,7 @@ def response(system, operation, state, status='ok', error=None):
     return result
 
 
-def _dispatch(value, factory=admin.Linux):
+def _dispatch(value, factory=admin.Linux, expected_recovery=None):
     if isinstance(value, dict) and value.get('operation') in ('idle','reconcile-output','resume'):
         import runtime_output
         request = runtime_output.parse(value)
@@ -83,6 +83,9 @@ def _dispatch(value, factory=admin.Linux):
     with factory() as system:
         state = system.call()
         admin.validate_observation(state)
+        if (expected_recovery is not None and operation == 'recover' and
+                response(system, 'query', state)['state'] != expected_recovery):
+            raise ValueError('stale provider recovery state; no mutation performed')
         if operation == 'query':
             return response(system, operation, state)
         if operation == 'preflight':
@@ -145,7 +148,7 @@ def _dispatch(value, factory=admin.Linux):
         return result
 
 
-def dispatch(value, factory=admin.Linux):
+def dispatch(value, factory=admin.Linux, mutation_lock=None, expected_recovery=None):
     import runtime_application as app
     # Only admission waits; no module/overlay effect is retried. Startup queries
     # must not latch a failure merely because a short readiness poll holds flock.
@@ -171,7 +174,7 @@ def dispatch(value, factory=admin.Linux):
             raise ValueError('restore requires explicit execution')
     else:
         parse(value)
-    with app.mutation_lock():
+    with (mutation_lock or app.mutation_lock)():
         with factory() as system:
             record = app.load(system)
             if operation in ('switch', 'remove'):
@@ -264,7 +267,7 @@ def dispatch(value, factory=admin.Linux):
                             if operation == 'remove' else value)
                 if operation == 'remove':
                     recovery.pop('route', None)
-                result = _dispatch(recovery, factory)
+                result = _dispatch(recovery, factory, expected_recovery=expected_recovery)
             elif not capture_only:
                 with factory() as system:
                     state = system.call()
