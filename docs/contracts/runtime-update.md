@@ -30,7 +30,11 @@ does not promise that the application remains stopped. DKMS package
 or source rollback remains the predecessor's lifecycle operation. Preparation
 never selects a route or enables transmission. The application may replace its
 files only after `prepared` with verified runtime absence. It subsequently
-deploys and activates the new provider through the existing public facade.
+deploys and activates the new provider through the existing public facade. The
+standalone bundle includes the manager used by update execution and the complete
+local import dependencies of every bootstrap helper, including imports inside
+functions. Each helper is byte-identical to its digest-bound deployment payload;
+predeployment validation must not rely on an installed helper or source checkout.
 
 ## Response contract
 

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Hardware-free installer-facing readiness and ensure-contract tests."""
 import copy
+import ast
 import hashlib
 import json
 import lzma
@@ -848,9 +849,20 @@ class Tests(unittest.TestCase):
                 'runtime_deployment.py', 'runtime_controller_admin.py',
                 'runtime_layout.py', 'runtime_application.py',
                 'runtime_output.py', 'runtime_provider.py', 'runtime_binding.py',
-                'runtime_activation.py', 'runtime_route_client.py',
+                'runtime_activation.py', 'runtime_route_client.py', 'runtime_manager.py',
             }
             self.assertTrue(bootstrap <= set(first_files))
+            # Include imports inside functions: the update facade uses a lazy
+            # manager import that ordinary top-level import smoke tests miss.
+            for name in bootstrap:
+                for node in ast.walk(ast.parse(first_files[name], filename=name)):
+                    imports = ([alias.name.split('.')[0] for alias in node.names]
+                               if isinstance(node, ast.Import) else
+                               [node.module.split('.')[0]] if isinstance(node, ast.ImportFrom)
+                               and node.level == 0 and node.module else [])
+                    for module in imports:
+                        if module.startswith('runtime_'):
+                            self.assertIn(module + '.py', bootstrap, name + ' imports ' + module)
             subprocess.run([sys.executable, '-c',
                 'import sys; sys.path.insert(0, sys.argv[1]); import runtime_provider, runtime_activation',
                 str(first)], check=True)
