@@ -916,5 +916,370 @@ class Tests(unittest.TestCase):
         self.assertEqual(provider.CONTRACT, 'rp1-gpclk-runtime-readiness-v1')
 
 
+class UpdateHost(Host):
+    """Real activation planners/executors over the existing offline system."""
+    def __init__(self, active=True, masked=False, removed=False):
+        import check_runtime_activation as fixture
+        super().__init__()
+        self.fixture = fixture
+        self.system = fixture.System(fixture.captured(active, masked))
+        self.system.binding_value = self.value
+        self.system.raw = json.dumps(self.value, sort_keys=True).encode()
+        self.system.deployed['files'][provider.deployment.BINDING]['after'] = provider.deployment.encode(self.system.raw)
+        self.system.deployment_raw = provider.deployment.journal_bytes(self.system.deployed)
+        initial = provider.activation.activation_plan(self.system)
+        provider.activation.ensure(self.system, initial, provider.activation.plan_digest(initial), fixture.lock)
+        if removed:
+            fixture.Tests().recovered_route(self.system, removal=True)
+            phase = 'neutral-administrator-masked' if masked else 'neutral-restored' if active else 'neutral-stopped'
+            self.system.records['application.json'].update(phase=phase,
+                wasActive=active, administratorMasked=masked)
+            captured = self.system.records['manager.json']['response']['state']['application']
+            captured.update(wasActive=active, administratorMasked=masked)
+            self.system.application_active = active
+        self.absent = False
+        self.busy = False
+        self.effects = []
+
+    def running_kernel(self): return KERNEL
+    def binding(self):
+        return {'status': 'absent'} if self.absent else {
+            'status': 'valid', 'sha256': provider.admin.digest(self.system.raw), 'value': self.value}
+    def artifacts(self, unused): return {} if self.absent else super().artifacts(unused)
+    def journal(self, name):
+        value = None if self.absent else self.system.read_record(name)
+        return {'status': 'present', 'value': value} if value is not None else {'status': 'absent'}
+    def module(self, name):
+        loaded = self.system.controller if name == 'rp1_route_controller' else self.system.consumer
+        return super().module(name) if loaded and not self.absent else {'status': 'absent'}
+    def endpoint(self, path): return self.system.endpoint(path, None)
+    def socket(self): return self.system.manager_socket()
+    def services(self):
+        return {name: self.system.service(name) for name in super().services()}
+    def activation_observation(self):
+        return {'status': 'absent'} if self.absent else {
+            'status': 'observed', 'value': provider.activation.observe(self.system)}
+    def manager(self):
+        state = {'profile': 'runtime', 'controller': copy.deepcopy(self.system.state),
+            'bootId': self.system.boot_id, 'bindingSha256': provider.admin.digest(self.system.raw),
+            'activeRoute': {1: 'gpio4', 2: 'gpio20'}.get(self.system.state['route']),
+            'configuredRoute': None, 'qualification': False, 'outputEnabled': False,
+            'applicationInhibited': self.system.inhibited, 'applicationRestoration': True,
+            'pendingTransaction': self.system.read_record('transaction.json'),
+            'application': self.system.read_record('application.json')}
+        value = {'status': 'observed', 'query': {'schemaVersion': 3,
+            'contract': provider.client.CONTRACT, 'operation': 'query', 'status': 'ok', 'state': state}}
+        if self.system.consumer:
+            value['idle'] = manager_ready(state['activeRoute'])['idle']
+            value['idle']['state']['outputLifecycle'].update(controller=state['controller'],
+                bootId=state['bootId'], bindingSha256=state['bindingSha256'])
+        return value
+    def activation_recovery_plan(self): return provider.activation.recovery_plan(self.system)
+    def activation_recover(self, value, digest):
+        self.effects.append('recover-activation')
+        return provider.activation.ensure_recovery(self.system, value, digest, self.fixture.lock)
+    def activation_retirement_plan(self): return provider.activation.retirement_plan(self.system)
+    def activation_retire(self, value, digest):
+        self.effects.append('retire-activation')
+        return provider.activation.retire(self.system, value, digest, self.fixture.lock)
+    def update_removal_evidence(self): return None if self.absent else self.system.deployed
+    def deployment_removal_plan(self): return copy.deepcopy(self.system.deployed)
+    def deployment_remove(self, value, digest):
+        self.effects.append('remove-deployment')
+        if provider.deployment.plan_hash(value) != digest or self.system.controller or self.system.consumer:
+            raise ValueError('unsafe inverse deployment')
+        if self.system.journal:
+            self.system.archive_journal(self.system.journal)
+            tx = provider.activation.recovered_route_retirement(self.system)
+            if tx: self.system.retire_transactions(tx)
+            self.system.retire_journal(self.system.journal)
+        self.absent = True
+        return {'status': 'removed-exact-deployment'}
+    def update_absent(self): return self.absent
+    def update_stop_socket(self, expected): self.system.stop_socket()
+    def select_route(self, gpio):
+        self.fixture.Tests().recovered_route(self.system)
+        s = self.system
+        s.state.update(generation=1, id=9, route=1 if gpio == 4 else 2,
+                       flags=provider.admin.CONSUMER | provider.admin.PINNED)
+        tx = s.records['transaction.json']
+        tx.update(phase='complete-inhibited', observation=copy.deepcopy(s.state), target=s.state['route'])
+        manager = s.records['manager.json']
+        manager.update(controller=copy.deepcopy(s.state))
+        manager['response'].update(operation='switch', status='complete-inhibited')
+        manager['response']['state'].update(controller=copy.deepcopy(s.state), pendingTransaction=copy.deepcopy(tx))
+        s.records['application.json'].update(phase='restored', controller=copy.deepcopy(s.state),
+            route='gpio'+str(gpio), requestId=manager['requestId'], fingerprint=manager['fingerprint'])
+        s.records['application.json']['ready']['route'] = 'gpio'+str(gpio)
+        s.consumer = s.consumer_endpoint = s.application_active = True
+        s.inhibited = False
+    def update_route_recover(self, expected):
+        self.effects.append('recover-route')
+        target = self.system.state['route']
+        self.fixture.Tests().recovered_route(self.system)
+        self.system.records['transaction.json']['target'] = target
+        self.system.records['manager.json']['response']['state']['pendingTransaction']['target'] = target
+        app = self.system.records['application.json']
+        app['controller']['route'] = target
+        app['route'] = app['ready']['route'] = 'gpio4' if target == 1 else 'gpio20'
+        self.system.consumer = self.system.consumer_endpoint = False
+        self.system.application_active = False
+        return {'status': 'recovered-inhibited'}
+    @contextlib.contextmanager
+    def update_lock(self):
+        if self.busy: raise ValueError('concurrent update')
+        self.busy = True
+        try: yield
+        finally: self.busy = False
+
+
+class RemovalHost(UpdateHost):
+    """Actual inverse deployment over the existing in-memory filesystem."""
+    def __init__(self):
+        super().__init__()
+        import check_runtime_manager as fixture
+        self.files = fixture.Files()
+        values = {path: path.encode() for path in provider.deployment.INVENTORY}
+        values.update({path: None for path in provider.deployment.JOURNALS})
+        values[provider.deployment.BINDING] = self.system.raw
+        self.system.deployed = provider.deployment.plan(self.files, values)
+        provider.deployment.apply(self.files, self.system.deployed,
+                                  provider.deployment.plan_hash(self.system.deployed))
+        self.system.controller = self.system.consumer = self.system.socket_active = False
+        self.system.journal = None
+        self.system.records = {}
+        self.files.prune_removed_directories = lambda: None
+    def binding(self):
+        raw = self.files.read(provider.deployment.BINDING)
+        return {'status': 'absent'} if raw is None else {
+            'status': 'valid', 'sha256': provider.admin.digest(raw),
+            'value': binding.validate(provider.admin.strict_json(raw))}
+    def journal(self, name):
+        raw = self.files.read(str(provider.admin.STATE / name))
+        return {'status': 'absent'} if raw is None else {
+            'status': 'present', 'value': provider.admin.strict_json(raw)}
+    def artifacts(self, unused):
+        return {path: {'status': 'exact' if self.files.read(path) == path.encode() else 'absent'}
+                for path in provider.deployment.INVENTORY}
+    def activation_observation(self): return {'status': 'absent'}
+    update_removal_evidence = provider.Host.update_removal_evidence
+    deployment_removal_plan = provider.Host.deployment_removal_plan
+    def deployment_remove(self, value, digest):
+        self.effects.append('remove-deployment')
+        # Production facade, with system reads/locks replaced at the boundary.
+        with patch.object(provider.deployment, 'mutation_lock', self.fixture.lock), \
+             patch.object(provider.activation, 'Linux', return_value=self.system):
+            return provider.Host.deployment_remove(self, value, digest)
+    update_absent = provider.Host.update_absent
+
+
+class UpdateTests(unittest.TestCase):
+    def request(self, host):
+        return provider.update_request(host.value['sourceCommit'],
+            provider.admin.digest(host.system.raw), host.value['artifactSetSha256'],
+            provider.deployment.plan_hash(host.system.deployed))
+
+    def test_neutral_and_completed_removal_sequences(self):
+        for removed in (False, True):
+            for active, masked in ((True, False), (False, False), (False, True)):
+                with self.subTest(removed=removed, active=active, masked=masked):
+                    host = UpdateHost(active, masked, removed)
+                    request = self.request(host)
+                    receipt = provider.installation_status(host)
+                    self.assertEqual(receipt['receipt']['controllerGeneration'], 0)
+                    before = copy.deepcopy(host.system.__dict__)
+                    plan = provider.update_plan(host, request)
+                    self.assertEqual(host.system.__dict__, before, 'planning cannot mutate state')
+                    self.assertEqual(plan['plan']['action'], 'recover-activation')
+                    for _ in range(4):
+                        reply = provider.update_execute(host, request, plan['planSha256'])
+                        if reply['status'] == 'prepared': break
+                        plan = provider.update_plan(host, request)
+                    self.assertTrue(reply['postconditions']['runtimeAbsent'])
+                    self.assertEqual(host.effects, ['recover-activation', 'remove-deployment'])
+                    self.assertTrue(provider.update_plan(host, request)['postconditions']['runtimeAbsent'])
+
+    def test_later_neutral_generations_are_attributed_by_real_recovery_planner(self):
+        for generation in (2, 4, 20):
+            host = UpdateHost(removed=True)
+            s = host.system
+            s.state['generation'] = generation
+            tx = s.records['transaction.json']; tx['observation']['generation'] = generation
+            manager = s.records['manager.json']
+            manager['controller']['generation'] = generation
+            manager['response']['state']['controller']['generation'] = generation
+            manager['response']['state']['pendingTransaction']['observation']['generation'] = generation
+            plan = provider.update_plan(host, self.request(host))
+            self.assertEqual(plan['plan']['action'], 'recover-activation')
+
+    def test_stale_plan_and_concurrency_refuse_before_effects(self):
+        for mutate in (lambda h: setattr(h, 'busy', True),
+                       lambda h: setattr(h.system, 'boot_id', '00000000-0000-0000-0000-000000000002'),
+                       lambda h: h.system.state.update(session=99),
+                       lambda h: h.system.state.update(flags=8),
+                       lambda h: setattr(h.system, 'controller_open', True),
+                       lambda h: h._artifacts[next(iter(h._artifacts))].update(status='changed')):
+            host = UpdateHost(removed=True); request = self.request(host)
+            plan = provider.update_plan(host, request)
+            mutate(host)
+            with self.assertRaises((ValueError, KeyError)):
+                provider.update_execute(host, request, plan['planSha256'])
+            self.assertEqual(host.effects, [])
+
+    def test_missing_or_changed_removal_evidence_cannot_be_prepared(self):
+        for name in ('transaction.json', 'manager.json', 'application.json'):
+            for mutation in ('missing', 'changed'):
+                host = UpdateHost(removed=True)
+                if mutation == 'missing': host.system.records.pop(name)
+                else: host.system.records[name]['boot'] = 'foreign'
+                with self.assertRaises(ValueError): provider.update_plan(host, self.request(host))
+                self.assertEqual(host.effects, [])
+
+    def test_interrupted_recovery_requires_a_new_plan_and_preserves_evidence(self):
+        host = UpdateHost(removed=True); request = self.request(host)
+        plan = provider.update_plan(host, request)
+        with patch.object(host.system, 'unload_controller', side_effect=ValueError('interrupted')):
+            with self.assertRaisesRegex(ValueError, 'interrupted'):
+                provider.update_execute(host, request, plan['planSha256'])
+        self.assertEqual(host.system.journal['phase'], 'rollback-failed')
+        with self.assertRaisesRegex(ValueError, 'stale update plan'):
+            provider.update_execute(host, request, plan['planSha256'])
+        plan = provider.update_plan(host, request)
+        provider.update_execute(host, request, plan['planSha256'])
+        self.assertFalse(host.system.controller)
+
+    def test_public_capability_discovery_has_no_host_observations(self):
+        with patch.object(sys, 'argv', ['runtime_provider.py', 'capabilities']), contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(provider.main(object()), 0)
+        self.assertEqual(json.loads(output.getvalue())['contract'], provider.UPDATE_CONTRACT)
+
+    def test_installer_start_after_neutral_activation_allows_route_preflight(self):
+        host = UpdateHost(active=False)
+        host.system.application_active = True
+        host.system.app['service']['MainPID'] = '99'
+        # The immutable activation capture stays stopped; current service intent
+        # can change independently after completion.
+        self.assertFalse(host.system.journal['plan']['application']['wasActive'])
+        result, _ = provider.inspect(host)
+        self.assertEqual(result['result'], 'neutral_ready')
+        self.assertFalse(provider.activation.neutral_ready(provider.activation.observe(host.system)),
+                         'activation completion still requires exact captured restoration')
+        for route in ('gpio4', 'gpio20'):
+            with patch.object(provider.client, 'exchange', return_value={
+                    'status': 'ok', 'state': {'preflightToken': 'a' * 64,
+                    'controller': host.system.state}}):
+                self.assertEqual(provider.route_plan(result, route)['route'], route)
+
+    def test_post_reboot_neutral_update_uses_provider_retirement(self):
+        host = UpdateHost()
+        host.system.boot_id = '00000000-0000-0000-0000-000000000002'
+        host.system.controller = host.system.socket_active = host.system.application_active = False
+        plan = provider.update_plan(host, self.request(host))
+        self.assertEqual(plan['plan']['action'], 'retire-activation')
+        reply = provider.update_execute(host, self.request(host), plan['planSha256'])
+        self.assertEqual(reply['status'], 'planned')
+        self.assertIsNone(host.system.journal)
+
+    def test_selected_routes_recover_before_neutral_update(self):
+        for gpio in (4, 20):
+            host = UpdateHost(); host.select_route(gpio)
+            request = self.request(host)
+            plan = provider.update_plan(host, request)
+            self.assertEqual(plan['plan']['action'], 'recover-route')
+            for _ in range(4):
+                reply = provider.update_execute(host, request, plan['planSha256'])
+                if reply['status'] == 'prepared': break
+                plan = provider.update_plan(host, request)
+            self.assertEqual(reply['status'], 'prepared')
+            self.assertEqual(host.effects, ['recover-route', 'recover-activation', 'remove-deployment'])
+
+    def test_installer_readiness_still_rejects_invalid_service_states(self):
+        for changes in ({'fragment': '/tmp/foreign.service'}, {'active': 'activating'},
+                        {'active': 'active', 'MainPID': '0'}, {'MainPID': 'unknown'},
+                        {'load': 'masked', 'active': 'active'}):
+            host = UpdateHost(); service = host.system.service
+            def changed(name):
+                original = service(name)
+                return {**original, **changes} if name == provider.activation.APPLICATION_UNIT else original
+            with patch.object(host.system, 'service', side_effect=changed):
+                self.assertNotEqual(provider.inspect(host)[0]['result'], 'neutral_ready')
+
+
+    def test_receipt_distinguishes_plan_digest_from_journal_byte_digest(self):
+        host = UpdateHost()
+        receipt = provider.installation_status(host)['receipt']
+        self.assertEqual(receipt['deploymentPlanSha256'], provider.deployment.plan_hash(host.system.deployed))
+        self.assertNotEqual(receipt['deploymentPlanSha256'], provider.admin.digest(host.system.deployment_raw))
+        changed = copy.deepcopy(host.system.deployed)
+        changed['application']['companion']['route'] = 'gpio20'
+        with patch.object(host, 'deployment_removal_plan', return_value=changed):
+            with self.assertRaisesRegex(ValueError, 'deployment changed'):
+                provider.installation_status(host)
+
+    def test_passive_readiness_accepts_a_real_systemd_mask(self):
+        host = UpdateHost(active=False, masked=True)
+        service = host.system.service
+        def masked(name):
+            value = service(name)
+            if name == provider.activation.APPLICATION_UNIT: value['fragment'] = '/dev/null'
+            return value
+        with patch.object(host.system, 'service', side_effect=masked):
+            self.assertEqual(provider.inspect(host)[0]['result'], 'neutral_ready')
+
+    def test_inverse_deployment_retries_every_durable_interruption(self):
+        # Includes provider source, binding, unit-file self-removal and both
+        # sides of the last-deployment/pending barrier transition.
+        for offset in range(1, len(provider.deployment.DESTINATIONS) + 4):
+            with self.subTest(write=offset):
+                host = RemovalHost(); request = self.request(host)
+                plan = provider.update_plan(host, request)
+                host.files.crash = host.files.count + offset
+                with self.assertRaises(OSError):
+                    provider.update_execute(host, request, plan['planSha256'])
+                host.files.crash = None
+                retry = provider.update_plan(host, request)
+                if retry['status'] != 'prepared':
+                    reply = provider.update_execute(host, request, retry['planSha256'])
+                    self.assertEqual(reply['status'], 'prepared')
+                self.assertTrue(host.update_absent())
+                self.assertEqual(host.files.restored, host.files.application)
+
+    def test_interrupted_removal_preserves_restore_failure_and_foreign_bytes(self):
+        host = RemovalHost(); request = self.request(host)
+        plan = provider.update_plan(host, request)
+        host.files.restore_fails = True
+        with self.assertRaisesRegex(ValueError, 'restore failed'):
+            provider.update_execute(host, request, plan['planSha256'])
+        self.assertIsNotNone(host.files.read(str(provider.admin.STATE / 'deployment-pending.json')))
+        host.files.restore_fails = False
+        path = next(iter(provider.deployment.INVENTORY))
+        host.files.values[path] = b'foreign'
+        retry = provider.update_plan(host, request)
+        writes = host.files.count
+        with self.assertRaisesRegex(ValueError, 'destination changed'):
+            provider.update_execute(host, request, retry['planSha256'])
+        self.assertEqual(host.files.count, writes)
+        host.files.values[path] = None
+        retry = provider.update_plan(host, request)
+        self.assertEqual(provider.update_execute(host, request, retry['planSha256'])['status'], 'prepared')
+
+    def test_absence_refuses_an_active_cached_manager_unit(self):
+        host = RemovalHost(); request = self.request(host)
+        plan = provider.update_plan(host, request)
+        provider.update_execute(host, request, plan['planSha256'])
+        services = host.services()
+        services['rp1-gpclk-route-manager.socket']['active'] = 'active'
+        with patch.object(host, 'services', return_value=services):
+            with self.assertRaisesRegex(ValueError, 'absence is unproven'):
+                provider.update_plan(host, request)
+
+    def test_update_rejects_recorded_deployment_drift_before_effects(self):
+        host = UpdateHost(); request = self.request(host)
+        request['deploymentPlanSha256'] = 'f' * 64
+        with self.assertRaisesRegex(ValueError, 'deployment identity'):
+            provider.update_plan(host, request)
+        self.assertEqual(host.effects, [])
+
+
 if __name__ == '__main__':
     unittest.main()

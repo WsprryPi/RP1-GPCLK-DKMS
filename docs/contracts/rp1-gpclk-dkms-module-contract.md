@@ -469,6 +469,11 @@ separate digest-bound operations. Between them, `activation-plan` and
 `activation-ensure` establish only the exact controller and manager socket in a
 zero-route state, then restore the application according to its captured service
 intent. The consumer remains unloaded and `/dev/rp1-gpclk` remains absent.
+Activation completion verifies the captured application restoration intent.
+Later passive neutral readiness accepts a stable start, stop, or restart of the
+bound application service while retaining the exact neutral hardware and
+activation evidence. Route preflight separately validates the current service
+and application state before selecting a route.
 Neutral activation is neither route selection nor transmission eligibility.
 None of these operations authorizes output. Exact repeated execution is
 idempotent. A same-boot completed route remains attributable to its neutral
@@ -504,6 +509,11 @@ foreign, substituted, mixed, unsafe, open, or contradictory state is `conflict`.
 During an exact inverse deployment, a same-boot `recovered-inhibited` route
 journal chain may likewise be retired after the modules, endpoints, manager
 socket, and application are all verified inactive and inhibited. This remains
-retryable if WsprryPi already archived the recovered activation journal or if
+retryable if an older application archived the recovered activation journal or
 an earlier retirement removed only an ordered prefix of dependent journals.
+Applications use the versioned [update preparation contract](runtime-update.md)
+for provider recovery and inverse deployment. The provider interprets sessions,
+generations, journals and interrupted removal; applications retain version
+selection, installation provenance, configuration and service orchestration.
+The update contract also exposes a provider-validated installation receipt.
 The source-development manager remains passive-query-only.

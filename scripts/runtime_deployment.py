@@ -52,8 +52,9 @@ def removal_plan(files):
     """Return the exact retained deployment for a reviewed inverse mutation."""
     pending = existing_deployment_state(files)
     raw = files.read(LAST_DEPLOYMENT)
-    if pending is not None and raw is not None:
-        raise ValueError('pending deployment requires recovery')
+    if (pending is not None and raw is not None and
+            admin.strict_json(pending) != admin.strict_json(raw)):
+        raise ValueError('pending deployment differs from retained inverse')
     if pending is not None:
         raw = pending
     if raw is None:
@@ -232,6 +233,17 @@ class Files:
         }
         for unit, fragment in units.items():
             observed = admin.systemd_unit(unit)
+            # Inverse deployment may already have removed these exact files
+            # before interruption. Missing units are admissible only with a
+            # retained, schema-valid removal plan owning their absence.
+            if (observed['load'] == 'not-found' and
+                    observed['active'] == 'inactive' and
+                    observed['enabled'] in ('not-found', '') and not observed['fragment']):
+                retained = removal_plan(self)
+                journal_bytes(retained)
+                if (decode(retained['files'][fragment]['before']) is None and
+                        self.read(fragment) is None):
+                    continue
             if (observed['load'] != 'loaded' or
                     observed['active'] not in ('inactive', 'failed') or
                     observed['enabled'] not in ('disabled', 'static') or

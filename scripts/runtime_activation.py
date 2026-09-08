@@ -774,7 +774,24 @@ def retire(system, reviewed, approved, lock=deployment.mutation_lock):
         'activationJournalSha256': reviewed['activationJournalSha256']}
 
 
-def neutral_ready(observation):
+def neutral_ready(observation, *, current_service=False):
+    # Activation completion verifies the captured service intent strictly.
+    # Later passive readiness must allow an administrator/installer to start,
+    # stop or restart that application without invalidating neutral hardware.
+    service = observation.get('applicationService', {})
+    stable_service = (
+        service.get('fragment') in ('/etc/systemd/system/wsprrypi.service',
+                                    '/usr/lib/systemd/system/wsprrypi.service') and
+        ((service.get('load') == 'loaded' and service.get('active') == 'active' and
+          service.get('enabled') not in ('masked', 'masked-runtime') and
+          isinstance(service.get('MainPID'), str) and service['MainPID'].isdigit() and
+          int(service['MainPID']) > 0) or
+         (service.get('load') in ('loaded', 'masked') and
+          service.get('active') in ('inactive', 'failed') and service.get('MainPID') == '0')))
+    stable_service = stable_service or (
+        service.get('fragment') == '/dev/null' and service.get('load') == 'masked' and
+        service.get('enabled') in ('masked', 'masked-runtime') and
+        service.get('active') in ('inactive', 'failed') and service.get('MainPID') == '0')
     journal = observation['activationJournal']
     return bool(journal and journal['phase'] == 'complete-neutral' and
         journal['plan']['bindingSha256'] == observation['bindingSha256'] and
@@ -799,7 +816,8 @@ def neutral_ready(observation):
         observation['managerService'].get('fragment') ==
             '/usr/lib/systemd/system/rp1-gpclk-route-manager@.service' and
         not observation['inhibited'] and
-        restored_application_matches(journal, observation['applicationService']) and
+        (stable_service if current_service else
+         restored_application_matches(journal, observation['applicationService'])) and
         isinstance(journal.get('application'), dict) and
         journal['application'].get('phase') in application.TERMINAL)
 

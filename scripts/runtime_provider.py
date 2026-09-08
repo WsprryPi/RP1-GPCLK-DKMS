@@ -9,9 +9,11 @@ explicit digest-bound operation delegated to those implementations.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import grp
 import json
 import os
+import re
 from pathlib import Path
 import stat
 import sys
@@ -25,6 +27,7 @@ import runtime_output
 import runtime_route_client as client
 
 CONTRACT = 'rp1-gpclk-runtime-readiness-v1'
+UPDATE_CONTRACT = 'rp1-gpclk-runtime-update-v1'
 SCHEMA_VERSION = 1
 EXIT = {'exact_ready': 0, 'neutral_ready': 0, 'absent': 10,
         'deployment_required': 11, 'recovery_required': 12, 'conflict': 13,
@@ -284,6 +287,237 @@ class Host:
     def activation_retire(self, value, approved):
         return activation.retire(activation.Linux(), value, approved)
 
+    def update_lock(self):
+        import runtime_application
+        return runtime_application.mutation_lock()
+
+    def running_kernel(self):
+        return os.uname().release
+
+    def update_route_recover(self, expected):
+        import runtime_manager
+        return runtime_manager.dispatch({'schemaVersion': 3, 'operation': 'recover',
+            'execute': True, 'requestId': str(uuid.uuid4()),
+            'actor': 'runtime-provider-update'}, mutation_lock=contextlib.nullcontext,
+            expected_recovery=expected)
+
+    def update_stop_socket(self, expected):
+        with deployment.mutation_lock():
+            system = activation.Linux()
+            observed = activation.observe(system)
+            if observed != expected:
+                raise ValueError('socket retirement observation changed')
+            if (observed['socket'].get('fragment') !=
+                    '/usr/lib/systemd/system/rp1-gpclk-route-manager.socket' or
+                    observed['socket'].get('load') != 'loaded' or
+                    observed['managerSocket'].get('status') != 'owned'):
+                raise ValueError('socket retirement requires the owned manager unit')
+            if (observed['controller']['status'] != 'absent' or
+                    observed['consumer']['status'] != 'absent' or
+                    not observed['inhibited']):
+                raise ValueError('socket retirement requires inactive inhibited runtime')
+            system.stop_socket()
+
+    def update_removal_evidence(self):
+        """Read retained inverse-deployment evidence even after self-removal."""
+        raw = self.files.read(deployment.LAST_DEPLOYMENT)
+        pending = self.files.read(str(admin.STATE / 'deployment-pending.json'))
+        if (pending is not None and raw is not None and
+                admin.strict_json(pending) != admin.strict_json(raw)):
+            raise ValueError('pending deployment differs from retained inverse')
+        return admin.strict_json(raw or pending) if raw or pending else None
+
+    def update_absent(self):
+        services = self.services()
+        manager_units = ('rp1-gpclk-route-manager.socket',
+                         'rp1-gpclk-route-manager@.service')
+        inactive_units = all(services.get(name, {}).get('load') in ('loaded', 'not-found')
+            and services.get(name, {}).get('active') in ('inactive', 'failed')
+            for name in manager_units)
+        return (inactive_units and all(self.files.read(path) is None for path in deployment.DESTINATIONS)
+            and self.files.read(deployment.LAST_DEPLOYMENT) is None
+            and self.files.read(str(admin.STATE / 'deployment-pending.json')) is None
+            and all(self.module(name)['status'] == 'absent' for name in
+                    ('rp1_route_controller', 'rp1_gpclk_dkms'))
+            and all(self.endpoint(path)['status'] == 'absent' for path in ENDPOINTS.values())
+            and self.socket()['status'] == 'absent')
+
+
+def update_request(source, binding=None, artifacts=None, deployed=None):
+    if not isinstance(source, str) or not re.fullmatch('[0-9a-f]{40}', source):
+        raise ValueError('exact predecessor source commit required')
+    if (binding is None) != (artifacts is None):
+        raise ValueError('paired binding and artifact identities required')
+    for value in (binding, artifacts, deployed):
+        if value is not None and (not isinstance(value, str) or
+                                  not re.fullmatch('[0-9a-f]{64}', value)):
+            raise ValueError('invalid update identity digest')
+    return {'sourceCommit': source, 'bindingSha256': binding,
+            'artifactSetSha256': artifacts, 'deploymentPlanSha256': deployed}
+
+
+def update_plan(host, request):
+    """Provider-private decisions behind a stable consumer envelope."""
+    result, _ = inspect(host)
+    binding = result['identities']['installedBinding']
+    retained = host.update_removal_evidence()
+    action, detail = 'prepared', None
+    if (retained is not None and request['deploymentPlanSha256'] is not None and
+            deployment.plan_hash(retained) != request['deploymentPlanSha256']):
+        raise ValueError('update deployment identity mismatch')
+    pending = result['journals']['deployment-pending.json'].get('status') == 'present'
+    if binding.get('status') == 'absent' or pending:
+        if retained is None:
+            if not host.update_absent():
+                raise ValueError('runtime absence is unproven')
+        else:
+            deployment.journal_bytes(retained)
+            old = runtime_binding.validate(admin.strict_json(deployment.decode(
+                retained['files'][deployment.BINDING]['after'])))
+            raw = deployment.decode(retained['files'][deployment.BINDING]['after'])
+            if binding.get('status') != 'absent' and (binding.get('status') != 'valid' or
+                    binding.get('sha256') != admin.digest(raw)):
+                raise ValueError('interrupted removal binding differs from retained inverse')
+            binding = {'status': 'valid', 'value': old, 'sha256': admin.digest(raw)}
+            if (request['deploymentPlanSha256'] is None or
+                    deployment.plan_hash(retained) != request['deploymentPlanSha256']):
+                raise ValueError('interrupted removal lacks exact deployment identity')
+            # The inverse deployment validates every remaining byte against the
+            # retained before/after pair and refuses changed external artifacts.
+            host.files.preflight_removal()
+            action, detail = 'remove-deployment', host.deployment_removal_plan()
+    if binding.get('status') == 'valid':
+        value = binding['value']
+        if (value['kernel'] != host.running_kernel() or
+                value['sourceCommit'] != request['sourceCommit'] or
+                (request['bindingSha256'] is not None and
+                 binding['sha256'] != request['bindingSha256']) or
+                (request['artifactSetSha256'] is not None and
+                 value['artifactSetSha256'] != request['artifactSetSha256'])):
+            raise ValueError('update installation identity mismatch')
+        if action != 'remove-deployment':
+            if (not result['artifacts'] or any(item.get('status') != 'exact'
+                    for item in result['artifacts'].values())):
+                raise ValueError('update refuses changed provider artifacts')
+            classification = result['result']
+            if classification == 'exact_ready':
+                action = 'recover-route'
+                detail = result['manager']['query']['state']
+            else:
+                if (any(item.get('status') != 'absent' for name, item in
+                        result['modules'].items() if name == 'rp1_gpclk_dkms') or
+                        result['endpoints']['consumer'].get('status') != 'absent' or
+                        result['endpoints']['consumer'].get('open') is not False or
+                        result['routes']['active'] is not None):
+                    raise ValueError('update refuses an unsafe or unproven route')
+                journal = result['journals']['activation.json']
+                current = journal.get('value', {})
+                observed = result['activation'].get('value', {})
+                if result['modules']['rp1_route_controller'].get('status') == 'loaded':
+                    state = observed.get('controllerState')
+                    origin = current.get('controller')
+                    if (result['endpoints']['controller'].get('status') != 'owned' or
+                            result['endpoints']['controller'].get('open') is not False or
+                            observed.get('controller', {}).get('exact') is not True or
+                            not isinstance(state, dict)):
+                        raise ValueError('update lacks a closed exact controller')
+                    admin.validate_observation(state)
+                    if any(state[name] for name in ('id', 'error', 'route', 'flags')):
+                        raise ValueError('update refuses non-neutral controller state')
+                    if (current.get('phase') == 'complete-neutral' and
+                            (not isinstance(origin, dict) or origin['session'] != state['session'])):
+                        raise ValueError('update controller session differs from activation')
+                if classification == 'conflict':
+                    raise ValueError('update refuses conflicting runtime state')
+                if current and current.get('phase') != 'recovered-inhibited':
+                    if result['reboot'].get('occurred') is True:
+                        action, detail = 'retire-activation', host.activation_retirement_plan()
+                    else:
+                        action, detail = 'recover-activation', host.activation_recovery_plan()
+                else:
+                    if (any(item.get('status') != 'absent' for item in result['modules'].values()) or
+                            any(item.get('status') != 'absent' for item in result['endpoints'].values())):
+                        raise ValueError('update removal requires absent modules and endpoints')
+                    if result['managerSocket'].get('status') == 'owned':
+                        action, detail = 'stop-manager', observed
+                    elif result['managerSocket'].get('status') == 'absent':
+                        action, detail = 'remove-deployment', host.deployment_removal_plan()
+                    else:
+                        raise ValueError('update refuses an unowned manager socket')
+    elif action != 'prepared':
+        raise ValueError('update requires an attributable provider binding')
+    elif binding.get('status') != 'absent':
+        raise ValueError('update binding is invalid')
+    plan = {'version': 1, 'goal': 'prepare-application-update', 'identity': request,
+            'action': action, 'evidence': detail,
+            'observationSha256': canonical_digest(result)}
+    return {'schemaVersion': 1, 'contract': UPDATE_CONTRACT, 'operation': 'update-plan',
+            'identity': request, 'status': 'prepared' if action == 'prepared' else 'planned',
+            'planSha256': canonical_digest(plan), 'plan': plan,
+            'postconditions': {'runtimeAbsent': action == 'prepared',
+                              'transmissionAuthorized': False}}
+
+
+def installation_status(host):
+    result, _ = inspect(host)
+    if result['result'] != 'neutral_ready' or not result['administrationEligible']:
+        raise ValueError('installation receipt requires exact neutral readiness')
+    binding = result['identities']['installedBinding']
+    value = binding['value']
+    observed = result['activation']['value']
+    journal = result['journals']['activation.json']['value']
+    controller = journal['controller']
+    activation.validate_journal(journal)
+    if (value['kernel'] != host.running_kernel() or
+            journal['phase'] != 'complete-neutral' or
+            any(controller[name] for name in ('generation', 'id', 'error', 'route', 'flags'))):
+        raise ValueError('installation receipt lacks neutral activation provenance')
+    deployed = host.deployment_removal_plan()
+    if admin.digest(deployment.journal_bytes(deployed)) != observed['lastDeploymentSha256']:
+        raise ValueError('deployment changed during installation receipt observation')
+    receipt = {'readinessContract': CONTRACT, 'bindingSha256': binding['sha256'],
+        'artifactSetSha256': value['artifactSetSha256'], 'sourceCommit': value['sourceCommit'],
+        'productVersion': value['productVersion'], 'targetKernel': value['kernel'],
+        'compatibilityIdentities': value['compatibilityIdentities'],
+        'deploymentPlanSha256': deployment.plan_hash(deployed),
+        'activationPlanSha256': journal['planSha256'], 'activationRequestId': journal['requestId'],
+        'controllerSession': controller['session'], 'controllerGeneration': 0,
+        'state': 'neutral_ready', 'route': None, 'output': 'disabled'}
+    return {'schemaVersion': 1, 'contract': UPDATE_CONTRACT,
+            'operation': 'installation-status', 'status': 'neutral_ready', 'receipt': receipt}
+
+
+def update_execute(host, request, approved):
+    with host.update_lock():
+        reviewed = update_plan(host, request)
+        if reviewed['planSha256'] != approved:
+            raise ValueError('stale update plan; inspect and plan again before mutation')
+        selected = reviewed['plan']
+        action, detail = selected['action'], selected['evidence']
+        if action == 'recover-route':
+            reply = host.update_route_recover(detail)
+            if reply.get('status') != 'recovered-inhibited':
+                raise ValueError('route recovery failed; preserve evidence and re-plan')
+        elif action == 'recover-activation':
+            host.activation_recover(detail, activation.plan_digest(detail))
+        elif action == 'retire-activation':
+            host.activation_retire(detail, activation.plan_digest(detail))
+        elif action == 'stop-manager':
+            host.update_stop_socket(detail)
+        elif action == 'remove-deployment':
+            host.deployment_remove(detail, deployment.plan_hash(detail))
+        elif action != 'prepared':
+            raise ValueError('unsupported update action')
+        # Re-plan, rather than trusting a primitive's exit code. The next public
+        # result proves whether preparation is complete or another step remains.
+        following = update_plan(host, request)
+        if following['planSha256'] == approved and action != 'prepared':
+            raise ValueError('update did not advance; no effect will be retried')
+        return {'schemaVersion': 1, 'contract': UPDATE_CONTRACT,
+                'operation': 'update-execute', 'identity': request,
+                'planSha256': approved, 'status': following['status'],
+                'postconditions': following['postconditions']}
+
 
 def inspect(host, bundle=None, requested=None, configured=None, persisted=None):
     binding = host.binding()
@@ -459,7 +693,7 @@ def classify(result, activation_recovery_plan=None):
     controller_ready = (controller.get('flags') == admin.CONSUMER | admin.PINNED and
                         controller.get('error') == 0 and controller.get('route') in (1, 2))
     neutral = (activation_observation.get('status') == 'observed' and
-        activation.neutral_ready(activation_observation['value']))
+        activation.neutral_ready(activation_observation['value'], current_service=True))
     post_reboot_restartable = False
     post_reboot_blocked = False
     current_route_ancestry = False
@@ -633,7 +867,7 @@ def emit(value):
 
 def main(host=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('operation', choices=('inspect', 'plan', 'ensure',
+    parser.add_argument('operation', choices=('capabilities', 'installation-status', 'update-plan', 'update-execute', 'inspect', 'plan', 'ensure',
         'remove-plan', 'remove',
         'activation-plan', 'activation-ensure', 'activation-recover-plan',
         'activation-recover', 'activation-retire-plan', 'activation-retire',
@@ -644,8 +878,29 @@ def main(host=None):
     parser.add_argument('--requested-route', choices=ROUTES)
     parser.add_argument('--configured-route', choices=ROUTES)
     parser.add_argument('--persisted-route', choices=ROUTES)
+    parser.add_argument('--source-commit')
+    parser.add_argument('--binding-sha256')
+    parser.add_argument('--artifact-set-sha256')
+    parser.add_argument('--deployment-sha256')
     args = parser.parse_args()
     host = host or Host()
+    if args.operation == 'capabilities':
+        emit({'schemaVersion': 1, 'contract': UPDATE_CONTRACT,
+              'operation': 'capabilities', 'capabilities': ['update-plan', 'update-execute', 'installation-status'],
+              'predecessorContracts': [runtime_binding.CONTRACT]})
+        return 0
+    if args.operation == 'installation-status':
+        emit(installation_status(host))
+        return 0
+    if args.operation in ('update-plan', 'update-execute'):
+        if any(value is not None for value in (args.bundle, args.route,
+                args.requested_route, args.configured_route, args.persisted_route)):
+            raise ValueError('update preparation accepts no bundle or route selection')
+        request = update_request(args.source_commit, args.binding_sha256,
+                                 args.artifact_set_sha256, args.deployment_sha256)
+        emit(update_plan(host, request) if args.operation == 'update-plan' else
+             update_execute(host, request, args.plan_sha256))
+        return 0
     if args.operation in ('plan', 'ensure') and args.bundle is None:
         raise ValueError('--bundle is required')
     if args.operation in ('route-plan', 'route-ensure') and args.route is None:

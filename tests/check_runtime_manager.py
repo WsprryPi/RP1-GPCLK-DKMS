@@ -467,6 +467,39 @@ class Tests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'substituted runtime unit'):
                 deploy.Files().preflight_removal()
 
+    def test_provider_recovery_revalidates_state_under_controller_lock(self):
+        system = System()
+        reviewed = manager.response(system, 'query', system.call())['state']
+        reviewed['bindingSha256'] = 'f' * 64
+        request = {'schemaVersion': 3, 'operation': 'recover', 'execute': True,
+                   'requestId': 'provider-1234', 'actor': 'offline.test'}
+        with patch.object(admin, 'execute') as effects:
+            with self.assertRaisesRegex(ValueError, 'stale provider recovery'):
+                manager._dispatch(request, lambda: system, expected_recovery=reviewed)
+        effects.assert_not_called()
+        self.assertIsNone(system.record)
+
+    def test_removal_preflight_accepts_only_attributed_missing_units(self):
+        files = Files()
+        retained = deploy.plan(files, deployment_values(journals_none=True))
+        missing = {'load': 'not-found', 'active': 'inactive',
+                   'enabled': '', 'fragment': ''}
+        for mutation in ('none', 'foreign-file', 'unowned-before', 'no-plan'):
+            with self.subTest(mutation=mutation):
+                value = copy.deepcopy(retained)
+                if mutation == 'unowned-before':
+                    value['files']['/usr/lib/systemd/system/rp1-gpclk-route-manager.socket']['before'] = deploy.encode(b'old')
+                with patch.object(deploy.Files, 'preflight'), \
+                     patch.object(Path, 'exists', return_value=False), \
+                     patch.object(admin, 'systemd_unit', return_value=missing), \
+                     patch.object(deploy.Files, 'read', return_value=b'foreign' if mutation == 'foreign-file' else None), \
+                     patch.object(deploy, 'removal_plan', side_effect=ValueError('no plan') if mutation == 'no-plan' else None, return_value=value):
+                    if mutation == 'none':
+                        deploy.Files().preflight_removal()
+                    else:
+                        with self.assertRaises(ValueError):
+                            deploy.Files().preflight_removal()
+
     def test_quiescence_failure_preserves_barrier(self):
         files = Files()
         value = deploy.plan(files, deployment_values())
