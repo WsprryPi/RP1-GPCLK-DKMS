@@ -523,6 +523,7 @@ class Tests(unittest.TestCase):
                 ('retire-transactions', current)))
         host = provider.Host.__new__(provider.Host)
         host.files = SimpleNamespace(
+            read=lambda path: None,
             prune_removed_directories=lambda: events.append(('prune', None)))
         with patch.object(provider.deployment, 'mutation_lock',
                           return_value=contextlib.nullcontext()), \
@@ -1061,6 +1062,12 @@ class RemovalHost(UpdateHost):
         self.system.journal = None
         self.system.records = {}
         self.files.prune_removed_directories = lambda: None
+        self.system.binding = self.system_binding
+    def system_binding(self):
+        raw = self.files.read(provider.deployment.BINDING)
+        if raw is None:
+            raise FileNotFoundError(provider.deployment.BINDING)
+        return raw, binding.validate(provider.admin.strict_json(raw))
     def binding(self):
         raw = self.files.read(provider.deployment.BINDING)
         return {'status': 'absent'} if raw is None else {
@@ -1293,6 +1300,28 @@ class UpdateTests(unittest.TestCase):
             provider.update_execute(host, request, retry['planSha256'])
         self.assertEqual(host.files.count, writes)
         host.files.values[path] = None
+        retry = provider.update_plan(host, request)
+        self.assertEqual(provider.update_execute(host, request, retry['planSha256'])['status'], 'prepared')
+
+    def test_interrupted_inverse_refuses_remaining_route_journals(self):
+        host = RemovalHost(); request = self.request(host)
+        plan = provider.update_plan(host, request)
+        host.files.restore_fails = True
+        with self.assertRaisesRegex(ValueError, 'restore failed'):
+            provider.update_execute(host, request, plan['planSha256'])
+        self.assertIsNone(host.files.read(provider.deployment.BINDING))
+        host.files.restore_fails = False
+        for name in provider.activation.RETIREMENT_TRANSACTIONS:
+            with self.subTest(journal=name):
+                path = str(provider.admin.STATE / name)
+                host.files.values[path] = b'{"foreign":true}'
+                writes = host.files.count
+                with self.assertRaises(ValueError):
+                    retry = provider.update_plan(host, request)
+                    provider.update_execute(host, request, retry['planSha256'])
+                self.assertEqual(writes, host.files.count)
+                self.assertEqual(host.files.values[path], b'{"foreign":true}')
+                host.files.values[path] = None
         retry = provider.update_plan(host, request)
         self.assertEqual(provider.update_execute(host, request, retry['planSha256'])['status'], 'prepared')
 

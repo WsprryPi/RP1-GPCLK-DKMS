@@ -23,6 +23,11 @@ reconstructs it under application mutation exclusion and rejects drift before
 effects. Existing primitives retain their deployment/controller locks and
 revalidation. Each effect has its own reviewed step; failed execution is never
 automatically retried. A new plan observes the completed or interrupted state.
+An interrupted inverse may already have removed the installed binding and its
+helpers. Recovery uses the digest-bound retained inverse and verifies that the
+activation and dependent route journals are absent before resuming file
+restoration. A remaining or changed journal is a refusal; missing removed
+prerequisites never justify reconstructing or discarding journal ownership.
 
 Successful preparation removes only the exact runtime deployment. The inverse
 may restore the application service intent captured before deployment; success
