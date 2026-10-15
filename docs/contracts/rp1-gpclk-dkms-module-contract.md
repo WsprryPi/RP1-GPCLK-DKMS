@@ -313,6 +313,17 @@ post-boot active routes separate, rejects ambiguous ownership, and exposes no
 qualification-plan interface. Package installation remains route-neutral and
 does not create runtime state.
 
+The [package transition contract](../operator/package-lifecycle.md) requires
+read-only preflight before the package manager, exact inactive ownership, complete
+payload identity and native DKMS/cache agreement. Same-version replacement
+rebuilds every eligible installed kernel. The selected historical predecessor is
+`a1cb772107ba46f626b67af0b83a45c7b54ede78` (`0.9.0-1`); its boot/systemd
+lifecycle differs. Direct upgrade/downgrade is refused. Owning predecessor removal
+precedes clean successor installation; rollback removes the successor before exact
+retained predecessor reinstall. No package transition restores runtime sessions,
+application state or qualification. Native kernel hooks remain distribution-owned;
+external orchestration must retain the documented preflight and state audits.
+
 Signing keys and trust enrollment are administrator-owned. No private key is
 distributed or created as a silent installation side effect. Signing proves
 provenance and possible load eligibility; it does not qualify behavior.

@@ -109,7 +109,9 @@ compact format fixture, not WsprryPi implementation or acceptance evidence.
 Refresh the read-only consumer comparison when selecting an acceptance candidate.
 
 Hand the exact candidate directory, source commit/tree, checksum file and retained
-build environment to package lifecycle and `0.9.0` to `1.0.0` validation (Item 15).
+build environment to [package lifecycle validation](package-lifecycle.md) (Item 15).
+The historical `0.9.0` transition uses owning removal followed by clean installation;
+direct replacement and in-place downgrade are refused.
 Then use the supported exact-source/test path for current WsprryPi `devel`
 acceptance of those same identities (Item 16), including its update, rollback,
 ownership and runtime contracts. Repair application-owned version fixtures and

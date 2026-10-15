@@ -16,11 +16,11 @@ jobs:
         run: |
           ./scripts/render-development-tree --source . --output /tmp/rp1-development-render
           python3 -c 'import json,jsonschema; jsonschema.Draft202012Validator(json.load(open("schema/rp1-gpclk-source-development-manifest.schema.json"))).validate(json.load(open("/tmp/rp1-development-render/DEVELOPMENT_MANIFEST.json")))'
-      - name: Reject silent Debian downgrade
+      - name: Reject direct predecessor upgrade and silent downgrade
         run: |
           if sh debian/rp1-gpclk-dkms.preinst upgrade 9.9.9-1 > /tmp/downgrade-result 2>&1; then exit 1; fi
           grep -q downgrade /tmp/downgrade-result
-          sh debian/rp1-gpclk-dkms.preinst upgrade 0.9.0-1
+          if sh debian/rp1-gpclk-dkms.preinst upgrade 0.9.0-1; then exit 1; fi
           sh debian/rp1-gpclk-dkms.preinst upgrade 1.0.0-1
       - name: Build and independently validate the unpublished candidate
         run: |
@@ -31,3 +31,29 @@ jobs:
           test "$(dpkg-deb -f /tmp/rp1-candidate/rp1-gpclk-dkms_1.0.0-1_all.deb Version)" = 1.0.0-1
           dpkg --compare-versions 0.9.0-1 lt 1.0.0-1
           dpkg --compare-versions 9.9.9-1 gt 1.0.0-1
+  lifecycle:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6, Node 24
+        with:
+          fetch-depth: 0
+      - name: Provision disposable Debian and exact representative headers
+        run: docker build -t rp1-lifecycle -f tools/package-lifecycle.Containerfile .
+      - name: Rebuild exact candidate and selected historical predecessor
+        run: |
+          mkdir -p /tmp/rp1-lifecycle-inputs
+          chmod 0777 /tmp/rp1-lifecycle-inputs
+          docker run --rm --network none --cap-drop ALL --user nobody \
+            -e SOURCE_COMMIT="$(git rev-parse HEAD)" \
+            -v "$PWD:/source:ro" -v /tmp/rp1-lifecycle-inputs:/output \
+            -w /source rp1-lifecycle sh -eu -c '
+              ./scripts/build-release-candidate --version 1.0.0 --source-commit "$SOURCE_COMMIT" --output /output/candidate
+              ./scripts/validate-release-candidate --candidate /output/candidate --source-commit "$SOURCE_COMMIT"
+              ./scripts/build-lifecycle-predecessor --source-commit a1cb772107ba46f626b67af0b83a45c7b54ede78 --output /output/predecessor'
+      - name: Real package and DKMS lifecycle with controlled faults
+        run: |
+          python3 tools/run-package-lifecycle.py --image rp1-lifecycle \
+            --candidate /tmp/rp1-lifecycle-inputs/candidate \
+            --predecessor /tmp/rp1-lifecycle-inputs/predecessor \
+            --output /tmp/rp1-lifecycle-results

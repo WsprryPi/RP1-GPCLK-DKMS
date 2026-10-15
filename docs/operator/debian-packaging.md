@@ -28,7 +28,7 @@ generator is invoked.
 
 The package installs the route executor at `/usr/sbin/rp1-gpclk-route-manager`
 and a matching `/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager`, its versioned
-schema, consumer documentation, read-only package preflight and disabled socket
+schema, consumer documentation, read-only package preflight, explicit module-index verification and disabled socket
 and service template. It creates the `rp1-gpclk-route` group if absent. It does
 not enroll application accounts, create runtime bindings/journals, enable or
 start a socket, reload systemd, or copy overlays into `/boot`. Firmware-overlay
@@ -43,7 +43,7 @@ No application source or qualification harness is packaged.
 
 ## Prerequisites and passive lifecycle
 
-The package requires DKMS 3.2.2 through the 3.2 series, Python,
+The package requires DKMS 3.2.2 through the 3.2 series, Python, OpenSSL,
 device-tree-compiler, zstd and adduser. The DKMS bound limits native helper behavior
 to the reviewed lifecycle family; older or newer families require explicit
 compatibility review rather than silently inheriting passive-install claims. Before
@@ -62,7 +62,7 @@ nonempty `modprobe_on_install`, `post_transaction` or `symlink_modules`, and
 package-specific override files, are refused. Even the string `false` is
 nonempty to DKMS. Dynamic configuration is not executed by the guard.
 
-For signing-capable header trees, the guard requires an existing administrator
+For signing-capable effective DKMS header configurations, the guard requires an existing administrator
 key and certificate before DKMS can generate replacements. Filesystem keys must
 be root-owned mode 0600; public certificates must be root-owned and not writable
 by group/others. The guard neither reads private key bytes nor creates keys.
@@ -75,23 +75,29 @@ is selected. This does not change the immutable production load-time default.
 
 ## Transitions, removal and rollback
 
-Debian ordering permits `0.9.0-1` to `1.0.0-1`, repeated installation and
-same-version reinstall; a downgrade is refused. Real package lifecycle and
-interruption validation, including predecessor maintainer scripts, remain a
-separate gate. A build or deterministic fixture does not establish target success.
+The supported transition policy is [package lifecycle and recovery](package-lifecycle.md).
+The authoritative `0.9.0` predecessor is
+`a1cb772107ba46f626b67af0b83a45c7b54ede78`. Its legacy package owns only the
+ordinary consumer and has boot-overlay/systemd lifecycle effects. Direct upgrade
+and downgrade are refused. Use owning predecessor cleanup/removal before clean
+`1.0.0` installation; rollback likewise removes the successor before reinstalling
+the exact retained predecessor. Never submit an old archive over an installed
+successor. Debian runs an outgoing prerm before an incoming preinst, so the
+read-only transition preflight must precede dpkg/APT.
 
-Before an authorized package removal or upgrade, the owning runtime workflow
-must recover/remove routes, unload both modules and remove its deployment.
-The package guard refuses retained runtime state. DKMS removes only the named
-version and its modules across kernels. Package removal does not interpret or
-remove foreign journals, boot state, administrator keys, trust entries or shared
-configuration. Former 0.9.0 boot copies require attributable predecessor cleanup.
+Repeated installation and same-version reinstall rebuild the attributable named
+DKMS instance across all eligible installed kernels. Incoming preinst embeds the
+exact new read-only guard. Complete dpkg data hashes, modes, private directories,
+DKMS source/kernel links and installed/cache ELF identities must agree. Present
+modified or foreign objects are preserved through refusal; missing data may be
+restored by an exact reinstall. Removal and purge retain administrator signing
+material, trust, shared configuration, the route group and unrelated state.
+Runtime/development/application-owned records require their owning cleanup first.
 
-Retain the exact predecessor package or source/rollback record, its checksums,
-installed compressed module bytes, decompressed ELF identities and any runtime
-binding/inverse before replacement. An exact rollback uses that predecessor's
-owning workflow after verified inactive cleanup of the successor. There is no
-force flag, automatic downgrade or invented predecessor package download.
+The maintained disposable Linux harness exercises real dpkg/APT and native DKMS;
+command failures and header signing/compression variants are recorded separately.
+It does not establish target module loading, service-manager behavior, trust
+enforcement, application acceptance or RF qualification.
 
 Target-built modules are not package payloads. For each installed kernel and
 both module names, record the actual `.ko`, `.ko.xz`, `.ko.gz`, `.ko.zst` or

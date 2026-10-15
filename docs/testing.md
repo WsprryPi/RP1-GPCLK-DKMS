@@ -149,3 +149,15 @@ No fixture installs a package or executes target/module/overlay effects.
 Target waveform and mode qualification belongs in the external WsprryPi Harness.
 No ordinary repository test authorizes installation, loading, GPIO, transmission,
 SDR capture or RF operation.
+
+## Debian lifecycle integration
+
+`make package-check` includes offline ownership, migration-policy and predecessor
+rendering regressions. The opt-in
+[disposable Linux harness](operator/package-lifecycle.md) additionally runs real
+Debian package/DKMS transitions. It is never launched by ordinary `make check`.
+Its container-only driver refuses host execution and unapproved capabilities or
+system bind mounts. Package operations are real; command faults and header
+signing/compression variants are explicitly recorded. Generated results remain
+outside the checkout. Source-development, package, target-loading, application
+and RF evidence remain distinct.

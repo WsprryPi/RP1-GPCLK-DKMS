@@ -87,6 +87,11 @@ def _validate_snapshot(candidate, commit):
             'unexpected maintainer script, trigger or control member')
     for name in ('preinst', 'postinst', 'prerm'):
         payload = control_map[name]['bytes']
+        if name == 'preinst':
+            embedded = (b"python3 -I - unpack <<'RP1_INCOMING_PREFLIGHT'\n"+
+                        files['scripts/package_preflight.py'][1]+b'RP1_INCOMING_PREFLIGHT\n')
+            require(payload.count(embedded) == 1, 'incoming read-only guard differs from source')
+            payload = payload.replace(embedded, b'')
         for word in (b'modprobe', b'insmod', b'rmmod', b'dtoverlay', b'systemctl',
                      b'deb-systemd', b'/boot/', b'/dev/rp1', b'gpioset'):
             require(word not in payload, 'forbidden maintainer-script action: '+name)

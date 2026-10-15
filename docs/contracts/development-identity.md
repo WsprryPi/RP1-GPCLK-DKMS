@@ -71,13 +71,15 @@ establish migration safety.
    enrollment/manager/runtime state block replacement. It retains `prior-source`
    and original installed/compressed module files in the new evidence directory,
    with hashes and DKMS status in `ROLLBACK.json`, before removing the instance.
-3. **Package transitions:** Debian version ordering permits `0.9.0-1` to
-   `1.0.0-1` and same-version reinstall. The package refuses downgrades;
-   an exact rollback requires retained predecessor bytes and its owning removal
-   workflow. Read-only pre-unpack checks preserve foreign or changed package
-   payloads. Before DKMS effects, package preflight requires inactive provider
-   state and passive DKMS/signing configuration. Real lifecycle validation remains
-   a separate gate; predecessor maintainer scripts also require that validation.
+3. **Package transitions:** same-version reinstall is supported only for exact
+   attributable inactive package state. The selected historical `0.9.0`
+   predecessor is `a1cb772107ba46f626b67af0b83a45c7b54ede78`. Direct upgrades
+   from it and in-place downgrades are refused. Use owning predecessor cleanup
+   and removal before successor installation. Exact rollback removes the
+   successor before reinstalling retained predecessor bytes; it does not restore
+   runtime or application state. An external read-only preflight precedes dpkg/APT
+   because Debian invokes the outgoing prerm first. See the current
+   [package transition procedure](../operator/package-lifecycle.md).
 4. **Source-development non-current installation:** no general compatibility,
    adoption or automated migration is claimed. Source workflows fail closed on non-current or foreign
    DKMS, source, module, overlay, enrollment, manager, or runtime state. A

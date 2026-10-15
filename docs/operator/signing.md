@@ -69,10 +69,16 @@ A key shared with another module is therefore intentionally retained.
 
 The 1.0.0 package reads static DKMS framework configuration before native DKMS
 effects. It refuses automatic module loading, post-transaction hooks, dynamic
-configuration and module-specific overrides. For installed signing-capable
-header trees it requires an existing secure filesystem key and public
+configuration and module-specific overrides. For installed signing-capable effective DKMS configurations
+(`include/config/auto.conf`, with `.config` fallback) it requires an existing secure filesystem key and public
 certificate before DKMS can generate a replacement. PKCS#11/dynamic signing
 setups require a separately reviewed guard extension; they are not silently
-interpreted. No source or Debian candidate contains a compiled or signed module.
+interpreted. Native libkmod compression support is also a prerequisite; for example a
+`-ZLIB` build cannot validate gzip modules. Unsupported formats are refused
+before package effects. Required installed signatures are verified against the exact selected public
+certificate, including its validity period. A native DKMS warning after sign-file
+failure cannot silently accept an unsigned result. Cryptographic verification
+does not establish running-kernel trust, code-signing EKU policy or load eligibility.
+No source or Debian candidate contains a compiled or signed module.
 See [package prerequisites](debian-packaging.md) and
 [candidate provenance](release-candidate.md).

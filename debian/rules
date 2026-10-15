@@ -30,6 +30,10 @@ override_dh_compress:
 override_dh_dkms:
 	dh_dkms -V $(MODULE_VERSION)
 
+override_dh_installdeb:
+	dh_installdeb
+	python3 scripts/package_stage.py --preinst debian/$(PACKAGE)
+
 override_dh_auto_clean:
 	rm -rf debian/build
 

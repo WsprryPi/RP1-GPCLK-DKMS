@@ -23,6 +23,7 @@ development-frequency-sweep-client:
 
 package-check:
 	python3 tests/check_debian_packaging.py
+	python3 tests/check_package_lifecycle.py
 
 clean:
 	@test -n "$(KERNEL_BUILD)" || { echo "KERNEL_BUILD=/path/to/kernel/build is required"; exit 2; }

@@ -21,6 +21,8 @@ def payload_sources(root=ROOT):
     result = {prefix+name: name for name in names}
     result.update({
         'usr/libexec/rp1-gpclk-dkms/package_preflight.py': 'scripts/package_preflight.py',
+        'usr/libexec/rp1-gpclk-dkms/package_indices.py': 'scripts/package_indices.py',
+        'usr/libexec/rp1-gpclk-dkms/package_signatures.py': 'scripts/package_signatures.py',
         'usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager': 'scripts/rp1-gpclk-route-manager.py',
         'usr/sbin/rp1-gpclk-route-manager': 'scripts/rp1-gpclk-route-manager.py',
         'usr/share/rp1-gpclk-dkms/1.0.0/rp1-gpclk-route-manager.schema.json': 'schema/rp1-gpclk-route-manager.schema.json',
@@ -55,11 +57,28 @@ def stage(destination):
         if (ROOT/source).is_symlink():
             raise ValueError('package source symlink')
         shutil.copyfile(ROOT/source, path)
-        path.chmod(0o755 if target.endswith('/rp1-gpclk-route-manager') else 0o644)
+        path.chmod(0o755 if target.endswith('/rp1-gpclk-route-manager') or
+                   target.startswith('usr/libexec/rp1-gpclk-dkms/') else 0o644)
     dkms = destination/'usr/src/rp1-gpclk-dkms-1.0.0/dkms.conf'
     dkms.write_text(render_dkms((ROOT/'dkms.conf').read_text()))
     dkms.chmod(0o644)
 
 
+def preinst(destination):
+    """Embed the incoming read-only guard before unpack; trust no old helper."""
+    path = destination/'DEBIAN/preinst'
+    marker = '# RP1_INCOMING_PREFLIGHT\n'
+    text = path.read_text()
+    if text.count(marker) != 1:
+        raise ValueError('incoming package guard marker differs')
+    guard = (ROOT/'scripts/package_preflight.py').read_text()
+    text = text.replace(marker, "python3 -I - unpack <<'RP1_INCOMING_PREFLIGHT'\n"+
+                        guard+"RP1_INCOMING_PREFLIGHT\n")
+    path.write_text(text)
+
+
 if __name__ == '__main__':
-    stage(Path(sys.argv[1]))
+    if len(sys.argv) == 3 and sys.argv[1] == '--preinst':
+        preinst(Path(sys.argv[2]))
+    else:
+        stage(Path(sys.argv[1]))

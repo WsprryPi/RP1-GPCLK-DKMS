@@ -1,0 +1,102 @@
+#!/usr/bin/python3 -I
+# SPDX-License-Identifier: MIT
+"""Render the maintainer-selected historical package for isolated lifecycle tests.
+
+This does not create a release or make historical maintainer scripts passive.
+"""
+import argparse
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+sys.dont_write_bytecode = True
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT/'scripts'))
+from release_contract import (build_environment, command, epoch, git, inventory,
+                              package_members, require, sha, source_files, tools, write_source)
+
+TRANSFORM = '\noverride_dh_builddeb:\n\tdh_builddeb -- -Zgzip -z9 --threads-max=1\n'
+
+
+def select(commit, record):
+    require(commit == record['sourceCommit'], 'ambiguous or unapproved predecessor; exact maintainer selection required')
+    require(len(commit) == 40 and all(c in '0123456789abcdef' for c in commit), 'full predecessor commit required')
+
+
+def render(files, record):
+    files = dict(files)
+    for path, key in (('debian/rules', 'rulesSha256'),
+                      ('include/uapi/linux/rp1_gpclk.h', 'consumerUapiSha256'),
+                      ('include/uapi/linux/rp1_route_admin.h', 'controllerUapiSha256')):
+        require(sha(files[path][1]) == record[key], 'predecessor source differs: '+path)
+    require(b'"0.9.0"' in files['include/rp1_gpclk/version.h'][1], 'predecessor module version differs')
+    original = files['debian/rules']
+    require(b'override_dh_builddeb:' not in original[1], 'unreviewed predecessor compression policy')
+    files['debian/rules'] = original[0], original[1]+TRANSFORM.encode()
+    return files, [{'path': 'debian/rules', 'operation': 'append-deterministic-compression',
+                    'beforeSha256': sha(original[1]), 'afterSha256': sha(files['debian/rules'][1]),
+                    'appendedBytes': TRANSFORM}]
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--source-commit', required=True)
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    record = json.loads((ROOT/'release/lifecycle-predecessor-v1.json').read_text())
+    select(args.source_commit, record)
+    require(sys.platform == 'linux', 'Linux Debian packaging tools required')
+    output = args.output
+    require(output.is_absolute() and output == output.resolve() and not output.exists() and
+            not output.is_relative_to(ROOT), 'new absolute output outside source required')
+    require(output.parent.is_dir(), 'output parent directory must exist')
+    checkout = subprocess.run(['git', '-C', str(output.parent), 'rev-parse', '--show-toplevel'],
+                              capture_output=True, env={'PATH': '/usr/bin:/bin',
+                              'GIT_CONFIG_GLOBAL': '/dev/null', 'GIT_CONFIG_NOSYSTEM': '1'})
+    require(checkout.returncode != 0, 'predecessor output must be outside every Git checkout')
+    require(git(ROOT, 'rev-parse', args.source_commit+'^{tree}').decode().strip() == record['sourceTree'],
+            'predecessor tree mismatch')
+    original = source_files(ROOT, args.source_commit)
+    files, changes = render(original, record)
+    require({n for n in files if files[n] != original[n]} == {'debian/rules'}, 'unrecorded predecessor transformation')
+    package = 'rp1-gpclk-dkms_0.9.0-1_all.deb'
+    outputs = []
+    for repeat in range(2):
+        with tempfile.TemporaryDirectory(prefix='rp1-predecessor-', dir='/tmp') as temporary:
+            root = Path(temporary)
+            source = root/'source'
+            write_source(files, source)
+            command(['dpkg-buildpackage', '--no-sign', '-b'], cwd=source,
+                    env=build_environment(epoch(ROOT, args.source_commit)))
+            require([p.name for p in root.glob('*.deb')] == [package], 'predecessor package set differs')
+            outputs.append((root/package).read_bytes())
+    require(outputs[0] == outputs[1], 'predecessor is not reproducible')
+    with tempfile.TemporaryDirectory(prefix='rp1-predecessor-inventory-', dir='/tmp') as temporary:
+        path = Path(temporary)/package
+        path.write_bytes(outputs[0])
+        members, controls = package_members(path)
+    record.update(package=package, packageSha256=sha(outputs[0]),
+                  packageInventory=inventory(members), controlInventory=inventory(controls),
+                  transformations=changes, reproducible=True,
+                  runtimeInputsUnchanged=True, packageScriptsPassive=False,
+                  build={'sourceDateEpoch': epoch(ROOT, args.source_commit), 'tools': tools()})
+    output.mkdir()
+    try:
+        (output/package).write_bytes(outputs[0])
+        (output/'predecessor.json').write_text(json.dumps(record, sort_keys=True, indent=2)+'\n')
+    except BaseException:
+        shutil.rmtree(output)
+        raise
+    print(json.dumps({'status': 'PASS', 'sourceCommit': args.source_commit,
+                      'packageSha256': sha(outputs[0]), 'published': False,
+                      'packageScriptsPassive': False}))
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, ValueError) as error:
+        print(json.dumps({'status': 'FAIL', 'error': str(error)[-8192:]}))
+        raise SystemExit(1)

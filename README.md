@@ -52,7 +52,7 @@ before installing over an existing version.
 
 DKMS builds the module for eligible installed Raspberry Pi kernel headers. The
 package installs the `GPIO4` and `GPIO20` overlays but leaves both inactive. Review
-the [package lifecycle guide](docs/operator/debian-packaging.md) before making
+the [package transition and recovery guide](docs/operator/package-lifecycle.md) before making
 any route, boot, module, or signing changes.
 
 For a local package-only build from reviewed source:

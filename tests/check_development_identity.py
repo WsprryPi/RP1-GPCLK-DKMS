@@ -115,18 +115,18 @@ with tempfile.TemporaryDirectory() as directory:
     path = Path(directory)/'dpkg'
     path.write_text('''#!/usr/bin/env python3
 import sys
-assert sys.argv[1] == '--compare-versions' and sys.argv[3:] == ['gt', '1.0.0-1']
-raise SystemExit(0 if sys.argv[2] == '9.9.9-1' else 1)
+assert sys.argv[1] == '--compare-versions' and sys.argv[3] in ('gt', 'lt') and sys.argv[4] == '1.0.0-1'
+raise SystemExit(0 if (sys.argv[2] == '9.9.9-1' and sys.argv[3] == 'gt') or (sys.argv[2] == '0.9.0-1' and sys.argv[3] == 'lt') else 1)
 ''')
     path.chmod(0o755)
-    for args, expected in ((['install'], 0), (['upgrade', '0.9.0-1'], 0), (['upgrade', '1.0.0-1'], 0),
+    for args, expected in ((['install'], 0), (['upgrade', '0.9.0-1'], 1), (['upgrade', '1.0.0-1'], 0),
                            (['upgrade', '9.9.9-1'], 1), (['install', '9.9.9-1'], 1)):
         result = subprocess.run(['sh', str(ROOT/'debian/rp1-gpclk-dkms.preinst'), *args],
             env={**os.environ, 'PATH': directory+os.pathsep+os.environ['PATH']},
             capture_output=True, text=True)
         assert result.returncode == expected, result.stderr
         if expected:
-            assert 'downgrade' in result.stderr
+            assert 'downgrade' in result.stderr or 'direct upgrade refused' in result.stderr
 print('Runtime bundle and Debian downgrade guards: PASS')
 
 import shutil

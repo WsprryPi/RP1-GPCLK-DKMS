@@ -63,8 +63,10 @@ investigated.
 
 ## Update and rollback
 
-Retain the installed instance until its replacement has passed all applicable
-build, signing, installation, output-inhibited runtime, and cleanup checks.
+Retain exact predecessor packages and recovery inputs until the replacement has
+passed its separately scoped checks. The [package transition procedure](package-lifecycle.md)
+requires owning removal before the historical `0.9.0` to `1.0.0` change and
+before exact remove/reinstall rollback. Direct upgrade/downgrade is refused.
 Version ordering alone does not establish compatibility.
 
 On failure, remove only state attributable to the failed replacement. Do not
