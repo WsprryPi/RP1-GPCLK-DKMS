@@ -25,8 +25,8 @@ MAX_MODULE_BYTES = 64 * 1024 * 1024
 def validate_module_version(payload):
     """Do not bind predecessor modules to current userspace/overlay source."""
     versions = re.findall(rb'(?:^|\x00)version=([^\x00]+)\x00', payload)
-    if versions != [b'0.9.0']:
-        raise ValueError('runtime module version differs from 0.9.0 development source')
+    if versions != [PRODUCT_VERSION.encode()]:
+        raise ValueError('runtime module version differs from 1.0.0 development source')
 
 
 def source_commit():

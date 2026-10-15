@@ -5,11 +5,11 @@
 #include <linux/types.h>
 
 #define RP1_GPCLK_COMPATIBILITY_ARCH "aarch64"
-#define RP1_GPCLK_COMPATIBILITY_VERSION "0.9.0"
+#define RP1_GPCLK_COMPATIBILITY_VERSION "1.0.0"
 #define RP1_GPCLK_GPIO4_COMPATIBILITY_ID \
-	"v0.9.0-rp1-gpio4"
+	"v1.0.0-rp1-gpio4"
 #define RP1_GPCLK_GPIO20_COMPATIBILITY_ID \
-	"v0.9.0-rp1-gpio20"
+	"v1.0.0-rp1-gpio20"
 
 bool rp1_gpclk_compatibility_allowed(__u32 route,
 				     const char *architecture,

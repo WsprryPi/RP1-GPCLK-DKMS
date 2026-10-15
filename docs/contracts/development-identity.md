@@ -2,7 +2,7 @@
 
 # Development identity and installation transitions
 
-The current pre-release development baseline is `0.9.0`. It includes finite
+The current source version is the unpublished `1.0.0` candidate. It includes finite
 generic events, fixed-memory DMA chunking, exact `GPIO4`/`GPIO20` selection,
 runtime switching through none, bounded cancellation/drain, and application restoration.
 WsprryPi owns present/future modes and product policy; DKMS enforces resource,
@@ -10,22 +10,22 @@ ownership, capability and cleanup contracts without a product-mode allowlist.
 
 | Identity | Current development contract |
 | --- | --- |
-| Product/upstream, consumer module, DKMS version | `0.9.0` |
-| Debian version | `0.9.0-1` |
+| Product/upstream, consumer module, DKMS version | `1.0.0` |
+| Debian version | `1.0.0-1` |
 | Package/DKMS name | `rp1-gpclk-dkms` |
-| Binary package filename | `rp1-gpclk-dkms_0.9.0-1_all.deb` |
+| Binary package filename | `rp1-gpclk-dkms_1.0.0-1_all.deb` |
 | Consumer module / endpoint | `rp1_gpclk_dkms` / `/dev/rp1-gpclk` |
-| Opt-in companion module | `rp1_route_controller`, version `0.9.0`; not default package content |
-| Source destination | `/usr/src/rp1-gpclk-dkms-0.9.0` |
-| Package schema directory | `/usr/share/rp1-gpclk-dkms/0.9.0` |
+| Controller module | `rp1_route_controller`, version `1.0.0`; part of the candidate DKMS package |
+| Source destination | `/usr/src/rp1-gpclk-dkms-1.0.0` |
+| Package schema directory | `/usr/share/rp1-gpclk-dkms/1.0.0` |
 | Transmission UAPI | exact `include/uapi/linux/rp1_gpclk.h` bytes and SHA-256 |
 | Administrative UAPI | exact `include/uapi/linux/rp1_route_admin.h` bytes |
 | Development manifest | `rp1-gpclk-source-development-manifest` |
 | Route-manager protocols | packaged/source and runtime profiles |
-| `GPIO4` compatibility ID | `v0.9.0-rp1-gpio4` |
-| `GPIO20` compatibility ID | `v0.9.0-rp1-gpio20` |
+| `GPIO4` compatibility ID | `v1.0.0-rp1-gpio4` |
+| `GPIO20` compatibility ID | `v1.0.0-rp1-gpio20` |
 | Classification | `source-development` / `Experimental`; not release-qualified |
-| Future tag convention | `vMAJOR.MINOR.PATCH`; no `v0.9.0` tag is created |
+| Future tag convention | `vMAJOR.MINOR.PATCH`; no `v1.0.0` tag is created |
 
 Product, Debian, DKMS, UAPI, and schema identities are distinct. Current
 compatibility IDs identify the RP1 resource contract and route. `Experimental`
@@ -35,7 +35,7 @@ of the compatibility ID and is not a per-release permission list. Exact hashes
 identify each build. Canonical route overlay names and endpoint nodes are stable
 and carry no product-version suffix.
 
-An operator may build `0.9.0` through DKMS for another stock Raspberry Pi kernel
+An operator may build `1.0.0` through DKMS for another stock Raspberry Pi kernel
 on a structurally compatible RP1 system without defining a new compatibility
 ID. The running kernel must still be identified, the module must be built for
 it, and all route, resource, ownership, signing, and cleanup checks still apply.
@@ -43,10 +43,14 @@ Such use establishes no support or qualification claim. A kernel change can
 change module bytes and therefore requires the normal DKMS rebuild and artifact
 identity checks.
 
-The supported development paths are `development-*` and the opt-in runtime
-manager. Release generation and finalization are disabled until the release
-pipeline has a reviewed current contract. Local Debian package builds are
-unpublished development artifacts, not release qualification.
+The supported development paths remain `development-*` and the explicit runtime
+manager. Source-development renders the same version with separate Experimental
+identity and no release metadata. The [candidate pipeline](../operator/release-candidate.md)
+produces the unpublished package and release-shaped consumer metadata from a
+clean exact commit. Candidate preparation does not freeze or publish the provider.
+The normalized predecessor for package-upgrade validation is `0.9.0-1`;
+`1.0.0` changes the SemVer major component. Version ordering alone does not
+establish migration safety.
 
 ## Maintainer transition policy
 
@@ -56,7 +60,7 @@ unpublished development artifacts, not release qualification.
    does not select a route, install or apply an overlay, enroll, load, edit boot
    configuration, operate a service, or enable output. Its manifest records
    `route: null` and exact installed identities. A route-specific maintainer may
-   instead render the exact `0.9.0` checkout with
+   instead render the exact `1.0.0` checkout with
    `scripts/render-development-tree --source SOURCE --output NEW_TREE`.
    The renderer derives the version from the canonical source header and changes
    only the DKMS placeholder and explicit development kernel filter.
@@ -67,8 +71,15 @@ unpublished development artifacts, not release qualification.
    enrollment/manager/runtime state block replacement. It retains `prior-source`
    and original installed/compressed module files in the new evidence directory,
    with hashes and DKMS status in `ROLLBACK.json`, before removing the instance.
-3. **Any non-current installation:** no general compatibility, adoption or
-   automated migration is claimed. Package and source workflows fail closed on non-current or foreign
+3. **Package transitions:** Debian version ordering permits `0.9.0-1` to
+   `1.0.0-1` and same-version reinstall. The package refuses downgrades;
+   an exact rollback requires retained predecessor bytes and its owning removal
+   workflow. Read-only pre-unpack checks preserve foreign or changed package
+   payloads. Before DKMS effects, package preflight requires inactive provider
+   state and passive DKMS/signing configuration. Real lifecycle validation remains
+   a separate gate; predecessor maintainer scripts also require that validation.
+4. **Source-development non-current installation:** no general compatibility,
+   adoption or automated migration is claimed. Source workflows fail closed on non-current or foreign
    DKMS, source, module, overlay, enrollment, manager, or runtime state. A
    maintainer must separately inventory ownership, quiesce the application,
    prove output/clock/DMA/GPIO cleanup, preserve a recovery point, and use the

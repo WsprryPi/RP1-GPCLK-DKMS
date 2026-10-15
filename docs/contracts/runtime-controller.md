@@ -22,7 +22,7 @@ identity JSON under `build/runtime-controller` come only from the two canonical
 DTS files, through the existing deterministic overlay builder. Neither controller
 ioctl nor userspace administration accepts an arbitrary overlay or path.
 
-The opt-in build produces `rp1_route_controller.ko` (version specified in the
+The runtime-controller build produces `rp1_route_controller.ko` (version specified in the
 [development identity contract](development-identity.md)) plus `rp1_gpclk_dkms.ko` with the `rp1_runtime_controller=1` modinfo marker
 and a link-time dependency on the controller. There is no OF autoload alias in
 this opt-in build: the administrator explicitly
@@ -30,9 +30,9 @@ loads it after APPLY, avoiding an automatic load racing that step. Its driver
 retains the OF match table for explicit binding. The default build retains its
 autoload alias. The consumer version follows the same development identity contract;
 changed bytes do not inherit qualification. The interlock constrains overlay
-ownership and consumer lifetime, not output policy. Default builds do not link
-the controller or change their administration interface. The ordinary package and
-DKMS profile remains unchanged. Exact-source orchestration may explicitly select
+ownership and consumer lifetime, not output policy. Ordinary direct builds do not link
+the controller or change their administration interface. The canonical 1.0.0 package selects this interlocked profile for both modules.
+Direct source builds retain the explicit opt-in flag and ordinary one-module default. Exact-source orchestration may explicitly select
 the `runtime-controller` DKMS profile; that one DKMS instance builds, installs,
 tracks, and rolls back both modules. The runtime bundle binds those installed
 module artifacts as external prerequisites and never installs a second copy.

@@ -20,8 +20,8 @@ for boundary in ("fixture blockage", "semantic validator", "exactly one",
                  "immutable", "terminal-silence", "REQUIRED-BEFORE-LIVE"):
     assert boundary in plain
 for route_id in (
-    "v0.9.0-rp1-gpio4",
-    "v0.9.0-rp1-gpio20",
+    "v1.0.0-rp1-gpio4",
+    "v1.0.0-rp1-gpio20",
 ):
     assert route_id in (ROOT / "docs/contracts/development-identity.md").read_text()
 for prohibited in ("/dev/mem", "automatic fallback", "generic event"):

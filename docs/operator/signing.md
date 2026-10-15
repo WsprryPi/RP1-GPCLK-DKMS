@@ -64,3 +64,15 @@ entries, hardware tokens, and DKMS-global configuration, and reports that
 retention. Removing trust is a separate administrator action after auditing all
 local modules. A key used to sign another local module must not be deleted.
 A key shared with another module is therefore intentionally retained.
+
+## Candidate package guard
+
+The 1.0.0 package reads static DKMS framework configuration before native DKMS
+effects. It refuses automatic module loading, post-transaction hooks, dynamic
+configuration and module-specific overrides. For installed signing-capable
+header trees it requires an existing secure filesystem key and public
+certificate before DKMS can generate a replacement. PKCS#11/dynamic signing
+setups require a separately reviewed guard extension; they are not silently
+interpreted. No source or Debian candidate contains a compiled or signed module.
+See [package prerequisites](debian-packaging.md) and
+[candidate provenance](release-candidate.md).

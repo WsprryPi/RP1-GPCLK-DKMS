@@ -133,8 +133,8 @@ sudo ./scripts/development-overlay rollback --manifest MANIFEST
 ```
 
 Before enrolling, query the loaded module and require compatibility ID
-`v0.9.0-rp1-gpio4` or `v0.9.0-rp1-gpio20` for the selected route. If an existing
-`0.9.0` installation reports another identifier, keep output inhibited, remove
+`v1.0.0-rp1-gpio4` or `v1.0.0-rp1-gpio20` for the selected route. If an existing
+`1.0.0` installation reports another identifier, keep output inhibited, remove
 its enrollment using the removal command in that enrollment record, perform the
 guarded same-version replacement, and enroll the current installation. Do not
 edit an enrollment record or substitute an expected identifier for the value

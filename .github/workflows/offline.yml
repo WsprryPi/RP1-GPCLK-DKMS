@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6, Node 24
       - name: Install build tools
-        run: sudo apt-get update && sudo apt-get install -y build-essential device-tree-compiler shellcheck debhelper dh-dkms python3-jsonschema
+        run: sudo apt-get update && sudo apt-get install -y build-essential device-tree-compiler shellcheck debhelper dh-dkms python3-jsonschema zstd
       - name: Offline contracts and host C tests
         run: make check
       - name: Validate exact development manifest schema
@@ -21,10 +21,13 @@ jobs:
           if sh debian/rp1-gpclk-dkms.preinst upgrade 9.9.9-1 > /tmp/downgrade-result 2>&1; then exit 1; fi
           grep -q downgrade /tmp/downgrade-result
           sh debian/rp1-gpclk-dkms.preinst upgrade 0.9.0-1
-      - name: Build unpublished development package
-        run: dpkg-buildpackage -us -uc -b
+          sh debian/rp1-gpclk-dkms.preinst upgrade 1.0.0-1
+      - name: Build and independently validate the unpublished candidate
+        run: |
+          ./scripts/build-release-candidate --version 1.0.0 --source-commit "$(git rev-parse HEAD)" --output /tmp/rp1-candidate
+          ./scripts/validate-release-candidate --candidate /tmp/rp1-candidate --source-commit "$(git rev-parse HEAD)"
       - name: Validate package version and ordering
         run: |
-          test "$(dpkg-deb -f ../rp1-gpclk-dkms_0.9.0-1_all.deb Version)" = 0.9.0-1
+          test "$(dpkg-deb -f /tmp/rp1-candidate/rp1-gpclk-dkms_1.0.0-1_all.deb Version)" = 1.0.0-1
           dpkg --compare-versions 0.9.0-1 lt 1.0.0-1
-          dpkg --compare-versions 9.9.9-1 gt 0.9.0-1
+          dpkg --compare-versions 9.9.9-1 gt 1.0.0-1

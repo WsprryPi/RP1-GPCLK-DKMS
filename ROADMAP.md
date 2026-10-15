@@ -17,8 +17,9 @@ Status: ✅ complete · ⏳ in progress · ⬜ not started
 11. ✅ Clean historical publication and repository material.
 12. ✅ Implement product improvements.
 13. ✅ Assess and apply only justified hardening.
-14. ⬜ Build the canonical 1.0.0 release candidate.
+14. ✅ Build the canonical 1.0.0 release candidate.
 15. ⬜ Validate the package lifecycle and 0.9-to-1.0 upgrades.
-16. ⬜ Freeze source and reproducible release artifacts.
+16. ⬜ Accept the exact candidate against WsprryPi `devel`, then freeze source
+    and reproducible release artifacts.
 17. ⬜ Publish DKMS, integrate immutable identities into WsprryPi, and release
     in dependency order.

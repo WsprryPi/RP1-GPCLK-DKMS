@@ -101,9 +101,9 @@ class Host:
             ('deployment-pending.json', 'transaction.json', 'manager.json',
              'application.json', 'activation.json')}
         self._modules = {
-            'rp1_route_controller': {'status': 'loaded', 'version': '0.9.0',
+            'rp1_route_controller': {'status': 'loaded', 'version': '1.0.0',
                 'buildNoteSha256': self.value['controllerNoteSha256']},
-            'rp1_gpclk_dkms': {'status': 'loaded', 'version': '0.9.0',
+            'rp1_gpclk_dkms': {'status': 'loaded', 'version': '1.0.0',
                 'buildNoteSha256': self.value['consumerNoteSha256']}}
         self._modules['rp1_gpclk_dkms']['outputInhibited'] = False
         self._endpoints = {name: {'status': 'owned', 'open': False}
@@ -419,7 +419,7 @@ class Tests(unittest.TestCase):
                 **Host.services(host), 'wsprrypi.service': {
                     'load': 'loaded', 'active': 'inactive', 'enabled': 'enabled'}}),
             lambda host: host._modules.update(rp1_gpclk_dkms={
-                'status': 'loaded', 'version': '0.9.0',
+                'status': 'loaded', 'version': '1.0.0',
                 'buildNoteSha256': host.value['consumerNoteSha256']}),
             lambda host: host._endpoints['/dev/rp1-gpclk'].update(status='owned'),
             lambda host: setattr(host, 'activation_recovery_plan', lambda: {
@@ -789,7 +789,7 @@ class Tests(unittest.TestCase):
         import tempfile
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            payload = (b'\x7fELF\x02\x01\0version=0.9.0\0vermagic=' +
+            payload = (b'\x7fELF\x02\x01\0version=1.0.0\0vermagic=' +
                        KERNEL.encode() + b' fixture')
             compressed = root/'rp1_gpclk_dkms.ko.xz'
             compressed.write_bytes(lzma.compress(payload))
@@ -813,9 +813,9 @@ class Tests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory); modules = root/'modules'; modules.mkdir()
             prefix = b'\x7fELF\x02\x01'
-            consumer = (prefix + b'version=0.9.0\0rp1_runtime_controller=1\0' +
+            consumer = (prefix + b'version=1.0.0\0rp1_runtime_controller=1\0' +
                 b'rp1_route_controller\0vermagic=' + KERNEL.encode() + b' ')
-            controller_data = prefix + b'version=0.9.0\0vermagic=' + KERNEL.encode() + b' '
+            controller_data = prefix + b'version=1.0.0\0vermagic=' + KERNEL.encode() + b' '
             for route in ('gpio4', 'gpio20'):
                 controller_data += (bundle_builder.ROOT/'build/runtime-controller'/
                                     (route+'.dtbo')).read_bytes()

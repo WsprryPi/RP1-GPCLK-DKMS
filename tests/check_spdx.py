@@ -9,13 +9,15 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED = {
     ".c": {"MIT", "GPL-2.0-only OR MIT"},
+    ".cpp": {"MIT"},
     ".h": {"GPL-2.0-only OR MIT", "(GPL-2.0-only WITH Linux-syscall-note) OR MIT"},
     ".md": {"MIT"},
     ".json": {"MIT"},
     ".py": {"MIT"},
     ".sh": {"MIT"},
+    ".dts": {"GPL-2.0-only OR MIT"},
 }
-SCAN = ["docs", "include", "schema", "src", "tests"]
+SCAN = ["docs", "include", "schema", "src", "tests", "scripts", "controller", "release", "overlays"]
 ROOT_FILES = ["Kbuild", "Makefile", "dkms.conf"]
 
 

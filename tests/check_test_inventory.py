@@ -15,6 +15,7 @@ RUNNERS = (
 PARAMETERIZED_UTILITIES = {"check_built_module.py"}
 TARGET_ONLY_C_CLIENTS = {"development_fault_client.c",
                          "development_tone_client.c"}
+HOST_CPP_TESTS = {"uapi_cpp.cpp"}
 TARGET_ONLY_CPP_CLIENTS = {"development_frequency_sweep.cpp"}
 
 checks = {path.name for path in TESTS.glob("check_*.py")}
@@ -40,7 +41,9 @@ if missing_clients:
     raise SystemExit(f"classified target clients are missing: {sorted(missing_clients)}")
 
 cpp_clients = {path.name for path in TESTS.glob("*.cpp")}
-unclassified_cpp = cpp_clients - TARGET_ONLY_CPP_CLIENTS
+unclassified_cpp = cpp_clients - TARGET_ONLY_CPP_CLIENTS - HOST_CPP_TESTS
+if not HOST_CPP_TESTS <= cpp_clients or any(name not in RUNNERS[0] for name in HOST_CPP_TESTS):
+    raise SystemExit("host C++ test missing or unregistered")
 missing_cpp_clients = TARGET_ONLY_CPP_CLIENTS - cpp_clients
 if unclassified_cpp:
     raise SystemExit(f"unregistered C++ tests: {sorted(unclassified_cpp)}")
@@ -49,5 +52,6 @@ if missing_cpp_clients:
 
 print(f"test inventory: PASS ({len(registered)} registered, "
       f"{len(PARAMETERIZED_UTILITIES)} parameterized utility, "
-      f"{len(registered_c)} host C tests, {len(TARGET_ONLY_C_CLIENTS)} target C client, "
+      f"{len(registered_c)} host C tests, {len(HOST_CPP_TESTS)} host C++ test, "
+      f"{len(TARGET_ONLY_C_CLIENTS)} target C client, "
       f"{len(TARGET_ONLY_CPP_CLIENTS)} target C++ client)")

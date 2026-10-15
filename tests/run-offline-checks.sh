@@ -20,6 +20,7 @@ python3 "$repo_dir/tests/check_pll_sys_parent_contract.py"
 python3 "$repo_dir/tests/check_build_contract.py"
 python3 "$repo_dir/tests/check_route_uapi_contract.py"
 python3 "$repo_dir/tests/check_debian_packaging.py"
+python3 "$repo_dir/tests/check_release_candidate.py"
 python3 "$repo_dir/tests/check_overlay_admin_contract.py"
 python3 "$repo_dir/tests/check_signing_policy.py"
 python3 "$repo_dir/tests/check_diagnostics_contract.py"
@@ -39,7 +40,10 @@ python3 "$repo_dir/tests/check_doc_links.py"
 
 if command -v shellcheck >/dev/null 2>&1; then
     shellcheck "$repo_dir/tests/run-offline-checks.sh" \
-        "$repo_dir/scripts/rp1-gpclk-lifecycle.sh"
+        "$repo_dir/scripts/rp1-gpclk-lifecycle.sh" \
+        "$repo_dir/debian/rp1-gpclk-dkms.preinst" \
+        "$repo_dir/debian/rp1-gpclk-dkms.postinst" \
+        "$repo_dir/debian/rp1-gpclk-dkms.prerm"
     echo "shellcheck: PASS"
 else
     echo "shellcheck: SKIP (not installed)"
@@ -49,6 +53,12 @@ ${CC:-cc} -std=c11 -Wall -Wextra -Werror \
     -I"$repo_dir/tests/fixtures/linux" \
     -I"$repo_dir/include/uapi" "$repo_dir/tests/uapi_contract.c" \
     -o "$tmp_dir/uapi_contract"
+
+${CXX:-c++} -std=c++17 -Wall -Wextra -Werror \
+    -I"$repo_dir/tests/fixtures/linux" -I"$repo_dir/include/uapi" \
+    "$repo_dir/tests/uapi_cpp.cpp" -o "$tmp_dir/uapi_cpp"
+"$tmp_dir/uapi_cpp"
+echo "C++ consumer/admin UAPI compile: PASS"
 "$tmp_dir/uapi_contract"
 
 ${CC:-cc} -std=c11 -Wall -Wextra -Werror \

@@ -8,8 +8,8 @@ import re
 from runtime_layout import INVENTORY, MODULES
 
 CONTRACT = 'rp1-gpclk-runtime-binding-v3'
-PRODUCT_VERSION = '0.9.0'
-COMPATIBILITY = {'gpio4': 'v0.9.0-rp1-gpio4', 'gpio20': 'v0.9.0-rp1-gpio20'}
+PRODUCT_VERSION = '1.0.0'
+COMPATIBILITY = {'gpio4': 'v1.0.0-rp1-gpio4', 'gpio20': 'v1.0.0-rp1-gpio20'}
 APPLICATION = '/usr/local/lib/wsprrypi/route_application.py'
 EXTERNAL_PATHS = {APPLICATION}
 

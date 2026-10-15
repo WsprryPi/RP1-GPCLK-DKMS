@@ -1,0 +1,54 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "repository": "WsprryPi/WsprryPi",
+  "sourceCommit": "fbb80fa2d1f654c10b8fcf695390144e945e0dd1",
+  "installerPath": "scripts/rp1_gpclk_dkms_install.py",
+  "installerSha256": "d1fbe5ac4eab6fc2bcf1837722dd82d9a74875864476f9da5db68fb6fa159ca8",
+  "requiredAssets": [
+    "SHA256SUMS",
+    "rp1-gpclk-dkms-installation-manifest-v1.json",
+    "rp1-gpclk-dkms_1.0.0-1_all.deb"
+  ],
+  "manifestKeys": [
+    "administrationProtocol",
+    "debianVersion",
+    "dkmsModule",
+    "installationBehavior",
+    "kernelModule",
+    "package",
+    "packageInventory",
+    "packageInventorySha256",
+    "productVersion",
+    "releaseChannel",
+    "releaseTag",
+    "repository",
+    "schema",
+    "schemaVersion",
+    "sourceCommit",
+    "uapi"
+  ],
+  "inventoryKeys": [
+    "mode",
+    "path",
+    "sha256",
+    "type"
+  ],
+  "stableChannel": "release",
+  "tagForm": "vMAJOR.MINOR.PATCH",
+  "selectionRequires": [
+    "immutable",
+    "published",
+    "non-draft",
+    "non-prerelease"
+  ],
+  "runtimeBinding": "rp1-gpclk-runtime-binding-v3",
+  "runtimeUpdate": "rp1-gpclk-runtime-update-v1",
+  "requiredAncestor": "8a8bf5d4184714949faffbf2e2538a1cac0526b2",
+  "qualificationClaim": false,
+  "deferredAcceptance": [
+    "exact-candidate application acceptance including historical provider rejection and eight-second finite TONE",
+    "development installer v0.9.0-pi5 identity must be reconciled with 1.0.0 through its owning repository",
+    "cross-repository update-contract test has synthetic 0.9.0 module payloads; use selected provider version",
+    "real passive package lifecycle including predecessor scripts and installed-module compression/signing"
+  ]
+}

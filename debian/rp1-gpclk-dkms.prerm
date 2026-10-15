@@ -1,21 +1,12 @@
 #!/bin/sh
 # SPDX-License-Identifier: MIT
+set -eu
 
-set -e
-
-if [ "$1" = remove ] || [ "$1" = upgrade ] || [ "$1" = deconfigure ]; then
-    source_dir=/usr/lib/rp1-gpclk-dkms/overlays
-    target_dir=/boot/firmware/overlays
-
-    for name in rp1-gpclk-gpio4.dtbo rp1-gpclk-gpio20.dtbo; do
-        source_file="$source_dir/$name"
-        target_file="$target_dir/$name"
-        if [ -f "$source_file" ] && [ -f "$target_file" ] && cmp -s "$source_file" "$target_file"; then
-            rm -f "$target_file"
-        fi
-    done
-fi
-
+# Runtime recovery, module unloading and route removal precede package removal.
+case "${1:-}" in
+remove|upgrade|deconfigure)
+    python3 /usr/libexec/rp1-gpclk-dkms/package_preflight.py remove
+    ;;
+esac
 #DEBHELPER#
-
 exit 0

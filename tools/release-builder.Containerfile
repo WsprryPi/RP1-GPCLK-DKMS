@@ -9,4 +9,10 @@ RUN apt-get update \
         dh-dkms \
         device-tree-compiler \
         python3 \
+        python3-jsonschema \
+        git \
+        gzip \
+        xz-utils \
+        shellcheck \
+        zstd \
     && rm -rf /var/lib/apt/lists/*

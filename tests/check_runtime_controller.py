@@ -116,7 +116,7 @@ class Tests(unittest.TestCase):
                 (tmp / 'linux' / (name+'.h')).write_text(f'#include "{stub}"\n')
             binary = tmp / 'controller-test'
             subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-Wno-unused-parameter',
-                            '-I'+str(tmp), '-I'+str(ROOT/'include/uapi'), '-I'+str(ROOT/'controller'),
+                            '-I'+str(tmp), '-I'+str(ROOT/'include'), '-I'+str(ROOT/'include/uapi'), '-I'+str(ROOT/'controller'),
                             str(ROOT/'tests/fixtures/runtime_controller_harness.c'), '-o', str(binary)], check=True)
             subprocess.run([str(binary)], check=True)
 

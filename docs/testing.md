@@ -136,8 +136,15 @@ behavior.
 
 Generated test output belongs in temporary directories. Qualification captures,
 run results and deployment inventories belong outside this source checkout.
-Release metadata and publication checks are added with a reviewed release
-candidate rather than retained from development runs.
+Release format/adversarial checks run through `check_release_candidate.py`.
+Its portable cases check version convergence, deterministic source encoding,
+unsafe archive members and duplicate JSON keys. On Linux its unprivileged
+fixtures build an exact temporary Git commit, exercise the real builder and
+independent validator, test dirty/untracked and index-hidden source changes,
+rebuild package/source bytes, and reject malformed, substituted and incorrectly
+classified assets. Linux requires the complete Debian build dependencies;
+macOS reports the Linux-only cases as skipped. CI runs the full Linux suite.
+No fixture installs a package or executes target/module/overlay effects.
 
 Target waveform and mode qualification belongs in the external WsprryPi Harness.
 No ordinary repository test authorizes installation, loading, GPIO, transmission,

@@ -13,15 +13,18 @@ MMIO, DMA channels, register writes, or GPIO routes to userspace.
 
 ## Release status
 
-`0.9.0` is the current pre-release development baseline with the
-canonical userspace interface and independent `GPIO4`/`GPIO20` runtime routes.
-Source/DKMS/module version `0.9.0` and Debian version `0.9.0-1` are coordinated
-labels, not frozen artifacts or qualification. See the
-[development identity and migration contract](docs/contracts/development-identity.md).
-The development baseline is unpublished and not release-qualified.
-`Experimental` is a runtime compatibility classification, not a release status.
-It identifies a bounded development build and route; it does not qualify
-installation, clock output, transmission, RF use, or product behavior.
+`1.0.0` / Debian `1.0.0-1` is the current **unpublished candidate**.
+There is no published release or created release tag. The candidate includes
+both the interlocked consumer and runtime route controller in one DKMS instance.
+The UAPI bytes remain canonical; GPIO4 and GPIO20 have separate compatibility
+identities and inactive overlays. No target, lifecycle, application or RF
+qualification is implied.
+
+Use the [candidate build and independent validation procedure](docs/operator/release-candidate.md).
+Its installation manifest declares the intended stable `v1.0.0` consumer format;
+separate provenance explicitly records `classification: candidate`,
+`published: false`, and no existing tag, release URL or GitHub asset digest.
+Exact-source development remains a distinct `source-development` workflow.
 
 ## Safety
 
@@ -43,7 +46,7 @@ alternate-transmitter fallback.
 
 For exact-commit development installation, follow the
 [source-development guide](docs/operator/source-development.md). The current
-`0.9.0` package is an unpublished development artifact. Review the
+`1.0.0` package is an unpublished candidate. Review the
 [identity and migration contract](docs/contracts/development-identity.md)
 before installing over an existing version.
 
@@ -52,7 +55,7 @@ package installs the `GPIO4` and `GPIO20` overlays but leaves both inactive. Rev
 the [package lifecycle guide](docs/operator/debian-packaging.md) before making
 any route, boot, module, or signing changes.
 
-To build an unpublished development package from the reviewed source checkout:
+For a local package-only build from reviewed source:
 
 ```sh
 dpkg-buildpackage -us -uc -b
@@ -115,8 +118,9 @@ The maintained test inventory and the distinction between automatic,
 parameterized build, and explicitly authorized hardware checks are documented
 in [Testing](docs/testing.md).
 
-Release generation and publication are disabled pending a reviewed current
-release pipeline. Use the development installer or local Debian build above.
+Candidate generation is available through `scripts/build-release-candidate`;
+publication remains a later gate after package lifecycle and exact-candidate
+WsprryPi acceptance. A plain Debian build does not produce the candidate asset set.
 
 Build the module against an explicitly selected local kernel build tree:
 

@@ -300,8 +300,8 @@ compatibility-ID components.
 
 ## Packaging and administration
 
-The Debian package owns only its declared module source and inactive overlay
-files. Standard `dpkg`, `dh-dkms`, and DKMS mechanisms own package lifecycle.
+The Debian package owns its declared source for both modules, inactive overlay
+files, passive package guard, packaged route executor, schema and disabled units. Standard `dpkg`, `dh-dkms`, and DKMS mechanisms own package lifecycle.
 Installation refuses to overwrite foreign files. Removal deletes only files
 whose identity and ownership remain attributable to the package.
 
@@ -384,13 +384,13 @@ authorization for their system effects. Output-inhibited administration, live
 GPIO behavior, timing, transmission, and RF are separate evidence classes and
 must not be inferred from one another.
 
-For the `0.9.0` dual-route development identity, structural compatibility also requires
+For the `1.0.0` dual-route development identity, structural compatibility also requires
 the route-specific endpoint node name emitted by the corresponding current
 overlay: `rp1-gpclk-dkms-gpio4` for route `1` or
 `rp1-gpclk-dkms-gpio20` for route `2`. Any other endpoint name is rejected even
 when its remaining properties are otherwise valid.
 
-The development build reports the route-specific `0.9.0` identities in the
+The development build reports the route-specific `1.0.0` identities in the
 [development identity contract](development-identity.md). Its exact RP1
 topology, kernel, architecture, module-version, resource, and route observations
 apply together.
@@ -410,14 +410,25 @@ compatibility, provenance, licensing, and security metadata. The source
 version, tag, Debian version, DKMS version, module version, UAPI, package, and
 release metadata must agree according to the release policy.
 
-Version `0.9.0` is the current pre-release development baseline. Debian version
-is `0.9.0-1`; the exact UAPI header and current protocol schemas are coordinated
-with that source. The
-[identity and downgrade contract](development-identity.md) defines source,
-package, diagnostics, compatibility, authority, and recovery relationships.
-Release metadata is absent from the development baseline and will be generated
-only when the canonical release pipeline is reviewed. No final source, package,
-or qualification identity is frozen by the development version.
+Version `1.0.0` / Debian `1.0.0-1` is the current unpublished candidate.
+The [candidate procedure](../operator/release-candidate.md) defines the exact
+clean-commit builder, independent validator, complete source/package/control
+inventories, checksums and provenance. The canonical package builds both the
+interlocked consumer and runtime controller in one DKMS instance; neither is
+loaded at installation. Both firmware overlays remain inactive under `/usr/lib`.
+No package operation writes boot configuration or overlay files or runs systemd.
+The package bounds native helper compatibility to DKMS 3.2.2 through the 3.2
+series. Other DKMS families and dynamic signing mechanisms require explicit
+review; installation preflight refuses their unsupported configurations.
+
+The installation manifest declares intended stable `v1.0.0` consumer identity.
+Its artifact set is explicitly a candidate in separate provenance, with no
+existing tag or release URL. Qualification fields remain false; compatibility
+metadata defaults to Unavailable with no invented target entries. Candidate
+bytes and source identities are preserved through lifecycle and consumer
+acceptance before freeze or publication. A changed byte requires new candidate
+identities and repetition of affected checks. The source-development workflow
+remains Experimental and cannot create this release identity.
 
 WsprryPi consumes only an explicitly compatible tagged release. Module and
 application commits, reviews, releases, and qualification claims remain

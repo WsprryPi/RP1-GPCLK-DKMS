@@ -9,6 +9,7 @@
 #include <linux/random.h>
 #include <linux/uaccess.h>
 #include <linux/rp1_route_admin.h>
+#include "rp1_gpclk/version.h"
 #include "consumer.h"
 #include "state.h"
 #include "overlays.h"
@@ -246,4 +247,4 @@ module_init(route_init);
 module_exit(route_exit);
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_DESCRIPTION("Experimental clock-disabled RP1 route administrator");
-MODULE_VERSION("0.9.0");
+MODULE_VERSION(RP1_GPCLK_MODULE_VERSION);

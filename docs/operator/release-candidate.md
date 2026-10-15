@@ -1,0 +1,123 @@
+<!-- SPDX-License-Identifier: MIT -->
+
+# Build and verify the unpublished candidate
+
+The product/source/module/DKMS version is `1.0.0`; Debian is `1.0.0-1`;
+the intended future tag is `v1.0.0`. Candidate preparation creates no tag,
+GitHub release, asset URL, immutable release or qualification claim.
+
+## Commands and environment
+
+Use Linux with Python 3, python3-jsonschema, Git, dpkg-dev, debhelper 13,
+dh-dkms, device-tree-compiler (including fdtput), make, gzip, xz and zstd. The maintained
+[container recipe](../../tools/release-builder.Containerfile) provisions these
+tools without a target. Retain the built image by immutable image ID or save it
+outside the checkout. Its pinned base alone does not pin later APT packages;
+provenance records exact tool/package versions. Validation requires the same
+tool environment and refuses drift. Container setup may access package mirrors;
+candidate generation and validation need no network or root. Python is a pre-dependency because the
+read-only pre-unpack guard runs before ordinary package dependencies configure.
+
+From a clean checkout whose HEAD is the full reviewed commit:
+
+```sh
+./scripts/build-release-candidate --version 1.0.0 \
+  --source-commit FULL_40_CHARACTER_SHA \
+  --output /absolute/new/candidate
+
+./scripts/validate-release-candidate \
+  --candidate /absolute/new/candidate \
+  --source-commit FULL_40_CHARACTER_SHA
+```
+
+Replace the commit placeholder with the actual reviewed commit. The builder
+refuses abbreviated/mutable revisions, tracked or untracked changes (including
+changes hidden by index flags), unsafe Git members, private key material,
+version divergence, unresolved identity placeholders, existing output,
+symlinked output or output inside the source checkout. There is no dirty-source
+release override. Ignored files are never read as source inputs. The executable
+uses isolated Python startup, ignores checkout bytecode caches, fixes Git/tool
+environments and temporary roots, and disables bytecode writes.
+
+The builder reconstructs only tracked Git blobs in fresh isolated directories,
+builds the package twice, and compares every candidate asset byte. Before
+publishing files to its new output directory it invokes the separate validator.
+Failure removes only its own new output reservation. Neither command installs
+a package, uses DKMS on the host, loads a module or operates hardware.
+
+Determinism uses commit time as `SOURCE_DATE_EPOCH`, sorted USTAR source members,
+root ownership, fixed 0644/0755 modes, a zero gzip header timestamp, locale C,
+UTC, umask 0022, a fixed subprocess environment and single-thread gzip Debian
+compression. Package source, control and data identities bind actual bytes.
+No build path, current timestamp, login name or hostname is a release input.
+The source archive preserves the reviewed DKMS template; the installed source
+has its version and runtime-controller profile rendered explicitly.
+
+## Exact asset set
+
+| Asset | Meaning |
+| --- | --- |
+| `rp1-gpclk-dkms-1.0.0.tar.gz` | Exact tracked source of the identified commit/tree |
+| `rp1-gpclk-dkms_1.0.0-1_all.deb` | One source-only DKMS Debian package |
+| `rp1-gpclk-dkms-installation-manifest-v1.json` | WsprryPi consumer identity and complete package data inventory |
+| `rp1-gpclk-compatibility-manifest.json` | Exact source/UAPI identity, default Unavailable, no target entries |
+| `release-metadata.json` | Unpublished candidate classification, tool versions, module/controller/UAPI/overlay/runtime identities and provenance |
+| `candidate-validation.json` | Machine-readable repeat-build result, bound to source and package |
+| `SHA256SUMS` | Sorted lowercase SHA-256, two spaces, filename and LF for every other asset; no self-hash |
+
+The installation manifest is deliberately release-shaped: `releaseChannel` is
+`release` and `releaseTag` declares intended `v1.0.0`. These are the stable
+consumer contract, not evidence of publication. Separate provenance says
+`classification: candidate`, `published: false` and leaves actual tag, release
+URL and GitHub asset digest null. WsprryPi additionally requires an actual
+published immutable non-draft/non-prerelease release; a local candidate cannot
+satisfy that selection gate. This preserves candidate bytes for later acceptance.
+
+The closed [manifest schema](../../schema/rp1-gpclk-dkms-installation-manifest-v1.schema.json)
+permits only the defined exact keys. Inventory records use relative destination,
+file/directory type, mode and SHA-256; directory hashes cover empty bytes.
+Provenance separately declares root uid/gid and inventories control members.
+Source and package hashes are independent. Checksums establish integrity,
+not authentication; the expected source commit and retained environment are
+external trust anchors. No private signing key is generated or distributed.
+Target signing and trust enrollment remain administrator-owned prerequisites.
+
+Both `v1.0.0-rp1-gpio4` and `v1.0.0-rp1-gpio20` remain distinct. Both canonical
+UAPIs retain their reviewed bytes. The runtime contracts are binding v3,
+readiness v1 and update v1. The source package includes controller build inputs;
+target DKMS produces both ELF modules. Installed compressed-file and decompressed
+ELF hashes, vermagic, signatures and build notes remain null until actual target
+builds produce them. Runtime-private overlays omit exported symbols through the
+maintained controller generator; their bytes are bound during target bundle
+construction. Firmware and runtime overlays have separate meanings.
+
+## Independent verification and handoff
+
+The validator trusts neither a builder cache nor its result declaration. It
+checks the exact asset set, checksum bytes, JSON keys/schema, full Git
+commit/tree and source archive, canonical archive paths/ownership/modes,
+duplicate/shadowed Debian ar/tar members, package control identity, complete
+inventories, passive maintainer-script constraints, every interface and
+provenance identity, and absence of fabricated qualification. It reads a bounded nonsymlink asset snapshot and rechecks the original bytes
+after validation. It independently reconstructs and rebuilds the package from Git and requires byte equality.
+It writes no candidate or source files. Keep stdout results outside the checkout.
+
+[The pinned consumer-contract fixture](../../release/wsprrypi-consumer-contract.json)
+identifies the reviewed WsprryPi commit and installer digest. It documents the
+stable asset/key contract and application-owned acceptance follow-ups. It is a
+compact format fixture, not WsprryPi implementation or acceptance evidence.
+Refresh the read-only consumer comparison when selecting an acceptance candidate.
+
+Hand the exact candidate directory, source commit/tree, checksum file and retained
+build environment to package lifecycle and `0.9.0` to `1.0.0` validation (Item 15).
+Then use the supported exact-source/test path for current WsprryPi `devel`
+acceptance of those same identities (Item 16), including its update, rollback,
+ownership and runtime contracts. Repair application-owned version fixtures and
+any actual integration defects in the application repository under that scope.
+Source or artifact changes invalidate the prior candidate identity and require
+rebuilding/repeating affected checks. Freeze and publication follow acceptance;
+the provider release must precede the dependent WsprryPi production release.
+
+These commands establish source/package reproducibility and format integrity.
+They do not establish real package lifecycle, target binding/cleanup, signing
+trust, WsprryPi acceptance, product eligibility, transmission or RF qualification.

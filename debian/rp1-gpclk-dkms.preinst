@@ -2,16 +2,54 @@
 # SPDX-License-Identifier: MIT
 set -eu
 
-# dpkg permits explicit downgrades. This development baseline requires removal
-# through an independently reviewed recovery plan before a clean installation.
+# dpkg permits explicit downgrades; require a separately reviewed exact rollback.
 case "${1:-}" in
 install|upgrade)
-    if [ -n "${2:-}" ] && dpkg --compare-versions "$2" gt 0.9.0-1; then
-        echo 'rp1-gpclk-dkms: 1.x to 0.9.0 is a downgrade; explicit maintainer migration and predecessor removal required' >&2
+    if [ -n "${2:-}" ] && dpkg --compare-versions "$2" gt 1.0.0-1; then
+        echo 'rp1-gpclk-dkms: downgrade refused; preserve exact rollback inputs and remove through the owning lifecycle' >&2
         exit 1
     fi
     ;;
 esac
+
+# Validate before unpacking can replace existing bytes. Standard distribution
+# ancestors may be symlinks; owned payload members themselves may not be.
+python3 - <<'GUARD'
+from pathlib import Path
+import subprocess
+import stat
+import os
+for name in ('rp1_gpclk_dkms', 'rp1_route_controller'):
+    if (Path('/sys/module')/name).exists():
+        raise SystemExit('rp1-gpclk-dkms: loaded provider blocks unpack')
+roots = ('/usr/src/rp1-gpclk-dkms-1.0.0', '/usr/libexec/rp1-gpclk-dkms',
+         '/usr/lib/rp1-gpclk-dkms/overlays', '/usr/share/rp1-gpclk-dkms/1.0.0',
+         '/usr/sbin/rp1-gpclk-route-manager',
+         '/usr/lib/systemd/system/rp1-gpclk-route-manager.socket',
+         '/usr/lib/systemd/system/rp1-gpclk-route-manager@.service')
+found = False
+for name in roots:
+    root = Path(name)
+    paths = [root, *root.rglob('*')] if root.is_dir() and not root.is_symlink() else [root]
+    for path in paths:
+        if path.is_symlink():
+            raise SystemExit('rp1-gpclk-dkms: payload symlink blocks unpack')
+        if not path.exists():
+            continue
+        info = path.stat()
+        if not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode)):
+            raise SystemExit('rp1-gpclk-dkms: special payload file blocks unpack')
+        if info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) not in (0o644, 0o755):
+            raise SystemExit('rp1-gpclk-dkms: unsafe payload ownership or mode')
+        owner = subprocess.run(['dpkg-query', '-S', str(path)], capture_output=True, text=True)
+        if owner.returncode or owner.stdout.strip() != 'rp1-gpclk-dkms: '+str(path):
+            raise SystemExit('rp1-gpclk-dkms: foreign payload blocks unpack: '+str(path))
+        found = True
+if found:
+    verified = subprocess.run(['dpkg', '--verify', 'rp1-gpclk-dkms'], capture_output=True)
+    if verified.returncode or verified.stdout:
+        raise SystemExit('rp1-gpclk-dkms: modified package bytes require owning recovery')
+GUARD
 
 #DEBHELPER#
 exit 0

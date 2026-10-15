@@ -343,4 +343,7 @@ If only application readiness fails, use `restore --execute`. The low-level
 `resume` operation is not a substitute for that configuration/startup handshake.
 [Output reconciliation](../contracts/runtime-output.md) is observational;
 UAPI acquisition and WsprryPi operator authorization remain separate gates.
-The global load-time output gate stays disabled.
+The immutable load-time switch remains explicit: clock-disabled testing uses
+`output_inhibit=1`; production uses the root-owned endpoint contract with the
+default `output_inhibit=0`. Neither package installation nor route switching
+submits output.
