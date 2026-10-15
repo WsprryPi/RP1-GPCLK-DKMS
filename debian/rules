@@ -19,8 +19,10 @@ override_dh_auto_install:
 	python3 scripts/package_stage.py debian/$(PACKAGE)
 	cp $(SOURCE_DEST)/dkms.conf debian/build/dkms.conf
 
+# Units are copied as inactive data by package_stage.py. Do not ask debhelper
+# to generate any systemd lifecycle integration (including removal/purge).
 override_dh_installsystemd:
-	dh_installsystemd --no-scripts --no-enable --no-start rp1-gpclk-route-manager.socket
+	:
 
 override_dh_compress:
 	dh_compress -Xroute-manager.md

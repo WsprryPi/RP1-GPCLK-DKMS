@@ -26,7 +26,11 @@ class Tests(unittest.TestCase):
             self.assertIn(value, rendered)
         self.assertNotIn('#MODULE_VERSION#', rendered)
         self.assertEqual((ROOT/'debian/rp1-gpclk-dkms.dkms').read_text(), 'debian/build/dkms.conf\n')
-        self.assertIn('dh_installsystemd --no-scripts --no-enable --no-start', (ROOT/'debian/rules').read_text())
+        rules = (ROOT/'debian/rules').read_text()
+        self.assertIn('override_dh_installsystemd:', rules)
+        self.assertNotIn('dh_installsystemd --', rules)
+        for name in ('rp1-gpclk-route-manager.socket', 'rp1-gpclk-route-manager@.service'):
+            self.assertEqual(sources['usr/lib/systemd/system/'+name], 'systemd/'+name)
         self.assertIn('dh_builddeb -- -Zgzip -z9 --threads-max=1', (ROOT/'debian/rules').read_text())
         self.assertFalse(any(p.startswith(('boot/', 'etc/', 'dev/', 'lib/modules/')) for p in sources))
 

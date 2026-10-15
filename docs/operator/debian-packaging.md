@@ -23,6 +23,9 @@ Both overlays remain inactive:
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo`;
 - `/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo`.
 
+Systemd unit files are staged directly as data; no systemd debhelper lifecycle
+generator is invoked.
+
 The package installs the route executor at `/usr/sbin/rp1-gpclk-route-manager`
 and a matching `/usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager`, its versioned
 schema, consumer documentation, read-only package preflight and disabled socket
