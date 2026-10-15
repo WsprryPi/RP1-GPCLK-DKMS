@@ -367,6 +367,8 @@ def check(root=Path('/'), operation='configure'):
                  'etc/systemd/system/sockets.target.wants/rp1-gpclk-route-manager.socket',
                  'opt/rp1-gpclk-dkms-development',
                  'usr/lib/rp1-gpclk-dkms/runtime-overlays',
+                 'usr/lib/rp1-gpclk-dkms/runtime-uapi',
+                 'usr/lib/rp1-gpclk-dkms/package_preflight.py',
                  'usr/lib/rp1-gpclk-dkms/uapi',
                  'usr/lib/rp1-gpclk-dkms/schema',
                  'etc/systemd/system/wsprrypi.service.d/90-rp1-route-inhibit.conf',
