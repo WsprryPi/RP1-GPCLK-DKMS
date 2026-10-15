@@ -35,12 +35,16 @@ def main():
         parser.error('lifecycle output must be outside every Git checkout')
     image = subprocess.check_output(['docker', 'image', 'inspect', args.image], text=True)
     identity = json.loads(image)[0]
-    output.mkdir()
+    output.mkdir(mode=0o700)
     (output/'image.json').write_text(image)
     results = []
     for scenario in SCENARIOS if args.scenario == 'all' else (args.scenario,):
         destination = output/scenario
         destination.mkdir()
+        # Linux bind mounts retain the runner's uid. Container root deliberately
+        # lacks DAC_OVERRIDE, so share only this directory below the private
+        # host-owned result root. Do not broaden container capabilities.
+        destination.chmod(0o777)
         command = ['docker', 'run', '--rm', '--network', 'none', '--cap-drop', 'ALL',
                    '--cap-add', 'CHOWN', '--cap-add', 'FOWNER', '--cap-add', 'SETUID',
                    '--cap-add', 'SETGID', '--security-opt', 'no-new-privileges',

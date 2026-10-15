@@ -186,7 +186,9 @@ immutable image ID and recorded tool versions. Package tests run without a
 network. They require no host boot/module/service/device mounts and no module,
 reboot or hardware capabilities. Only filesystem ownership and APT user-switch
 capabilities are retained. Each scenario is removed with its container; results
-and logs stay in the new external output directory.
+and logs stay in the new external output directory. Its mode is `0700`;
+individual scenario bind-mount directories use `0777` beneath it so both users
+can record results without `CAP_DAC_OVERRIDE`.
 
 ```sh
 docker build -t rp1-package-lifecycle -f tools/package-lifecycle.Containerfile .

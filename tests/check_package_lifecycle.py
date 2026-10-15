@@ -344,6 +344,31 @@ class Tests(unittest.TestCase):
             docker.assert_not_called()
         self.assertFalse((repository/'results').exists())
 
+    def test_results_are_private_with_a_shared_container_directory(self):
+        import subprocess
+        import contextlib
+        import io
+        import stat
+        driver = runpy.run_path(str(ROOT/'tools/run-package-lifecycle.py'))
+        output = self.root/'results'
+        arguments = ['run-package-lifecycle', '--image', 'unused', '--candidate', str(self.root),
+                     '--predecessor', str(self.root), '--output', str(output),
+                     '--scenario', 'missing-headers']
+        native = subprocess.run
+
+        def command(argv, **kwargs):
+            if argv[0] == 'docker':
+                return subprocess.CompletedProcess(argv, 0)
+            return native(argv, **kwargs)
+
+        with patch.object(sys, 'argv', arguments), patch('subprocess.run', side_effect=command), \
+                patch('subprocess.check_output', return_value='[{"Id":"fixture"}]'):
+            with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as result:
+                driver['main']()
+        self.assertEqual(result.exception.code, 0)
+        self.assertEqual(stat.S_IMODE(output.stat().st_mode), 0o700)
+        self.assertEqual(stat.S_IMODE((output/'missing-headers').stat().st_mode), 0o777)
+
 
 if __name__ == '__main__':
     unittest.main()
