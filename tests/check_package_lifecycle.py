@@ -325,6 +325,25 @@ class Tests(unittest.TestCase):
                                           'partly-configured-or-interrupted-remove-depmod'):
                 self.assertEqual(case['expectedState'], 'absent')
 
+    def test_lifecycle_outputs_refuse_another_git_checkout_before_docker(self):
+        import subprocess
+        import contextlib
+        import io
+        repository = self.root/'another-repository'
+        repository.mkdir()
+        subprocess.run(['git', 'init', '-q', str(repository)], check=True)
+        driver = runpy.run_path(str(ROOT/'tools/run-package-lifecycle.py'))
+        arguments = ['run-package-lifecycle', '--image', 'unused', '--candidate', str(self.root),
+                     '--predecessor', str(self.root), '--output', str(repository/'results')]
+        with patch.object(sys, 'argv', arguments), patch('subprocess.check_output') as docker:
+            with contextlib.redirect_stderr(io.StringIO()) as diagnostic:
+                with self.assertRaises(SystemExit) as error:
+                    driver['main']()
+            self.assertEqual(error.exception.code, 2)
+            self.assertIn('outside every Git checkout', diagnostic.getvalue())
+            docker.assert_not_called()
+        self.assertFalse((repository/'results').exists())
+
 
 if __name__ == '__main__':
     unittest.main()

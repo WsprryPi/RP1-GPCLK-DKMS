@@ -26,8 +26,13 @@ def main():
             parser.error('absolute nonsymlink input directories required')
     output = args.output
     if (not output.is_absolute() or output != output.resolve() or output.exists() or
-            output.is_relative_to(ROOT)):
+            not output.parent.is_dir() or output.is_relative_to(ROOT)):
         parser.error('new absolute output outside source required')
+    checkout = subprocess.run(['git', '-C', str(output.parent), 'rev-parse', '--show-toplevel'],
+                              capture_output=True, env={'PATH': '/usr/bin:/bin',
+                              'GIT_CONFIG_GLOBAL': '/dev/null', 'GIT_CONFIG_NOSYSTEM': '1'})
+    if checkout.returncode == 0:
+        parser.error('lifecycle output must be outside every Git checkout')
     image = subprocess.check_output(['docker', 'image', 'inspect', args.image], text=True)
     identity = json.loads(image)[0]
     output.mkdir()
