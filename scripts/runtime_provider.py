@@ -328,13 +328,17 @@ class Host:
         return admin.strict_json(raw or pending) if raw or pending else None
 
     def update_absent(self):
+        baseline = self.files.packaged_baseline()
         services = self.services()
         manager_units = ('rp1-gpclk-route-manager.socket',
                          'rp1-gpclk-route-manager@.service')
         inactive_units = all(services.get(name, {}).get('load') in ('loaded', 'not-found')
             and services.get(name, {}).get('active') in ('inactive', 'failed')
             for name in manager_units)
-        return (inactive_units and all(self.files.read(path) is None for path in deployment.DESTINATIONS)
+        runtime_absent = all((data := self.files.read(path)) is None or
+                    (path in baseline and admin.digest(data) == baseline[path])
+                    for path in deployment.DESTINATIONS)
+        return (inactive_units and runtime_absent
             and self.files.read(deployment.LAST_DEPLOYMENT) is None
             and self.files.read(str(admin.STATE / 'deployment-pending.json')) is None
             and all(self.module(name)['status'] == 'absent' for name in

@@ -231,6 +231,51 @@ def clean_cycle():
     absent(run('final-purge', ['dpkg', '--purge', PACKAGE]))
 
 
+def packaged_runtime_baseline():
+    """Real passive package data plus a filesystem-only runtime inverse.
+
+    No controller, service, endpoint or hardware operation is performed.
+    """
+    installed(run('clean-install', ['dpkg', '-i', DEB]))
+    sys.path[:0] = ['/source/scripts', '/source/tests']
+    import runtime_deployment as deployment
+    import runtime_provider as provider
+    baseline = deployment.Files().packaged_baseline()
+    require(len(baseline) == 4, 'exact passive package baseline required')
+    files = deployment.Files()
+    # Reproduce the inverse's final filesystem phase against real package
+    # inventory. Earlier administrative effects are outside this test class.
+    files.prune_removed_directories()
+    for name, expected in baseline.items():
+        require(Path(name).exists() and sha(Path(name)) == expected,
+                'runtime pruning changed passive package data')
+    host = provider.Host.__new__(provider.Host)
+    host.files = files
+    host.services = lambda: {name: {'load': 'loaded', 'active': 'inactive'} for name in
+        ('rp1-gpclk-route-manager.socket', 'rp1-gpclk-route-manager@.service')}
+    host.module = lambda name: {'status': 'absent'}
+    host.endpoint = lambda name: {'status': 'absent'}
+    host.socket = lambda: {'status': 'absent'}
+    require(host.update_absent(), 'verified passive package units prevent runtime absence')
+    overlay = Path('/usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo')
+    original = overlay.read_bytes()
+    overlay.write_bytes(b'changed overlay')
+    try:
+        try: files.prune_removed_directories()
+        except ValueError: pass
+        else: raise ValueError('changed package overlay was accepted')
+        require(overlay.read_bytes() == b'changed overlay', 'changed overlay was removed')
+    finally: overlay.write_bytes(original)
+    foreign = overlay.parent/'foreign.dtbo'; foreign.write_bytes(b'preserve')
+    try:
+        try: files.prune_removed_directories()
+        except ValueError: pass
+        else: raise ValueError('foreign package-directory member was accepted')
+        require(foreign.read_bytes() == b'preserve', 'foreign member was removed')
+    finally: foreign.unlink()
+    absent(run('purge-after-runtime-retirement', ['dpkg', '--purge', PACKAGE]))
+
+
 def dependency_recovery():
     packages = list(Path('/opt/lifecycle-inputs').glob('adduser_*.deb'))
     require(len(packages) == 1, 'official dependency repair archive required')
@@ -593,6 +638,7 @@ def main():
         fault(scenario.removeprefix('fault-'))
     else:
         {'clean-cycle': clean_cycle, 'foreign-state': foreign_state,
+         'packaged-runtime-baseline': packaged_runtime_baseline,
          'missing-payload': missing_payload,
          'package-lock': package_lock,
          'multi-kernel': multi_kernel, 'unpack-recovery': unpack_recovery,

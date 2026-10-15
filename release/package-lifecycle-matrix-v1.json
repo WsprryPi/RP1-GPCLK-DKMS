@@ -1219,6 +1219,33 @@
         "tests/check_package_lifecycle.py",
         "tests/package_lifecycle_linux.py"
       ]
+    },
+    {
+      "id": "68",
+      "startingState": "installed",
+      "operation": "retire-runtime-keep-passive-package-baseline",
+      "disposition": "permitted",
+      "exitStatus": 0,
+      "expectedState": "installed",
+      "evidenceClass": "real-dpkg-dkms-with-filesystem-only-runtime-retirement",
+      "checks": [
+        "tests/check_runtime_manager.py",
+        "tests/check_runtime_provider.py",
+        "tests/package_lifecycle_linux.py"
+      ]
+    },
+    {
+      "id": "69",
+      "startingState": "installed",
+      "operation": "refuse-changed-or-foreign-passive-package-baseline",
+      "disposition": "refused",
+      "exitStatus": 1,
+      "expectedState": "installed",
+      "evidenceClass": "real-dpkg-dkms-with-controlled-passive-payload-drift",
+      "checks": [
+        "tests/check_runtime_manager.py",
+        "tests/package_lifecycle_linux.py"
+      ]
     }
   ],
   "limitations": [

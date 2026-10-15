@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-SCENARIOS = ('clean-cycle', 'missing-payload', 'package-lock', 'dependency-recovery', 'header-profiles', 'multi-kernel', 'missing-headers', 'unpack-recovery', 'foreign-state',
+SCENARIOS = ('packaged-runtime-baseline', 'clean-cycle', 'missing-payload', 'package-lock', 'dependency-recovery', 'header-profiles', 'multi-kernel', 'missing-headers', 'unpack-recovery', 'foreign-state',
              'fault-add', 'fault-build', 'fault-install', 'fault-depmod',
              'fault-remove', 'fault-purge', 'fault-remove-depmod', 'fault-unpack',
              'fault-gcc', 'fault-signature', 'compression-signing', 'predecessor')

@@ -36,6 +36,18 @@ local import dependencies of every bootstrap helper, including imports inside
 functions. Each helper is byte-identical to its digest-bound deployment payload;
 predeployment validation must not rely on an installed helper or source checkout.
 
+On a Debian-package installation, inverse deployment restores the passive
+package-owned route-manager unit fragments. The inactive firmware overlays
+remain package data throughout. Runtime absence permits only these attributable
+package files after complete payload verification against the root-owned dpkg
+inventory and the exact installed package version. Missing, changed, foreign,
+or additional files remain refusals. The shared library directory is retained
+only when its remaining descendants are exactly the two verified package
+overlays and their directory. Preparation does not remove the package, its
+DKMS instance, or its inactive overlays. Source-development has no such package
+baseline. The bundle includes the checksummed package-inventory helper needed
+to verify this distinction even during inverse deployment.
+
 ## Response contract
 
 All successful responses use integer `schemaVersion: 1`, string `contract:

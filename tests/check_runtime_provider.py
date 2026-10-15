@@ -849,7 +849,7 @@ class Tests(unittest.TestCase):
                 'runtime_deployment.py', 'runtime_controller_admin.py',
                 'runtime_layout.py', 'runtime_application.py',
                 'runtime_output.py', 'runtime_provider.py', 'runtime_binding.py',
-                'runtime_activation.py', 'runtime_route_client.py', 'runtime_manager.py',
+                'runtime_activation.py', 'runtime_route_client.py', 'runtime_manager.py', 'package_preflight.py',
             }
             self.assertTrue(bootstrap <= set(first_files))
             # Include imports inside functions: the update facade uses a lazy
@@ -1086,6 +1086,27 @@ class RemovalHost(UpdateHost):
 
 
 class UpdateTests(unittest.TestCase):
+    def test_update_absence_accepts_only_authenticated_passive_package_units(self):
+        host = RemovalHost()
+        host.files.values = {}
+        host.files.packaged_baseline = lambda: {}
+        host.services = lambda: {name: {'load': 'loaded', 'active': 'inactive'} for name in
+            ('rp1-gpclk-route-manager.socket', 'rp1-gpclk-route-manager@.service')}
+        host.module = lambda name: {'status': 'absent'}
+        host.endpoint = lambda path: {'status': 'absent'}
+        host.socket = lambda: {'status': 'absent'}
+        self.assertTrue(host.update_absent())
+        unit = '/usr/lib/systemd/system/rp1-gpclk-route-manager.socket'
+        host.files.values[unit] = b'passive packaged unit'
+        self.assertFalse(host.update_absent())
+        host.files.packaged_baseline = lambda: {unit: provider.admin.digest(b'passive packaged unit')}
+        self.assertTrue(host.update_absent())
+        host.files.values[unit] = b'foreign modification'
+        self.assertFalse(host.update_absent())
+        host.files.values[unit] = b'passive packaged unit'
+        host.files.values[provider.deployment.BINDING] = b'leftover runtime'
+        self.assertFalse(host.update_absent())
+
     def request(self, host):
         return provider.update_request(host.value['sourceCommit'],
             provider.admin.digest(host.system.raw), host.value['artifactSetSha256'],
