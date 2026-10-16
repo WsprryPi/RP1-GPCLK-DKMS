@@ -6,6 +6,28 @@ The product/source/module/DKMS version is `1.0.0`; Debian is `1.0.0-1`;
 the canonical release tag is `v1.0.0`. Default candidate preparation creates no tag,
 GitHub release, asset URL, immutable release or qualification claim.
 
+## Release identity and maintenance
+
+The published immutable `v1.0.0` tag identifies source commit
+`8c16d3c237cb1267cbedafb5da2bb74132ca5de0` and tree
+`4c1ad8acf513b36ba32e58a636942655accbb52d`. Reconstruct and validate the existing
+release using a clean detached checkout of that commit, the retained build
+environment, downloaded assets, and `--release` on the validator.
+
+Documentation and test maintenance on `main` or `devel` does not change the
+published release or require a version bump. A maintenance commit has a different
+source identity: every tracked file is included in the source archive, so even
+a documentation deletion changes that archive and its provenance. Do not replace
+the `v1.0.0` tag, rebuild maintenance HEAD as the published release, edit generated
+checksums, or relabel old evidence as testing a different source tree.
+
+The ordinary builder may validate a maintenance checkout as an unpublished
+candidate with version `1.0.0`; it does not replace any published asset or grant
+production selection. Exact-source development remains a separate Experimental
+path. Compare the inputs exercised by prior tests before reusing evidence;
+repeat affected checks when executable, build, packaging or interface inputs
+change. No target or RF evidence transfers solely because versions match.
+
 ## Commands and environment
 
 Use Linux with Python 3, python3-jsonschema, Git, dpkg-dev, debhelper 13,
@@ -109,11 +131,11 @@ compact format fixture, not WsprryPi implementation or acceptance evidence.
 Refresh the read-only consumer comparison when selecting an acceptance candidate.
 
 Hand the exact candidate directory, source commit/tree, checksum file and retained
-build environment to [package lifecycle validation](package-lifecycle.md) (Item 15).
+build environment to [package lifecycle validation](package-lifecycle.md).
 The historical `0.9.0` transition uses owning removal followed by clean installation;
 direct replacement and in-place downgrade are refused.
 Then use the supported exact-source/test path for current WsprryPi `devel`
-acceptance of those same identities (Item 16), including its update, rollback,
+acceptance of those same identities, including its update, rollback,
 ownership and runtime contracts. Repair application-owned version fixtures and
 any actual integration defects in the application repository under that scope.
 Source or artifact changes invalidate the prior candidate identity and require
@@ -125,6 +147,9 @@ They do not establish real package lifecycle, target binding/cleanup, signing
 trust, WsprryPi acceptance, product eligibility, transmission or RF qualification.
 
 ## Frozen publication profile
+
+The publication procedure below defines the release workflow. The existing
+`v1.0.0` publication is complete; its tag and assets must remain unchanged.
 
 After integration and affected acceptance checks, build from the final clean
 `devel` commit with `--release` on both commands above. Repeat into a second new

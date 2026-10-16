@@ -425,6 +425,12 @@ version, tag, Debian version, DKMS version, module version, UAPI, package, and
 release metadata must agree according to the release policy.
 
 Version `1.0.0` / Debian `1.0.0-1` is the current release source.
+The immutable published tag identifies the release's exact source and assets.
+Later documentation or test maintenance may retain source version `1.0.0` while
+carrying a different Git identity; it does not replace the published release or
+inherit acceptance of changed inputs. Historical qualification campaign tools
+are not supported product interfaces. Maintained module, runtime and package
+regressions and their consumed metadata remain in this repository.
 The [candidate procedure](../operator/release-candidate.md) defines the exact
 clean-commit builder, independent validator, complete source/package/control
 inventories, checksums and provenance. The canonical package builds both the

@@ -62,19 +62,6 @@ ${CXX:-c++} -std=c++17 -Wall -Wextra -Werror \
 echo "C++ consumer/admin UAPI compile: PASS"
 "$tmp_dir/uapi_contract"
 
-${CC:-cc} -std=c11 -Wall -Wextra -Werror \
-    -I"$repo_dir/tests/fixtures/linux" \
-    -I"$repo_dir/include/uapi" "$repo_dir/tools/gate_d_uapi_probe.c" \
-    -o "$tmp_dir/gate_d_uapi_probe"
-echo "UAPI probe compile: PASS"
-
-${CC:-cc} -std=c11 -Wall -Wextra -Werror -DGATE_D_BUSY_LIBRARY \
-    -I"$repo_dir/tests/fixtures/linux" -I"$repo_dir/include/uapi" \
-    -I"$repo_dir/tools" "$repo_dir/tools/gate_d_busy_injector.c" \
-    "$repo_dir/tests/busy_state_injector_test.c" \
-    -o "$tmp_dir/busy_state_injector_test"
-"$tmp_dir/busy_state_injector_test"
-
 ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
     -DRP1_GPCLK_HOST_TEST \
     -I"$repo_dir/tests/fixtures/linux" \

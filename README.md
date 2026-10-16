@@ -26,6 +26,12 @@ binds the stable tag and release URL. Actual publication requires independent
 remote-tag and downloaded-asset verification. All qualification flags stay false.
 Exact-source development remains a distinct `source-development` workflow.
 
+The release is published and immutable. Build release `1.0.0` from its tagged
+commit and verify its existing assets. `main` and `devel` may contain later
+documentation and test maintenance while retaining the `1.0.0` source version;
+those commits have their own source identities and do not replace the release.
+See [release identity and maintenance](docs/operator/release-candidate.md#release-identity-and-maintenance).
+
 ## Safety
 
 Installing the package does not select an overlay, edit boot configuration,

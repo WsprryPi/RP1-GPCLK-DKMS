@@ -10,16 +10,11 @@ device=(R/'include/rp1_gpclk/device.h').read_text()
 target_client=(R/'tests/development_tone_client.c').read_text()
 contract=(R/'docs/contracts/uapi.md').read_text()
 source_development=(R/'docs/operator/source-development.md').read_text()
-gate_lifecycle=(R/'scripts/gate_d_lifecycle.py').read_text()
-gate_outer=(R/'scripts/gate_d_outer.py').read_text()
 assert 'authorization_digest' not in u and 'authorization_flags' not in u
 assert 'RP1_GPCLK_CAP_OPERATION_LIVE_GATE' not in u
 assert 'RP1_GPCLK_CAP_OUTPUT_INHIBIT' in u
 assert '--live-output' not in source_development
 assert source_development.count('--output-inhibit 1') >= 4
-assert 'output_inhibit_supported=1 released=1' in gate_lifecycle
-assert 'output_inhibit_supported=1 released=1' in gate_outer
-assert 'live_eligible=0 released=1' not in gate_lifecycle + gate_outer
 for legacy_document in ('uapi-v1.md','uapi-v2.md','uapi-v3-passive-snapshot.md',
                         'uapi-v4-operation-live.md'):
     assert not (R/'docs/contracts'/legacy_document).exists()
