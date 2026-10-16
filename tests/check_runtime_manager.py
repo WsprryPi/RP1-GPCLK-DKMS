@@ -52,6 +52,7 @@ class System(Machine):
 
 
 class Files:
+    def packaged_baseline(self): return {}
     def __init__(self):
         self.values = {}
         self.count = 0
@@ -390,6 +391,64 @@ class Tests(unittest.TestCase):
                  patch.object(admin, 'fsync_dir'):
                 files.prune_removed_directories(expected_uid=os.geteuid())
             self.assertFalse(state.exists() or library.exists())
+
+    def test_passive_package_baseline_preserves_only_exact_overlays(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            names = ('usr/lib/systemd/system/rp1-gpclk-route-manager.socket',
+                     'usr/lib/systemd/system/rp1-gpclk-route-manager@.service',
+                     'usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo',
+                     'usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo')
+            paths = []
+            for name in names:
+                path = root/name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(name.encode()); path.chmod(0o644)
+                paths.append(path)
+            database = root/'var/lib/dpkg/info'; database.mkdir(parents=True)
+            (database/'rp1-gpclk-dkms.list').write_text(''.join('/'+name+'\n' for name in names) +
+                '/usr/lib/rp1-gpclk-dkms/overlays\n')
+            (database/'rp1-gpclk-dkms.md5sums').write_text(''.join(
+                hashlib.md5(name.encode(), usedforsecurity=False).hexdigest()+'  '+name+'\n' for name in names))
+            files = deploy.Files()
+            with patch.object(admin, 'run', return_value='install ok installed\n1.0.0-1'), \
+                 patch.object(admin, 'safe_directory'), patch.object(admin, 'read_regular', side_effect=lambda p, limit: Path(p).read_bytes()), \
+                 patch.object(deploy.package_preflight, 'OWNER_UID', os.geteuid()):
+                baseline = files.packaged_baseline(root)
+                self.assertEqual(set(baseline), set(map(str, paths)))
+                for bad in ('changed', 'missing', 'foreign'):
+                    if bad == 'changed': paths[-1].write_bytes(b'changed')
+                    elif bad == 'missing': paths[-1].unlink()
+                    else:
+                        paths[-1].write_bytes(names[-1].encode())
+                        (paths[-1].parent/'foreign.dtbo').write_bytes(b'foreign')
+                    with self.assertRaises(ValueError): files.packaged_baseline(root)
+                (paths[-1].parent/'foreign.dtbo').unlink()
+            library = root/'usr/lib/rp1-gpclk-dkms'
+            for name in ('schema', 'runtime-uapi', 'runtime-overlays'):
+                (library/name).mkdir()
+            cache = library/'__pycache__'; cache.mkdir()
+            (cache/'package_preflight.cpython-313.pyc').write_bytes(b'cache')
+            with patch.object(files, 'packaged_baseline', return_value=baseline), \
+                 patch.object(admin, 'STATE', root/'absent-state'), \
+                 patch.object(deploy, 'RUNTIME_LIBRARY', library), \
+                 patch.object(admin, 'safe_directory'), patch.object(admin, 'fsync_dir'), \
+                 patch.object(admin, 'read_regular', side_effect=lambda p, limit: Path(p).read_bytes()):
+                files.prune_removed_directories(expected_uid=os.geteuid())
+                self.assertTrue(library.exists())
+                self.assertEqual(set(library.iterdir()), {library/'overlays'})
+                self.assertTrue(all(path.exists() for path in paths))
+                with patch.object(files, 'packaged_baseline', side_effect=FileNotFoundError('missing database')):
+                    with self.assertRaises(FileNotFoundError):
+                        files.prune_removed_directories(expected_uid=os.geteuid())
+                with patch.object(admin, 'read_regular', side_effect=FileNotFoundError('overlay race')):
+                    with self.assertRaises(FileNotFoundError):
+                        files.prune_removed_directories(expected_uid=os.geteuid())
+                (library/'foreign').write_bytes(b'preserve')
+                with self.assertRaisesRegex(ValueError, 'unexpected residue'):
+                    files.prune_removed_directories(expected_uid=os.geteuid())
+                self.assertEqual((library/'foreign').read_bytes(), b'preserve')
 
     def test_removed_directory_pruning_rejects_unowned_application_lock(self):
         with tempfile.TemporaryDirectory() as directory:

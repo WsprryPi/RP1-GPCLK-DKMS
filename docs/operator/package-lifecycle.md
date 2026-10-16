@@ -207,7 +207,14 @@ architecture, package manager, DKMS/compiler/compression tools, header configs,
 candidate/predecessor digests and every before/after transition. Legacy service
 attempts are separately logged and interlocked; candidate service/module-loader
 attempts fail the test. Native DKMS is real; command faults and signing/compression
-header variants are explicitly controlled test inputs. Actual service-manager,
+header variants are explicitly controlled test inputs.
+
+The `packaged-runtime-baseline` scenario checks runtime directory pruning and
+absence detection against a real installed package's passive units and overlays.
+It substitutes inactive service/module/endpoint observations and does not deploy
+or activate a runtime. It also checks refusal and preservation of changed or
+foreign overlay files. These filesystem checks do not establish target runtime
+removal or service correctness. Actual service-manager,
 signing trust, target binding, GPIO, WsprryPi and RF validation remain separate.
 Item 16 accepts the exact final candidate against then-current WsprryPi `devel`
 before freeze or publication.

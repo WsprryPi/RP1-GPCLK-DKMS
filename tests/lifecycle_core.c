@@ -345,6 +345,7 @@ static void test_release_and_owner_close(void)
     CHECK(core.value.terminal_reason == RP1_GPCLK_REASON_OWNER_CLOSED);
     CHECK(core.value.terminal_publications == 1);
     CHECK(core.value.owner_id == 0);
+    CHECK(core.value.lease_id == 0);
     CHECK(rp1_gpclk_core_release(&core, OWNER_A, lease) ==
           RP1_GPCLK_CORE_STALE);
     CHECK(rp1_gpclk_core_acquire(&core, OWNER_B, RP1_GPCLK_ROUTE_GPIO20, 0,
@@ -413,8 +414,90 @@ static void test_owner_close_during_stop_drain(void)
     CHECK(core.value.terminal_reason == RP1_GPCLK_REASON_OWNER_CLOSED);
     CHECK(core.value.terminal_publications == 1);
     CHECK(core.value.owner_id == 0);
+    CHECK(core.value.lease_id == 0);
     CHECK(rp1_gpclk_core_acquire(&core, OWNER_B, RP1_GPCLK_ROUTE_GPIO4, 0,
                                  &lease) == RP1_GPCLK_CORE_OK);
+}
+
+static void test_owner_close_authority(void)
+{
+    const __u32 routes[] = { RP1_GPCLK_ROUTE_GPIO4, RP1_GPCLK_ROUTE_GPIO20 };
+    const __u32 faults[] = { RP1_GPCLK_FAULT_NONE, RP1_GPCLK_FAULT_CLEANUP,
+                             RP1_GPCLK_FAULT_TERMINAL_PRECOMMIT };
+    unsigned int route_index;
+    unsigned int fault_index;
+    unsigned int stop_first;
+
+    for (route_index = 0; route_index < 2; route_index++) {
+        for (fault_index = 0; fault_index < 3; fault_index++) {
+            for (stop_first = 0; stop_first < 2; stop_first++) {
+                struct rp1_gpclk_core core;
+                struct rp1_gpclk_core before;
+                struct rp1_gpclk_core_snapshot snapshot;
+                __u64 lease;
+                __u64 next_lease;
+                __u64 generation;
+                __u32 reason = RP1_GPCLK_REASON_OWNER_CLOSED;
+
+                rp1_gpclk_core_init(&core);
+                CHECK(rp1_gpclk_core_acquire(&core, OWNER_A,
+                          routes[route_index], 0, &lease) == RP1_GPCLK_CORE_OK);
+                generation = submit_events(&core, OWNER_A, lease, 3);
+                if (stop_first)
+                    CHECK(rp1_gpclk_core_stop(&core, OWNER_A, lease,
+                              generation) == RP1_GPCLK_CORE_OK);
+                CHECK(rp1_gpclk_core_owner_close(&core, OWNER_A) ==
+                      RP1_GPCLK_CORE_OK);
+                CHECK(core.value.state == RP1_GPCLK_STATE_DRAINING);
+                CHECK(core.value.owner_id == OWNER_A);
+                CHECK(core.value.lease_id == lease);
+                CHECK(core.value.terminal_publications == 0);
+                if (faults[fault_index] != RP1_GPCLK_FAULT_NONE)
+                    rp1_gpclk_core_inject_fault(&core, faults[fault_index], 1);
+                CHECK(rp1_gpclk_core_progress(&core, OWNER_A, lease,
+                          generation) == RP1_GPCLK_CORE_OK);
+                if (faults[fault_index] == RP1_GPCLK_FAULT_CLEANUP)
+                    reason = RP1_GPCLK_REASON_CLEANUP_FAILED;
+                else if (faults[fault_index] == RP1_GPCLK_FAULT_TERMINAL_PRECOMMIT)
+                    reason = RP1_GPCLK_REASON_INTERNAL_ERROR;
+                CHECK(core.value.state == (fault_index == 0 ?
+                      RP1_GPCLK_STATE_COMPLETE : RP1_GPCLK_STATE_FAILED));
+                CHECK(core.value.terminal_reason == reason);
+                CHECK(core.value.cleanup_fault == (faults[fault_index] ==
+                      RP1_GPCLK_FAULT_CLEANUP));
+                CHECK(core.value.generation == generation);
+                CHECK(core.value.completed_units == 1);
+                CHECK(core.value.drain_units == 0);
+                CHECK(core.value.plan_loaded == 0);
+                CHECK(core.value.plan_releases == 1);
+                CHECK(core.value.terminal_publications == 1);
+                CHECK(core.owner_closing == 0);
+                CHECK(rp1_gpclk_core_get_public_state(&core, &snapshot) ==
+                      RP1_GPCLK_CORE_OK);
+                CHECK(snapshot.owner_id == 0 && snapshot.lease_id == 0);
+                CHECK(snapshot.generation == generation);
+                CHECK(snapshot.terminal_reason == reason);
+                before = core;
+                CHECK(rp1_gpclk_core_progress(&core, OWNER_A, lease,
+                          generation) == RP1_GPCLK_CORE_STALE);
+                CHECK(rp1_gpclk_core_stop(&core, OWNER_A, lease,
+                          generation) == RP1_GPCLK_CORE_STALE);
+                CHECK(rp1_gpclk_core_owner_close(&core, OWNER_A) ==
+                      RP1_GPCLK_CORE_STALE);
+                CHECK(rp1_gpclk_core_release(&core, OWNER_A, lease) ==
+                      RP1_GPCLK_CORE_STALE);
+                CHECK(memcmp(&before, &core, sizeof(core)) == 0);
+                CHECK(rp1_gpclk_core_acquire(&core, OWNER_B,
+                          routes[route_index], 0, &next_lease) ==
+                      (faults[fault_index] == RP1_GPCLK_FAULT_CLEANUP ?
+                       RP1_GPCLK_CORE_LATCHED : RP1_GPCLK_CORE_OK));
+                if (faults[fault_index] == RP1_GPCLK_FAULT_CLEANUP)
+                    CHECK(memcmp(&before, &core, sizeof(core)) == 0);
+                else
+                    CHECK(next_lease != 0 && next_lease != lease);
+            }
+        }
+    }
 }
 
 static void test_generation_wrap(void)
@@ -659,6 +742,7 @@ int main(void)
     RUN(test_cleanup_latch);
     RUN(test_runtime_cleanup_failure_latch);
     RUN(test_owner_close_during_stop_drain);
+    RUN(test_owner_close_authority);
     RUN(test_generation_wrap);
     RUN(test_limit_boundaries);
     RUN(test_terminal_precedence_and_dead);

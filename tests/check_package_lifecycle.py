@@ -127,6 +127,8 @@ class Tests(unittest.TestCase):
             'var/lib/wsprrypi/rp1-gpclk-dkms-installation.json',
             'etc/rp1-gpclk-dkms/development/record.json',
             'usr/lib/rp1-gpclk-dkms/runtime_activation.py',
+            'usr/lib/rp1-gpclk-dkms/package_preflight.py',
+            'usr/lib/rp1-gpclk-dkms/runtime-uapi/rp1_gpclk.h',
             'usr/lib/rp1-gpclk-dkms/runtime-overlays/gpio20.dtbo',
             'etc/systemd/system/rp1-gpclk-route-manager@.service.d/95-runtime-controller.conf'):
             path = put(root, name, b'foreign or owning workflow evidence')

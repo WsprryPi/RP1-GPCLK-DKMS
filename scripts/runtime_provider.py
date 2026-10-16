@@ -247,9 +247,20 @@ class Host:
                 # WsprryPi may already have archived and retired the recovered
                 # activation journal. The remaining route journals are still
                 # removable only as an exact, inactive, same-boot chain.
-                transactions = activation.recovered_route_retirement(system)
-                if transactions is not None:
-                    system.retire_transactions(transactions)
+                if deployment.existing_deployment_state(self.files) is not None:
+                    # Inverse publication can already have removed its binding
+                    # and every activation prerequisite. Route retirement must
+                    # have finished before that publication began. Do not read a
+                    # removed binding to re-prove an already absent journal chain.
+                    # The retained inverse and all remaining bytes are checked by
+                    # deployment.remove under this same mutation lock.
+                    if any(self.files.read(str(admin.STATE / name)) is not None
+                           for name in activation.RETIREMENT_TRANSACTIONS):
+                        raise ValueError('route journals remain during interrupted inverse deployment')
+                else:
+                    transactions = activation.recovered_route_retirement(system)
+                    if transactions is not None:
+                        system.retire_transactions(transactions)
             deployment.remove(self.files, value, approved)
         self.files.prune_removed_directories()
         return {'status': 'removed-exact-deployment'}
@@ -328,13 +339,17 @@ class Host:
         return admin.strict_json(raw or pending) if raw or pending else None
 
     def update_absent(self):
+        baseline = self.files.packaged_baseline()
         services = self.services()
         manager_units = ('rp1-gpclk-route-manager.socket',
                          'rp1-gpclk-route-manager@.service')
         inactive_units = all(services.get(name, {}).get('load') in ('loaded', 'not-found')
             and services.get(name, {}).get('active') in ('inactive', 'failed')
             for name in manager_units)
-        return (inactive_units and all(self.files.read(path) is None for path in deployment.DESTINATIONS)
+        runtime_absent = all((data := self.files.read(path)) is None or
+                    (path in baseline and admin.digest(data) == baseline[path])
+                    for path in deployment.DESTINATIONS)
+        return (inactive_units and runtime_absent
             and self.files.read(deployment.LAST_DEPLOYMENT) is None
             and self.files.read(str(admin.STATE / 'deployment-pending.json')) is None
             and all(self.module(name)['status'] == 'absent' for name in

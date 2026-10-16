@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import stat
 import tempfile
+import package_preflight
 import runtime_controller_admin as admin
 from runtime_binding import validate as validate_binding
 from runtime_layout import INVENTORY
@@ -129,6 +130,39 @@ def payloads(directory):
 
 class Files:
     """Production paths only. Tests substitute this adapter, not environment paths."""
+    def packaged_baseline(self, root=Path('/')):
+        """Authenticate passive package files that inverse deployment restores.
+
+        This is observational package ownership, never permission to mutate it.
+        Source-development has no package baseline. A present database must
+        describe the exact current package and its complete unchanged payload.
+        """
+        listing = root/'var/lib/dpkg/info/rp1-gpclk-dkms.list'
+        if not listing.exists() and not listing.is_symlink():
+            return {}
+        status = admin.run(('/usr/bin/dpkg-query', '-W', '-f=${Status}\n${Version}',
+                            'rp1-gpclk-dkms'))
+        if status != 'install ok installed\n1.0.0-1':
+            raise ValueError('passive package baseline requires exact installed 1.0.0-1')
+        owned = package_preflight.payload_ownership(root, complete=True)
+        names = ('usr/lib/systemd/system/rp1-gpclk-route-manager.socket',
+                 'usr/lib/systemd/system/rp1-gpclk-route-manager@.service',
+                 'usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio4.dtbo',
+                 'usr/lib/rp1-gpclk-dkms/overlays/rp1-gpclk-gpio20.dtbo')
+        result = {}
+        for name in names:
+            path = root/name
+            if path not in owned:
+                raise ValueError('passive package baseline lacks ownership: '+str(path))
+            admin.safe_directory(path.parent)
+            result[str(path)] = admin.digest(admin.read_regular(path, MAX_FILE_BYTES))
+        library = root/'usr/lib/rp1-gpclk-dkms'
+        overlays = library/'overlays'
+        expected = {overlays, overlays/'rp1-gpclk-gpio4.dtbo', overlays/'rp1-gpclk-gpio20.dtbo'}
+        if set(library.rglob('*')) != expected:
+            raise ValueError('unexpected residue beside passive package overlays')
+        return result
+
     def read(self, path):
         try:
             admin.safe_directory(Path(path).parent)
@@ -314,7 +348,7 @@ class Files:
             admin.safe_directory(cache)
             for path in cache.iterdir():
                 info = path.lstat()
-                if (not re.fullmatch(r'runtime_[A-Za-z0-9_]+\.cpython-[0-9]+\.pyc',
+                if (not re.fullmatch(r'(?:runtime_[A-Za-z0-9_]+|package_preflight)\.cpython-[0-9]+\.pyc',
                                      path.name) or
                         not stat.S_ISREG(info.st_mode) or info.st_uid != expected_uid or
                         stat.S_IMODE(info.st_mode) & 0o022 or info.st_nlink != 1):
@@ -325,10 +359,23 @@ class Files:
             admin.fsync_dir(cache.parent)
         except FileNotFoundError:
             pass
-        for path in (admin.STATE, Path('/usr/lib/rp1-gpclk-dkms/schema'),
-                     Path('/usr/lib/rp1-gpclk-dkms/runtime-uapi'),
-                     Path('/usr/lib/rp1-gpclk-dkms/runtime-overlays'),
+        for path in (admin.STATE, RUNTIME_LIBRARY/'schema',
+                     RUNTIME_LIBRARY/'runtime-uapi',
+                     RUNTIME_LIBRARY/'runtime-overlays',
                      RUNTIME_LIBRARY):
+            baseline = self.packaged_baseline() if path == RUNTIME_LIBRARY else {}
+            if baseline:
+                overlays = path/'overlays'
+                expected = {overlays, overlays/'rp1-gpclk-gpio4.dtbo',
+                            overlays/'rp1-gpclk-gpio20.dtbo'}
+                admin.safe_directory(path)
+                admin.safe_directory(overlays)
+                if set(path.rglob('*')) != expected:
+                    raise ValueError('unexpected residue beside passive package overlays')
+                for member in expected - {overlays}:
+                    if admin.digest(admin.read_regular(member, MAX_FILE_BYTES)) != baseline.get(str(member)):
+                        raise ValueError('passive package overlay changed during removal')
+                continue
             try:
                 path.rmdir()
                 admin.fsync_dir(path.parent)

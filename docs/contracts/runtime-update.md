@@ -23,6 +23,11 @@ reconstructs it under application mutation exclusion and rejects drift before
 effects. Existing primitives retain their deployment/controller locks and
 revalidation. Each effect has its own reviewed step; failed execution is never
 automatically retried. A new plan observes the completed or interrupted state.
+An interrupted inverse may already have removed the installed binding and its
+helpers. Recovery uses the digest-bound retained inverse and verifies that the
+activation and dependent route journals are absent before resuming file
+restoration. A remaining or changed journal is a refusal; missing removed
+prerequisites never justify reconstructing or discarding journal ownership.
 
 Successful preparation removes only the exact runtime deployment. The inverse
 may restore the application service intent captured before deployment; success
@@ -35,6 +40,18 @@ standalone bundle includes the manager used by update execution and the complete
 local import dependencies of every bootstrap helper, including imports inside
 functions. Each helper is byte-identical to its digest-bound deployment payload;
 predeployment validation must not rely on an installed helper or source checkout.
+
+On a Debian-package installation, inverse deployment restores the passive
+package-owned route-manager unit fragments. The inactive firmware overlays
+remain package data throughout. Runtime absence permits only these attributable
+package files after complete payload verification against the root-owned dpkg
+inventory and the exact installed package version. Missing, changed, foreign,
+or additional files remain refusals. The shared library directory is retained
+only when its remaining descendants are exactly the two verified package
+overlays and their directory. Preparation does not remove the package, its
+DKMS instance, or its inactive overlays. Source-development has no such package
+baseline. The bundle includes the checksummed package-inventory helper needed
+to verify this distinction even during inverse deployment.
 
 ## Response contract
 

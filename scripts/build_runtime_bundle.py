@@ -40,7 +40,7 @@ def bundle(modules, output, application_companion, kernel=None):
     for name in ('runtime_deployment.py', 'runtime_controller_admin.py', 'runtime_layout.py',
                  'runtime_application.py', 'runtime_output.py', 'runtime_provider.py',
                  'runtime_binding.py', 'runtime_activation.py', 'runtime_route_client.py',
-                 'runtime_manager.py'):
+                 'runtime_manager.py', 'package_preflight.py'):
         (output / name).write_bytes((ROOT / 'scripts' / name).read_bytes())
     return binding
 
