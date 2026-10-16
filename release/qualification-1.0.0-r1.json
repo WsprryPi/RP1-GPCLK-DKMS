@@ -1,0 +1,234 @@
+{
+  "SPDX-License-Identifier": "MIT",
+  "revision": 1,
+  "softwareTag": "v1.0.0",
+  "reuse": {
+    "testedProviderCommit": "817f3dc6a194f4a92a7f94acf10147169e6439d6",
+    "publishedProviderCommit": "8c16d3c237cb1267cbedafb5da2bb74132ca5de0",
+    "unchangedInputs": [
+      "src",
+      "controller",
+      "include",
+      "overlays",
+      "Kbuild",
+      "Makefile",
+      "dkms.conf",
+      "debian",
+      "scripts/package_stage.py",
+      "scripts/package_preflight.py",
+      "scripts/package_indices.py",
+      "scripts/package_signatures.py",
+      "scripts/overlay_builder.py",
+      "scripts/rp1-gpclk-route-manager.py",
+      "scripts/build_runtime_binding.py",
+      "scripts/build_runtime_bundle.py",
+      "scripts/build_runtime_controller.py",
+      "scripts/development_route_manager.py",
+      "scripts/development_workflow.py",
+      "scripts/runtime_activation.py",
+      "scripts/runtime_application.py",
+      "scripts/runtime_binding.py",
+      "scripts/runtime_controller_admin.py",
+      "scripts/runtime_deployment.py",
+      "scripts/runtime_inhibitor_cleanup.py",
+      "scripts/runtime_inventory.py",
+      "scripts/runtime_layout.py",
+      "scripts/runtime_manager.py",
+      "scripts/runtime_output.py",
+      "scripts/runtime_provider.py",
+      "scripts/runtime_route_client.py"
+    ],
+    "candidatePackageSha256": "3baa570a8bc7657a26f934980ee7d3aa4e1bc9e372b28ff446f324f01328b590",
+    "packagePayload": "Identical Debian data/control members; archive container and release metadata have independent identities.",
+    "rationale": "The release-profile changes affect source/archive provenance and documentation, not execution, build, UAPI, overlays, packaged runtime or lifecycle inputs."
+  },
+  "observations": {
+    "board": "Raspberry Pi 5 Model B (wspr5); BCM2712/RP1",
+    "kernel": "6.18.34+rpt-rpi-2712",
+    "architecture": "aarch64",
+    "compiler": "Debian GCC/G++ 14.2.0-19",
+    "kernelConfiguration": "Matching stock target headers; complete target configuration digest is not retained in this reference.",
+    "modules": {
+      "rp1_gpclk_dkms": {
+        "path": "/lib/modules/6.18.34+rpt-rpi-2712/updates/dkms/rp1_gpclk_dkms.ko.xz",
+        "installedFileSha256": "21b1c019b267a0939dfd48ee2d92b646163c8de6d62822e816eb3944f4c82843",
+        "decompressedElfSha256": "99d8a9264f6bb35e96d4e1405a89915dc82be9f5e2a043f5506b15a235c24614",
+        "version": "1.0.0"
+      },
+      "rp1_route_controller": {
+        "path": "/lib/modules/6.18.34+rpt-rpi-2712/updates/dkms/rp1_route_controller.ko.xz",
+        "installedFileSha256": "26655f915f9946777b675a80994b438c675fdbbbe567ffc7ffb8b64db6f8d768",
+        "decompressedElfSha256": "ef6bd37610d2a3ea18bdd2fcf438acc67103538b73c05a547c49f17a420b9b86",
+        "version": "1.0.0"
+      }
+    },
+    "application": {
+      "consumerCommit": "39bf443b49587149e15486a09dc1eb04db4c862e",
+      "providerCommit": "817f3dc6a194f4a92a7f94acf10147169e6439d6",
+      "binarySha256": "3586eb0864996f449249161aa4670886f9dfda0e96f70f5f4505d818e48def9e",
+      "companionSha256": "3d03c02db2a13feb32f29ee44d921635a44c2aeb97f7cebdfc512e8c025c463b",
+      "helperSha256": "ca0e68bf443f1a88245b80458cd4d5cd7085aac25a1c7c343b9a996e669e8e08",
+      "planSha256": "c73002ad129947931dd0a97f3e716921de3ba5741d83f7cd7efcbf6707ed18bf",
+      "maximumPrograms": 14,
+      "maximumProgrammedSeconds": 112,
+      "automaticRetry": false,
+      "maximumInteriorCarrierGapSeconds": 0.032768
+    },
+    "headerBuilds": [
+      {
+        "kernel": "6.18.50+rpt-rpi-2712",
+        "configurationSha256": "8282cb6fae3921b32278eb4ce0bfc10bc306e2e5e36111a54dcef79ba3be566c"
+      },
+      {
+        "kernel": "6.18.50+rpt-rpi-v8",
+        "configurationSha256": "a990ef94542fac5ff489753fef98157d0840474f0c88cc4617c8371c90c51b5d"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "urn:wsprrypi:item16:39bf443:817f3dc:conducted-tone",
+      "sha256": "6013848e3c708bf71710e8246b87d483855db02f643ccf7c00f307e51fa161bb"
+    },
+    {
+      "id": "urn:wsprrypi:item16:817f3dc:header-builds",
+      "sha256": "b20cd036dd3156b265d48f8a9a3ec1a8c2427b191ff99043cfbff56588265e94"
+    },
+    {
+      "id": "urn:wsprrypi:item16:817f3dc:package-lifecycle",
+      "sha256": "56ea561669985dc36ff8c99af80c1a8c31652658b3a4daf72a7ff63b44bf7b5c"
+    },
+    {
+      "id": "urn:wsprrypi:item10:release-payload-reuse",
+      "sha256": "0a32204a4afe5ec88304890ec79c3afe869d56ca4d3ac917ff35ee63080f2694"
+    },
+    {
+      "id": "urn:wsprrypi:harness:rp1-both-routes-20260831:gpio20-2200m-qualified-summary.json",
+      "sha256": "6423e4bf113b5ed53f3a1e0b0b0bd7316fa28b6db21ac24264878b1df615cc94"
+    },
+    {
+      "id": "urn:wsprrypi:harness:rp1-both-routes-20260831:gpio20-after630-summary.jsonl",
+      "sha256": "21ebe7f6d5f15f34107626b30f8d386b83190d95e7909e94f5c89514fc832c7e"
+    },
+    {
+      "id": "urn:wsprrypi:harness:rp1-both-routes-20260831:gpio20-remaining-summary.jsonl",
+      "sha256": "4299d3943c0f9b8bfc4461065e6b09ba26c170a7079c02c96918fd792c325909"
+    },
+    {
+      "id": "urn:wsprrypi:harness:rp1-both-routes-20260831:rf-path.json",
+      "sha256": "42140130d6f0839c1df9c6773b972de29624674bba3c9d977886dd8b1ac76fa4"
+    },
+    {
+      "id": "urn:wsprrypi:harness:rp1-gpio4-6m-4m-20260831T1833:measurement-audit.json",
+      "sha256": "f2f9d6273f1af8574abbe6554ebb126bb41919afd53265a8626d13edcace15f3"
+    },
+    {
+      "id": "urn:wsprrypi:harness:rp1-both-routes-20260831:fskcw630-review:plan.json",
+      "sha256": "d5e05f86d09b61e1f2b8db1ced9e965596f591412b6b9dc392a48ab62e131e45"
+    }
+  ],
+  "routes": [
+    {
+      "route": "gpio4",
+      "routeId": "v1.0.0-rp1-gpio4",
+      "state": "Qualified",
+      "scope": {
+        "kind": "finite-conducted-tone",
+        "frequencyHz": 14097100,
+        "mode": "TONE",
+        "driveMa": 2,
+        "parent": "pll_sys",
+        "parentHz": 200000000,
+        "intrinsicPpm": -46.245,
+        "manualPpm": 0,
+        "systemClockEstimate": false,
+        "maximumProgramSeconds": 8,
+        "physicalPath": "Maintainer confirmed GPIO4 and GPIO20 through proper attenuation to SDR; wiring unchanged",
+        "receiver": "SDRplay RSP1B serial 2404058C60;250ksps CF32;14087100Hz center;200kHz BW;20dB gain;AGC/bias off"
+      },
+      "caseNames": [
+        "complete",
+        "stop-start",
+        "stop-before-boundary",
+        "stop-after-boundary",
+        "stop-near-end",
+        "owner-close",
+        "service-stop"
+      ],
+      "caseSelectionSha256": "ccd839ae81ebba65748bd7c128b85931f3e4e0e64e52202369634ae5087071cc",
+      "evidenceId": "urn:wsprrypi:item16:39bf443:817f3dc:conducted-tone",
+      "evidenceSelector": {
+        "field": "cases.route",
+        "value": "GPIO4"
+      },
+      "acceptance": "Seven independently passing finite cases: completion, four STOP timings, owner close and service stop; stable cleanup and receiver silence verified.",
+      "runtimeOverlaySha256": "364fcdf4d6f4039c5ab24dad858d1e75b5aa9109a70bb5d607f45c53fdf2e5ba",
+      "overlaySourceSha256": "92aac0681f6a4ac220e9e2ef9d87e38c8d7fc8e03807ffe91e11719e46a6f5dd"
+    },
+    {
+      "route": "gpio20",
+      "routeId": "v1.0.0-rp1-gpio20",
+      "state": "Qualified",
+      "scope": {
+        "kind": "finite-conducted-tone",
+        "frequencyHz": 14097100,
+        "mode": "TONE",
+        "driveMa": 2,
+        "parent": "pll_sys",
+        "parentHz": 200000000,
+        "intrinsicPpm": -46.245,
+        "manualPpm": 0,
+        "systemClockEstimate": false,
+        "maximumProgramSeconds": 8,
+        "physicalPath": "Maintainer confirmed GPIO4 and GPIO20 through proper attenuation to SDR; wiring unchanged",
+        "receiver": "SDRplay RSP1B serial 2404058C60;250ksps CF32;14087100Hz center;200kHz BW;20dB gain;AGC/bias off"
+      },
+      "caseNames": [
+        "complete",
+        "stop-start",
+        "stop-before-boundary",
+        "stop-after-boundary",
+        "stop-near-end",
+        "owner-close",
+        "service-stop"
+      ],
+      "caseSelectionSha256": "7ad6bddaf6f86b4d21395d9c78bb8037387f7e4dcb20c65f7afe27289a336b14",
+      "evidenceId": "urn:wsprrypi:item16:39bf443:817f3dc:conducted-tone",
+      "evidenceSelector": {
+        "field": "cases.route",
+        "value": "GPIO20"
+      },
+      "acceptance": "Seven independently passing finite cases: completion, four STOP timings, owner close and service stop; stable cleanup and receiver silence verified.",
+      "runtimeOverlaySha256": "e1dc4b66ebcc9eb4a2c6757ca44750b01d56de685eb12f40aed024b2ae08ef98",
+      "overlaySourceSha256": "b2d4464c8ff322733f66c6d41b0735d645505b8941400a29976ebc238395d7c1"
+    }
+  ],
+  "applicationQualification": {
+    "authority": "WsprryPi",
+    "url": "https://wsprry-pi.readthedocs.io/en/devel/About_Wsprry_Pi/index.html#band-qualification",
+    "sourceRepository": "WsprryPi/WsprryPi-Docs",
+    "sourceCommit": "01d9bef6f8d7a05ac2b3223f02270483f33caac4",
+    "sourcePath": "docs/About_Wsprry_Pi/index.md",
+    "sourceSha256": "6fccbee61d6af916775e5cf645741ba59de120134a2625dfcc1561e87857e076",
+    "scope": "Maintained Pi 5 / 200 MHz PLL_SYS application statement. Separate from the finite TONE route cases; not a provider permission table.",
+    "earlierCampaignProvenance": "Lee Bussy maintains and accepts the evidence and its provenance. His explicit disposition establishes the maintained band table as the accepted application qualification scope. Item 16 retains its separate exact route evidence; subordinate earlier campaign records retain their original outcomes.",
+    "earlierCampaignObservations": {
+      "parentRevision": "d6789f1fc91fed3236392d6e85b761511522b4a0",
+      "transmitterComponentRevision": "703c81c2f5a0ae16945a0f3ec51a39e788e3f419",
+      "sourceOfObservation": "retained fskcw630-review/plan.json; source fields describe that retained plan, not every earlier campaign",
+      "providerSource": "The locally retained summaries do not identify an exact provider revision. Lee Bussy's acceptance establishes the maintained application scope; Item 16 supplies the separate exact 1.0.0 route/build binding.",
+      "rfPath": "conducted; no antenna; 20 dB per GPIO into splitter/combiner and SDRplay RSP1B 2404058C60; both routes physically connected, one active route",
+      "routeScope": "Earlier lower-band summaries identify GPIO20. Separate GPIO4 6 m/4 m audit records unsuccessful outcomes. Neither record is transferred to the other route.",
+      "modeScope": "TONE, WSPR, QRSS, FSKCW, DFCW; preserve each subordinate result and later application disposition",
+      "applicability": "The accepted maintained application statement remains WsprryPi policy. Item 16 independently binds both 1.0.0 routes for finite TONE/lifecycle acceptance. This metadata references broader application evidence without claiming byte-identical old provider builds or expanding its scope."
+    }
+  },
+  "limitations": [
+    "Records accepted evidence; does not create qualification or grant execution authority.",
+    "Board and kernel are observations, not a structural compatibility allowlist.",
+    "No calibrated frequency, power, spectral compliance or general coexistence guarantee.",
+    "Item 16 is TONE-only at 14097100 Hz; does not qualify other bands or modes.",
+    "Application band/mode policy and its Unavailable dispositions remain exclusively in WsprryPi.",
+    "No GPIO4/GPIO20 evidence transfer; each route has its own seven cases."
+  ]
+}

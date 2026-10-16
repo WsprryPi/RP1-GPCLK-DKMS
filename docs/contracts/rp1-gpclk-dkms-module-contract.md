@@ -457,6 +457,15 @@ WsprryPi consumes only an explicitly compatible tagged release. Module and
 application commits, reviews, releases, and qualification claims remain
 separate. A clean test run or published artifact never broadens the stated
 qualification scope.
+
+Separately versioned [qualification metadata](../operator/qualification-metadata.md)
+records accepted evidence for immutable software without modifying its tag,
+assets, package version or original empty compatibility manifest. It binds the
+software and its own provenance independently. Structural module compatibility,
+operational readiness, externally established scoped qualification and WsprryPi
+band/mode eligibility are separate facts. Evidence absence or invalidity creates
+no new provider admission, enrollment or transmission gate. Product policy,
+including genuinely Unavailable band/mode dispositions, remains in WsprryPi.
 ### Opt-in runtime management integration
 
 The [runtime manager workflow](../operator/runtime-manager-workflow.md) uses a
