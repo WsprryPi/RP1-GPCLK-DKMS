@@ -49,7 +49,7 @@ def validate_source(files):
                     'unresolved placeholder in '+name)
 
 
-def documents(files, commit, tree, timestamp, directory):
+def documents(files, commit, tree, timestamp, directory, release=False):
     members, controls = package_members(directory/DEB)
     member_map = {m['path']: m for m in members}
     inv = inventory(members)
@@ -71,10 +71,13 @@ def documents(files, commit, tree, timestamp, directory):
         routes[route] = {'routeId': number, 'compatibilityId': f'v{VERSION}-rp1-{route}',
             'sourcePath': source, 'sourceSha256': sha(files[source][1]),
             'packagePath': installed, 'dtboSha256': member_map[installed]['sha256']}
-    metadata = {'schema': 'rp1-gpclk-candidate-provenance-v1', 'schemaVersion': 1,
-        'SPDX-License-Identifier': 'MIT', 'classification': 'candidate', 'published': False,
+    classification = 'release' if release else 'candidate'
+    metadata = {'schema': f'rp1-gpclk-{classification}-provenance-v1', 'schemaVersion': 1,
+        'SPDX-License-Identifier': 'MIT', 'classification': classification, 'published': release,
         'productVersion': VERSION, 'debianVersion': DEBIAN, 'intendedTag': 'v'+VERSION,
-        'releaseTag': None, 'releaseUrl': None, 'githubAssetDigest': None,
+        'releaseTag': 'v'+VERSION if release else None,
+        'releaseUrl': 'https://github.com/WsprryPi/RP1-GPCLK-DKMS/releases/tag/v'+VERSION if release else None,
+        'githubAssetDigest': None,
         'sourceCommit': commit, 'sourceTree': tree,
         'sourceArchive': {'filename': SOURCE, 'sha256': sha((directory/SOURCE).read_bytes())},
         'package': {'filename': DEB, 'sha256': sha((directory/DEB).read_bytes()),
@@ -112,17 +115,17 @@ def documents(files, commit, tree, timestamp, directory):
                           'wsprrypiAcceptance': False, 'lifecycle': False},
         'consumerContract': read_json(files['release/wsprrypi-consumer-contract.json'][1])}
     compatibility = {'SPDX-License-Identifier': 'MIT', 'schemaVersion': 1,
-        'manifestId': f'v{VERSION}-candidate-{commit}',
+        'manifestId': f'v{VERSION}-'+('' if release else 'candidate-')+commit,
         'generatedAt': datetime.fromtimestamp(timestamp, timezone.utc).isoformat().replace('+00:00', 'Z'),
         'module': {'name': MODULES[0], 'release': VERSION, 'sourceCommit': commit,
                    'sourceArchiveSha256': metadata['sourceArchive']['sha256'],
                    'uapiHeaderSha256': manifest['uapi']['sha256']},
         'defaultState': 'Unavailable', 'entries': []}
     result = {'SPDX-License-Identifier': 'MIT', 'schema': 'rp1-gpclk-candidate-validation-v1',
-        'sourceCommit': commit, 'sourceTree': tree, 'classification': 'candidate',
+        'sourceCommit': commit, 'sourceTree': tree, 'classification': classification,
         'reproducibility': {'independentCleanBuilds': 2, 'byteIdentical': True},
         'sourceSha256': metadata['sourceArchive']['sha256'],
-        'packageSha256': manifest['package']['sha256'], 'published': False,
+        'packageSha256': manifest['package']['sha256'], 'published': release,
         'qualification': False}
     return {MANIFEST: manifest, METADATA: metadata, COMPATIBILITY: compatibility, RESULT: result}
 

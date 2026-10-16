@@ -1,9 +1,9 @@
 <!-- SPDX-License-Identifier: MIT -->
 
-# Build and verify the unpublished candidate
+# Build, verify and publish 1.0.0
 
 The product/source/module/DKMS version is `1.0.0`; Debian is `1.0.0-1`;
-the intended future tag is `v1.0.0`. Candidate preparation creates no tag,
+the canonical release tag is `v1.0.0`. Default candidate preparation creates no tag,
 GitHub release, asset URL, immutable release or qualification claim.
 
 ## Commands and environment
@@ -123,3 +123,46 @@ the provider release must precede the dependent WsprryPi production release.
 These commands establish source/package reproducibility and format integrity.
 They do not establish real package lifecycle, target binding/cleanup, signing
 trust, WsprryPi acceptance, product eligibility, transmission or RF qualification.
+
+## Frozen publication profile
+
+After integration and affected acceptance checks, build from the final clean
+`devel` commit with `--release` on both commands above. Repeat into a second new
+directory and compare every file. This profile retains identical source archive,
+Debian package and installation-manifest bytes for the same commit/environment;
+only provenance, compatibility manifest ID, validation classification and their
+checksums change. No generated asset is edited by hand.
+
+Release provenance uses `rp1-gpclk-release-provenance-v1`, classification
+`release`, canonical `releaseTag` and tag-specific `releaseUrl`.
+Its `published: true` describes the intended published artifact profile; local
+building or validation does not verify GitHub publication. Command results
+always return `published: false` because they perform no publication. The retained
+`candidate-validation.json` filename records reproducibility of the frozen set
+with classification `release`; it grants no qualification. The compatibility
+manifest ID is `v1.0.0-FULL_SOURCE_COMMIT`, defaults to Unavailable and has no
+target entries. Actual target module identities remain null until built.
+`githubAssetDigest` remains null because provenance cannot embed its own final
+digest; GitHub's independently queried per-asset digests and `SHA256SUMS` bind
+the published files. Candidate and release profiles are never accepted
+interchangeably by the validator.
+
+Use an annotated `v1.0.0` tag at that exact reviewed commit. Verify synchronized
+`devel`, clean source, exact-commit CI, both reproducible builds and independent
+validation before creating it. Inspect existing tags/releases first; conflicting
+identities stop publication. Never move an existing tag or overwrite an asset.
+
+Enable repository release immutability before publishing. With authenticated
+`gh`, create a draft using `--verify-tag`, reviewed release notes and every
+validated asset. Download the draft and compare the complete set against the
+frozen directory before `gh release edit v1.0.0 --draft=false --verify-tag`.
+Published releases must be immutable, non-draft and non-prerelease. Independently
+query the peeled remote tag and release, download all seven assets into a new
+external directory, recompute every SHA-256 and compare every byte. Retain the
+build image by immutable ID for reconstruction. If interrupted, inspect and
+finish the existing draft; never replace an immutable publication.
+
+Provider publication precedes application release. WsprryPi candidate acceptance
+remains bound to its reviewed fixture until its separate published-identity
+migration. Publication alone neither migrates that consumer nor extends
+conducted acceptance into calibrated or general RF qualification.

@@ -13,17 +13,17 @@ MMIO, DMA channels, register writes, or GPIO routes to userspace.
 
 ## Release status
 
-`1.0.0` / Debian `1.0.0-1` is the current **unpublished candidate**.
-There is no published release or created release tag. The candidate includes
+`1.0.0` / Debian `1.0.0-1` is the current release source, with canonical tag
+[`v1.0.0`](https://github.com/WsprryPi/RP1-GPCLK-DKMS/releases/tag/v1.0.0). It includes
 both the interlocked consumer and runtime route controller in one DKMS instance.
 The UAPI bytes remain canonical; GPIO4 and GPIO20 have separate compatibility
 identities and inactive overlays. No target, lifecycle, application or RF
 qualification is implied.
 
-Use the [candidate build and independent validation procedure](docs/operator/release-candidate.md).
-Its installation manifest declares the intended stable `v1.0.0` consumer format;
-separate provenance explicitly records `classification: candidate`,
-`published: false`, and no existing tag, release URL or GitHub asset digest.
+Use the [build, validation and publication procedure](docs/operator/release-candidate.md).
+Default builds remain unpublished candidates; the explicit `--release` profile
+binds the stable tag and release URL. Actual publication requires independent
+remote-tag and downloaded-asset verification. All qualification flags stay false.
 Exact-source development remains a distinct `source-development` workflow.
 
 ## Safety
@@ -46,7 +46,7 @@ alternate-transmitter fallback.
 
 For exact-commit development installation, follow the
 [source-development guide](docs/operator/source-development.md). The current
-`1.0.0` package is an unpublished candidate. Review the
+`1.0.0` package uses the exact tagged source and checksummed assets. Review the
 [identity and migration contract](docs/contracts/development-identity.md)
 before installing over an existing version.
 
@@ -71,7 +71,7 @@ The byte-authoritative userspace header is
 [`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The
 [userspace interface contract](docs/contracts/uapi.md) describes queries,
 root-only ownership, generic finite events, state, bounded cancellation, passive
-snapshots, and immutable test inhibition. This unreleased
+snapshots, and immutable test inhibition. This versioned
 interface has no legacy layouts or compatibility fallbacks.
 
 The API supports:
@@ -106,7 +106,7 @@ make check
 make package-check
 ```
 
-For a maintainer-facing build/install/load workflow from an exact unreleased
+For a maintainer-facing build/install/load workflow from an exact
 Git commit, see [Exact-source development lifecycle](docs/operator/source-development.md).
 That path is package-independent and remains explicitly `Experimental`; it does
 not create release or qualification identity.
@@ -118,9 +118,9 @@ The maintained test inventory and the distinction between automatic,
 parameterized build, and explicitly authorized hardware checks are documented
 in [Testing](docs/testing.md).
 
-Candidate generation is available through `scripts/build-release-candidate`;
-publication remains a later gate after package lifecycle and exact-candidate
-WsprryPi acceptance. A plain Debian build does not produce the candidate asset set.
+Candidate and frozen release generation use `scripts/build-release-candidate`;
+publication follows package lifecycle and exact-candidate WsprryPi acceptance.
+A plain Debian build does not produce the complete asset set.
 
 Build the module against an explicitly selected local kernel build tree:
 

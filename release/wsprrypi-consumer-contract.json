@@ -1,9 +1,9 @@
 {
   "SPDX-License-Identifier": "MIT",
   "repository": "WsprryPi/WsprryPi",
-  "sourceCommit": "fbb80fa2d1f654c10b8fcf695390144e945e0dd1",
+  "sourceCommit": "c4736e55e34574349d94d5e974c337760d7f78a2",
   "installerPath": "scripts/rp1_gpclk_dkms_install.py",
-  "installerSha256": "d1fbe5ac4eab6fc2bcf1837722dd82d9a74875864476f9da5db68fb6fa159ca8",
+  "installerSha256": "c1bcafe8a76b71de55620522b9fde10627f42d64b027860d94dafe1da48d3ba6",
   "requiredAssets": [
     "SHA256SUMS",
     "rp1-gpclk-dkms-installation-manifest-v1.json",
@@ -43,12 +43,9 @@
   ],
   "runtimeBinding": "rp1-gpclk-runtime-binding-v3",
   "runtimeUpdate": "rp1-gpclk-runtime-update-v1",
-  "requiredAncestor": "8a8bf5d4184714949faffbf2e2538a1cac0526b2",
+  "requiredAncestor": "817f3dc6a194f4a92a7f94acf10147169e6439d6",
   "qualificationClaim": false,
   "deferredAcceptance": [
-    "exact-candidate application acceptance including historical provider rejection and eight-second finite TONE",
-    "development installer v0.9.0-pi5 identity must be reconciled with 1.0.0 through its owning repository",
-    "cross-repository update-contract test has synthetic 0.9.0 module payloads; use selected provider version",
-    "real passive package lifecycle including predecessor scripts and installed-module compression/signing"
+    "published immutable-provider consumption and production installation, migration, runtime, removal, rollback and recovery in WsprryPi"
   ]
 }

@@ -2,7 +2,7 @@
 
 # Debian DKMS packaging
 
-The unpublished candidate is `rp1-gpclk-dkms_1.0.0-1_all.deb`. Use the
+The canonical package is `rp1-gpclk-dkms_1.0.0-1_all.deb`. Use the
 [complete candidate procedure](release-candidate.md) to build and independently
 validate its exact source, package, inventory, checksums and provenance.
 `dpkg-buildpackage --no-sign -b` builds only a local package, without candidate

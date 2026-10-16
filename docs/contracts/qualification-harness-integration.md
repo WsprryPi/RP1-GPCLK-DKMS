@@ -37,9 +37,10 @@ ordering or implicit defaults.
   policy, and actual installed module-file hash when an artifact exists; and
 - route overlay source, compiled DTBO, and installed DTBO hashes.
 
-Unreleased `1.0.0` source labels are development inputs, not a final package,
-tag, inventory, compatibility manifest, or consumer identity. An absent future
-package identity remains an explicit blocker rather than a fabricated value.
+Source-development labels alone are not a final package, tag, inventory,
+compatibility manifest or consumer identity. Release inputs require the exact
+immutable tag and verified assets. An absent package identity remains an
+explicit blocker rather than a fabricated value.
 
 ### Target and route
 

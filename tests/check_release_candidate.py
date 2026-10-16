@@ -223,12 +223,48 @@ class LinuxTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=self.base) as temporary:
             candidate = Path(temporary)/'candidate'
             shutil.copytree(self.candidate, candidate)
-            def drift(unused, commit):
+            def drift(unused, commit, release=False):
                 (candidate/c.METADATA).write_bytes(b'changed during independent verification')
                 return {'status': 'PASS'}
             with patch.dict(self.validator.__globals__, {'_validate_snapshot': drift}):
                 with self.assertRaisesRegex(ValueError, 'changed during validation'):
                     self.validator(candidate, self.commit)
+
+    def test_release_profile_reproducibility_and_stale_candidate_refusal(self):
+        first, second = self.base/'release-first', self.base/'release-second'
+        for destination in (first, second):
+            run(str(self.builder), '--version', c.VERSION, '--source-commit', self.commit,
+                '--output', str(destination), '--release')
+        self.assertTrue(all((first/name).read_bytes() == (second/name).read_bytes() for name in c.ASSETS))
+        self.assertEqual((first/c.DEB).read_bytes(), (self.candidate/c.DEB).read_bytes())
+        self.assertEqual((first/c.SOURCE).read_bytes(), (self.candidate/c.SOURCE).read_bytes())
+        self.assertEqual(self.validator(first, self.commit, release=True)['classification'], 'release')
+        self.assertIs(self.validator(first, self.commit, release=True)['published'], False)
+        with self.assertRaises(ValueError):
+            self.validator(first, self.commit)
+        with self.assertRaises(ValueError):
+            self.validator(self.candidate, self.commit, release=True)
+        for name in (c.METADATA, c.COMPATIBILITY, c.RESULT):
+            with self.subTest(stale=name), tempfile.TemporaryDirectory(dir=self.base) as temporary:
+                destination = Path(temporary)/'stale'
+                shutil.copytree(first, destination)
+                (destination/name).write_bytes((self.candidate/name).read_bytes())
+                (destination/'SHA256SUMS').write_bytes(c.checksum_bytes(destination))
+                with self.assertRaises(ValueError):
+                    self.validator(destination, self.commit, release=True)
+        for mutation in (lambda v: v.update(releaseUrl='https://example.invalid/moving'),
+                         lambda v: v.update(releaseTag='devel'),
+                         lambda v: v.update(published=1),
+                         lambda v: v['qualification'].update(rf=True)):
+            with tempfile.TemporaryDirectory(dir=self.base) as temporary:
+                destination = Path(temporary)/'forged'
+                shutil.copytree(first, destination)
+                value = c.read_json((destination/c.METADATA).read_bytes())
+                mutation(value)
+                (destination/c.METADATA).write_bytes(c.canonical(value)+b'\n')
+                (destination/'SHA256SUMS').write_bytes(c.checksum_bytes(destination))
+                with self.assertRaises(ValueError):
+                    self.validator(destination, self.commit, release=True)
 
     def test_substituted_packages_with_rebound_manifests(self):
         from release_manifest import documents, encode_documents

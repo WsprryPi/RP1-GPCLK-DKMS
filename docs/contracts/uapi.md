@@ -12,7 +12,7 @@ a separately reviewed change to the endpoint ownership boundary.
 
 The byte-authoritative interface is `include/uapi/linux/rp1_gpclk.h` and
 `uapi-identity.json` records its exact SHA-256 digest. The current interface is
-unreleased and has no legacy layouts, negotiation, or fallback behavior. The
+versioned and has no legacy layouts, negotiation, or fallback behavior. The
 module, consumers, diagnostics, tests, and identity digest change together.
 
 The interface exposes a bounded sequence of generic clock events. It never

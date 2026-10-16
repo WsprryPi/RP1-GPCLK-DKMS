@@ -207,7 +207,7 @@ cannot be cleared by releasing a lease.
 
 The canonical endpoint is `/dev/rp1-gpclk`. The byte-authoritative current
 interface is `include/uapi/linux/rp1_gpclk.h`; `uapi-identity.json` records its
-SHA-256. The unreleased interface has one current set of ioctl identities,
+SHA-256. The current interface has one set of ioctl identities,
 sizes, routes, lease semantics, submission semantics, terminal states, and
 cleanup meanings. No legacy layouts or compatibility commands are retained.
 The root-owned, root-only mode-`0600` endpoint is production execution
@@ -424,7 +424,7 @@ compatibility, provenance, licensing, and security metadata. The source
 version, tag, Debian version, DKMS version, module version, UAPI, package, and
 release metadata must agree according to the release policy.
 
-Version `1.0.0` / Debian `1.0.0-1` is the current unpublished candidate.
+Version `1.0.0` / Debian `1.0.0-1` is the current release source.
 The [candidate procedure](../operator/release-candidate.md) defines the exact
 clean-commit builder, independent validator, complete source/package/control
 inventories, checksums and provenance. The canonical package builds both the
@@ -436,8 +436,11 @@ series. Other DKMS families and dynamic signing mechanisms require explicit
 review; installation preflight refuses their unsupported configurations.
 
 The installation manifest declares intended stable `v1.0.0` consumer identity.
-Its artifact set is explicitly a candidate in separate provenance, with no
-existing tag or release URL. Qualification fields remain false; compatibility
+Default builds are explicitly candidates, with no publication identity.
+The explicit `--release` profile binds annotated tag `v1.0.0` and its canonical
+release URL; actual publication requires an independently verified immutable
+GitHub release and downloaded asset comparison. A local profile flag cannot
+establish publication. Qualification fields remain false; compatibility
 metadata defaults to Unavailable with no invented target entries. Candidate
 bytes and source identities are preserved through lifecycle and consumer
 acceptance before freeze or publication. A changed byte requires new candidate

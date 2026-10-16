@@ -20,7 +20,7 @@ Status: ✅ complete · ⏳ in progress · ⬜ not started
 14. ✅ Build the canonical 1.0.0 release candidate.
 15. ✅ Validate the package lifecycle and 0.9-to-1.0 upgrades.
 16. ✅ Accept the exact DKMS candidate against current WsprryPi `devel`.
-17. ⬜ Integrate the accepted DKMS provider repair and WsprryPi consumer
+17. ⏳ Integrate the accepted DKMS provider repair and WsprryPi consumer
     branches, repeat affected acceptance checks, then freeze and publish the
     immutable DKMS 1.0.0 release.
 18. ⬜ Update WsprryPi to consume the published DKMS identities and validate

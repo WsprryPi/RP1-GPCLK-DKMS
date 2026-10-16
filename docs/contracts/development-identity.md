@@ -2,7 +2,7 @@
 
 # Development identity and installation transitions
 
-The current source version is the unpublished `1.0.0` candidate. It includes finite
+The current source version is `1.0.0`. It includes finite
 generic events, fixed-memory DMA chunking, exact `GPIO4`/`GPIO20` selection,
 runtime switching through none, bounded cancellation/drain, and application restoration.
 WsprryPi owns present/future modes and product policy; DKMS enforces resource,
@@ -25,7 +25,7 @@ ownership, capability and cleanup contracts without a product-mode allowlist.
 | `GPIO4` compatibility ID | `v1.0.0-rp1-gpio4` |
 | `GPIO20` compatibility ID | `v1.0.0-rp1-gpio20` |
 | Classification | `source-development` / `Experimental`; not release-qualified |
-| Future tag convention | `vMAJOR.MINOR.PATCH`; no `v1.0.0` tag is created |
+| Release tag convention | `vMAJOR.MINOR.PATCH`; canonical `v1.0.0` |
 
 Product, Debian, DKMS, UAPI, and schema identities are distinct. Current
 compatibility IDs identify the RP1 resource contract and route. `Experimental`

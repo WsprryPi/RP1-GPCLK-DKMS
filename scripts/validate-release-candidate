@@ -44,7 +44,8 @@ def exact(value, keys, label):
     require(isinstance(value, dict) and set(value) == set(keys), label+' exact-key mismatch')
 
 
-def _validate_snapshot(candidate, commit):
+def _validate_snapshot(candidate, commit, release=False):
+    classification = 'release' if release else 'candidate'
     require(candidate.is_absolute() and candidate == candidate.resolve() and candidate.is_dir(),
             'absolute nonsymlink candidate directory required')
     require({p.name for p in candidate.iterdir()} == ASSETS, 'missing or unexpected candidate assets')
@@ -124,12 +125,14 @@ def _validate_snapshot(candidate, commit):
             all(m.get('packagedElf') is False for m in metadata['modules']) and
             metadata['signing'].get('privateKeyIncluded') is False and
             all(v is False for v in metadata['qualification'].values()), 'invalid provenance JSON field types')
-    require(metadata['schema'] == 'rp1-gpclk-candidate-provenance-v1' and metadata['schemaVersion'] == 1 and
-            metadata['SPDX-License-Identifier'] == 'MIT' and metadata['classification'] == 'candidate' and
-            metadata['published'] is False and metadata['sourceCommit'] == commit and
+    require(metadata['schema'] == f'rp1-gpclk-{classification}-provenance-v1' and metadata['schemaVersion'] == 1 and
+            metadata['SPDX-License-Identifier'] == 'MIT' and metadata['classification'] == classification and
+            metadata['published'] is release and metadata['sourceCommit'] == commit and
             metadata['sourceTree'] == tree and metadata['productVersion'] == VERSION and
             metadata['debianVersion'] == DEBIAN and metadata['intendedTag'] == 'v'+VERSION and
-            all(metadata[k] is None for k in ('releaseTag', 'releaseUrl', 'githubAssetDigest')),
+            metadata['releaseTag'] == ('v'+VERSION if release else None) and
+            metadata['releaseUrl'] == ('https://github.com/WsprryPi/RP1-GPCLK-DKMS/releases/tag/v'+VERSION if release else None) and
+            metadata['githubAssetDigest'] is None,
             'candidate/development/publication provenance mismatch')
     require(metadata['sourceArchive'] == {'filename': SOURCE, 'sha256': sha(source)}, 'source archive provenance mismatch')
     require(metadata['package'] == {'filename': DEB, 'sha256': sha((candidate/DEB).read_bytes()),
@@ -175,20 +178,20 @@ def _validate_snapshot(candidate, commit):
     jsonschema.Draft202012Validator(read_json(files['schema/rp1-gpclk-compatibility-manifest-v1.schema.json'][1])).validate(compat)
     from datetime import datetime, timezone
     require(compat == {'SPDX-License-Identifier': 'MIT', 'schemaVersion': 1,
-        'manifestId': f'v{VERSION}-candidate-{commit}',
+        'manifestId': f'v{VERSION}-'+('' if release else 'candidate-')+commit,
         'generatedAt': datetime.fromtimestamp(timestamp, timezone.utc).isoformat().replace('+00:00', 'Z'),
         'module': {'name': MODULES[0], 'release': VERSION, 'sourceCommit': commit,
             'sourceArchiveSha256': sha(source), 'uapiHeaderSha256': manifest['uapi']['sha256']},
         'defaultState': 'Unavailable', 'entries': []}, 'stale/unsupported compatibility metadata')
     result = read_json((candidate/RESULT).read_bytes())
-    require(result.get('published') is False and result.get('qualification') is False and
+    require(result.get('published') is release and result.get('qualification') is False and
             type(result['reproducibility'].get('independentCleanBuilds')) is int and
             result['reproducibility'].get('byteIdentical') is True, 'invalid validation JSON field types')
     require(result == {'SPDX-License-Identifier': 'MIT', 'schema': 'rp1-gpclk-candidate-validation-v1',
-        'sourceCommit': commit, 'sourceTree': tree, 'classification': 'candidate',
+        'sourceCommit': commit, 'sourceTree': tree, 'classification': classification,
         'reproducibility': {'independentCleanBuilds': 2, 'byteIdentical': True},
         'sourceSha256': sha(source), 'packageSha256': sha((candidate/DEB).read_bytes()),
-        'published': False, 'qualification': False}, 'unverified reproducibility or classification declaration')
+        'published': release, 'qualification': False}, 'unverified reproducibility or classification declaration')
     # Independent replay from authenticated Git blobs; no builder imports or state.
     with tempfile.TemporaryDirectory(prefix='rp1-independent-verify-', dir='/tmp') as temporary:
         source_dir = Path(temporary)/'reconstructed'
@@ -197,7 +200,7 @@ def _validate_snapshot(candidate, commit):
         packages = list(Path(temporary).glob('*.deb'))
         require([p.name for p in packages] == [DEB] and packages[0].read_bytes() == (candidate/DEB).read_bytes(),
                 'package not reproducible from exact source/environment')
-    return {'status': 'PASS', 'classification': 'candidate', 'published': False,
+    return {'status': 'PASS', 'classification': classification, 'published': False,
             'sourceCommit': commit, 'sourceTree': tree, 'independentlyRebuilt': True}
 
 
@@ -226,7 +229,7 @@ def snapshot_assets(candidate):
         os.close(descriptor)
 
 
-def validate(candidate, commit):
+def validate(candidate, commit, release=False):
     # Work only on one bounded, nonsymlink input snapshot. Recheck original bytes
     # after the independent build so changing inputs never receive a PASS.
     captured = snapshot_assets(candidate)
@@ -234,7 +237,7 @@ def validate(candidate, commit):
         staging = Path(temporary)
         for name, data in captured.items():
             (staging/name).write_bytes(data)
-        result = _validate_snapshot(staging, commit)
+        result = _validate_snapshot(staging, commit, release=release)
     require(snapshot_assets(candidate) == captured, 'candidate changed during validation')
     return result
 
@@ -243,10 +246,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--candidate', type=Path, required=True)
     parser.add_argument('--source-commit', required=True)
+    parser.add_argument('--release', action='store_true', help='require the immutable publication profile')
     args = parser.parse_args()
     os.umask(0o022)
     require(sys.platform == 'linux', 'Linux Debian packaging environment required')
-    print(canonical(validate(args.candidate, args.source_commit)).decode())
+    print(canonical(validate(args.candidate, args.source_commit, release=args.release)).decode())
 
 
 if __name__ == '__main__':
