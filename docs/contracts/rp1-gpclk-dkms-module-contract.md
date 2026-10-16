@@ -197,6 +197,9 @@ logical request may span signed 64-bit nanoseconds, but execution materializes
 at most one fixed one-second coherent DMA chunk. Timing remainders and dither
 state carry across chunk boundaries. Cancellation prevents every successor and
 drains at most the current chunk before cleanup. Stale callbacks are rejected.
+Owner close retains authority for the bounded drain. After successful cleanup,
+terminal publication revokes both owner and lease. Passive inspection retains the
+completed generation and terminal reason without retaining that authority.
 Terminal outcomes are stable and specific. A cleanup fault remains latched and
 cannot be cleared by releasing a lease.
 

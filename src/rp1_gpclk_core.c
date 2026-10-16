@@ -144,6 +144,7 @@ static int rp1_gpclk_cleanup_and_publish(struct rp1_gpclk_core *core,
     result = rp1_gpclk_publish_terminal(core, state, reason);
     if (result == RP1_GPCLK_CORE_OK && owner_closed) {
         core->value.owner_id = 0;
+        core->value.lease_id = 0;
         core->owner_closing = 0;
     }
     return result;
