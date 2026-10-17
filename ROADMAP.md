@@ -57,7 +57,7 @@ Status: ✅ complete within accepted scope · ⏳ in progress · ⬜ not started
 | 18 | 10 | ✅ Complete within accepted scope | Published-provider installation, idle runtime and installed qualification reporting | `WsprryPi` |
 | 19 | 11 | ✅ Complete within accepted scope | Documentation performance and Impeccable housekeeping | `WsprryPi-Docs` |
 | 20 | 12 | ✅ Complete within accepted scope | Consolidated operator documentation, including supplement cache, refresh and status | `WsprryPi-Docs` |
-| 21 | 13 | ⬜ Not started | Final integrated application Impeccable review (#423) | `WsprryPi` |
+| 21 | 13 | ✅ Complete within accepted scope | Final integrated application Impeccable review (#423) | `WsprryPi` |
 | 22 | 14 | ⬜ Not started | WsprryPi 4.0 Beta 1 release documentation and candidate preparation; stop after 22c / Pi 14c; later publication and issue updates under 22d–22e / Pi 14d–14e | `WsprryPi` |
 
 The WsprryPi checklist owns the detailed prerequisites and completion decisions.
