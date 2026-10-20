@@ -88,6 +88,19 @@ It checks parent agreement with the provider, exact Q16 divider/count fixtures,
 UAPI divider constraints and the calculated mean frequency. Other hosts skip
 this wrapper because it requires Linux userspace headers.
 
+The same Linux runner compiles the sweep client's real CLI and renderer through
+`development_sweep_plan.cpp`, using aborting endpoint and SoapySDR stubs instead
+of an SDR library. `check_development_sweep.py` checks the default frequency
+vector, fixed-tone dividers, source PPM, direct/third-harmonic selection,
+integer-divider boundaries, alternate offline models, and rejection of live
+parent mismatches before any hardware call.
+
+The 200 MHz GPCLK parent is independent of the 50 MHz DMA pacing source.
+Execution-policy tests retain the one-write minimum duration and 97,847 writes
+for a fresh one-second event with tick divider 511. Clock-setup tests model a 50 MHz
+alternate parent so they can verify reparenting and restoration; that model is
+not the current output-parent contract.
+
 The tone client's `finite` operation submits one one-second event. The
 `cancel-start`, `cancel-middle`, and `cancel-boundary` operations each submit one
 maximum-duration logical event, then request cancellation immediately, halfway
@@ -157,8 +170,8 @@ An injected artifact emits a prominent `TEST-ONLY` kernel warning and carries
 the `rp1_target_fault_stage` module-information field. The setting is a build
 variable only: it creates no module parameter and no UAPI control. Clean or use
 a separate build tree between stages and retain every artifact hash. The fixed
-C-client frequency limitation above also applies to fault validation. A reviewed
-fault client requires the expected
+C-client tone-planning and target-authorization requirements above also apply
+to fault validation. A reviewed fault client requires the expected
 terminal reason and whether a cleanup latch is expected. It verifies retained
 terminal state twice, GPIO/clock/DMA quiescence, normal lease release for setup
 or execution failures, and deliberate `EUCLEAN` release refusal for cleanup
@@ -166,8 +179,8 @@ faults. The administrator must unload each cleanup-latched test artifact and
 verify endpoint, lease authority, route, clock, DMA, and GPIO teardown before
 continuing.
 
-`development_frequency_sweep.cpp` is also target-only. Build it explicitly
-with `make development-frequency-sweep-client` on a target with SoapySDR
+Build the standalone `development_frequency_sweep.cpp` client explicitly with
+`make development-frequency-sweep-client` on a Linux host with SoapySDR
 development headers. Its default, hardware-free `--render-only` run requests
 16 uniformly spaced RF frequencies, inclusive, from 135.7 kHz through 148.0
 MHz. It uses finite two-second generic `GPIO20` events at 2 mA only with explicit `--live`,
@@ -179,15 +192,17 @@ Source-clock and receiver PPM values are separate explicit inputs; both default
 to zero. The CSV includes the divider plan, raw SDR estimate,
 receiver-corrected estimate, carrier level, worst spur outside a roughly 200 Hz
 carrier exclusion, median in-band noise, and rejected points. This diagnostic
-is never part of `make check` and does not itself authorize target or RF work.
+does not itself authorize target or RF work. `make check` exercises only its
+hardware-blocked offline wrapper described above.
 Repeat `--frequency-hz` for a repeatable selected-frequency comparison within
 the same range; otherwise the uniformly spaced vector is retained. Explicit
 `--parent-hz` and `--maximum-direct-hz` inputs change userspace planning only;
-they do not change the provider's clock source or output contract. Keep the
-200 MHz parent for the current provider. A comparison using another parent
-requires a separately identified, reviewed provider that implements that parent
-contract; changing a client flag alone would produce the wrong frequency. When an
-ideal pair straddles an integer-divider boundary, the renderer selects the
+they do not change the provider's clock source or output contract. Alternate
+parents are accepted only for offline rendering. Live mode requires the nominal
+200 MHz parent and rejects other parent values before opening the output file,
+endpoint or SDR. Use `--source-rate-ppm` for source calibration. Changing the
+provider's parent contract requires a separately reviewed provider and client.
+When an ideal pair straddles an integer-divider boundary, the renderer selects the
 nearest legal same-integer pair and clamps its weighting instead of rejecting
 the requested frequency.
 

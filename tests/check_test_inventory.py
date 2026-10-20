@@ -15,7 +15,7 @@ RUNNERS = (
 PARAMETERIZED_UTILITIES = {"check_built_module.py"}
 TARGET_ONLY_C_CLIENTS = {"development_fault_client.c",
                          "development_tone_client.c"}
-HOST_CPP_TESTS = {"uapi_cpp.cpp"}
+HOST_CPP_TESTS = {"uapi_cpp.cpp", "development_sweep_plan.cpp"}
 TARGET_ONLY_CPP_CLIENTS = {"development_frequency_sweep.cpp"}
 
 checks = {path.name for path in TESTS.glob("check_*.py")}
@@ -53,6 +53,6 @@ if missing_cpp_clients:
 
 print(f"test inventory: PASS ({len(registered)} registered, "
       f"{len(PARAMETERIZED_UTILITIES)} parameterized utility, "
-      f"{len(registered_c)} host C tests, {len(HOST_CPP_TESTS)} host C++ test, "
+      f"{len(registered_c)} host C tests, {len(HOST_CPP_TESTS)} host C++ tests, "
       f"{len(TARGET_ONLY_C_CLIENTS)} target C client, "
       f"{len(TARGET_ONLY_CPP_CLIENTS)} target C++ client)")

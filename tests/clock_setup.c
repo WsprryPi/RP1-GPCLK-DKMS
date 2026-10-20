@@ -20,6 +20,8 @@ static int set_rate(void *arg, __u64 rate)
 	m->calls++;
 	if (m->error)
 		return m->error;
+	/* Model provider reparenting, including a 50 MHz state that cleanup may
+	 * restore. Output setup must explicitly select the 200 MHz parent. */
 	m->parent = rate > 50000000 ||
 		(m->oscillate && !(m->calls % 2)) ? 200000000 : 50000000;
 	if (m->nearest_parent) {

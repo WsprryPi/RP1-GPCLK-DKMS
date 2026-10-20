@@ -103,6 +103,14 @@ int main(void)
 
     CHECK(rp1_gpclk_execution_event_writes(10000000ULL, &writes) == 0);
     CHECK(writes == 978);
+    /* The 50 MHz DMA pacing source is independent of the 200 MHz GPCLK parent. */
+    CHECK(rp1_gpclk_execution_event_writes(1000000000ULL, &writes) == 0);
+    CHECK(writes == 97847);
+    CHECK(rp1_gpclk_execution_event_writes(
+              RP1_GPCLK_EVENT_DURATION_NS_MIN, &writes) == 0);
+    CHECK(writes == 1);
+    CHECK(rp1_gpclk_execution_event_writes(
+              RP1_GPCLK_EVENT_DURATION_NS_MIN - 1, &writes) != 0);
     CHECK(rp1_gpclk_execution_event_writes(1, &writes) != 0);
     CHECK(rp1_gpclk_execution_event_writes(0, &writes) != 0);
     CHECK(rp1_gpclk_execution_event_writes(10000000ULL, NULL) != 0);
