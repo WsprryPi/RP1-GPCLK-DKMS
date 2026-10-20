@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 """Enforce deterministic PLL_SYS identity, selection, and cleanup ordering."""
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -9,6 +10,15 @@ EXECUTION = (ROOT / "src/rp1_gpclk_execution.c").read_text()
 MACHINE = (ROOT / "src/rp1_gpclk_execution_machine.c").read_text()
 POLICY = (ROOT / "include/rp1_gpclk/resource_policy.h").read_text()
 SWEEP = (ROOT / "tests/development_frequency_sweep.cpp").read_text()
+OVERLAY_IDENTITY = json.loads(
+    (ROOT / "release/overlay-contract-v1.json").read_text()
+)["sharedIdentity"]
+
+# Packaged metadata must describe the same parent as the kernel and consumers.
+assert OVERLAY_IDENTITY["parentClockRateHz"] == 200_000_000, \
+    "overlay metadata must describe the 200 MHz parent"
+assert OVERLAY_IDENTITY["parentClockId"] == "RP1_PLL_SYS"
+assert OVERLAY_IDENTITY["parentClockProvider"] == "rp1_clocks"
 
 for token in (
     '#define RP1_GPCLK_PARENT_PROVIDER_COMPATIBLE "raspberrypi,rp1-clocks"',
