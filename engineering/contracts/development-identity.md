@@ -81,7 +81,7 @@ establish migration safety.
    because Debian invokes the outgoing prerm first. See the current
    [package transition procedure](../operations/package-lifecycle.md).
 4. **Source-development non-current installation:** no general compatibility,
-   adoption or automated migration is claimed. Source workflows fail closed on non-current or foreign
+   adoption or automated migration is claimed. Installer transitions refuse non-current or foreign
    DKMS, source, module, overlay, enrollment, manager, or runtime state. A
    maintainer must separately inventory ownership, quiesce the application,
    prove output/clock/DMA/GPIO cleanup, preserve a recovery point, and use the
@@ -94,3 +94,11 @@ No transition command grants host, system, GPIO, transmission, or RF authority.
 Actual-host installation, removal, and recovery require a reviewed host-specific
 plan and separate authorization. Offline fixtures establish only deterministic
 workflow behavior.
+
+The source installer's `--build-only` still registers source and builds through
+DKMS with privilege; it is not the unprivileged direct Kbuild path. Its
+`development-rollback` removes the recorded installation and does not restore
+the retained predecessor automatically. Legacy firmware route/overlay helpers
+also have narrower ownership checks than the runtime/package workflows; review
+their [explicit limits](../operations/source-development.md#firmware-helper-limits)
+before including them in a target plan.

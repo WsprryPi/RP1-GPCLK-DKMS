@@ -6,7 +6,9 @@
 
 This contract defines the evidence boundary between an external WsprryPi
 Qualification Harness, WsprryPi, and the `RP1-GPCLK-DKMS` `1.0.0` development
-module. It prepares later product integration and qualification; it does not
+module. These are integration/evidence requirements, not a claim that every
+Harness or application version implements the complete path. Resolve actual
+version capabilities and readiness before selecting a plan. This contract does not
 authorize installation, target access, module or overlay changes, endpoint
 operation, GPIO output, receiver access, transmission, or RF activity.
 
@@ -59,8 +61,11 @@ explicit blocker rather than a fabricated value.
   property;
 - exact `v1.0.0-rp1-gpio4` or `v1.0.0-rp1-gpio20` compatibility ID and
   structural compatibility state, separately from external qualification; and
-- package route-manager transaction ID, status, boot IDs, configuration
-  hashes, attribution, and reconciliation result.
+- management profile and its contract/schema identity; transaction ID, status,
+  boot IDs, configuration hashes, attribution and reconciliation result; and
+- for the runtime profile, exact binding/artifact-set identity, controller
+  session/generation, overlay ownership, and terminal route/application journals.
+  Runtime and packaged boot-route records are not interchangeable.
 
 The route manager supplies configured and active route state. WsprryPi supplies
 requested and persisted state. `QUERY` supplies the module-reported route

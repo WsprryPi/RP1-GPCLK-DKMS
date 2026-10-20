@@ -67,7 +67,12 @@ uses the existing deployment recovery path; failed route effects retain their
 ID and error for explicit recovery. Compilation or idle reconciliation is not
 output evidence.
 
-After reboot, load the reviewed controller and use explicit recovery before
-switching. A clean empty state may archive the prior boot journal and establish
-current neutral state. Nonempty or faulted state is not adopted. Recovery leaves
-the application inhibited and output inactive.
+After a clean reboot, use the public facade's digest-bound
+`activation-plan`/`activation-ensure` workflow. Exact terminal prior-boot evidence
+and inactive current-boot state permit a new neutral controller session;
+WsprryPi separately restores only its explicitly persisted route in idle mode.
+Do not manually load the controller or run route recovery as ordinary reboot
+reconciliation. Incomplete, faulted or foreign state needs its owning recovery
+operation or investigation. Explicit route recovery remains distinct: it ends
+neutral with application inhibition retained. See the
+[reboot and deployment workflow](../operations/runtime-manager-workflow.md).

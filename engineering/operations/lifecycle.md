@@ -28,7 +28,12 @@ are separate lifecycle steps.
 
 Route selection is an administrative configuration decision. Exactly one of
 the `GPIO4` or `GPIO20` overlays may be selected. There is no arbitrary GPIO
-parameter, combined overlay, hot route change, or automatic substitution.
+parameter, combined overlay or automatic substitution. A loaded consumer's
+route never changes in place. The runtime profile can switch without reboot by
+inhibiting the application, unloading the consumer, removing the owned overlay,
+passing through neutral, then applying the selected overlay and restoring the
+consumer/application. Firmware boot routes use a different lifecycle; see the
+[profile selection](../README.md#start-with-the-management-profile).
 
 ## Compatibility and signing
 
@@ -88,7 +93,8 @@ entries, shared configuration, and unrelated files are retained.
 
 ## Diagnostics
 
-Use `rp1-gpclk-diagnostics` for bounded read-only inspection. It does not load,
+Use the source-tree [diagnostic collector](diagnostics.md) for bounded read-only
+inspection. It does not load,
 bind, repair, select a route, edit boot configuration, or operate hardware. See
 [Read-only diagnostics](diagnostics.md).
 

@@ -4,21 +4,33 @@
 
 For current scoped qualification status use the separately identified
 [supplemental interpreter](qualification-metadata.md#diagnostics) or maintained
-WsprryPi consumer tooling. The executable shipped in frozen `1.0.0-1` remains
+WsprryPi consumer tooling. The collector source at frozen `v1.0.0` remains
 unchanged; its aggregate compatibility summary must not be used to infer output
 inhibition or erase independently established qualification. Its raw observations
 remain useful. The supplemental tool verifies exact release/build attribution
 and keeps structural compatibility, readiness and qualification separate.
 
-Run `rp1-gpclk-diagnostics` to print a bounded JSON report. Optionally pass
-`--release-directory RELEASE` to compare a sealed release directory. The tool
+The collector is `scripts/rp1-gpclk-diagnostics.py` in a reviewed source checkout;
+the Debian package does not install a `rp1-gpclk-diagnostics` command. Run it on
+the authorized system being observed, from that checkout:
+
+```sh
+python3 scripts/rp1-gpclk-diagnostics.py
+```
+
+Optionally pass `--release-directory RELEASE` to inventory a separately verified
+release directory. This collector reports hashes and parses selected metadata;
+it does not perform the independent release validator's complete source,
+checksum, archive or publication verification. The tool
 does not install, load, bind, apply an overlay, enroll, change GPIO, repair, or
 remove anything.
 
 For an exact-source installation, pass
 `--development-manifest DEVELOPMENT_MANIFEST.json` instead. Diagnostics checks
-the separate source-development schema and reports it as `Experimental` and not
-release-qualified. A release directory and development manifest are mutually
+the manifest's schema/classification/module markers and reports it as
+`Experimental` and not release-qualified. It does not fully validate the
+manifest schema, installed-artifact inventory or loaded source identity. A
+release directory and development manifest are mutually
 exclusive.
 
 Endpoint discovery checks `/dev/rp1-gpclk`, the only canonical transmission
@@ -52,11 +64,19 @@ clock, DMA, and pinctrl properties without interpreting phandles through a
 fixed path. These observations do not substitute for WsprryPi's requested and
 persisted route or for the route manager's configured and reconciled state.
 
-The summary distinguishes healthy `Qualified`, healthy `Experimental`,
+The legacy summary distinguishes healthy `Qualified`, healthy `Experimental`,
 build-compatible but live-disabled, unavailable, rejected, and indeterminate
 because required inspection lacked privileges. Run as an administrator only
 when support needs fields reported as permission-denied; elevated inspection
 still performs no repair.
+
+Those categories are aggregate compatibility labels, not an output measurement
+or independent qualification decision. In particular, an accepted development
+manifest can produce an Experimental summary without proving route/boot
+ownership. Use the runtime facade and its exact binding for managed readiness,
+the supplemental interpreter for scoped evidence, and raw passive snapshots for
+current lifecycle observations. The runtime inventory collector is a different
+tool and never opens either RP1 endpoint.
 
 The report limits commands to five seconds, each command stream to 8192 bytes,
 ordinary files to 4096 bytes, build/kernel logs to 16384 bytes, eight build

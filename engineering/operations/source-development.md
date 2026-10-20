@@ -2,9 +2,10 @@
 
 # Exact-source development lifecycle
 
-`source-development` deployment remains passive-query-only. It is not deployment
-enrollment or route authorization, and no automatic route startup service is
-provided.
+The `source-development` **route-manager binding** remains passive-query-only.
+The source installer can build/install modules; the binding does not authorize
+route effects or provide an automatic startup service. The interlocked runtime
+profile uses a [different managed workflow](runtime-manager-workflow.md).
 
 `python3 scripts/runtime_inventory.py` is a separate bounded read-only collector.
 It accepts no arguments, never opens the RP1 endpoint and never invokes
@@ -27,6 +28,15 @@ package name is `rp1-gpclk-dkms`; the endpoint is `/dev/rp1-gpclk`. Do not guess
 installed-file and decompressed-ELF hashes.
 
 ## Primary path
+
+Use a dedicated clean checkout on the identified Linux/Pi build host, with
+matching kernel headers, compiler/make, Python, Git, DKMS, kmod and the tools
+reported by `development-preflight`. Overlay/controller generation also needs
+device-tree-compiler (`dtc`/`fdtput`) and the applicable header inputs. Retain the
+exact source commit, header/kernel configuration, signing policy and tool
+versions. Run examples from that checkout, replacing every placeholder.
+The privileged commands below are target mutations and require their own
+authorization; a successful read-only preflight does not supply it.
 
 For a clean route-neutral installation suitable for external installer
 orchestration, use:
@@ -98,8 +108,13 @@ modifying the checkout, records the exact commit and any explicitly allowed
 dirty state, registers and builds with DKMS, installs for the requested kernel,
 runs `depmod`, resolves the real module artifact, verifies version and vermagic,
 and optionally loads with an explicit `output_inhibit` value. Detailed command
-output is retained in the evidence directory. Use `--build-only`, `--install`,
-`--load`, and `--keep-build` to select the lifecycle. A same-name, same-version
+output is retained in the evidence directory. `--install` installs through DKMS;
+`--load` additionally loads the consumer. **`--build-only` still requires root,
+copies source under `/usr/src`, and registers/builds a DKMS instance.** It can
+replace an attributable same-version instance before building; it is not a
+safe substitute for unprivileged compilation. Use direct Kbuild in a disposable
+tree for [build-only evidence](../testing.md#representative-kernel-builds).
+A same-name, same-version
 development instance is replaced only after complete source-ownership validation.
 The evidence directory retains its source and installed module bytes for recovery.
 Non-current versions, foreign/package ownership, and active enrollment or manager
@@ -113,6 +128,11 @@ Route-neutral mode never unloads a running instance for replacement; any loaded
 module, route, endpoint, or installed route overlay is a preflight refusal.
 
 ## Separate operations
+
+These are command forms, not an ordered installation or teardown script. The
+firmware helpers below belong to the ordinary one-module profile, not a
+controller-owned runtime route. A route-neutral manifest has no GPIO selection
+and is not usable as a route-specific enrollment/overlay record.
 
 ```sh
 ./scripts/render-development-tree --source . --output /absolute/tree
@@ -132,7 +152,8 @@ sudo ./scripts/development-route rollback --development-manifest MANIFEST
 sudo ./scripts/development-overlay rollback --manifest MANIFEST
 ```
 
-Before enrolling, query the loaded module and require compatibility ID
+Enrollment records installed artifacts; it does not query or load the module.
+After a separately authorized load, query the module and require compatibility ID
 `v1.0.0-rp1-gpio4` or `v1.0.0-rp1-gpio20` for the selected route. If an existing
 `1.0.0` installation reports another identifier, keep output inhibited, remove
 its enrollment using the removal command in that enrollment record, perform the
@@ -146,10 +167,31 @@ They never reboot automatically. `GPIO4` and `GPIO20` remain independent; a
 manifest or active identity for one never substitutes for the other. After an
 approved reboot, run the read-only status and route verification commands.
 
-The status state progresses through `development-built`,
-`development-installed`, `development-loaded`, `development-endpoint-ready`,
-and `development-live-enabled`. `release-qualified` is deliberately separate
-and is never produced by this workflow.
+Status can report `development-built`, `development-installed`,
+`development-loaded` or `development-endpoint-ready`. When the immutable load
+parameter is readable, `development-output-inhibited` or
+`development-output-capable` takes precedence over the generic loaded/endpoint
+label. Output-capable is not active output, endpoint readiness or qualification;
+read the separate endpoint and identity fields. `releaseQualified` remains false.
+
+### Firmware-helper limits
+
+`development-route` edits literal canonical `dtoverlay=` lines in
+`/boot/firmware/config.txt`. It does not implement the packaged manager's full
+boot-include/conditional ownership protocol. Its rollback removes the selected
+literal line; it does not restore the complete prior configuration snapshot.
+Route `verify` rejects disagreements but can accept absent observations, so
+success alone does not establish a loaded route or endpoint.
+
+`development-overlay install` can replace an existing regular destination and
+records its prior hash, not recoverable prior bytes. Its rollback deletes the
+recorded path; it does not independently prove that the file is still the
+installed copy or restore a predecessor. These helpers are not general safe
+replacement/removal tools. A reviewed firmware plan must establish the exact
+destinations are available for this development installation, preserve required
+prior bytes separately, and recheck ownership and unchanged content before each
+effect. Changed, shared or ambiguous state needs investigation instead. Do not
+use these helpers to bypass the guarded package or runtime lifecycle.
 
 ## Passive exact-source route manager
 
@@ -163,6 +205,11 @@ sudo ./scripts/development-route-manager install \
   --kernel "$(uname -r)" --route gpio4
 sudo ./scripts/development-route-manager adopt-current-boot
 sudo ./scripts/development-route-manager status
+```
+
+After separately reviewing teardown of that exact binding:
+
+```sh
 sudo ./scripts/development-route-manager rollback-adoption
 sudo ./scripts/development-route-manager rollback
 ```
@@ -213,6 +260,10 @@ sudo ./scripts/development-rollback --record /absolute/evidence/path/ROLLBACK.js
 Removal unloads and removes the selected development module/version and source
 tree; it does not restore a prior installation. Boot, overlay, service, and route
 operations have separately scoped removal records because they may span a
-reboot. No
-command removes unrelated kernels, modules, overlays, services, repositories,
-boot settings, or user files.
+reboot. Retained `prior-source` and prior module files are recovery inputs, not
+an automatic predecessor restoration. `development-rollback` requires its
+complete installed-artifact record; a build-only or interrupted installation
+without that record needs separately reviewed cleanup of its exact native DKMS
+prefix. Do not infer that every emitted rollback record is executable recovery.
+Preserve unrelated kernels, modules, overlays, services, repositories, settings
+and user files; the firmware-helper limitations above still apply.

@@ -115,3 +115,20 @@ Project settings and builds are available from the
 The public branch URLs are
 [main](https://rp1-gpclk-dkms.readthedocs.io/en/main/) and
 [devel](https://rp1-gpclk-dkms.readthedocs.io/en/devel/).
+
+## Engineering-document validation
+
+Engineering Markdown is maintained in the repository, not in the Sphinx
+operator handbook. `make docs-check` includes its relative-link and SPDX checks,
+but does not render engineering pages or check their heading fragments and
+external URLs. Review those separately, including command syntax against the
+actual parser, current paths against package/runtime inventories, and recovery
+preconditions against the implementation. A passing handbook build cannot
+establish engineering-document completeness.
+
+Keep normative contracts distinct from implementation limitations and proposed
+work. Examples must identify privilege, system effects, input identity, expected
+result and refusal/recovery behavior; alternative mutation commands must not
+look like a batch script. Keep review results in the execution chat and generated
+output outside the checkout. Technical-document changes that are staged into
+packages also need the ordinary Linux candidate/package checks.
