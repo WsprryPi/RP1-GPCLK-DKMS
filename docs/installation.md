@@ -23,19 +23,36 @@ requires **DKMS 3.2.2 through the 3.2 series**. Unsupported DKMS configurations,
 missing headers and unknown signing policies are refused. Do not disable
 signature enforcement to make a build load.
 
+Being able to run WsprryPi with another backend does not establish that the
+same OS has the RP1 build prerequisites. If the installer reports an unsupported
+DKMS version or unavailable matching headers, retain that message and resolve
+the supported OS/package combination before retrying. Do not substitute a
+nearby kernel's headers or bypass the provider's checks.
+
 ## Follow the managed installation
 
 1. Prepare the Pi and install WsprryPi using its
    [installation guide](https://wsprry-pi.readthedocs.io/en/devel/Install/index.html).
    Select the manual version that matches your application channel.
-2. Keep transmission disabled. Retain the installer's result and any error
-   details until setup is complete.
-3. Open the WsprryPi web interface and go to **Setup > Transmitter**.
+2. Let the complete installer finish. An individual successful DKMS/build step
+   is not overall installation success. Retain the final result, reported
+   configuration URLs and any error details. Follow an explicit installer
+   reboot request before checking the installed application.
+3. Open the URL it reports from the Pi's local network. Keep transmission
+   disabled and go to **Setup > Transmitter**. See
+   [use an installed system](getting-started.md) for the exact output-path
+   control and idle checks.
 4. For fresh setup, expect neutral administration with **no route selected**.
    An explicitly saved RP1 GPIO4/GPIO20 route may be restored during a repeat
    installation, with transmission still disabled.
 5. If installation succeeds, follow [route selection](routes.md). If it fails,
    use [troubleshooting](troubleshooting.md) before making further changes.
+
+**Setup is complete** when the installer reports overall success, the web
+interface reconnects with current status, and the managed route state is
+explained: neutral for a fresh installation, or the confirmed saved RP1 route
+after an eligible repeat installation. There must be no pending recovery or
+restoration error. A missing execution endpoint is expected in the neutral case.
 
 The package installs two modules and inactive GPIO4/GPIO20 overlays. WsprryPi
 separately deploys and activates the runtime manager. Package installation
@@ -48,6 +65,10 @@ provider for production/main application installations and an exact resolved
 development source for named development branches. Explicit release selection
 is available to administrators through `RP1_GPCLK_DKMS_SOURCE=release`.
 `INSTALL_RP1_GPCLK_DKMS=false` deliberately skips provider installation.
+
+These are administrator installer settings, not Read the Docs version-selector
+options or settings required for ordinary route selection. Keep your existing
+application channel during maintenance unless you intend a reviewed migration.
 
 These installer settings belong to WsprryPi. Use its
 [provider installation reference](https://github.com/WsprryPi/WsprryPi/blob/devel/docs/rp1-gpclk-dkms-installation.md)

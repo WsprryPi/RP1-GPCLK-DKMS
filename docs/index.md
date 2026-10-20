@@ -13,8 +13,14 @@ those steps and the occasional maintenance tasks that need an administrator.
 
 ## Start with your task
 
+If WsprryPi is already installed, start with
+[use an installed system](getting-started.md). You do not need to install RP1
+again or switch an already correct route merely to check it.
+
 | Task | Where to go |
 | --- | --- |
+| Open WsprryPi and check an existing installation | [Use an installed system](getting-started.md) |
+| Stop output before a change | [Make the transmitter idle](getting-started.md#make-the-transmitter-idle) |
 | Set up a new Raspberry Pi | [Install with WsprryPi](installation.md) |
 | Choose GPIO4 or GPIO20 | [Select or remove a route](routes.md) |
 | Understand a status message | [Read provider status](status.md) |
@@ -39,6 +45,7 @@ to the application version you have installed.
 :caption: Start here
 
 about
+getting-started
 installation
 safety
 ```
