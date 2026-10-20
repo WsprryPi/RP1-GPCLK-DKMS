@@ -4,13 +4,19 @@
 
 This document describes the **packaged boot/reboot profile**, including its
 passive source-development binding. The
-[runtime profile](../operations/runtime-manager-workflow.md) uses the same socket
+[runtime profile](https://github.com/WsprryPi/RP1-GPCLK-DKMS/blob/main/engineering/operations/runtime-manager-workflow.md) uses the same socket
 with a different contract and schema. Query the profile before constructing any
 effect request; do not send these reboot operations to a runtime deployment.
 Package installation alone neither activates this executor's socket nor deploys
 the runtime profile.
 
 `/usr/sbin/rp1-gpclk-route-manager` is the application-facing executor. It accepts one JSON object on standard input, no command-line arguments, and writes one JSON object to standard output. Both directions use `schema/rp1-gpclk-route-manager.schema.json`; the contract identifier is `rp1-gpclk-route-manager`.
+
+The package installs that schema at
+`/usr/share/rp1-gpclk-dkms/1.0.0/rp1-gpclk-route-manager.schema.json`.
+This document is also installed independently at
+`/usr/share/doc/rp1-gpclk-dkms/route-manager.md`; its web reference above points
+to the maintained engineering guide, not a file included beside it.
 
 Requests contain one operation. `query` has no other fields. `preflight` requires `route` (`gpio4` or `gpio20`). `apply-and-reboot` requires `route`, `execute: true`, an 8--64-character `requestId`, and an attributable `actor`. `rollback` and `reconcile` require the same mutation fields except `route`. Unknown or operation-inappropriate fields fail closed.
 
