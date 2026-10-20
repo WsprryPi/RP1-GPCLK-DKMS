@@ -2,6 +2,14 @@
 
 # Read-only diagnostics
 
+For current scoped qualification status use the separately identified
+[supplemental interpreter](qualification-metadata.md#diagnostics) or maintained
+WsprryPi consumer tooling. The executable shipped in frozen `1.0.0-1` remains
+unchanged; its aggregate compatibility summary must not be used to infer output
+inhibition or erase independently established qualification. Its raw observations
+remain useful. The supplemental tool verifies exact release/build attribution
+and keeps structural compatibility, readiness and qualification separate.
+
 Run `rp1-gpclk-diagnostics` to print a bounded JSON report. Optionally pass
 `--release-directory RELEASE` to compare a sealed release directory. The tool
 does not install, load, bind, apply an overlay, enroll, change GPIO, repair, or

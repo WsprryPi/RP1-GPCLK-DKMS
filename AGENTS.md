@@ -20,6 +20,39 @@ These instructions apply to the entire project unless a more specific nested
   decisions, and validation still required.
 - Prefer the smallest maintainable change that satisfies the current contract.
 
+## Repository and work-harness cleanup
+
+- Cleanup retires obsolete project material and maintains clear documentation
+  of the current product while preserving useful source, tests, tools, settings
+  and recovery resources.
+- For an explicit request to clean up RP1-GPCLK-DKMS or this project/repository,
+  follow [the reusable cleanup prompt](engineering/development/repository-cleanup-prompt.md).
+- Inventory deletion, rewrite, retention and hold decisions before cleanup
+  changes. Cover project artifacts in the checkout, local work areas and
+  identified Raspberry Pi harnesses; preserve user work and shared tools.
+- Documentation describes the current product in direct, impersonal language.
+  Selected future work belongs in the maintained roadmap or an issue.
+  Remove obsolete evidence and development narratives without creating an archive.
+- Operator-facing prose, especially README.md, explains current capabilities
+  and use in plain language. Replace engineering status and validation narratives
+  with capability descriptions; retain needed technical detail in engineering
+  documentation. Do not substitute engineering links for operator explanations,
+  add documentation placeholders or promise future documentation.
+- Delete completed, superseded and abandoned execution prompts and temporary
+  handoffs after consolidating any needed technical content. Repair their
+  references; do not archive them or retain them solely because a completed
+  checklist item links to them. Keep only handoffs needed for selected unfinished
+  work and genuinely reusable instructions.
+- Apply the same inventory, rewrite, reference-repair and validation process to
+  development phase and step references, including those in README.md and
+  SECURITY.md. Preserve phase/step organization only in explicitly retained,
+  currently used planning documents such as ROADMAP.md or an equivalent active
+  plan. Preserve actual operating instructions and technical uses of phase or step.
+- Preserve useful source, behavioral tests and fixtures, tools, live settings,
+  shared dependencies, recovery resources and consumed compatibility, release,
+  runtime and integrity metadata. Keep the licensing and hardware boundaries below.
+- Reading or maintaining the prompt alone does not invoke cleanup.
+
 ## Authoritative contracts and project boundary
 
 - Read `engineering/contracts/rp1-gpclk-dkms-module-contract.md` before architecture,
