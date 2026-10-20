@@ -19,6 +19,30 @@ notice is preserved in
 No application source is included. Original independent documentation and
 build configuration use MIT; the module and canonical UAPI licensing remain
 unchanged.
+The adapted scaffold is based on
+[revision c0a0ec5](https://github.com/WsprryPi/WsprryPi-Docs/tree/c0a0ec5dd8ea6d7cb49fd7fa3d417ee0640c5672).
+
+## Build configuration
+
+Sphinx uses MyST Markdown, task lists and the shared image-delivery extension.
+The extension supplies intrinsic image dimensions, asynchronous decoding and
+eager loading for the first local content image. Later local images load lazily.
+Explicit author sizing/loading is preserved, and print output retains its
+builder's sizing defaults. Its regression fixture exercises clean and incremental
+builds, nested sources, external images, explicit sizing and print output.
+
+The direct Sphinx/MyST/theme versions are pinned in `docs/requirements.txt`,
+alongside the scaffold's Requests and Pygments minimum versions. The handbook
+uses no Python API autodocumentation, code introspection, developer TODOs or
+editor language server, so those optional scaffold dependencies are unnecessary.
+
+Version labels identify `main`, `devel` or a local checkout; `latest` displays
+as `main`. The release label adds the checked-out Git revision. Hosted builds
+use `READTHEDOCS_GIT_COMMIT_HASH` for that revision and
+`READTHEDOCS_GIT_IDENTIFIER` for the source branch/tag. Pull request source links
+use the exact commit rather than treating the pull request number as a branch.
+These identifiers follow the
+[Read the Docs environment-variable reference](https://docs.readthedocs.com/platform/stable/reference/environment-variables.html).
 
 ## Build locally
 
@@ -27,20 +51,40 @@ Use Python 3.14 and a disposable environment outside the checkout:
 ```sh
 python3.14 -m venv /tmp/rp1-docs-venv
 /tmp/rp1-docs-venv/bin/python -m pip install -r docs/requirements.txt
-/tmp/rp1-docs-venv/bin/python -m sphinx -n -W --keep-going \
-  -b html docs /tmp/rp1-docs-html
-/tmp/rp1-docs-venv/bin/python -m sphinx -n -W --keep-going \
-  -b epub docs /tmp/rp1-docs-epub
-python3 tests/check_doc_links.py
-python3 tests/check_spdx.py
-git diff --check
+make docs DOCS_PYTHON=/tmp/rp1-docs-venv/bin/python \
+  DOCS_BUILDDIR=/tmp/rp1-docs-build
+make docs-check DOCS_PYTHON=/tmp/rp1-docs-venv/bin/python \
+  DOCS_BUILDDIR=/tmp/rp1-docs-build
 ```
 
-Open `/tmp/rp1-docs-html/index.html` for a preview. Check navigation, local
+Open `/tmp/rp1-docs-build/html/index.html` for a preview. Check navigation, local
 anchors and the mobile menu. Generated files stay outside the checkout.
-The documentation CI job performs strict HTML and EPUB builds and repository
-link/license checks. `sphinx -b linkcheck` can additionally check public external
-URLs; network failures require interpretation rather than a blind URL rewrite.
+`docs-check` runs the documentation regressions, strict HTML, EPUB, LaTeX source,
+HTML Help, manual-page and Texinfo builds, and repository link/license/whitespace
+checks. The Linux documentation CI job uses the same target and Python version
+as Read the Docs. A separate Windows job checks the documentation regressions,
+batch entry point and failed-build exit status. The ordinary module offline suite
+does not require Sphinx. `sphinx -b linkcheck` can additionally check public
+external URLs; network failures require interpretation rather than a blind URL rewrite.
+
+The scaffold's platform entry points are kept with engineering tools:
+
+- [Makefile](documentation/Makefile): `make -C engineering/documentation help`
+  lists the Sphinx builders. Set `SPHINXBUILD` to the chosen environment's
+  `python -m sphinx` command and `BUILDDIR` to an external output directory.
+- [makedocs.sh](documentation/makedocs.sh): builds HTML without changing file
+  ownership or deploying to a web server. Set `DOCS_PYTHON` and `BUILDDIR` as
+  needed; extra arguments are passed to Sphinx.
+- [make.bat](documentation/make.bat): after activating a Python 3.14 environment
+  with the documentation dependencies, run
+  `engineering\documentation\make.bat html` on Windows. It defaults to
+  `%TEMP%\rp1-gpclk-dkms-docs` and preserves the Sphinx exit status.
+
+The Makefile and shell helper default to a `rp1-gpclk-dkms-docs` directory under
+`TMPDIR` or `/tmp`. These tools build documentation only. PDF compilation uses
+the Read the Docs environment or an explicitly provisioned local TeX toolchain.
+HTML Help, manual-page and Texinfo outputs are optional local exports; Read the
+Docs publishes HTML, PDF, EPUB and the offline HTML archive.
 
 ## Read the Docs
 
@@ -57,7 +101,8 @@ their assets or qualification scope.
 
 The project's **Read the Docs Community GitHub App** integration receives
 push webhooks and triggers builds for active versions. Its webhook is managed
-by the GitHub App rather than a separate repository-hook entry. Keep that integration connected to this repository.
+by the GitHub App rather than a separate repository-hook entry. Keep that
+integration connected to this repository.
 After changing publication settings, verify both branch builds, their exact
 commits and public pages. Test automatic triggering with a real documentation
 push and inspect the integration's delivery/build result. Store no integration

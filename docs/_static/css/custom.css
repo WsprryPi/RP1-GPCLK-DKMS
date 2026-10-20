@@ -44,7 +44,7 @@
     --wsprrypi-docs-active-color: #c8a85d;
     --wsprrypi-docs-chrome-bg: #405e7a;
     --wsprrypi-docs-chrome-text: #ecf1f6;
-    --wsprrypi-docs-chrome-text-muted: rgba(236, 241, 246, 0.8);
+    --wsprrypi-docs-chrome-text-muted: rgba(236, 241, 246, 0.84);
     --wsprrypi-docs-chrome-text-soft: rgba(236, 241, 246, 0.84);
     --wsprrypi-docs-chrome-border: rgba(236, 241, 246, 0.14);
     --wsprrypi-docs-chrome-border-strong: rgba(236, 241, 246, 0.22);
@@ -369,6 +369,8 @@ footer a:focus-visible {
     float: left;
     font-size: 30px;
     line-height: inherit;
+    min-height: 44px;
+    min-width: 44px;
     padding: 0;
 }
 
