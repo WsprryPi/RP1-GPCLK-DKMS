@@ -29,7 +29,9 @@ technical contracts and procedures needed to maintain the provider.
 - [Signing and trust](operations/signing.md)
 - [Diagnostics implementation and limits](operations/diagnostics.md)
 - [Release build and publication](operations/release-candidate.md)
+- [Supplemental qualification metadata](operations/qualification-metadata.md)
 - [Documentation maintenance and publication](documentation.md)
+- [Reusable repository cleanup instructions](development/repository-cleanup-prompt.md)
 
 These procedures do not grant installation, module/overlay, GPIO, transmission
 or RF authorization. Follow the applicable ownership and safety contract.

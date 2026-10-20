@@ -428,8 +428,7 @@ Version `1.0.0` / Debian `1.0.0-1` is the current release source.
 The immutable published tag identifies the release's exact source and assets.
 Later documentation or test maintenance may retain source version `1.0.0` while
 carrying a different Git identity; it does not replace the published release or
-inherit acceptance of changed inputs. Historical qualification campaign tools
-are not supported product interfaces. Maintained module, runtime and package
+inherit acceptance of changed inputs. Maintained module, runtime and package
 regressions and their consumed metadata remain in this repository.
 The [candidate procedure](../operations/release-candidate.md) defines the exact
 clean-commit builder, independent validator, complete source/package/control
@@ -457,6 +456,15 @@ WsprryPi consumes only an explicitly compatible tagged release. Module and
 application commits, reviews, releases, and qualification claims remain
 separate. A clean test run or published artifact never broadens the stated
 qualification scope.
+
+Separately versioned [qualification metadata](../operations/qualification-metadata.md)
+records accepted evidence for immutable software without modifying its tag,
+assets, package version or original empty compatibility manifest. It binds the
+software and its own provenance independently. Structural module compatibility,
+operational readiness, externally established scoped qualification and WsprryPi
+band/mode eligibility are separate facts. Evidence absence or invalidity creates
+no new provider admission, enrollment or transmission gate. Product policy,
+including genuinely Unavailable band/mode dispositions, remains in WsprryPi.
 ### Opt-in runtime management integration
 
 The [runtime manager workflow](../operations/runtime-manager-workflow.md) uses a

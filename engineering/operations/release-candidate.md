@@ -187,7 +187,7 @@ external directory, recompute every SHA-256 and compare every byte. Retain the
 build image by immutable ID for reconstruction. If interrupted, inspect and
 finish the existing draft; never replace an immutable publication.
 
-Provider publication precedes application release. WsprryPi candidate acceptance
-remains bound to its reviewed fixture until its separate published-identity
-migration. Publication alone neither migrates that consumer nor extends
-conducted acceptance into calibrated or general RF qualification.
+Provider publication precedes application release. WsprryPi separately owns
+acceptance of each selected published provider identity and migration to it.
+Provider publication does not perform that migration or extend conducted
+acceptance into calibrated or general RF qualification.

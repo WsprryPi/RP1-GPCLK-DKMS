@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Pure, deny-by-default Phase 5.7 module-signing evaluator."""
+"""Pure, deny-by-default module-signing evaluator."""
 
 from __future__ import annotations
 

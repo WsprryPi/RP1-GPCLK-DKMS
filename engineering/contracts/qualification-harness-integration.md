@@ -15,9 +15,13 @@ script, `python -m` entry point, published schemas, maintained semantic
 validators, supported replay/fixture interfaces, and machine-readable result
 bundles. No WsprryPi or DKMS code may import undocumented Harness internals.
 
-The current module state is `Experimental`. `GPIO4` and `GPIO20` are separate
-independently attributable targets requiring exact-build qualification; identity,
-authorization, results, and retained evidence never transfer between them.
+The module reports structural `Compatible-unqualified` independently of external
+qualification. Exact-source development remains an `Experimental` consumer
+classification. `GPIO4` and `GPIO20` have independent attributable evidence;
+identity, authorization, results and retained evidence never transfer between them.
+The [supplemental metadata contract](../operations/qualification-metadata.md)
+records accepted scoped evidence while preserving the original empty release
+manifest. Application band/mode policy remains in WsprryPi.
 
 ## Identity record
 
@@ -54,7 +58,7 @@ explicit blocker rather than a fabricated value.
   `rp1-gpclk-dkms-gpio20` endpoint, with the matching `wsprrypi,route`
   property;
 - exact `v1.0.0-rp1-gpio4` or `v1.0.0-rp1-gpio20` compatibility ID and
-  `Experimental` state; and
+  structural compatibility state, separately from external qualification; and
 - package route-manager transaction ID, status, boot IDs, configuration
   hashes, attribution, and reconciliation result.
 

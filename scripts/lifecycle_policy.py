@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Pure fail-closed Phase 5.9 lifecycle planning and acceptance policy."""
+"""Pure fail-closed lifecycle planning and acceptance policy."""
 
 from __future__ import annotations
 
@@ -99,7 +99,7 @@ def recovery_plan(state: dict) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="read-only Phase 5.9 lifecycle policy")
+    parser = argparse.ArgumentParser(description="read-only lifecycle policy")
     parser.add_argument("action", choices=("rollback-plan", "recovery-plan", "removal-audit"))
     parser.add_argument("snapshot", type=pathlib.Path)
     args = parser.parse_args()
