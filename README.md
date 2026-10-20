@@ -12,8 +12,9 @@ driver remains the clock provider; no custom kernel is required.
 
 **Install and manage RP1 support through WsprryPi.** Its installer validates
 the provider and establishes route-neutral administration. Use **Setup >
-Transmitter** to select GPIO4 (header pin 7), GPIO20 (header pin 38), or remove
-the route. Only one route can be active. Installation and route selection do
+Transmitter** to select GPIO4 (standard 40-pin header pin 7), GPIO20 (pin 38),
+or remove the route. Use the carrier's mapping for a custom connector. Only one
+route can be active. Installation and route selection do
 not start a transmission.
 
 ## Operator documentation
@@ -23,6 +24,7 @@ maintenance and troubleshooting:
 
 - [Main handbook](https://rp1-gpclk-dkms.readthedocs.io/en/main/)
 - [Development handbook](https://rp1-gpclk-dkms.readthedocs.io/en/devel/)
+- [Use an installed system](docs/getting-started.md)
 - [Install with WsprryPi](docs/installation.md)
 - [Select or remove a route](docs/routes.md)
 - [Understand status](docs/status.md)

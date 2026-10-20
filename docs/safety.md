@@ -21,9 +21,17 @@ Software installation and a healthy status report do not qualify that RF path.
   clock or DMA resources. Operator responsibility does not create technical
   isolation from another root process or direct hardware access.
 
-The two supported routes are **GPIO4, physical header pin 7**, and **GPIO20,
-physical header pin 38**. GPIO numbering and header pin numbering are different.
-Selecting one does not move a cable attached to the other.
+On a standard Raspberry Pi 40-pin header, the two supported routes are
+**GPIO4, physical pin 7**, and **GPIO20, physical pin 38**. GPIO numbering and
+physical pin numbering are different. Confirm the connector orientation and
+ground connection using your board and RF-interface documentation. A Compute
+Module carrier or custom connector needs its own verified mapping; do not
+assume its connector positions match the standard header. Selecting a route
+does not move a cable attached to the other.
+
+Turn [scheduled transmission off and finish or cancel active work](getting-started.md#make-the-transmitter-idle)
+before changing a route. A browser disconnect is not an emergency stop, and
+turning the scheduling switch off alone does not cancel committed work.
 
 ## Stop when state is uncertain
 

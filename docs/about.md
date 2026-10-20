@@ -2,6 +2,8 @@
 
 # How RP1 support works
 
+RP1 is the I/O controller used on Pi 5-family systems. GPCLK is a general-purpose
+clock output, used here as the signal source for the transmitter's RF interface.
 WsprryPi prepares the signal and schedules transmissions. RP1-GPCLK-DKMS
 controls the Pi's RP1 GPCLK0 output using the stock Raspberry Pi clock driver.
 The module accepts finite tone and gap sequences and permits one execution
@@ -39,6 +41,10 @@ These are separate operations:
 A route is the selected signal path, not an antenna connection or proof of
 RF suitability. GPIO4 and GPIO20 need separate wiring and support evidence.
 
+For everyday use, open WsprryPi, check the selected route and leave it in place
+when it matches your wiring. You do not need to load a module or run an
+engineering test client. Start with [use an installed system](getting-started.md).
+
 ## Software and support limits
 
 The published provider software is **v1.0.0**, Debian package **1.0.0-1**.
@@ -51,7 +57,7 @@ each route. Its finite conducted TONE cases at 14,097,100 Hz, 2 mA and nominal
 200 MHz `pll_sys` do not establish every kernel, board, frequency, mode or RF
 chain. A successful DKMS build establishes build compatibility only.
 
-Use [WsprryPi's band qualification guidance](https://wsprry-pi.readthedocs.io/)
+Use [WsprryPi's band qualification guidance](https://wsprry-pi.readthedocs.io/en/devel/About_Wsprry_Pi/index.html#band-qualification)
 for application band and mode choices. The provider's structural compatibility,
 current readiness and externally established qualification are separate facts;
 [status](status.md) explains how to read them.
