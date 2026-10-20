@@ -5,7 +5,7 @@
 Thank you for helping improve RP1-GPCLK-DKMS.
 
 Before contributing, read [AGENTS.md](AGENTS.md), the
-[module contract](docs/contracts/rp1-gpclk-dkms-module-contract.md), and
+[module contract](engineering/contracts/rp1-gpclk-dkms-module-contract.md), and
 [licensing policy](LICENSE.md).
 
 Keep changes within this repository's ownership boundary and preserve its
@@ -29,6 +29,11 @@ hardware or system effects, compatibility implications, documentation impact,
 and remaining validation.
 
 ## Current-state documentation
+
+Keep the published operator handbook in `docs/` and technical contracts,
+developer procedures and maintainer instructions in `engineering/`.
+See [documentation maintenance](engineering/documentation.md) for local builds
+and Read the Docs publication.
 
 Describe current capabilities, interfaces, prerequisites, limitations and operating
 procedures. Keep durable technical contracts and necessary source provenance.

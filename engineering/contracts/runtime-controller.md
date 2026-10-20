@@ -193,7 +193,7 @@ pinctrl state, timing, cleanup, coexistence, rebootless switching or RF safety.
 
 The explicit runtime profile now has an implementation on the existing manager
 socket, a bounded operator client, and journaled filesystem deployment tooling.
-See [the workflow and its remaining target gates](../operator/runtime-manager-workflow.md).
+See [the workflow and its remaining target gates](../operations/runtime-manager-workflow.md).
 The runtime profile is distinct from the packaged and source-development
 protocols. Exact bindings include the entire runtime software inventory;
 incomplete bindings must be regenerated and reviewed. Deployment and

@@ -22,7 +22,7 @@ These instructions apply to the entire project unless a more specific nested
 
 ## Authoritative contracts and project boundary
 
-- Read `docs/contracts/rp1-gpclk-dkms-module-contract.md` before architecture,
+- Read `engineering/contracts/rp1-gpclk-dkms-module-contract.md` before architecture,
   implementation, packaging, compatibility, installation, or target work.
 - This repository owns the RP1 kernel module, canonical UAPI, device-tree
   overlays, DKMS packaging, compatibility metadata, module lifecycle tooling,
@@ -120,7 +120,8 @@ build.
 
 ## Documentation and release discipline
 
-- Keep durable architecture and lifecycle decisions in `docs/`.
+- Keep durable architecture and lifecycle decisions in `engineering/`.
+  Reserve `docs/` for the published operator handbook.
 - Update the module contract when ownership, UAPI, compatibility, licensing,
   route, lifecycle, or distribution policy changes.
 - Keep warnings precise: operator responsibility does not create technical

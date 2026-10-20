@@ -5,7 +5,7 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-contract = (ROOT / "docs/contracts/qualification-harness-integration.md").read_text()
+contract = (ROOT / "engineering/contracts/qualification-harness-integration.md").read_text()
 plain = contract.replace("`", "")
 
 for mode in ("WSPR", "QRSS", "FSKCW", "DFCW"):
@@ -23,7 +23,7 @@ for route_id in (
     "v1.0.0-rp1-gpio4",
     "v1.0.0-rp1-gpio20",
 ):
-    assert route_id in (ROOT / "docs/contracts/development-identity.md").read_text()
+    assert route_id in (ROOT / "engineering/contracts/development-identity.md").read_text()
 for prohibited in ("/dev/mem", "automatic fallback", "generic event"):
     assert prohibited in plain
 

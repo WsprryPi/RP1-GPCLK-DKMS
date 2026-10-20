@@ -316,7 +316,7 @@ post-boot active routes separate, rejects ambiguous ownership, and exposes no
 qualification-plan interface. Package installation remains route-neutral and
 does not create runtime state.
 
-The [package transition contract](../operator/package-lifecycle.md) requires
+The [package transition contract](../operations/package-lifecycle.md) requires
 read-only preflight before the package manager, exact inactive ownership, complete
 payload identity and native DKMS/cache agreement. Same-version replacement
 rebuilds every eligible installed kernel. The selected historical predecessor is
@@ -431,7 +431,7 @@ carrying a different Git identity; it does not replace the published release or
 inherit acceptance of changed inputs. Historical qualification campaign tools
 are not supported product interfaces. Maintained module, runtime and package
 regressions and their consumed metadata remain in this repository.
-The [candidate procedure](../operator/release-candidate.md) defines the exact
+The [candidate procedure](../operations/release-candidate.md) defines the exact
 clean-commit builder, independent validator, complete source/package/control
 inventories, checksums and provenance. The canonical package builds both the
 interlocked consumer and runtime controller in one DKMS instance; neither is
@@ -459,7 +459,7 @@ separate. A clean test run or published artifact never broadens the stated
 qualification scope.
 ### Opt-in runtime management integration
 
-The [runtime manager workflow](../operator/runtime-manager-workflow.md) uses a
+The [runtime manager workflow](../operations/runtime-manager-workflow.md) uses a
 separate runtime profile on the existing privileged socket. It binds the complete
 runtime inventory, serializes deployment and route effects, preserves removal
 errors and ownership, and restores application availability after successful switching

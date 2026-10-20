@@ -60,7 +60,7 @@ automatically.
 
 ## Coherent update procedure
 
-Use the [runtime deployment workflow](../operator/runtime-manager-workflow.md)
+Use the [runtime deployment workflow](../operations/runtime-manager-workflow.md)
 with one complete binding and matching WsprryPi companion. Keep the module,
 manager, UAPI, overlays, and application identities coherent. Failed deployment
 uses the existing deployment recovery path; failed route effects retain their

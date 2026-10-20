@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT
+name: Operator documentation
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  documentation:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Install documentation dependencies
+        run: |
+          python3 -m venv /tmp/rp1-docs-venv
+          /tmp/rp1-docs-venv/bin/python -m pip install -r docs/requirements.txt
+      - name: Strict HTML and EPUB builds
+        run: |
+          /tmp/rp1-docs-venv/bin/python -m sphinx -n -W --keep-going -b html docs /tmp/rp1-docs-html
+          /tmp/rp1-docs-venv/bin/python -m sphinx -n -W --keep-going -b epub docs /tmp/rp1-docs-epub
+      - name: Repository documentation checks
+        run: |
+          python3 tests/check_doc_links.py
+          python3 tests/check_spdx.py
+          git diff --check

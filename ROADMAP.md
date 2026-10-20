@@ -13,7 +13,7 @@ Keep the current module, UAPIs, route overlays, runtime management, packaging,
 diagnostics and deterministic tests aligned with their maintained contracts.
 Build or test a maintenance checkout under its own exact source identity; use
 the tagged checkout and published assets when verifying release `1.0.0`.
-See the [release procedure](docs/operator/release-candidate.md).
+See the [release procedure](engineering/operations/release-candidate.md).
 
 Retain the selected `0.9.0` lifecycle predecessor and package transition matrix.
 They are active regression inputs for cleanup-first migration and rollback.

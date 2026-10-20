@@ -17,7 +17,7 @@ EXPECTED = {
     ".sh": {"MIT"},
     ".dts": {"GPL-2.0-only OR MIT"},
 }
-SCAN = ["docs", "include", "schema", "src", "tests", "scripts", "controller", "release", "overlays"]
+SCAN = ["docs", "engineering", "include", "schema", "src", "tests", "scripts", "controller", "release", "overlays"]
 ROOT_FILES = ["Kbuild", "Makefile", "dkms.conf"]
 
 
