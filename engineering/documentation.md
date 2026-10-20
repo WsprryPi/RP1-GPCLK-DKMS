@@ -104,7 +104,9 @@ push webhooks and triggers builds for active versions. Its webhook is managed
 by the GitHub App rather than a separate repository-hook entry. Keep that
 integration connected to this repository.
 After changing publication settings, verify both branch builds, their exact
-commits and public pages. Test automatic triggering with a real documentation
+commits and public pages. Check the hosted version selector's readability,
+keyboard focus and available branches; it is injected by Read the Docs and is
+absent from a local Sphinx preview. Test automatic triggering with a real documentation
 push and inspect the integration's delivery/build result. Store no integration
 token or webhook secret in this repository.
 

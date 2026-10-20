@@ -85,6 +85,25 @@
     color: var(--wsprrypi-docs-chrome-text);
 }
 
+/* Read the Docs injects this selector only into hosted builds. */
+.wy-side-nav-search > div.switch-menus > div.version-switch,
+.wy-side-nav-search > div.switch-menus > div.version-switch select,
+.wy-side-nav-search > div.switch-menus > div.version-switch select:hover,
+.wy-side-nav-search > div.switch-menus > div.version-switch select:focus,
+.wy-side-nav-search > div.switch-menus > div.version-switch select:active {
+    color: var(--wsprrypi-docs-chrome-text);
+}
+
+.wy-side-nav-search > div.switch-menus > div.version-switch select option {
+    background: var(--wsprrypi-docs-background-color);
+    color: var(--wsprrypi-docs-text-color);
+}
+
+.wy-side-nav-search > div.switch-menus > div.version-switch select:focus-visible {
+    outline: 2px solid var(--wsprrypi-docs-chrome-text);
+    outline-offset: 2px;
+}
+
 .wy-side-nav-search input[type="text"] {
     background: var(--wsprrypi-docs-chrome-search-bg);
     border: 1px solid var(--wsprrypi-docs-chrome-border-strong);
