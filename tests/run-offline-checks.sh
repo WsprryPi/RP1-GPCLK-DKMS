@@ -1,6 +1,10 @@
 #!/bin/sh
 # SPDX-License-Identifier: MIT
 set -eu
+# Assertions and hardware-blocking stubs must not leave core files in the tree.
+# Linux and macOS sh support this limit; POSIX specifies only ulimit -f.
+# shellcheck disable=SC3045
+ulimit -c 0
 
 python3 tests/check_development_workflow.py
 python3 tests/check_development_identity.py

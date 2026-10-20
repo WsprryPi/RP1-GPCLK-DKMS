@@ -15,8 +15,10 @@ PARENT = 200_000_000
 
 
 def run(*arguments):
-    return subprocess.run([BINARY, *arguments], capture_output=True, text=True,
-                          timeout=15, check=False)
+    with tempfile.TemporaryDirectory() as temporary:
+        return subprocess.run([BINARY, *arguments], cwd=temporary,
+                              capture_output=True, text=True,
+                              timeout=15, check=False)
 
 
 def render(*arguments):

@@ -103,7 +103,7 @@ int main(void)
 
     CHECK(rp1_gpclk_execution_event_writes(10000000ULL, &writes) == 0);
     CHECK(writes == 978);
-    /* The 50 MHz DMA pacing source is independent of the 200 MHz GPCLK parent. */
+    /* DMA pacing uses 50 MHz; GPCLK divider planning uses a 200 MHz parent. */
     CHECK(rp1_gpclk_execution_event_writes(1000000000ULL, &writes) == 0);
     CHECK(writes == 97847);
     CHECK(rp1_gpclk_execution_event_writes(

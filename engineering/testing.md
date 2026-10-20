@@ -95,7 +95,7 @@ vector, fixed-tone dividers, source PPM, direct/third-harmonic selection,
 integer-divider boundaries, alternate offline models, and rejection of live
 parent mismatches before any hardware call.
 
-The 200 MHz GPCLK parent is independent of the 50 MHz DMA pacing source.
+GPCLK divider planning uses a 200 MHz parent; DMA pacing uses a 50 MHz reference.
 Execution-policy tests retain the one-write minimum duration and 97,847 writes
 for a fresh one-second event with tick divider 511. Clock-setup tests model a 50 MHz
 alternate parent so they can verify reparenting and restoration; that model is
