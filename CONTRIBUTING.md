@@ -5,7 +5,7 @@
 Thank you for helping improve RP1-GPCLK-DKMS.
 
 Before contributing, read [AGENTS.md](AGENTS.md), the
-[module contract](docs/contracts/rp1-gpclk-dkms-module-contract.md), and
+[module contract](engineering/contracts/rp1-gpclk-dkms-module-contract.md), and
 [licensing policy](LICENSE.md).
 
 Keep changes within this repository's ownership boundary and preserve its
@@ -31,12 +31,17 @@ and remaining validation.
 ## Repository and work-harness cleanup
 
 For an explicit cleanup request, follow the
-[reusable cleanup instructions](docs/development/repository-cleanup-prompt.md).
+[reusable cleanup instructions](engineering/development/repository-cleanup-prompt.md).
 Inventory deletion, rewrite, retention and hold decisions before changing
 project material. Preserve useful source, tests, tools, settings and recovery
 resources. Reading or maintaining these instructions does not execute cleanup.
 
 ## Current-state documentation
+
+Keep the published operator handbook in `docs/` and technical contracts,
+developer procedures and maintainer instructions in `engineering/`.
+See [documentation maintenance](engineering/documentation.md) for local builds
+and Read the Docs publication.
 
 Describe current capabilities, interfaces, prerequisites, limitations and operating
 procedures. Keep durable technical contracts and necessary source provenance.

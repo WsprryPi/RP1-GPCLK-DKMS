@@ -171,7 +171,7 @@ for prohibited in ("modprobe","dtoverlay","dkms add","dkms build","dkms install"
     assert prohibited not in source
 for required in ("O_RDONLY","QUERY_IOCTL","SNAPSHOT_IOCTL","permission-denied","journalctl","cleanupFaultLatch"):
     assert required in source
-operator=(ROOT/"docs/operator/diagnostics.md").read_text()
+operator=(ROOT/"engineering/operations/diagnostics.md").read_text()
 assert "does not prove absence" in operator
 assert commands and all(command[0] in {"dpkg-query","dkms","modinfo","journalctl"} for command in commands)
 print("diagnostics contracts: PASS")

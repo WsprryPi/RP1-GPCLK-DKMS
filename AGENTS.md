@@ -26,7 +26,7 @@ These instructions apply to the entire project unless a more specific nested
   of the current product while preserving useful source, tests, tools, settings
   and recovery resources.
 - For an explicit request to clean up RP1-GPCLK-DKMS or this project/repository,
-  follow [the reusable cleanup prompt](docs/development/repository-cleanup-prompt.md).
+  follow [the reusable cleanup prompt](engineering/development/repository-cleanup-prompt.md).
 - Inventory deletion, rewrite, retention and hold decisions before cleanup
   changes. Cover project artifacts in the checkout, local work areas and
   identified Raspberry Pi harnesses; preserve user work and shared tools.
@@ -55,7 +55,7 @@ These instructions apply to the entire project unless a more specific nested
 
 ## Authoritative contracts and project boundary
 
-- Read `docs/contracts/rp1-gpclk-dkms-module-contract.md` before architecture,
+- Read `engineering/contracts/rp1-gpclk-dkms-module-contract.md` before architecture,
   implementation, packaging, compatibility, installation, or target work.
 - This repository owns the RP1 kernel module, canonical UAPI, device-tree
   overlays, DKMS packaging, compatibility metadata, module lifecycle tooling,
@@ -153,7 +153,8 @@ build.
 
 ## Documentation and release discipline
 
-- Keep durable architecture and lifecycle decisions in `docs/`.
+- Keep durable architecture and lifecycle decisions in `engineering/`.
+  Reserve `docs/` for the published operator handbook.
 - Update the module contract when ownership, UAPI, compatibility, licensing,
   route, lifecycle, or distribution policy changes.
 - Keep warnings precise: operator responsibility does not create technical

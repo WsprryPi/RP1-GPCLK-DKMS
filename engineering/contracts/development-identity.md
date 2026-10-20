@@ -45,7 +45,7 @@ identity checks.
 
 The supported development paths remain `development-*` and the explicit runtime
 manager. Source-development renders the same version with separate Experimental
-identity and no release metadata. The [candidate pipeline](../operator/release-candidate.md)
+identity and no release metadata. The [candidate pipeline](../operations/release-candidate.md)
 produces the unpublished package and release-shaped consumer metadata from a
 clean exact commit. Candidate preparation does not freeze or publish the provider.
 The normalized predecessor for package-upgrade validation is `0.9.0-1`;
@@ -79,7 +79,7 @@ establish migration safety.
    successor before reinstalling retained predecessor bytes; it does not restore
    runtime or application state. An external read-only preflight precedes dpkg/APT
    because Debian invokes the outgoing prerm first. See the current
-   [package transition procedure](../operator/package-lifecycle.md).
+   [package transition procedure](../operations/package-lifecycle.md).
 4. **Source-development non-current installation:** no general compatibility,
    adoption or automated migration is claimed. Source workflows fail closed on non-current or foreign
    DKMS, source, module, overlay, enrollment, manager, or runtime state. A

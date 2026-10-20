@@ -6,7 +6,7 @@ The current software release is `v1.0.0` (Debian `1.0.0-1`), identified by the
 [maintained release binding](release/software-1.0.0.json). Development builds
 remain unqualified. Installation does not qualify a kernel or physical setup;
 operations remain limited to the exact systems, routes and behaviors authorized
-by their operator. See the [qualification scope](docs/operator/qualification-metadata.md)
+by their operator. See the [qualification scope](engineering/operations/qualification-metadata.md)
 for the separately identified release evidence and its exclusions.
 
 Report a suspected vulnerability privately through GitHub's security advisory

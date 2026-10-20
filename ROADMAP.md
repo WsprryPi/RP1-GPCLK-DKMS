@@ -5,7 +5,7 @@
 The published provider is `1.0.0` / Debian `1.0.0-1`, identified by the immutable
 [`v1.0.0` release](https://github.com/WsprryPi/RP1-GPCLK-DKMS/releases/tag/v1.0.0).
 The separately identified `qualification-v1.0.0-r1` supplement records scoped
-route evidence. See [qualification metadata](docs/operator/qualification-metadata.md)
+route evidence. See [qualification metadata](engineering/operations/qualification-metadata.md)
 for applicability and exclusions.
 
 ## Provider maintenance
@@ -14,7 +14,7 @@ Keep the module, UAPIs, route overlays, runtime management, packaging,
 diagnostics and deterministic tests aligned with their maintained contracts.
 Build or test a maintenance checkout under its own exact source identity; use
 the tagged checkout and published assets when verifying release `1.0.0`.
-See the [release procedure](docs/operator/release-candidate.md).
+See the [release procedure](engineering/operations/release-candidate.md).
 
 Retain the selected `0.9.0` lifecycle predecessor and package transition matrix.
 They are active regression inputs for cleanup-first migration and rollback.

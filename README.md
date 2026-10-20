@@ -2,145 +2,84 @@
 
 # RP1 GPCLK DKMS
 
-`RP1-GPCLK-DKMS` provides a Linux kernel module for bounded control of the
-Raspberry Pi RP1 GPCLK0 peripheral. WsprryPi uses it on Raspberry Pi 5-family
-hardware. DKMS builds the module for the operator's installed stock Raspberry
-Pi kernel.
+RP1-GPCLK-DKMS provides the kernel modules and managed GPIO route service used
+by WsprryPi on Raspberry Pi 5 and Compute Module 5 systems. DKMS builds the
+modules for the installed stock Raspberry Pi kernel. The stock `clk-rp1`
+driver remains the clock provider; no custom kernel is required.
+
+**Install and manage RP1 support through WsprryPi.** Its installer validates
+the provider and establishes route-neutral administration. Use **Setup >
+Transmitter** to select GPIO4 (header pin 7), GPIO20 (header pin 38), or remove
+the route. Only one route can be active. Installation and route selection do
+not start a transmission.
+
+## Operator documentation
+
+The handbook uses the WsprryPi-Docs layout and covers setup, operation,
+maintenance and troubleshooting:
+
+- [Main handbook](https://rp1-gpclk-dkms.readthedocs.io/en/main/)
+- [Development handbook](https://rp1-gpclk-dkms.readthedocs.io/en/devel/)
+- [Install with WsprryPi](docs/installation.md)
+- [Select or remove a route](docs/routes.md)
+- [Understand status](docs/status.md)
+- [Maintenance and recovery](docs/maintenance.md)
+- [Troubleshooting and support](docs/troubleshooting.md)
 
 The module supports finite tone/gap sequences, exclusive ownership, passive
-status queries and bounded cancellation. GPIO4 and GPIO20 are separate
-administrative routes. Only one route can be active at a time; selecting a
-route does not authorize output.
+status queries and bounded cancellation. Unknown identity, conflicting
+ownership or uncertain cleanup blocks operation. A GPIO clock signal requires
+an appropriate RF interface and filtering; follow the
+[RF and electrical precautions](docs/safety.md) before enabling output.
 
-The stock Raspberry Pi `clk-rp1` driver remains the clock provider. The module
-requires no custom kernel and exposes no arbitrary memory access, DMA channels,
-register writes or GPIO routes to userspace.
+## Software and support limits
 
-## Current release and support limits
+The published software is
+[v1.0.0](https://github.com/WsprryPi/RP1-GPCLK-DKMS/releases/tag/v1.0.0),
+Debian package **1.0.0-1**. It contains the consumer module, runtime route
+controller, canonical userspace interfaces and inactive GPIO4/GPIO20 overlays.
+Package installation does not select a route, load a module, edit boot
+configuration or authorize output. WsprryPi separately establishes its managed
+runtime and restores an explicitly saved RP1 route when eligible.
 
-The current software release is
-[`v1.0.0`](https://github.com/WsprryPi/RP1-GPCLK-DKMS/releases/tag/v1.0.0),
-Debian package `1.0.0-1`. It includes the consumer module, runtime route
-controller, canonical userspace interface and inactive GPIO4/GPIO20 overlays.
-Use the published package and checksummed assets from that exact release.
+Use a stock Raspberry Pi kernel with matching eligible headers and the
+supported DKMS/signing configuration. Build success establishes build
+compatibility only. The separate qualification supplement records scoped
+route evidence; it does not establish every kernel, band, mode or RF setup.
+WsprryPi owns application band/mode eligibility and operating policy. See
+[how RP1 support works](docs/about.md) and [read provider status](docs/status.md).
 
-The separately identified qualification supplement describes the accepted
-systems, routes and finite conducted TONE cases for this release. It does not
-establish support for every kernel, band, mode or physical setup. WsprryPi owns
-application eligibility and operating policy. See
-[qualification scope and installed status](docs/operator/qualification-metadata.md)
-for applicability and exclusions. Qualification of one route never transfers
-to the other.
+## Engineering and contributions
 
-Maintenance checkouts have their own source identities and do not replace the
-published release. Contributors can use the
-[release procedure](docs/operator/release-candidate.md) to verify source and
-package identities.
+Technical contracts, API details, developer workflows and package/release
+procedures are in [engineering/](engineering/README.md), separately from the
+operator handbook. Before changing source, read [AGENTS.md](AGENTS.md),
+[CONTRIBUTING.md](CONTRIBUTING.md), the
+[module contract](engineering/contracts/rp1-gpclk-dkms-module-contract.md) and
+[testing guide](engineering/testing.md).
 
-## Prerequisites and installation
-
-Use a stock Raspberry Pi kernel with matching eligible kernel headers, DKMS
-and the device-tree tools required by the package. The actual RP1 topology,
-clock and DMA providers, resource ownership and selected route must match the
-module contract. Signing and trust requirements depend on the installed
-kernel's policy. Unknown or ambiguous state is refused; there is no alternate
-hardware backend.
-
-Installing the package builds its modules and installs both overlays inactive.
-It does not edit boot configuration, load a module, select a route, change GPIO
-state or authorize transmission. Review the
-[package prerequisites](docs/operator/debian-packaging.md) and
-[installation, update and recovery procedure](docs/operator/package-lifecycle.md)
-before making administrative changes.
-
-Module signing and trust enrollment are administrator-owned. The package ships
-no private key and does not weaken the host's signing policy. See
-[module signing](docs/operator/signing.md).
-
-## Select and manage a route
-
-GPIO4 and GPIO20 have distinct overlays and compatibility identities. With
-neither overlay active, the route is `none` and there is no consumer endpoint.
-Two active overlays are ambiguous and rejected.
-
-| Administration profile | Workflow |
-| --- | --- |
-| Packaged manager | [Configure a route, reboot and reconcile](docs/contracts/route-manager.md) |
-| Source development | [Install an exact source identity and adopt the current boot](docs/operator/source-development.md) |
-| Opt-in runtime manager | [Switch GPIO4/GPIO20 without rebooting and recover to none](docs/operator/runtime-manager-workflow.md) |
-
-The runtime manager serializes route changes and restores application service
-intent after a successful transition. Failed or unresolved transactions retain
-output inhibition and require recovery. Follow the selected profile's procedure;
-a saved route or successful status query is not permission to transmit.
-
-## Interface and diagnostics
-
-The consumer endpoint is `/dev/rp1-gpclk`, a root-owned, root-only device. One
-open file can own one lease and submit a bounded finite sequence. Cancellation
-prevents successors and drains at most the current fixed DMA chunk before
-cleanup. Passive queries do not grant ownership or output authority.
-
-The API supports:
-
-- `QUERY` for capabilities and compatibility state;
-- `ACQUIRE` and `RELEASE` for exclusive ownership;
-- bounded generic tone/gap event submission;
-- `GET_STATE` for runtime and terminal state;
-- `GET_SNAPSHOT` for passive, non-owning observations; and
-- `STOP` for generation-specific bounded cancellation.
-
-The canonical header is
-[`include/uapi/linux/rp1_gpclk.h`](include/uapi/linux/rp1_gpclk.h). The
-[userspace interface contract](docs/contracts/uapi.md) defines layouts, limits,
-state and immutable test inhibition. The interface has no legacy-layout
-fallbacks.
-
-`rp1-gpclk-diagnostics` produces a bounded, read-only JSON report without
-installing, loading, binding, repairing or operating hardware. Follow the
-[diagnostic procedure](docs/operator/diagnostics.md) to interpret its status.
-For removal and recovery, see the [module lifecycle guide](docs/operator/lifecycle.md).
-
-## Development
-
-Ordinary development checks are offline, unprivileged and hardware-free:
+Ordinary offline, unprivileged and hardware-free checks are:
 
 ```sh
 make check
 make package-check
 ```
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md), the
-[module contract](docs/contracts/rp1-gpclk-dkms-module-contract.md) and
-[maintained test inventory](docs/testing.md) before changing the source. The
-[source-development procedure](docs/operator/source-development.md) provides a
-separate, explicitly Experimental path for exact-commit work. Installation,
-loading, binding, route administration and output each retain their documented
-authorization requirements.
+Target installation, binding, route administration, GPIO and RF work require
+separate authorization. See [documentation maintenance](engineering/documentation.md)
+for strict local handbook builds and automatic Read the Docs publication.
 
-A successful module build proves build compatibility only. It does not qualify target
-behavior, timing, coexistence, cleanup, transmission or RF performance. External
-qualification follows the
-[harness integration contract](docs/contracts/qualification-harness-integration.md).
+## Project ownership and licensing
 
-## Project boundary
+This repository owns the kernel modules, canonical UAPI, overlays, DKMS
+packaging, lifecycle tooling, compatibility metadata and provider releases.
+[WSPR-Transmitter](https://github.com/WsprryPi/WSPR-Transmitter) owns the
+userspace adapter. [WsprryPi](https://github.com/WsprryPi/WsprryPi) owns
+installation orchestration, configuration, scheduling, operator workflow and
+product qualification. Production consumption uses explicitly compatible tagged
+provider releases; development uses separately identified exact source.
 
-- This repository owns the kernel module, canonical UAPI, overlays, DKMS
-  packaging, module lifecycle tooling, compatibility metadata and releases.
-- [`WsprryPi/WSPR-Transmitter`](https://github.com/WsprryPi/WSPR-Transmitter)
-  owns its userspace adapter and conversion into this UAPI.
-- [`WsprryPi/WsprryPi`](https://github.com/WsprryPi/WsprryPi) owns application
-  policy, configuration, scheduling, installer orchestration, operator workflow
-  and product qualification.
-
-The projects coordinate through tagged artifacts, the canonical UAPI,
-compatibility metadata and explicit cross-repository validation. WsprryPi does
-not consume this repository's moving default branch.
-
-## Licensing
-
-Independent original tools, tests and documentation use MIT. Kernel-facing
-module and device-tree sources use `GPL-2.0-only OR MIT`. Canonical
-userspace-visible UAPI headers use
-`(GPL-2.0-only WITH Linux-syscall-note) OR MIT`. Imported material retains its
-license and attribution. See [LICENSE.md](LICENSE.md).
+Independent tools, tests and documentation use MIT. Kernel-facing module and
+device-tree source uses `GPL-2.0-only OR MIT`; canonical UAPI uses
+`(GPL-2.0-only WITH Linux-syscall-note) OR MIT`. Reused scaffold assets retain
+their MIT notice. See [LICENSE.md](LICENSE.md).

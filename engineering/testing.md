@@ -158,7 +158,7 @@ SDR capture or RF operation.
 
 `make package-check` includes offline ownership, migration-policy and predecessor
 rendering regressions. The opt-in
-[disposable Linux harness](operator/package-lifecycle.md) additionally runs real
+[disposable Linux harness](operations/package-lifecycle.md) additionally runs real
 Debian package/DKMS transitions. It is never launched by ordinary `make check`.
 Its container-only driver refuses host execution and unapproved capabilities or
 system bind mounts. Package operations are real; command faults and header

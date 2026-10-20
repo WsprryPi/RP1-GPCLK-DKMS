@@ -66,3 +66,7 @@ stage/
 /docs/evidence/
 /runs/
 /local/evidence/
+
+# Documentation environments and rendered output
+/docs/.venv/
+/docs/_build/

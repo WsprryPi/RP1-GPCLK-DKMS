@@ -9,7 +9,8 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parents[1]
 pattern = re.compile(r"\[[^]]*\]\(([^)]+)\)")
 failures = []
-for document in [*ROOT.glob("*.md"), *(ROOT / "docs").rglob("*.md")]:
+for document in [*ROOT.glob("*.md"), *(ROOT / "docs").rglob("*.md"),
+                 *(ROOT / "engineering").rglob("*.md")]:
     for target in pattern.findall(document.read_text(encoding="utf-8")):
         target = target.split("#", 1)[0]
         if not target or "://" in target or target.startswith("mailto:"):
@@ -20,7 +21,7 @@ for document in [*ROOT.glob("*.md"), *(ROOT / "docs").rglob("*.md")]:
 if failures:
     raise SystemExit("broken documentation links:\n" + "\n".join(failures))
 versioned_contracts = sorted(
-    path.name for path in (ROOT / "docs" / "contracts").glob("*-v[0-9]*.md")
+    path.name for path in (ROOT / "engineering" / "contracts").glob("*-v[0-9]*.md")
 )
 if versioned_contracts:
     raise SystemExit(
@@ -28,7 +29,7 @@ if versioned_contracts:
         ", ".join(versioned_contracts)
     )
 for obsolete in (
-    "docs/contracts/runtime-route-v2.md",
+    "engineering/contracts/runtime-route-v2.md",
     "schema/rp1-gpclk-runtime-binding-v2.schema.json",
     "schema/rp1-gpclk-runtime-route-v2.schema.json",
     "scripts/rp1-gpclk-runtime-route.py",

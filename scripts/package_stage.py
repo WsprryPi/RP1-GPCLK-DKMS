@@ -26,7 +26,7 @@ def payload_sources(root=ROOT):
         'usr/libexec/rp1-gpclk-dkms/rp1-gpclk-route-manager': 'scripts/rp1-gpclk-route-manager.py',
         'usr/sbin/rp1-gpclk-route-manager': 'scripts/rp1-gpclk-route-manager.py',
         'usr/share/rp1-gpclk-dkms/1.0.0/rp1-gpclk-route-manager.schema.json': 'schema/rp1-gpclk-route-manager.schema.json',
-        'usr/share/doc/rp1-gpclk-dkms/route-manager.md': 'docs/contracts/route-manager.md',
+        'usr/share/doc/rp1-gpclk-dkms/route-manager.md': 'engineering/contracts/route-manager.md',
     })
     for name in ('rp1-gpclk-route-manager.socket', 'rp1-gpclk-route-manager@.service'):
         result['usr/lib/systemd/system/'+name] = 'systemd/'+name
