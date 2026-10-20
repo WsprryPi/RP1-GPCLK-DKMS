@@ -32,7 +32,8 @@ if missing_utilities:
     raise SystemExit(f"classified utilities are missing: {sorted(missing_utilities)}")
 
 c_tests = {path.name for path in TESTS.glob("*.c")}
-registered_c = {name for name in c_tests if name in RUNNERS[0]}
+registered_c = {name for name in c_tests - TARGET_ONLY_C_CLIENTS
+                if name in RUNNERS[0]}
 unclassified_c = c_tests - registered_c - TARGET_ONLY_C_CLIENTS
 missing_clients = TARGET_ONLY_C_CLIENTS - c_tests
 if unclassified_c:

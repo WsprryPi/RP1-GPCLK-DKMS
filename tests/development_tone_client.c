@@ -14,7 +14,7 @@
 
 #include <linux/rp1_gpclk.h>
 
-#define PARENT_HZ 49997248.0L
+#define PARENT_HZ 200000000.0L
 #define PERIOD 66792U
 #define CANCELLATION_LATENCY_ALLOWANCE_NS 500000000ULL
 

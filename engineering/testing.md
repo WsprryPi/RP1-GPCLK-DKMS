@@ -75,14 +75,21 @@ parameterized utility.
 `make package-check` repeats the package-specific subset. Repetition there is
 intentional because package validation is also a separately usable gate.
 
-The C programs compiled by `tests/run-offline-checks.sh` are hardware-free
-host tests. `development_tone_client.c` is different: it is a target-only
-development client that can open the endpoint and request output. It is never
-compiled or executed by an ordinary test target and requires separate,
-route-specific hardware authorization.
+The C programs executed by `tests/run-offline-checks.sh` are hardware-free
+host tests. `development_tone_client.c` and `development_fault_client.c` are
+target development clients that can open the endpoint and request output.
+Their standalone entry points require separate, route-specific hardware
+authorization and are never invoked by an ordinary test target.
 
-Its `finite` operation submits one one-second event. The `cancel-start`,
-`cancel-middle`, and `cancel-boundary` operations each submit one
+On Linux, the offline runner compiles `development_client_tones.c` separately
+against each client's actual divider-planning function. This wrapper replaces
+endpoint opens and ioctls with aborting stubs and calls only the pure planner.
+It checks parent agreement with the provider, exact Q16 divider/count fixtures,
+UAPI divider constraints and the calculated mean frequency. Other hosts skip
+this wrapper because it requires Linux userspace headers.
+
+The tone client's `finite` operation submits one one-second event. The
+`cancel-start`, `cancel-middle`, and `cancel-boundary` operations each submit one
 maximum-duration logical event, then request cancellation immediately, halfway
 through the first one-second DMA chunk, or at its boundary. Each operation
 requires the opened endpoint to be a root-owned mode-`0600` character device,
@@ -94,20 +101,19 @@ target campaign must additionally use independent physical observation to
 prove endpoint closure, absence of a successor, GPIO safety, clock and DMA
 quiescence, and terminal silence; the client result alone is not that proof.
 
-### Fixed C-client frequency limitation
+### Fixed C-client tone planning
 
-Both `development_tone_client.c` and `development_fault_client.c` still calculate
-their fixed divider fixture from **49,997,248 Hz**, with a nominal 10,140,200 Hz
-tone label. The current provider selects nominal **200 MHz** `pll_sys`; these
-clients do not implement that frequency-planning contract. Their nominal label
-must not be used to authorize or interpret current-provider RF output. They also
-default to GPIO20; `RP1_GPCLK_TEST_ROUTE=4` selects GPIO4 and `20` selects GPIO20.
+Both `development_tone_client.c` and `development_fault_client.c` calculate
+their fixed nominal **10,140,200 Hz** tone from the provider's nominal
+**200 MHz** `pll_sys` parent. They default to GPIO20;
+`RP1_GPCLK_TEST_ROUTE=4` selects GPIO4 and `20` selects GPIO20. These are
+fixed-frequency lifecycle/fault fixtures, not general frequency planners.
 
-Retain these clients as lifecycle/fault fixtures, but do not run them unchanged
-as current frequency-correct target validation. A target plan needs a separately
-reviewed client with matching parent assumptions and exact route/frequency
-identity, or the integrated WsprryPi/Harness path. Output-inhibited submission
-is refused and cannot exercise their execution/cancellation cases.
+Correct divider arithmetic does not establish actual frequency accuracy,
+timing, cleanup or RF qualification. A target plan must separately identify
+the exact client/provider artifacts, route and frequency and obtain hardware
+authorization. Output-inhibited submission is refused and cannot exercise
+their execution/cancellation cases.
 
 ## Cancellation and fault evidence
 

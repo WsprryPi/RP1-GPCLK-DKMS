@@ -51,6 +51,19 @@ else
     echo "shellcheck: SKIP (not installed)"
 fi
 
+if [ "$(uname -s)" = Linux ]; then
+    for client in development_tone_client.c development_fault_client.c; do
+        ${CC:-cc} -std=c11 -Wall -Wextra -Werror -pedantic \
+            -DRP1_GPCLK_TEST_CLIENT_SOURCE=\"$client\" \
+            -I"$repo_dir/include" -I"$repo_dir/include/uapi" \
+            "$repo_dir/tests/development_client_tones.c" -lm \
+            -o "$tmp_dir/client_tones"
+        "$tmp_dir/client_tones"
+    done
+else
+    echo "C client tone planning: SKIP (requires Linux userspace headers)"
+fi
+
 ${CC:-cc} -std=c11 -Wall -Wextra -Werror \
     -I"$repo_dir/tests/fixtures/linux" \
     -I"$repo_dir/include/uapi" "$repo_dir/tests/uapi_contract.c" \
