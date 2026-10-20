@@ -55,8 +55,9 @@ default published version and point the automatic `latest` alias at `main`.
 Documentation branches do not replace tagged provider releases or modify
 their assets or qualification scope.
 
-The project's GitHub integration receives push webhooks and triggers builds
-for active versions. Keep that integration connected to this repository.
+The project's **Read the Docs Community GitHub App** integration receives
+push webhooks and triggers builds for active versions. Its webhook is managed
+by the GitHub App rather than a separate repository-hook entry. Keep that integration connected to this repository.
 After changing publication settings, verify both branch builds, their exact
 commits and public pages. Test automatic triggering with a real documentation
 push and inspect the integration's delivery/build result. Store no integration
