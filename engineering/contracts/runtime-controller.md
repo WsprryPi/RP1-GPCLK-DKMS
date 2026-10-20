@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: MIT -->
 
-# Experimental clock-disabled runtime route controller
+# Runtime route controller
 
 The runtime manager completes application restoration as specified in
 [Runtime application restoration](runtime-application-restoration.md). Its successful switch path
@@ -9,7 +9,10 @@ transaction ends inhibited; the runtime manager performs the application
 handshake afterward. `restore --execute` retries that application completion.
 
 This opt-in development implementation uses exported stock-kernel OF APIs.
-It is separate from the packaged route manager.
+It is separate from the packaged boot-route manager. Clock-disabled tests load
+the consumer with `output_inhibit=1`; production runtime administration loads
+the output-capable consumer only behind application inhibition. The controller
+itself exposes no transmission command.
 Deployment, binding and hardware validation require explicit authorization;
 software tests do not establish product or RF qualification.
 
@@ -232,15 +235,21 @@ route-recovery journal digest; missing or changed evidence remains a fault.
 A terminal `complete-neutral` journal may seed a new current-boot activation
 only after a clean reboot has removed both modules, both endpoints and the
 manager socket. The prior journal must validate completely and bind the same
-binding, artifact set and deployment record. The current application must yield
-a valid neutral capture, and that current stopped/running/masked intent is
-preserved. The version-2 activation plan digest binds the `post-reboot` context,
-current boot, current application capture and whether the owned inhibitor is
-already established. Approved execution establishes the
-inhibitor first, archives the prior terminal journal under its digest, and then
-uses the ordinary controller/socket/route-zero/restoration sequence. Existing
-version-1 plans remain valid historical journal content. Pending, failed,
-same-boot divergent or identity-drifted journals are not post-reboot admission.
+binding, artifact set and deployment record. Any prior route must have its full
+terminal route/manager/application chain, including an attributable idle override
+when present. Partial, failed, same-boot divergent or identity-drifted history
+does not admit reboot activation.
+
+New initial, recovered and idempotent activation plans use version 2;
+post-reboot plans use **version 3**. The latter bind the full historical chain,
+current disabled application capture and current boot. `reboot-prepare` durably
+records that current intent before establishing the inhibitor and retiring
+dependent journals in order. An exact interrupted suffix can be retried without
+reusing the old boot's service or transmission intent. A fresh controller session
+then establishes route zero and restores the captured current service intent.
+Version-1 and version-2 plans remain valid historical journal formats; they do
+not substitute for a newly reviewed version-3 reboot plan. WsprryPi separately
+orchestrates its saved route through the public facade.
 
 For replacement of an exact owned deployment, current candidate code may retire
 that same prior-boot terminal journal without first reactivating the controller.
@@ -249,8 +258,8 @@ prior boot and binding may be retired with it. `activation-retire-plan` binds th
 installed binding, artifact set, retained deployment, current boot, exact
 digest of every present journal, and any application-owned idle override.
 `activation-retire` repeats the complete
-inactive-state observation under the shared mutation lock and removes dependent
-idle-override removal while the application journal proves ownership, then
+inactive-state observation under the shared mutation lock and removes the exact
+owned idle override while the application journal proves ownership, then
 removes application, manager and route journals before the activation journal after the
 owning updater has preserved it. This order leaves every interrupted prefix
 eligible for an exact retry and creates no dynamic residue inside the deployment

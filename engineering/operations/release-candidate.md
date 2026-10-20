@@ -21,6 +21,12 @@ a documentation deletion changes that archive and its provenance. Do not replace
 the `v1.0.0` tag, rebuild maintenance HEAD as the published release, edit generated
 checksums, or relabel old evidence as testing a different source tree.
 
+Some technical documentation is also package payload: the route-manager contract
+is staged as `/usr/share/doc/rp1-gpclk-dkms/route-manager.md`. Editing it changes
+the candidate Debian archive and inventory as well as the source archive.
+An unpublished maintenance candidate still has its own exact hashes; neither
+version equality nor a documentation-only diff makes it the published package.
+
 The ordinary builder may validate a maintenance checkout as an unpublished
 candidate with version `1.0.0`; it does not replace any published asset or grant
 production selection. Exact-source development remains a separate Experimental
@@ -151,8 +157,8 @@ trust, WsprryPi acceptance, product eligibility, transmission or RF qualificatio
 The publication procedure below defines the release workflow. The existing
 `v1.0.0` publication is complete; its tag and assets must remain unchanged.
 
-After integration and affected acceptance checks, build from the final clean
-`devel` commit with `--release` on both commands above. Repeat into a second new
+To reconstruct the existing release, use its recorded clean source commit and
+retained environment with `--release` on both commands above. Repeat into a second new
 directory and compare every file. This profile retains identical source archive,
 Debian package and installation-manifest bytes for the same commit/environment;
 only provenance, compatibility manifest ID, validation classification and their
@@ -172,10 +178,13 @@ digest; GitHub's independently queried per-asset digests and `SHA256SUMS` bind
 the published files. Candidate and release profiles are never accepted
 interchangeably by the validator.
 
-Use an annotated `v1.0.0` tag at that exact reviewed commit. Verify synchronized
-`devel`, clean source, exact-commit CI, both reproducible builds and independent
-validation before creating it. Inspect existing tags/releases first; conflicting
-identities stop publication. Never move an existing tag or overwrite an asset.
+Initial publication uses an annotated tag at the exact accepted source commit,
+after exact-commit CI, reproducible builds and independent validation. That
+`v1.0.0` tag and release already exist: current maintenance uses verification,
+not tag creation or republishing. A different software version requires its own
+coordinated version/identity and consumer review before the publication sequence
+below can apply. Inspect existing tags/releases first; conflicting identities
+stop publication. Never move an existing tag or overwrite an asset.
 
 Enable repository release immutability before publishing. With authenticated
 `gh`, create a draft using `--verify-tag`, reviewed release notes and every

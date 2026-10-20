@@ -82,3 +82,22 @@ does not establish running-kernel trust, code-signing EKU policy or load eligibi
 No source or Debian candidate contains a compiled or signed module.
 See [package prerequisites](debian-packaging.md) and
 [candidate provenance](release-candidate.md).
+
+## Offline policy evaluation
+
+`scripts/signing_policy.py` evaluates an explicitly supplied observation record;
+it does not discover kernel enforcement, enroll a certificate or cryptographically
+verify a module itself. Its exact input fields are defined by `evaluate()` and
+the maintained [policy metadata](../../release/signing-policy-v1.json).
+
+```sh
+python3 scripts/signing_policy.py /absolute/reviewed-signing-snapshot.json
+```
+
+A valid input can exit successfully while returning `signaturePolicyAccepted:
+false` and state `Unavailable`. Inspect those fields and the reason; process
+success is not signing acceptance. Even an accepted policy returns
+`operationalReady: false`, because resource, route, ownership and cleanup checks
+are independent. Keep the actual trust/enforcement observations with the
+administrator's separately authorized verification, not inferred from a signer
+string or this evaluator's JSON.

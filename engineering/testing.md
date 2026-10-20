@@ -2,6 +2,58 @@
 
 # Testing
 
+## Run the offline checks
+
+Run commands from the repository root after inspecting the selected runner.
+Use a provisioned Linux build environment for the full suite. CI uses Ubuntu
+24.04, Python 3 with `jsonschema`, C/C++ compilers, Git, make, device-tree-compiler
+(`dtc` and `fdtput`), ShellCheck, Debian package tools, debhelper, dh-dkms and
+zstd. The [release-builder recipe](../tools/release-builder.Containerfile)
+provides a maintained dependency inventory; provisioning that environment can
+use the network, while ordinary checks need no network, privilege or hardware.
+
+```sh
+make check
+make package-check
+```
+
+Require each command's final exit status, not just an intermediate `PASS` line.
+`make check` includes C++ compilation and Linux-only real package-build fixtures.
+On macOS those Linux fixtures are skipped; the full result belongs to Linux CI.
+For documentation-only edits, the link/SPDX/whitespace checks below are sufficient
+locally; CI still runs the complete Linux suite:
+
+```sh
+python3 tests/check_doc_links.py
+python3 tests/check_spdx.py
+git diff --check
+```
+
+The link checker verifies relative destinations, not heading fragments or
+external URLs. Check changed fragments and command examples separately.
+Documentation regressions and Sphinx exports are a separate target, described
+below. None of these commands runs the disposable package-install harness.
+
+## Representative kernel builds
+
+Build in a separate disposable source tree on an identified Linux host with
+the exact representative headers. The direct default is the ordinary consumer;
+`RP1_RUNTIME_CONTROLLER=1` is the alternative interlocked two-module profile:
+
+```sh
+make KERNEL_BUILD=/absolute/representative/headers
+python3 tests/check_built_module.py rp1_gpclk_dkms.ko \
+  --kernel-release EXACT_KERNEL_RELEASE --machine AArch64
+```
+
+For the runtime profile, use a fresh tree and add `RP1_RUNTIME_CONTROLLER=1`
+to the build. Validate both `rp1_gpclk_dkms.ko` and `rp1_route_controller.ko`;
+check the consumer's interlock marker, dependency and absence of an OF autoload
+alias. The parameterized validator checks ELF architecture, version, license
+and vermagic only. It does not verify signing trust, complete binding identity
+or loaded memory. Record compiler, configuration, source/UAPI/artifact hashes
+and the selected profile separately. No command here loads either module.
+
 ## Documentation scaffold
 
 `make docs-check DOCS_PYTHON=/path/to/docs-environment/bin/python` runs the
@@ -41,6 +93,21 @@ lease are absent afterward. A
 target campaign must additionally use independent physical observation to
 prove endpoint closure, absence of a successor, GPIO safety, clock and DMA
 quiescence, and terminal silence; the client result alone is not that proof.
+
+### Fixed C-client frequency limitation
+
+Both `development_tone_client.c` and `development_fault_client.c` still calculate
+their fixed divider fixture from **49,997,248 Hz**, with a nominal 10,140,200 Hz
+tone label. The current provider selects nominal **200 MHz** `pll_sys`; these
+clients do not implement that frequency-planning contract. Their nominal label
+must not be used to authorize or interpret current-provider RF output. They also
+default to GPIO20; `RP1_GPCLK_TEST_ROUTE=4` selects GPIO4 and `20` selects GPIO20.
+
+Retain these clients as lifecycle/fault fixtures, but do not run them unchanged
+as current frequency-correct target validation. A target plan needs a separately
+reviewed client with matching parent assumptions and exact route/frequency
+identity, or the integrated WsprryPi/Harness path. Output-inhibited submission
+is refused and cannot exercise their execution/cancellation cases.
 
 ## Cancellation and fault evidence
 
@@ -83,8 +150,9 @@ modinfo rp1_gpclk_dkms.ko | grep rp1_target_fault_stage
 An injected artifact emits a prominent `TEST-ONLY` kernel warning and carries
 the `rp1_target_fault_stage` module-information field. The setting is a build
 variable only: it creates no module parameter and no UAPI control. Clean or use
-a separate build tree between stages and retain every artifact hash. Compile
-`development_fault_client.c` separately on the target; it requires the expected
+a separate build tree between stages and retain every artifact hash. The fixed
+C-client frequency limitation above also applies to fault validation. A reviewed
+fault client requires the expected
 terminal reason and whether a cleanup latch is expected. It verifies retained
 terminal state twice, GPIO/clock/DMA quiescence, normal lease release for setup
 or execution failures, and deliberate `EUCLEAN` release refusal for cleanup
@@ -108,8 +176,11 @@ carrier exclusion, median in-band noise, and rejected points. This diagnostic
 is never part of `make check` and does not itself authorize target or RF work.
 Repeat `--frequency-hz` for a repeatable selected-frequency comparison within
 the same range; otherwise the uniformly spaced vector is retained. Explicit
-`--parent-hz` and `--maximum-direct-hz` inputs allow the same client and RF
-vector to compare XOSC and PLL_SYS plans without changing its source. When an
+`--parent-hz` and `--maximum-direct-hz` inputs change userspace planning only;
+they do not change the provider's clock source or output contract. Keep the
+200 MHz parent for the current provider. A comparison using another parent
+requires a separately identified, reviewed provider that implements that parent
+contract; changing a client flag alone would produce the wrong frequency. When an
 ideal pair straddles an integer-divider boundary, the renderer selects the
 nearest legal same-integer pair and clamps its weighting instead of rejecting
 the requested frequency.
@@ -131,7 +202,8 @@ Run the same vector live only in an authorized `GPIO20`/SDRplay window:
 ```
 
 The transmitter PPM describes the selected source (`negative` means slow) and
-changes divider planning through `corrected_parent = 200 MHz * (1 + ppm/1e6)`.
+changes divider planning through `corrected_parent = parent_hz * (1 + ppm/1e6)`
+(the current default parent is 200 MHz).
 The receiver PPM corrects the SDR estimate by division by `(1 + ppm/1e6)`.
 Replace the example zero corrections only with values calibrated for the
 actual source and receiver. They are not interchangeable.

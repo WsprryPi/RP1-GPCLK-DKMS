@@ -94,7 +94,7 @@ sudo python3 /usr/local/lib/wsprrypi/rp1_qualification.py status --route gpio4
 
 Use `gpio20` for that route. This checks the installed evidence cache and
 performs bounded passive inspection; it does not download evidence or authorize
-output. The old diagnostic tool frozen in package 1.0.0-1 cannot interpret the
+output. The diagnostic collector source frozen at v1.0.0 cannot interpret the
 separate qualification supplement. Its aggregate summary is insufficient for
 current qualification or output-inhibition conclusions.
 

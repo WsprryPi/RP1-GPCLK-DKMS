@@ -197,8 +197,10 @@ logical request may span signed 64-bit nanoseconds, but execution materializes
 at most one fixed one-second coherent DMA chunk. Timing remainders and dither
 state carry across chunk boundaries. Cancellation prevents every successor and
 drains at most the current chunk before cleanup. Stale callbacks are rejected.
-Owner close retains authority for the bounded drain. After successful cleanup,
-terminal publication revokes both owner and lease. Passive inspection retains the
+Owner close retains authority for the bounded drain; on that close path,
+successful cleanup and terminal publication revoke both owner and lease.
+Ordinary completion with the owner still open retains its lease until release
+or close. After authority is released, passive inspection retains the
 completed generation and terminal reason without retaining that authority.
 Terminal outcomes are stable and specific. A cleanup fault remains latched and
 cannot be cleared by releasing a lease.
@@ -289,7 +291,8 @@ credential. Exact kernel, configuration, firmware, device tree, and board model
 remain build, diagnostic, and evidence observations.
 
 A successful module build establishes build compatibility only. Structural
-acceptance permits a bounded experiment; it does not qualify timing, cleanup,
+acceptance is a prerequisite for a bounded experiment, not operator authorization;
+it does not qualify timing, cleanup,
 coexistence, transmission, waveform, spectral, or RF behavior. `Qualified`
 claims remain tied to the exact systems and evidence on which they were
 established. Product policy and operator authorization remain in WsprryPi.
@@ -362,16 +365,17 @@ change the module gate, or authorize an operation.
 
 ## Validation
 
-The opt-in [clock-disabled runtime controller](runtime-controller.md) is a
-separate development implementation using exported stock-kernel overlay APIs.
+The [runtime controller](runtime-controller.md) is a separate administrative
+implementation using exported stock-kernel overlay APIs.
 It owns overlay IDs and error results, interlocks the consumer's module lifetime,
 and supplies concrete route administration and same-boot crash recovery. Test
 workflows load the consumer with `output_inhibit=1`; production loads the default
 output-capable module only while the application is inhibited and restores the
 captured application state after the transition. Digest-bound route plans protect
 the administrative transaction but are not kernel execution credentials. It
-adds a separate administrative UAPI, not transmission commands, and has no
-target qualification. Deployment and hardware tests remain separately
+adds a separate administrative UAPI, not transmission commands. Offline tests
+do not establish target qualification; applicable external evidence remains
+separately identified and scoped. Deployment and hardware tests remain separately
 authorized gates.
 
 A bounded read-only inventory collector does not provide a write adapter or

@@ -89,14 +89,14 @@ history document or retain obsolete evidence merely to avoid deleting it.
 Engineering material serves maintainers; it is not the operator manual.
 
 Do not replace the paragraph with an engineering-documentation link or tell an
-operator to consult development records to understand the product. Do not refer
-to the planned operator documentation in product prose or add a documentation
-section, unavailable site link, placeholder, "coming soon" statement or promise
-that documentation will be written later. The operator-facing description must
-stand on its own. Keep necessary maintainer references in maintainer entry
-points. Any separately selected operator-documentation work
-remains in its owning repository's backlog; cleanup does not execute it or
-advertise its future result in product prose.
+operator to consult development records to understand the product. The current
+operator handbook lives in `docs/` and is published on Read the Docs; technical
+contracts and maintainer procedures live in `engineering/`. Preserve useful
+links to real operator procedures. Do not add an unavailable site link,
+placeholder, "coming soon" statement or promise of later documentation.
+The operator-facing description must stand on its own. Keep necessary maintainer
+references in maintainer entry points. Cleanup does not execute separately
+selected documentation projects or move application policy out of WsprryPi.
 
 This standard applies throughout non-engineering text, including feature and
 status paragraphs, headings, captions, navigation and security explanations.

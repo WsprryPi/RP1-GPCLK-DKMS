@@ -179,7 +179,9 @@ after removal and restores the exact inhibitor if that reload fails.
 ## Deployment and validation boundary
 
 Install the companion and matching WsprryPi executable using the application's
-installer or `scripts/copy_exe.py`. Deploy a newly bound complete DKMS runtime
+installer or its own `scripts/copy_exe.py` in the **WsprryPi repository**. There
+is no application installer at that path in this repository. Deploy a newly
+bound complete DKMS runtime
 bundle: the inventory includes `runtime_application.py` and the manager's
 sandbox permits the canonical application configuration directory. Do not swap
 individual scripts under an incomplete binding. The application requires
@@ -202,9 +204,11 @@ error retention, startup lock ordering, stale acknowledgements, configuration
 preservation and startup policy. They do not qualify systemd behavior, kernel
 overlay removal, GPIO, RF or exact-target deployment.
 
-Separately authorized target validation should start with coherent identities,
-`GPIO20` and output disabled. Check running/stopped service restoration, `GPIO20` to
-`GPIO4` to `GPIO20` switching with no output, deliberate restart failure and explicit
-restoration, service/unit preservation, and final `GPIO20` idle state. Record route,
+Separately authorized target validation starts with coherent identities, the
+explicitly authorized physical route and output disabled. A two-route round trip
+requires verified wiring/ownership and authorization for both GPIO4 and GPIO20.
+Check running/stopped/masked service restoration, switching with no output,
+deliberate restart failure and explicit restoration, service/unit preservation,
+and restoration of the agreed final route in idle state. Record route,
 service PID/readiness, configuration, clock/DMA quiescence and both journals.
 Do not resume transmission or infer RF qualification from these tests.

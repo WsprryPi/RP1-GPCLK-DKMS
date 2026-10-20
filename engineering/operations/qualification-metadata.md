@@ -8,6 +8,9 @@ manifest has `defaultState: Unavailable` and no entries. Reconstruct and validat
 it with the tagged [release procedure](release-candidate.md).
 
 Qualification metadata has a separate identity, `qualification-v1.0.0-r1`.
+That revision is already published. Reconstruct it from its exact immutable
+metadata tag/source and verify downloaded assets; do not rebuild maintenance
+HEAD as replacement r1 assets or attempt to recreate its existing tag/release.
 It records accepted evidence; it does not create qualification. It is not a
 module release, package update, admission credential or execution permission.
 WsprryPi's semantic-version release selector excludes this tag. Publication
@@ -38,9 +41,11 @@ package archives retain different hashes even where extracted payloads match.
 Changed inputs require a new applicability decision; version equality alone
 is insufficient.
 
-## Build, validate and publish
+## Reconstruct and validate
 
-Use a clean reviewed provider commit with Git history and the original tag.
+For existing r1, use a clean checkout of its immutable metadata tag, with Git
+history and the original software tag available. `EXACT_METADATA_COMMIT` below
+means that tag's exact peeled commit, not maintenance HEAD.
 Keep output outside checkouts. The generator requires Python `jsonschema`,
 `dtc` and `fdtput`; it reconstructs and verifies both overlay forms.
 
@@ -62,11 +67,14 @@ the original software source. Build twice and compare every byte. Complete
 offline tests, schema/link/licensing checks, CI and a separate adversarial
 assessment before publication.
 
-Create an annotated `qualification-v1.0.0-r1` tag on that exact metadata commit.
-Create a separate draft release with `--latest=false`, upload the four validated
-assets and publish it with `--latest=false` under repository release immutability.
-Never upload to, retag or edit `v1.0.0`. A correction requires a new metadata
-revision and intentional consumer reference update.
+Initial publication uses an annotated metadata tag and a separate draft release
+with `--latest=false`, then uploads the validated four assets and publishes with
+`--latest=false` under repository release immutability. Existing r1 is verified,
+not recreated. Never replace its assets or upload to, retag or edit `v1.0.0`.
+A correction requires a new metadata revision, reviewed generator/input identity
+changes and intentional consumer reference update: the current generator fixes
+its tag and revision to r1, so a different `--source-commit` alone is not a new
+revision mechanism.
 
 Independently download the publication. Revalidate all four bytes, checksums,
 metadata tag/source, complete asset inventory and all seven original asset
@@ -79,7 +87,7 @@ produce a missing/invalid evidence result without changing operational policy.
 ## Diagnostics
 
 `qualification_status.py` is the separately identified supplemental interpreter.
-The diagnostic executable shipped in `1.0.0-1` is unchanged. Its legacy aggregate
+The diagnostic collector source at `v1.0.0` is unchanged. Its legacy aggregate
 summary cannot establish current qualification: route/compatibility-ID matching
 alone is insufficient, and its state-equality rule conflates external evidence
 with structural module compatibility.

@@ -46,9 +46,19 @@ by another file.
 | `RP1_GPCLK_IOC_GET_SNAPSHOT` | Returns one coherent passive, non-owning observation without exposing owner or lease tokens. |
 
 An acquired lease has generation zero until its first successful submission.
+`SUBMIT_EVENTS` must supply generation zero on input; the kernel allocates and
+returns the nonzero generation. Callers do not choose it. Use the returned
+lease/generation pair for `GET_STATE`, active `STOP` and `RELEASE`.
 `RELEASE` with generation zero releases only that never-submitted idle lease; it
 cannot release a lease that has retained or active generation state. After a
 submission, callers name the exact returned generation.
+
+Completion normally retains the open owner's lease until explicit release or
+owner close. Terminal state alone does not mean another client can acquire.
+Owner close during execution retains authority until bounded cleanup publishes
+the terminal result; that close path then revokes owner and lease. A successful
+explicit release retains terminal observations for passive inspection until the
+next acquisition. A cleanup latch is not cleared by release or close.
 
 Capabilities describe implemented mechanics: event submission, stop/drain,
 stable state, route and compatibility identity, cleanup-fault latching,
@@ -72,10 +82,25 @@ counts. Their checked sum cannot exceed `RP1_GPCLK_DITHER_PERIOD_MAX`; the upper
 divider equals the lower divider plus one. Provider and resource validation
 further restrict divider acceptance.
 
+The current execution implementation requires both divider values of every
+tone to share one common nonzero 16-bit integer part across the entire request.
+Both complete Q16 values must fit `0xffffffff`. Plan from the contracted nominal
+200 MHz `pll_sys` parent; passing a different userspace parent estimate does not
+change the kernel's selected source. `fractional_bits` must be
+`RP1_GPCLK_FRACTIONAL_BITS` (16) and `tick_divider` must be
+`RP1_GPCLK_TICK_DIVIDER` (511).
+
+Read `QUERY.supported_drive_ma_mask`. The current execution implementation
+advertises and accepts **2 mA only**, even though the header defines constants
+for other drive values. Header enum membership is not supported capability or
+measured RF power.
+
 `SUBMIT_EVENTS` accepts 1 through 64 tones and 1 through 512 events. Every
-event has a nonzero duration. `RP1_GPCLK_EVENT_F_OUTPUT_ENABLED` is the only
-event flag. Enabled events name a valid tone; disabled events ignore the tone
-index and create a quiescent gap. The checked event-duration sum must equal
+event duration is at least `RP1_GPCLK_EVENT_DURATION_NS_MIN` (10,220 ns) and at
+most `RP1_GPCLK_EVENT_DURATION_NS_MAX` (signed 64-bit nanoseconds).
+`RP1_GPCLK_EVENT_F_OUTPUT_ENABLED` is the only event flag. Enabled events name
+a valid tone; disabled events require `tone_index=0` and create a quiescent
+gap. The checked event-duration sum must equal
 `total_duration_ns` and cannot exceed signed 64-bit nanoseconds. The interface
 contains no WSPR, QRSS, FSKCW, DFCW, carrier, band, or scheduling semantics;
 userspace translates those policies into generic finite events.
@@ -103,12 +128,47 @@ cleanup and scheduling allowance, independent of the logical request duration.
 Cancellation and the worker's final check-and-issue boundary are serialized. A
 chunk committed before `STOP` obtains that boundary is the one permitted drain;
 after `STOP` returns, no later chunk can be issued.
+The ioctl returns after committing cancellation; it does **not** wait for the
+current descriptor or cleanup. Continue observing `GET_STATE` and a settled
+passive snapshot before concluding that the operation is finished. For a
+never-submitted idle lease, generation-zero `STOP` also follows the lease-release
+path; use `RELEASE` for ordinary idle-lease disposal and never replace a returned
+active generation with zero.
 The post-event divider readback uses the same cancellation commit boundary and
 explicitly starts its separately configured DMA descriptor. Cancellation that
 commits first suppresses readback issue and proceeds directly to cleanup.
 Release, owner close, unbind, provider removal, and module teardown converge on
 the same no-successor and bounded-drain rules. A DMA deadline remains failure
 even if cancellation was also requested.
+
+`RELEASE` of a submitted generation requests the same stop, then waits up to
+two seconds for worker completion before releasing the lease. Interruption,
+timeout or a cleanup fault is a failure to establish release, not permission to
+discard ownership evidence or start another operation. Retain the response,
+observe state and close the owned descriptor through the application's cleanup
+path. Unrestricted kernel teardown is not bounded by a userspace timeout.
+
+## Errors and client sequencing
+
+Zero-initialize complete structures and set `header.size` before each ioctl.
+Query and validate route, identity and required capabilities, acquire the exact
+route, submit one bounded plan, retain its returned generation, observe its
+terminal reason and settled resources, then release and close. A new logical
+operation needs its own application admission decision even when a lease can
+accept a successor.
+
+Typical errors include `EINVAL` for malformed values, `EBUSY` for occupied or
+unfinished state, `ESTALE` for a mismatched owner/lease/generation, `EACCES` when
+execution is not operationally admitted (including output inhibition),
+`EUCLEAN` for latched cleanup failure, `ENODEV` for a dead provider and
+`EOPNOTSUPP` for an unknown ioctl. `EALREADY` can describe a terminal operation
+whose result is not the requested stopped outcome; inspect the retained reason.
+These errno values are not the runtime-provider CLI's classified exit codes.
+
+An error copying a submission response to userspace can occur after internal
+acceptance; the driver requests cancellation on that path. Do not infer that
+nothing happened or blindly resubmit. Passive snapshots, owned cleanup and the
+original error must remain part of the application's failure handling.
 
 ## Passive snapshot
 

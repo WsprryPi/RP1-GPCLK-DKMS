@@ -58,6 +58,11 @@ sudo python3 -I /absolute/reviewed/source/scripts/package_preflight.py unpack
 sudo dpkg -i /absolute/candidate/rp1-gpclk-dkms_1.0.0-1_all.deb
 ```
 
+Run those as separate reviewed steps. Proceed to dpkg only after a `permitted`
+result and exit 0 from the guard, with the authorized inactive state unchanged.
+Do not paste an effect after a refused preflight and rely on the shell to stop.
+The guard does not reserve the host against another privileged actor.
+
 The guard emits `rp1-gpclk-package-preflight-v1` JSON, exits 0 for `permitted`,
 and exits 1 for `refused`, retaining the underlying diagnostic. It does not open
 either endpoint. The incoming preinst embeds those exact guard bytes and runs
@@ -160,6 +165,12 @@ sudo python3 -I /usr/libexec/rp1-gpclk-dkms/package_preflight.py remove
 sudo dpkg --remove rp1-gpclk-dkms
 sudo dpkg --purge rp1-gpclk-dkms
 ```
+
+Run each selected operation separately and stop on failure. Removal and purge
+are different requested outcomes; purge is not a workaround for failed removal.
+Use the owning runtime update preparation API before package removal on a
+WsprryPi-managed installation, and retire the application's installation record
+through its installer rather than deleting it to satisfy the package guard.
 
 Remove and purge delete attributable package data and native DKMS artifacts;
 there is no package-owned active configuration or postrm cleanup. Administrator

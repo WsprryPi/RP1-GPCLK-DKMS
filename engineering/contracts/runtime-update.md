@@ -85,6 +85,50 @@ booleans above are defined in version 1. A failure does not authorize a retry or
 prove absence. Current CLI failures use the readiness-v1 diagnostic envelope
 and a nonzero status; they are never successful update responses.
 
+## Prepare an update or uninstall
+
+Run from the exact reviewed installed provider, or the explicitly supported
+predecessor adapter described below, in an authorized administrator window.
+First disable transmission, establish current idle/cleanup state and retain the
+installation provenance. `INSTALLED_SOURCE_COMMIT` names the **installed
+predecessor**, not the selected replacement's HEAD.
+Keep a complete verified bootstrap bundle outside the installation being removed:
+inverse deployment can remove the installed facade and imports, including after
+an interruption. When the supported source adapter is needed, invoke its
+reviewed entry point and complete import closure instead of replacing an installed
+script or borrowing arbitrary helpers from another version.
+
+```sh
+python3 /usr/lib/rp1-gpclk-dkms/runtime_provider.py update-plan \
+  --source-commit INSTALLED_SOURCE_COMMIT
+```
+
+Supply the paired `--binding-sha256` and `--artifact-set-sha256` from the owning
+application record when available, and retain them unchanged on execution.
+Interrupted inverse deployment additionally needs its exact
+`--deployment-sha256`; do not invent it if the record is missing.
+Validate the public contract, identity, booleans and complete plan digest. If
+`status` is `planned`, review that one bounded step before executing:
+
+```sh
+python3 /usr/lib/rp1-gpclk-dkms/runtime_provider.py update-execute \
+  --source-commit INSTALLED_SOURCE_COMMIT --plan-sha256 REVIEWED_UPDATE_SHA256
+```
+
+Repeat the same identity options used for planning. There is no additional
+`--execute` flag on this facade verb: the unchanged approved digest is required.
+Check its exit status and response. After a successful step that remains
+`planned`, obtain and review a **new** `update-plan`; do not reuse the old digest
+or implement an automatic retry loop. A failure stops preparation and preserves
+the error and recovery inputs.
+
+Only `prepared` with `runtimeAbsent=true` and
+`transmissionAuthorized=false` permits the owning installer to proceed with its
+next separately controlled file/package operation. This is runtime absence,
+not package absence or a promise that WsprryPi remains stopped. Preserve the
+predecessor package/source recovery inputs until the new managed installation
+has passed its own checks.
+
 ## Compatibility and recovery
 
 Use the installed provider when it supports this contract. Otherwise an exact,
