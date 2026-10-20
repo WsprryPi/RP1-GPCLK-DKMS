@@ -47,13 +47,14 @@ class ImageDeliveryTests(unittest.TestCase):
             (source / "assets").mkdir()
             (source / "assets" / "sample.png").write_bytes(png())
             (source / "assets" / "vector.svg").write_text(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"/>')
+                '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"/>',
+                encoding="utf-8")
             (source / "conf.py").write_text(
                 f"import sys\nsys.path.insert(0, {str(EXTENSIONS)!r})\n"
                 "extensions = ['image_delivery']\n"
-                "html_theme = 'sphinx_rtd_theme'\n")
+                "html_theme = 'sphinx_rtd_theme'\n", encoding="utf-8")
             (source / "index.rst").write_text(
-                "Images\n======\n\n.. toctree::\n\n   nested/page\n")
+                "Images\n======\n\n.. toctree::\n\n   nested/page\n", encoding="utf-8")
             page = source / "nested" / "page.rst"
             page.write_text(
                 "Policy\n======\n\n"
@@ -70,7 +71,8 @@ class ImageDeliveryTests(unittest.TestCase):
                 ".. image:: ../assets/sample.png\n   :alt: scaled\n   :scale: 50%\n\n"
                 ".. image:: ../assets/sample.png\n   :alt: explicit\n   :loading: link\n\n"
                 ".. image:: ../assets/vector.svg\n   :alt: vector\n\n"
-                ".. image:: data:image/png;base64,iVBORw0KGgo=\n   :alt: data\n")
+                ".. image:: data:image/png;base64,iVBORw0KGgo=\n   :alt: data\n",
+                encoding="utf-8")
 
             def build(builder="html", *options):
                 result = subprocess.run(
@@ -81,9 +83,9 @@ class ImageDeliveryTests(unittest.TestCase):
 
             for options in (("-E", "-a"), ()):
                 # Touch the source to force a write using the cached environment.
-                page.write_text(page.read_text() + "\n")
+                page.write_text(page.read_text(encoding="utf-8") + "\n", encoding="utf-8")
                 build("html", *options)
-                html = (output / "nested" / "page.html").read_text()
+                html = (output / "nested" / "page.html").read_text(encoding="utf-8")
                 images = Images(html).images
                 with self.subTest(build=options):
                     self.assertEqual(images["first"]["loading"], "eager")
@@ -111,21 +113,23 @@ class ImageDeliveryTests(unittest.TestCase):
             page.write_text("Policy\n======\n\n"
                             ".. image:: ../assets/sample.png\n   :alt: explicit-first\n"
                             "   :loading: lazy\n\n"
-                            ".. image:: ../assets/sample.png\n   :alt: second\n")
+                            ".. image:: ../assets/sample.png\n   :alt: second\n",
+                            encoding="utf-8")
             build()
-            images = Images((output / "nested" / "page.html").read_text()).images
+            images = Images((output / "nested" / "page.html").read_text(encoding="utf-8")).images
             self.assertEqual(images["explicit-first"]["loading"], "lazy")
             self.assertEqual(images["second"]["loading"], "lazy")
 
             page.write_text("Policy\n======\n\n"
                             ".. image:: ../assets/sample.png\n   :alt: second\n\n"
-                            ".. image:: ../assets/sample.png\n   :alt: first\n")
+                            ".. image:: ../assets/sample.png\n   :alt: first\n",
+                            encoding="utf-8")
             build()
-            images = Images((output / "nested" / "page.html").read_text()).images
+            images = Images((output / "nested" / "page.html").read_text(encoding="utf-8")).images
             self.assertEqual(images["second"]["loading"], "eager")
             self.assertEqual(images["first"]["loading"], "lazy")
             build("latex", "-E", "-a")
-            tex = next((root / "latex").glob("*.tex")).read_text()
+            tex = next((root / "latex").glob("*.tex")).read_text(encoding="utf-8")
             self.assertNotIn(r"400\sphinxpxdimen", tex)
             self.assertNotIn(r"200\sphinxpxdimen", tex)
 

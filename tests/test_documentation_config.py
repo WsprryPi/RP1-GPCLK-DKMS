@@ -76,13 +76,14 @@ class DocumentationIdentityTests(unittest.TestCase):
 
     def test_extension_path_is_independent_of_working_directory(self):
         previous = Path.cwd()
-        try:
-            with tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory() as directory:
+            try:
                 os.chdir(directory)
                 configuration = self.configure()
                 self.assertEqual(configuration["extension_path"], str(DOCS / "_ext"))
-        finally:
-            os.chdir(previous)
+            finally:
+                # Windows cannot remove a directory while it is the process cwd.
+                os.chdir(previous)
 
 
 if __name__ == "__main__":
