@@ -1,6 +1,10 @@
 #!/bin/sh
 # SPDX-License-Identifier: MIT
 set -eu
+# Assertions and hardware-blocking stubs must not leave core files in the tree.
+# Linux and macOS sh support this limit; POSIX specifies only ulimit -f.
+# shellcheck disable=SC3045
+ulimit -c 0
 
 python3 tests/check_development_workflow.py
 python3 tests/check_development_identity.py
@@ -60,8 +64,13 @@ if [ "$(uname -s)" = Linux ]; then
             -o "$tmp_dir/client_tones"
         "$tmp_dir/client_tones"
     done
+    ${CXX:-c++} -std=c++20 -Wall -Wextra -Werror -pedantic -pthread \
+        -I"$repo_dir/tests/fixtures/sweep" \
+        -I"$repo_dir/include" -I"$repo_dir/include/uapi" \
+        "$repo_dir/tests/development_sweep_plan.cpp" -o "$tmp_dir/sweep_plan"
+    python3 "$repo_dir/tests/check_development_sweep.py" "$tmp_dir/sweep_plan"
 else
-    echo "C client tone planning: SKIP (requires Linux userspace headers)"
+    echo "client tone planning: SKIP (requires Linux userspace headers)"
 fi
 
 ${CC:-cc} -std=c11 -Wall -Wextra -Werror \

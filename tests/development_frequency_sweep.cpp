@@ -109,6 +109,9 @@ Options options(int argc, char **argv)
 	if (!out.repeats || out.repeats > 100) usage(argv[0], "repeats must be 1..100");
 	if (fabsl(out.source_ppm) > 200 || fabsl(out.receiver_ppm) > 200)
 		usage(argv[0], "PPM values must be within +/-200");
+	if (out.live && out.parent_hz != kNominalParentHz)
+		usage(argv[0], "live output requires the nominal 200 MHz parent; "
+			"use --source-rate-ppm for source calibration");
 	if (out.parent_hz <= 0 || out.parent_hz > 1000000000.0L ||
 	    out.maximum_direct_hz <= 0 || out.maximum_direct_hz > out.parent_hz ||
 	    out.maximum_direct_hz > kMaximumDirectHz)
@@ -172,7 +175,7 @@ public:
 		if (fd_ < 0) throw std::runtime_error(std::string("open: ") + strerror(errno));
 	}
 	~Endpoint() { if (fd_ >= 0) close(fd_); }
-	void transmit(const rp1_gpclk_tone &tone, double requested)
+	void transmit(const rp1_gpclk_tone &tone)
 	{
 		rp1_gpclk_query query{};
 		rp1_gpclk_acquire acquire{};
@@ -270,7 +273,7 @@ Measurement capture(SoapySDR::Device *sdr, Endpoint &endpoint, const Plan &p)
 	auto *stream = sdr->setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32);
 	sdr->activateStream(stream);
 	std::thread tx([&]() { try { std::this_thread::sleep_for(std::chrono::milliseconds(250));
-		endpoint.transmit(p.tone, p.requested_hz); } catch (...) { tx_error = std::current_exception(); } });
+		endpoint.transmit(p.tone); } catch (...) { tx_error = std::current_exception(); } });
 	try {
 		const size_t discard = static_cast<size_t>(kSampleRate * .45);
 		size_t received = 0;
