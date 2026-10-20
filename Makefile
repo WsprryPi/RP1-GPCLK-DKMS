@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: MIT
 
-.PHONY: all modules check development-check development-frequency-sweep-client package-check clean
+.PHONY: all modules check development-check development-frequency-sweep-client package-check clean docs docs-check
+
+DOCS_PYTHON ?= python3
+DOCS_BUILDDIR ?= $(if $(TMPDIR),$(TMPDIR),/tmp)/rp1-gpclk-dkms-docs
 
 all: modules
 
@@ -24,6 +27,16 @@ development-frequency-sweep-client:
 package-check:
 	python3 tests/check_debian_packaging.py
 	python3 tests/check_package_lifecycle.py
+
+docs:
+	$(MAKE) -C engineering/documentation html SPHINXBUILD="$(DOCS_PYTHON) -m sphinx" BUILDDIR="$(DOCS_BUILDDIR)"
+
+docs-check:
+	$(DOCS_PYTHON) -m unittest discover -s tests -p 'test_documentation*.py'
+	$(MAKE) -C engineering/documentation html epub latex htmlhelp man texinfo SPHINXBUILD="$(DOCS_PYTHON) -m sphinx" BUILDDIR="$(DOCS_BUILDDIR)" SPHINXOPTS="-n -W --keep-going"
+	$(DOCS_PYTHON) tests/check_doc_links.py
+	$(DOCS_PYTHON) tests/check_spdx.py
+	git diff --check
 
 clean:
 	@test -n "$(KERNEL_BUILD)" || { echo "KERNEL_BUILD=/path/to/kernel/build is required"; exit 2; }

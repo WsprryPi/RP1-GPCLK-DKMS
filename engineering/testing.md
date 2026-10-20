@@ -2,6 +2,15 @@
 
 # Testing
 
+## Documentation scaffold
+
+`make docs-check DOCS_PYTHON=/path/to/docs-environment/bin/python` runs the
+documentation-only `tests/test_documentation*.py` regressions and strict builds
+for the scaffold's supported output formats. It also validates repository links,
+licensing and whitespace. Sphinx dependencies belong to the selected documentation
+environment; ordinary module tests remain independent of them. See
+[documentation maintenance](documentation.md) for entry points and output paths.
+
 ## Maintained inventory
 
 `make check` runs every standalone `tests/check_*.py` program except
