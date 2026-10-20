@@ -16,7 +16,7 @@ The [predecessor record](../../release/lifecycle-predecessor-v1.json) binds its
 version, both UAPIs, compatibility identities and rendering rule. This is
 unpublished historical source, not a previously published release. Its package
 builds the ordinary consumer only; its runtime controller was a separate
-development profile. The `1.0.0-1` candidate owns both interlocked modules in
+development profile. The `1.0.0-1` package owns both interlocked modules in
 one DKMS instance. Equal consumer UAPI bytes do not establish package or runtime
 migration compatibility.
 
@@ -216,5 +216,6 @@ or activate a runtime. It also checks refusal and preservation of changed or
 foreign overlay files. These filesystem checks do not establish target runtime
 removal or service correctness. Actual service-manager,
 signing trust, target binding, GPIO, WsprryPi and RF validation remain separate.
-Item 16 accepts the exact final candidate against then-current WsprryPi `devel`
-before freeze or publication.
+WsprryPi owns application acceptance of exact provider identities. The existing
+target rollback exclusion remains in force; these procedures and offline
+regressions do not establish target rollback qualification.

@@ -22,14 +22,14 @@ external evidence store. Evidence URNs identify those retained records; their
 SHA-256 references permit independent integrity checks.
 
 Each route has its own seven finite conducted TONE cases at 14,097,100 Hz,
-2 mA, nominal 200 MHz `pll_sys`. Item 16 does not establish other band/mode,
+2 mA, nominal 200 MHz `pll_sys`. These cases do not establish other band/mode,
 calibrated-frequency, power or spectral claims. The separate maintained
 [application band table](https://wsprry-pi.readthedocs.io/en/devel/About_Wsprry_Pi/index.html#band-qualification)
 remains WsprryPi's qualification authority. The table's scope is not inferred
 from the TONE cases, nor promoted into a provider-side band/mode allowlist.
 Lee Bussy maintains the evidence and its provenance and explicitly accepts
 that table as the established application qualification scope. This acceptance
-and Item 16's exact route/build evidence are complementary authorities.
+and the exact route/build evidence are complementary authorities.
 Board, kernel and compiler observations do not create compatibility gates.
 
 The generator checks unchanged executable, build, UAPI, overlay and lifecycle

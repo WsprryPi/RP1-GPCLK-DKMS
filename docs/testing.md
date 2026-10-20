@@ -147,11 +147,8 @@ macOS reports the Linux-only cases as skipped. CI runs the full Linux suite.
 No fixture installs a package or executes target/module/overlay effects.
 
 The maintained suite covers module behavior, current runtime ownership and
-recovery, package transitions, and reproducible artifact validation. Historical
-Gate D campaign executors, bootstrap plans and campaign-only probes are outside
-the current source tree. Reproducing such historical work requires its exact
-original revision and separately authorized external evidence; current offline
-checks retain the canonical UAPI, output-inhibit and cleanup assertions.
+recovery, package transitions and reproducible artifact validation. Offline
+checks retain canonical UAPI, output-inhibit and cleanup assertions.
 
 Target waveform and mode qualification belongs in the external WsprryPi Harness.
 No ordinary repository test authorizes installation, loading, GPIO, transmission,
