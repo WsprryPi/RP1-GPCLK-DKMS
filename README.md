@@ -3,7 +3,6 @@
 # RP1 GPCLK DKMS
 
 [![Main documentation](https://app.readthedocs.org/projects/rp1-gpclk-dkms/badge/?version=main)](https://rp1-gpclk-dkms.readthedocs.io/en/main/)
-[![Development documentation](https://app.readthedocs.org/projects/rp1-gpclk-dkms/badge/?version=devel)](https://rp1-gpclk-dkms.readthedocs.io/en/devel/)
 
 RP1-GPCLK-DKMS provides the kernel modules and managed GPIO route service used
 by WsprryPi on Raspberry Pi 5 and Compute Module 5 systems. DKMS builds the
