@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Build/validate supplemental evidence for immutable software; never operate hardware."""
+"""Reconstruct pinned local evidence for immutable software; never operate hardware."""
 import argparse
 import hashlib
 import json
@@ -71,7 +71,7 @@ def documents(commit):
     require(data['applicationQualification']['earlierCampaignProvenance'] and
             data['applicationQualification']['earlierCampaignObservations']['applicability'],
             'earlier application evidence applicability required')
-    # The publication is reproducible from this separate source, never from a new module version.
+    # The evidence bundle is reproducible from its pinned source, independently of module versions.
     layout = {}
     exec(compile(blob(software['sourceCommit'], 'scripts/runtime_layout.py'),
                  'released runtime_layout.py', 'exec'), layout)

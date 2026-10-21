@@ -4,8 +4,9 @@
 
 The published provider is `1.0.0` / Debian `1.0.0-1`, identified by the immutable
 [`v1.0.0` release](https://github.com/WsprryPi/RP1-GPCLK-DKMS/releases/tag/v1.0.0).
-The separately identified `qualification-v1.0.0-r1` supplement records scoped
-route evidence. See [qualification metadata](engineering/operations/qualification-metadata.md)
+WsprryPi bundles pinned scoped route evidence locally; no separate
+qualification release is consumed. See
+[qualification metadata](engineering/operations/qualification-metadata.md)
 for applicability and exclusions.
 
 ## Provider maintenance
@@ -40,6 +41,11 @@ separate scope.
 
 ## Item 22 / WsprryPi item 16 — Beta 1 milestone
 
+WsprryPi's local evidence installation changes supporting installer/helper
+inputs. Those inputs require refreeze and affected installation/status
+acceptance before publication; the provider release and accepted executable
+and RF scopes remain unchanged.
+
 ⏳ **WsprryPi 4.0 Beta 1 release documentation and candidate preparation.**
 WsprryPi 16 · Lead: `WsprryPi`. The original candidate's **22b–22c / Pi
 16b–16c** acceptance retains its historical scope. The replacement executable
@@ -50,8 +56,8 @@ WsprryPi records own those gates. Publication and announcements in 22d–22e / P
 
 The WsprryPi checklist, candidate manifest and release evidence are authoritative
 for the exact executable, supporting installer/UI, documentation, provider and
-supplement identities. Completed RP1 acceptance and WsprryPi items 10–15 retain
-their recorded scopes; they do not automatically qualify later changed inputs.
+bundled evidence identities. Completed RP1 acceptance and WsprryPi items 10–15
+retain their recorded scopes; they do not automatically qualify later changed inputs.
 
 - ✅ **22a / Pi 16a: Research and draft Beta 1 release documentation in
   Markdown.** Complete. The stable-to-Beta source inventory, ready-for-release
@@ -67,8 +73,8 @@ their recorded scopes; they do not automatically qualify later changed inputs.
   and software checks are identified in WsprryPi's candidate manifest.
   Preserve the distinction between frozen executable source and accepted
   supporting installer/UI source. Use the exact accepted documentation and
-  unchanged published provider/supplement identities. Changes affecting an
-  artifact or acceptance assertion require updated identities and repetition
+  unchanged published provider and pinned evidence byte identities. Changes
+  affecting an artifact or acceptance assertion require updated identities and repetition
   of affected checks before publication.
 - ✅ **22c / Pi 16c: Validate, accept and hand off; stop before publication.**
   Replacement `1e047a44` has accepted wspr5 executable-replacement/restart and
@@ -107,7 +113,7 @@ their recorded scopes; they do not automatically qualify later changed inputs.
 Revisit only affected acceptance when a confirmed defect, changed input or
 publication discrepancy invalidates its earlier result. Later provider maintenance
 and legacy client fixes do not replace the frozen `1.0.0` software or broaden
-the `qualification-v1.0.0-r1` supplement. Preserve both publications and their
-accepted qualification limits. This roadmap reconciliation authorizes no
-installation, hardware/RF operation, candidate rebuild, release-branch merge,
+the pinned route evidence. Preserve the software publication, evidence source
+identities and accepted qualification limits. This roadmap reconciliation
+authorizes no installation, hardware/RF operation, candidate rebuild, release-branch merge,
 tag, release/draft, asset upload, publication or issue announcement.

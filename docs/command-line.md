@@ -92,11 +92,11 @@ For installed scoped evidence status, use WsprryPi's maintained helper:
 sudo python3 /usr/local/lib/wsprrypi/rp1_qualification.py status --route gpio4
 ```
 
-Use `gpio20` for that route. This checks the installed evidence cache and
-performs bounded passive inspection; it does not download evidence or authorize
+Use `gpio20` for that route. This checks the locally installed evidence bundle
+and performs bounded passive inspection; it does not download evidence or authorize
 output. The diagnostic collector source frozen at v1.0.0 cannot interpret the
-separate qualification supplement. Its aggregate summary is insufficient for
-current qualification or output-inhibition conclusions.
+application-bundled qualification metadata. Its aggregate summary is insufficient
+for current qualification or output-inhibition conclusions.
 
 ## Service and kernel messages
 
