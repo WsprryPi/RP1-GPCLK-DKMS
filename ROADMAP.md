@@ -43,7 +43,7 @@ separate scope.
 ⏳ **WsprryPi 4.0 Beta 1 release documentation and candidate preparation.**
 WsprryPi 16 · Lead: `WsprryPi`. The original candidate's **22b–22c / Pi
 16b–16c** acceptance retains its historical scope. The replacement executable
-has four refreshed artifacts and requires affected application acceptance; the
+has four refreshed artifacts and accepted bounded application evidence; the
 WsprryPi records own those gates. Publication and announcements in 22d–22e / Pi
 16d–16e remain not started and require separate authorization. Final WsprryPi
 4.0 stable publication is outside this Beta 1 milestone.
@@ -70,14 +70,14 @@ their recorded scopes; they do not automatically qualify later changed inputs.
   unchanged published provider/supplement identities. Changes affecting an
   artifact or acceptance assertion require updated identities and repetition
   of affected checks before publication.
-- ⏳ **22c / Pi 16c: Validate, accept and hand off; stop before publication.**
-  Replacement-executable acceptance is pending. The original finite wspr5
-  upgrade/repeat-installation, idle runtime and affected UI acceptance does not
-  establish installation/runtime acceptance for the replacement executable.
-  Affected target checks require a new bounded authorization. Fresh clean
-  installation, the other three exports on physical targets, reboot and fresh
-  GPIO4 selection remain explicitly
-  accepted unperformed checks. Preserve the documented operator-accepted
+- ✅ **22c / Pi 16c: Validate, accept and hand off; stop before publication.**
+  Replacement `1e047a44` has accepted wspr5 executable-replacement/restart and
+  idle-runtime evidence, with explicit reuse of unchanged normal-installer/UI
+  acceptance. WsprryPi's active records own exact identities, finite limits and
+  retained evidence. No provider runtime or publication input changes.
+  Fresh clean installation, the other three exports on physical targets, reboot
+  and fresh GPIO4 selection remain explicitly accepted unperformed checks.
+  Preserve the documented operator-accepted
   historical service-request cap exception: 20 requests occurred against an
   approved 18; this is neither a passing budget check nor retroactive
   authorization. Reused
