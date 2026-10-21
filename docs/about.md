@@ -53,10 +53,10 @@ the immutable release. WsprryPi verifies exact source and artifact identities;
 matching a version string alone is insufficient.
 
 WsprryPi includes verified scoped evidence for each route with its application.
-No separate evidence-release download or refresh is needed. The finite conducted
-TONE cases at 14,097,100 Hz, 2 mA and nominal 200 MHz `pll_sys` do not establish
-every kernel, board, frequency, mode or RF chain. A successful DKMS build
-establishes build compatibility only.
+No separate evidence-release download or refresh is needed. That evidence
+applies to specific systems and operating conditions; it does not establish
+support for every kernel, board, frequency, mode or RF setup. A successful
+DKMS build establishes build compatibility only.
 
 Use [WsprryPi's band qualification guidance](https://wsprry-pi.readthedocs.io/en/devel/About_Wsprry_Pi/index.html#band-qualification)
 for application band and mode choices. The provider's structural compatibility,

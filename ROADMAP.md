@@ -32,64 +32,52 @@ owns selected application and operator-documentation work. RP1 supplies
 provider-specific support. Keep module and application changes, releases and
 qualification claims separate.
 
-The selected work below is RP1 item 22 / WsprryPi item 16. WsprryPi items 14
-and 15 cover the accepted Pico WSPR Type 2/3 management integration and
-independent valid-field saves. They have no separate RP1 item numbers. Their
-selected Pi/Beta adoption and affected validation are covered by the candidate
-acceptance; broader Pico documentation and physical qualification retain their
-separate scope.
+The selected work below is RP1 item 22 / WsprryPi item 16. WsprryPi owns
+candidate coverage for its Pico WSPR Type 2/3 management integration and
+independent valid-field saves (Pi items 14–15). They have no separate RP1 item
+numbers; broader Pico documentation and physical qualification remain separate.
 
 ## Item 22 / WsprryPi item 16 — Beta 1 milestone
 
-WsprryPi's local evidence installation changes supporting installer/helper
-inputs. Those inputs require refreeze and affected installation/status
-acceptance before publication; the provider release and accepted executable
-and RF scopes remain unchanged.
-
 ⏳ **WsprryPi 4.0 Beta 1 release documentation and candidate preparation.**
-WsprryPi 16 · Lead: `WsprryPi`. The original candidate's **22b–22c / Pi
-16b–16c** acceptance retains its historical scope. The replacement executable
-has four refreshed artifacts and accepted bounded application evidence; the
-WsprryPi records own those gates. Publication and announcements in 22d–22e / Pi
-16d–16e remain not started and require separate authorization. Final WsprryPi
-4.0 stable publication is outside this Beta 1 milestone.
+WsprryPi 16 · Lead: `WsprryPi`. Release-note drafting and replacement candidate
+acceptance (22a–22c / Pi 16a–16c) are complete within their application-owned
+scope. Publication and announcements (22d–22e / Pi 16d–16e) remain not started
+and require separate authorization. Final WsprryPi 4.0 stable publication is
+outside this milestone.
 
-The WsprryPi checklist, candidate manifest and release evidence are authoritative
-for the exact executable, supporting installer/UI, documentation, provider and
-bundled evidence identities. Completed RP1 acceptance and WsprryPi items 10–15
-retain their recorded scopes; they do not automatically qualify later changed inputs.
+### Publication prerequisites and acceptance limits
 
-- ✅ **22a / Pi 16a: Research and draft Beta 1 release documentation in
-  Markdown.** Complete. The stable-to-Beta source inventory, ready-for-release
-  and relevant closed-issue dispositions, commit/merge history and internal
-  evidence are reconciled in WsprryPi's
-  `release_tools/4.0-Beta-1-Release-Notes.md` and
-  `release_tools/4.0-Beta-1-Release-Evidence.md`. Refresh the public notes and
-  companion coverage against the exact publication inputs; closure or readiness
-  alone does not prove that a change shipped.
-- ✅ **22b / Pi 16b: Freeze identities and build the Beta 1 candidate.**
-  The original four exports are superseded by the application-owned physical
-  dither encoding repair at WsprryPi `1e047a44`. The replacement four exports
-  and software checks are identified in WsprryPi's candidate manifest.
-  Preserve the distinction between frozen executable source and accepted
-  supporting installer/UI source. Use the exact accepted documentation and
-  unchanged published provider and pinned evidence byte identities. Changes
-  affecting an artifact or acceptance assertion require updated identities and repetition
-  of affected checks before publication.
-- ✅ **22c / Pi 16c: Validate, accept and hand off; stop before publication.**
-  Replacement `1e047a44` has accepted wspr5 executable-replacement/restart and
-  idle-runtime evidence, with explicit reuse of unchanged normal-installer/UI
-  acceptance. WsprryPi's active records own exact identities, finite limits and
-  retained evidence. No provider runtime or publication input changes.
-  Fresh clean installation, the other three exports on physical targets, reboot
-  and fresh GPIO4 selection remain explicitly accepted unperformed checks.
-  Preserve the documented operator-accepted
-  historical service-request cap exception: 20 requests occurred against an
-  approved 18; this is neither a passing budget check nor retroactive
-  authorization. Reused
-  provider, route, qualification and recovery evidence retains its original
-  identity and applicability. Candidate acceptance does not establish Beta
-  publication or general hardware/RF qualification.
+The WsprryPi checklist, candidate manifest and release evidence own the exact
+executable, supporting installer/UI, documentation, provider and bundled
+evidence identities. Keep these requirements with the publication work:
+
+- Refreeze supporting installer/helper inputs affected by local evidence
+  installation and repeat affected installation/status acceptance. Preserve
+  the published provider and the accepted executable and RF scopes.
+- Refresh WsprryPi's `release_tools/4.0-Beta-1-Release-Notes.md` and companion
+  `release_tools/4.0-Beta-1-Release-Evidence.md` against the exact publication
+  inputs. Reconcile the stable-to-Beta source inventory, readiness and relevant
+  closed-issue dispositions, commit/merge history and internal evidence;
+  issue closure or readiness alone does not prove a change shipped.
+- Use the four replacement exports identified by WsprryPi's candidate manifest
+  for executable source `1e047a44`. Distinguish frozen executable source from
+  accepted supporting installer/UI source. Preserve accepted documentation,
+  published provider and pinned evidence byte identities. Changed artifacts
+  or acceptance assertions require updated identities and affected checks.
+- Keep acceptance bounded to the documented executable replacement/restart and
+  idle-runtime cases and explicit reuse of unchanged normal-installer/UI
+  acceptance. Fresh clean installation, the other three exports on physical
+  targets, reboot and fresh GPIO4 selection remain accepted unperformed checks.
+  Carry forward the documented service-request cap exception as an exception,
+  never a passing budget check or retroactive authorization.
+- Preserve the exact identities, finite limits and applicability of reused
+  provider, route, qualification and recovery evidence. Earlier RP1 and Pi
+  items 10–15 do not automatically qualify changed inputs. Candidate acceptance
+  establishes neither publication nor general hardware/RF qualification.
+
+### Remaining release gates
+
 - ⬜ **22d / Pi 16d — Later: Publish Beta 1 as a GitHub prerelease and verify.**
   After separate publication authorization, reconcile the complete publication
   packet with the accepted executable, supporting installer/UI and documentation
@@ -114,6 +102,6 @@ Revisit only affected acceptance when a confirmed defect, changed input or
 publication discrepancy invalidates its earlier result. Later provider maintenance
 and legacy client fixes do not replace the frozen `1.0.0` software or broaden
 the pinned route evidence. Preserve the software publication, evidence source
-identities and accepted qualification limits. This roadmap reconciliation
-authorizes no installation, hardware/RF operation, candidate rebuild, release-branch merge,
+identities and accepted qualification limits. This plan grants no
+installation, hardware/RF operation, candidate rebuild, release-branch merge,
 tag, release/draft, asset upload, publication or issue announcement.

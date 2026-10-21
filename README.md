@@ -18,8 +18,7 @@ not start a transmission.
 
 ## Operator documentation
 
-The handbook uses the WsprryPi-Docs layout and covers setup, operation,
-maintenance and troubleshooting:
+The handbook covers setup, operation, maintenance and troubleshooting:
 
 - [Main handbook](https://rp1-gpclk-dkms.readthedocs.io/en/main/)
 - [Development handbook](https://rp1-gpclk-dkms.readthedocs.io/en/devel/)
