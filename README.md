@@ -49,8 +49,8 @@ runtime and restores an explicitly saved RP1 route when eligible.
 
 Use a stock Raspberry Pi kernel with matching eligible headers and the
 supported DKMS/signing configuration. Build success establishes build
-compatibility only. The separate qualification supplement records scoped
-route evidence; it does not establish every kernel, band, mode or RF setup.
+compatibility only. WsprryPi includes scoped route evidence with the application;
+it does not establish every kernel, band, mode or RF setup.
 WsprryPi owns application band/mode eligibility and operating policy. See
 [how RP1 support works](docs/about.md) and [read provider status](docs/status.md).
 

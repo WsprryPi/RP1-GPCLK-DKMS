@@ -94,9 +94,10 @@ the accompanying reason before further operation.
 
 **Qualification evidence** describes a particular software, route and test
 scope. The original v1.0.0 compatibility manifest is empty with a default of
-`Unavailable`; the separate qualification supplement does not rewrite it.
-Missing or invalid supplemental evidence is an evidence problem and must not
-be converted into an invented application band restriction.
+`Unavailable`; WsprryPi's bundled evidence does not rewrite it. Evidence ships
+with the application and needs no separate download or cache refresh. Missing
+or corrupt installed evidence is an installation-integrity problem and must
+not be converted into an invented application band restriction.
 
 If the route is selected but WsprryPi still refuses an operation, keep the
 refusal message. Check the application band/mode guidance and any required

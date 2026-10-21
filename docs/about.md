@@ -52,10 +52,11 @@ Maintenance branches can retain that version while their source differs from
 the immutable release. WsprryPi verifies exact source and artifact identities;
 matching a version string alone is insufficient.
 
-The separate `qualification-v1.0.0-r1` supplement records scoped evidence for
-each route. Its finite conducted TONE cases at 14,097,100 Hz, 2 mA and nominal
-200 MHz `pll_sys` do not establish every kernel, board, frequency, mode or RF
-chain. A successful DKMS build establishes build compatibility only.
+WsprryPi includes verified scoped evidence for each route with its application.
+No separate evidence-release download or refresh is needed. The finite conducted
+TONE cases at 14,097,100 Hz, 2 mA and nominal 200 MHz `pll_sys` do not establish
+every kernel, board, frequency, mode or RF chain. A successful DKMS build
+establishes build compatibility only.
 
 Use [WsprryPi's band qualification guidance](https://wsprry-pi.readthedocs.io/en/devel/About_Wsprry_Pi/index.html#band-qualification)
 for application band and mode choices. The provider's structural compatibility,

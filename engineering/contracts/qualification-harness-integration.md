@@ -21,9 +21,11 @@ The module reports structural `Compatible-unqualified` independently of external
 qualification. Exact-source development remains an `Experimental` consumer
 classification. `GPIO4` and `GPIO20` have independent attributable evidence;
 identity, authorization, results and retained evidence never transfer between them.
-The [supplemental metadata contract](../operations/qualification-metadata.md)
+The [local evidence contract](../operations/qualification-metadata.md)
 records accepted scoped evidence while preserving the original empty release
-manifest. Application band/mode policy remains in WsprryPi.
+manifest. WsprryPi installs the pinned bundle with its application; there is
+no separate qualification-release dependency. Application band/mode policy remains
+in WsprryPi.
 
 ## Identity record
 

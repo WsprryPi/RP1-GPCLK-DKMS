@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Supplemental read-only report interpreter, independent of frozen package diagnostics.
+"""Read-only local-evidence interpreter, independent of frozen package diagnostics.
 
-Consumes verified publication bytes and a separately collected runtime-provider
+Consumes verified bundled bytes and a separately collected runtime-provider
 inspection. It neither runs the old diagnostic executable nor contacts a device.
 """
 import argparse

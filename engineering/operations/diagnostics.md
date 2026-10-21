@@ -2,12 +2,13 @@
 
 # Read-only diagnostics
 
-For current scoped qualification status use the separately identified
-[supplemental interpreter](qualification-metadata.md#diagnostics) or maintained
-WsprryPi consumer tooling. The collector source at frozen `v1.0.0` remains
-unchanged; its aggregate compatibility summary must not be used to infer output
+For current scoped qualification status use WsprryPi's maintained helper and
+its locally installed evidence bundle, or the standalone
+[report interpreter](qualification-metadata.md#diagnostics) with explicit inputs.
+The collector source at frozen `v1.0.0` remains unchanged; its aggregate
+compatibility summary must not be used to infer output
 inhibition or erase independently established qualification. Its raw observations
-remain useful. The supplemental tool verifies exact release/build attribution
+remain useful. The evidence interpreter verifies exact release/build attribution
 and keeps structural compatibility, readiness and qualification separate.
 
 The collector is `scripts/rp1-gpclk-diagnostics.py` in a reviewed source checkout;
@@ -74,7 +75,7 @@ Those categories are aggregate compatibility labels, not an output measurement
 or independent qualification decision. In particular, an accepted development
 manifest can produce an Experimental summary without proving route/boot
 ownership. Use the runtime facade and its exact binding for managed readiness,
-the supplemental interpreter for scoped evidence, and raw passive snapshots for
+the local evidence interpreter for scoped evidence, and raw passive snapshots for
 current lifecycle observations. The runtime inventory collector is a different
 tool and never opens either RP1 endpoint.
 
