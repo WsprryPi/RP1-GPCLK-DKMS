@@ -22,6 +22,7 @@ import runtime_route_client as client
 JOURNAL = admin.STATE / 'activation.json'
 LAST_DEPLOYMENT = admin.STATE / 'last-deployment.json'
 SOCKET_UNIT = 'rp1-gpclk-route-manager.socket'
+SOCKET_GROUP = 'rp1-gpclk-route'
 SERVICE_UNIT = 'rp1-gpclk-route-manager@.service'
 APPLICATION_UNIT = 'wsprrypi.service'
 SOCKET_PATH = Path('/run/rp1-gpclk-dkms/route-manager.sock')
@@ -297,7 +298,7 @@ class Linux:
             info = os.lstat(SOCKET_PATH)
         except FileNotFoundError:
             return {'status': 'absent'}
-        group = grp.getgrnam('rp1-gpclk-route').gr_gid
+        group = grp.getgrnam(SOCKET_GROUP).gr_gid
         if (not stat.S_ISSOCK(info.st_mode) or info.st_uid or info.st_gid != group or
                 stat.S_IMODE(info.st_mode) != 0o660):
             return {'status': 'unsafe', 'ownerUid': info.st_uid,
@@ -340,6 +341,17 @@ class Linux:
         admin.run(('/usr/sbin/rmmod', 'rp1_route_controller'))
 
     def start_socket(self):
+        # Source-development installs do not run the Debian postinst that
+        # normally creates this persistent service group. Provision it only
+        # within approved activation, never during inspection or planning.
+        try:
+            grp.getgrnam(SOCKET_GROUP)
+        except KeyError:
+            admin.run(('/usr/sbin/addgroup', '--system', SOCKET_GROUP))
+            try:
+                grp.getgrnam(SOCKET_GROUP)
+            except KeyError as error:
+                raise ValueError('route-manager service group was not created') from error
         admin.run(('/usr/bin/systemctl', 'start', SOCKET_UNIT))
 
     def stop_socket(self):

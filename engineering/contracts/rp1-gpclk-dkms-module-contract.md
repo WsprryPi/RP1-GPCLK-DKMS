@@ -517,6 +517,9 @@ separate digest-bound operations. Between them, `activation-plan` and
 `activation-ensure` establish only the exact controller and manager socket in a
 zero-route state, then restore the application according to its captured service
 intent. The consumer remains unloaded and `/dev/rp1-gpclk` remains absent.
+
+Neutral activation ensures the persistent `rp1-gpclk-route` system group exists before starting the manager socket, including installations performed without Debian package configuration. An existing group is reused without changing membership or its numeric identity. Inspection and planning do not create accounts. Recovery and removal retain the group, as with the Debian package lifecycle.
+
 Activation completion verifies the captured application restoration intent.
 Later passive neutral readiness accepts a stable start, stop, or restart of the
 bound application service while retaining the exact neutral hardware and
