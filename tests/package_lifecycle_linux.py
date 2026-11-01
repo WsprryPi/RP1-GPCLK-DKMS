@@ -22,10 +22,10 @@ from release_contract import inventory, package_members
 import jsonschema
 
 PACKAGE = 'rp1-gpclk-dkms'
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 NAMES = ('rp1_gpclk_dkms', 'rp1_route_controller')
 OUT = Path('/results')
-DEB = Path('/candidate/rp1-gpclk-dkms_1.0.0-1_all.deb')
+DEB = Path('/candidate/rp1-gpclk-dkms_1.0.1-1_all.deb')
 OLD = Path('/predecessor/rp1-gpclk-dkms_0.9.0-1_all.deb')
 KERNELS = ('6.18.50+rpt-rpi-2712', '6.18.50+rpt-rpi-v8')
 STEPS = []
@@ -113,7 +113,7 @@ def neutral():
 
 
 def installed(state):
-    require(state['packageManager'] == 'ii  1.0.0-1', 'package is not configured')
+    require(state['packageManager'] == 'ii  1.0.1-1', 'package is not configured')
     require(len(state['modules']) == 2*len(KERNELS), 'module/kernel set differs')
     require(state['dkms'].count(': installed') == len(KERNELS), 'DKMS kernel set differs')
     for module in state['modules']:
@@ -291,7 +291,7 @@ def dependency_recovery():
 def missing_payload():
     installed(run('initial-install', ['dpkg', '-i', DEB]))
     for name in ('/usr/libexec/rp1-gpclk-dkms/package_preflight.py',
-                 '/usr/src/rp1-gpclk-dkms-1.0.0/dkms.conf'):
+                 '/usr/src/rp1-gpclk-dkms-1.0.1/dkms.conf'):
         Path(name).unlink()
         installed(run('repair-missing-'+Path(name).name, ['dpkg', '-i', DEB]))
     absent(run('purge', ['dpkg', '--purge', PACKAGE]))
@@ -404,7 +404,7 @@ def foreign_state():
             except OSError:
                 break
             parent = parent.parent
-    for version in ('1.0.0', '9.9.9'):
+    for version in ('1.0.1', '9.9.9'):
         path = Path('/var/lib/dkms', PACKAGE, version)
         path.mkdir(parents=True)
         run('foreign-dkms-'+version, ['dpkg', '-i', DEB], 1)
@@ -418,7 +418,7 @@ def foreign_state():
         run('refuse-foreign-cache-reinstall', ['dpkg', '-i', DEB], 1)
         require(foreign.read_bytes() == b'foreign cache evidence', 'foreign cache file deleted')
         foreign.unlink()  # Retire only the injected test object.
-    path = Path('/usr/src/rp1-gpclk-dkms-1.0.0/Kbuild')
+    path = Path('/usr/src/rp1-gpclk-dkms-1.0.1/Kbuild')
     saved = path.read_bytes()
     path.write_bytes(saved+b'\n# administrator change\n')
     run('refuse-drifted-removal', ['dpkg', '--remove', PACKAGE], 1)
@@ -450,7 +450,7 @@ def unpack_recovery():
 
 def header_profiles():
     run('extract-build-inputs', ['dpkg-deb', '-x', DEB, '/tmp/profile-payload'])
-    source = Path('/tmp/profile-payload/usr/src/rp1-gpclk-dkms-1.0.0')
+    source = Path('/tmp/profile-payload/usr/src/rp1-gpclk-dkms-1.0.1')
     builds = []
     for kernel in KERNELS:
         for profile in (0, 1):
@@ -609,7 +609,7 @@ def predecessor():
     # The retained predecessor refuses in-place downgrade; call its exact
     # preinst before dpkg could invoke the installed candidate's prerm.
     require(raw(['dpkg-deb', '-e', str(OLD), '/tmp/old-control']).returncode == 0, 'old control extraction failed')
-    run('refuse-direct-downgrade-before-dpkg', ['sh', '/tmp/old-control/preinst', 'upgrade', '1.0.0-1'], 1)
+    run('refuse-direct-downgrade-before-dpkg', ['sh', '/tmp/old-control/preinst', 'upgrade', '1.0.1-1'], 1)
     absent(run('rollback-remove-successor', ['dpkg', '--purge', PACKAGE]))
     legacy.touch()
     state = run('rollback-install-retained-predecessor', ['dpkg', '-i', OLD])

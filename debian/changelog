@@ -1,3 +1,13 @@
+rp1-gpclk-dkms (1.0.1-1) UNRELEASED; urgency=medium
+
+  * Add the operator handbook and maintain engineering and release contracts.
+  * Correct legacy development-client dividers and guard live sweep parents.
+  * Extend offline regression coverage and retire obsolete qualification tools.
+  * Bind the patch candidate to distinct module, runtime and route identities;
+    retain existing 1.0.0 evidence without transferring qualification.
+
+ -- Lee Bussy <lee@bussy.org>  Sat, 31 Oct 2026 00:00:00 +0000
+
 rp1-gpclk-dkms (1.0.0-1) UNRELEASED; urgency=medium
 
   * Prepare the unpublished canonical candidate with an interlocked consumer

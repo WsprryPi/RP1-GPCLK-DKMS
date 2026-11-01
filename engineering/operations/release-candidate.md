@@ -1,38 +1,34 @@
 <!-- SPDX-License-Identifier: MIT -->
 
-# Build, verify and publish 1.0.0
+# Build, verify and publish 1.0.1
 
-The product/source/module/DKMS version is `1.0.0`; Debian is `1.0.0-1`;
-the canonical release tag is `v1.0.0`. Default candidate preparation creates no tag,
+The product/source/module/DKMS version is `1.0.1`; Debian is `1.0.1-1`;
+the canonical release tag is `v1.0.1`. Default candidate preparation creates no tag,
 GitHub release, asset URL, immutable release or qualification claim.
 
 ## Release identity and maintenance
 
+The current source prepares unpublished `v1.0.1` / Debian `1.0.1-1`.
 The published immutable `v1.0.0` tag identifies source commit
 `8c16d3c237cb1267cbedafb5da2bb74132ca5de0` and tree
-`4c1ad8acf513b36ba32e58a636942655accbb52d`. Reconstruct and validate the existing
-release using a clean detached checkout of that commit, the retained build
-environment, downloaded assets, and `--release` on the validator.
+`4c1ad8acf513b36ba32e58a636942655accbb52d`. Its tag and seven assets remain
+unchanged. Reconstruct that release from its clean tagged checkout and retained
+environment, using the scripts from that checkout and `--release`.
 
-Documentation and test maintenance on `main` or `devel` does not change the
-published release or require a version bump. A maintenance commit has a different
-source identity: every tracked file is included in the source archive, so even
-a documentation deletion changes that archive and its provenance. Do not replace
-the `v1.0.0` tag, rebuild maintenance HEAD as the published release, edit generated
-checksums, or relabel old evidence as testing a different source tree.
+The patch includes the operator handbook, engineering documentation maintenance,
+legacy development-client clock-parent fixes, offline regressions and retirement
+of obsolete qualification tooling. See the [release notes](release-notes-1.0.1.md).
+Its module, package, runtime and route compatibility versions move together.
+Canonical UAPI bytes, overlay sources, resource behavior and licensing are
+unchanged. Version equality never substitutes for exact source and asset hashes.
 
-Some technical documentation is also package payload: the route-manager contract
-is staged as `/usr/share/doc/rp1-gpclk-dkms/route-manager.md`. Editing it changes
-the candidate Debian archive and inventory as well as the source archive.
-An unpublished maintenance candidate still has its own exact hashes; neither
-version equality nor a documentation-only diff makes it the published package.
-
-The ordinary builder may validate a maintenance checkout as an unpublished
-candidate with version `1.0.0`; it does not replace any published asset or grant
-production selection. Exact-source development remains a separate Experimental
-path. Compare the inputs exercised by prior tests before reusing evidence;
-repeat affected checks when executable, build, packaging or interface inputs
-change. No target or RF evidence transfers solely because versions match.
+Every tracked file is included in the source archive. The route-manager contract
+is also staged as `/usr/share/doc/rp1-gpclk-dkms/route-manager.md`, so its changes
+affect the package. Never move an existing tag, overwrite an asset, edit generated
+checksums or relabel evidence for a different source tree. The retained `1.0.0`
+evidence is not patch qualification. Target builds, lifecycle acceptance and
+WsprryPi consumer review remain separate gates. Direct in-place replacement of
+`1.0.0-1` is refused; owning cleanup/removal precedes a clean patch installation.
 
 ## Commands and environment
 
@@ -49,7 +45,7 @@ read-only pre-unpack guard runs before ordinary package dependencies configure.
 From a clean checkout whose HEAD is the full reviewed commit:
 
 ```sh
-./scripts/build-release-candidate --version 1.0.0 \
+./scripts/build-release-candidate --version 1.0.1 \
   --source-commit FULL_40_CHARACTER_SHA \
   --output /absolute/new/candidate
 
@@ -85,8 +81,8 @@ has its version and runtime-controller profile rendered explicitly.
 
 | Asset | Meaning |
 | --- | --- |
-| `rp1-gpclk-dkms-1.0.0.tar.gz` | Exact tracked source of the identified commit/tree |
-| `rp1-gpclk-dkms_1.0.0-1_all.deb` | One source-only DKMS Debian package |
+| `rp1-gpclk-dkms-1.0.1.tar.gz` | Exact tracked source of the identified commit/tree |
+| `rp1-gpclk-dkms_1.0.1-1_all.deb` | One source-only DKMS Debian package |
 | `rp1-gpclk-dkms-installation-manifest-v1.json` | WsprryPi consumer identity and complete package data inventory |
 | `rp1-gpclk-compatibility-manifest.json` | Exact source/UAPI identity, default Unavailable, no target entries |
 | `release-metadata.json` | Unpublished candidate classification, tool versions, module/controller/UAPI/overlay/runtime identities and provenance |
@@ -94,7 +90,7 @@ has its version and runtime-controller profile rendered explicitly.
 | `SHA256SUMS` | Sorted lowercase SHA-256, two spaces, filename and LF for every other asset; no self-hash |
 
 The installation manifest is deliberately release-shaped: `releaseChannel` is
-`release` and `releaseTag` declares intended `v1.0.0`. These are the stable
+`release` and `releaseTag` declares intended `v1.0.1`. These are the stable
 consumer contract, not evidence of publication. Separate provenance says
 `classification: candidate`, `published: false` and leaves actual tag, release
 URL and GitHub asset digest null. WsprryPi additionally requires an actual
@@ -110,7 +106,7 @@ not authentication; the expected source commit and retained environment are
 external trust anchors. No private signing key is generated or distributed.
 Target signing and trust enrollment remain administrator-owned prerequisites.
 
-Both `v1.0.0-rp1-gpio4` and `v1.0.0-rp1-gpio20` remain distinct. Both canonical
+Both `v1.0.1-rp1-gpio4` and `v1.0.1-rp1-gpio20` remain distinct. Both canonical
 UAPIs retain their reviewed bytes. The runtime contracts are binding v3,
 readiness v1 and update v1. The source package includes controller build inputs;
 target DKMS produces both ELF modules. Installed compressed-file and decompressed
@@ -131,7 +127,8 @@ after validation. It independently reconstructs and rebuilds the package from Gi
 It writes no candidate or source files. Keep stdout results outside the checkout.
 
 [The pinned consumer-contract fixture](../../release/wsprrypi-consumer-contract.json)
-identifies the reviewed WsprryPi commit and installer digest. It documents the
+identifies the historical reviewed WsprryPi commit and installer digest for
+`v1.0.0`; it does not assert `v1.0.1` consumer acceptance. It documents the
 stable asset/key contract and application-owned acceptance follow-ups. It is a
 compact format fixture, not WsprryPi implementation or acceptance evidence.
 Refresh the read-only consumer comparison when selecting an acceptance candidate.
@@ -156,9 +153,10 @@ trust, WsprryPi acceptance, product eligibility, transmission or RF qualificatio
 
 The publication procedure below defines the release workflow. The existing
 `v1.0.0` publication is complete; its tag and assets must remain unchanged.
+`v1.0.1` is an unpublished candidate and requires separate publication authorization.
 
-To reconstruct the existing release, use its recorded clean source commit and
-retained environment with `--release` on both commands above. Repeat into a second new
+To prepare the patch publication profile, use the accepted clean source commit
+and retained environment with `--release` on both commands above. Repeat into a second new
 directory and compare every file. This profile retains identical source archive,
 Debian package and installation-manifest bytes for the same commit/environment;
 only provenance, compatibility manifest ID, validation classification and their
@@ -171,7 +169,7 @@ building or validation does not verify GitHub publication. Command results
 always return `published: false` because they perform no publication. The retained
 `candidate-validation.json` filename records reproducibility of the frozen set
 with classification `release`; it grants no qualification. The compatibility
-manifest ID is `v1.0.0-FULL_SOURCE_COMMIT`, defaults to Unavailable and has no
+manifest ID is `v1.0.1-FULL_SOURCE_COMMIT`, defaults to Unavailable and has no
 target entries. Actual target module identities remain null until built.
 `githubAssetDigest` remains null because provenance cannot embed its own final
 digest; GitHub's independently queried per-asset digests and `SHA256SUMS` bind
@@ -179,17 +177,15 @@ the published files. Candidate and release profiles are never accepted
 interchangeably by the validator.
 
 Initial publication uses an annotated tag at the exact accepted source commit,
-after exact-commit CI, reproducible builds and independent validation. That
-`v1.0.0` tag and release already exist: current maintenance uses verification,
-not tag creation or republishing. A different software version requires its own
-coordinated version/identity and consumer review before the publication sequence
-below can apply. Inspect existing tags/releases first; conflicting identities
-stop publication. Never move an existing tag or overwrite an asset.
+after exact-commit CI, reproducible builds and independent validation. The
+`v1.0.1` tag must name the exact accepted patch source, after coordinated
+version/identity and consumer review. Candidate preparation does not create it.
+Inspect existing tags/releases first; conflicting identities stop publication. Never move an existing tag or overwrite an asset.
 
 Enable repository release immutability before publishing. With authenticated
 `gh`, create a draft using `--verify-tag`, reviewed release notes and every
 validated asset. Download the draft and compare the complete set against the
-frozen directory before `gh release edit v1.0.0 --draft=false --verify-tag`.
+frozen directory before `gh release edit v1.0.1 --draft=false --verify-tag`.
 Published releases must be immutable, non-draft and non-prerelease. Independently
 query the peeled remote tag and release, download all seven assets into a new
 external directory, recompute every SHA-256 and compare every byte. Retain the

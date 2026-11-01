@@ -16,7 +16,7 @@ The [predecessor record](../../release/lifecycle-predecessor-v1.json) binds its
 version, both UAPIs, compatibility identities and rendering rule. This is
 unpublished historical source, not a previously published release. Its package
 builds the ordinary consumer only; its runtime controller was a separate
-development profile. The `1.0.0-1` package owns both interlocked modules in
+development profile. The `1.0.1-1` package owns both interlocked modules in
 one DKMS instance. Equal consumer UAPI bytes do not establish package or runtime
 migration compatibility.
 
@@ -55,7 +55,7 @@ guard **before** invoking dpkg or APT:
 
 ```sh
 sudo python3 -I /absolute/reviewed/source/scripts/package_preflight.py unpack
-sudo dpkg -i /absolute/candidate/rp1-gpclk-dkms_1.0.0-1_all.deb
+sudo dpkg -i /absolute/candidate/rp1-gpclk-dkms_1.0.1-1_all.deb
 ```
 
 Run those as separate reviewed steps. Proceed to dpkg only after a `permitted`
@@ -71,13 +71,18 @@ appropriate checks before native DKMS effects.
 
 Debian invokes the outgoing prerm before the incoming preinst. Consequently a
 new package cannot prevent an old script's earlier effects. Direct `0.9.0` to
-`1.0.0` replacement is unsupported and refused; do not bypass the external
+`1.0.1` replacement is unsupported and refused; do not bypass the external
 preflight by running dpkg first. The approved path is owning runtime/development
 cleanup, owning predecessor removal, then a clean successor installation.
 The old scripts copy inactive overlays into `/boot` and contain debhelper
 systemd integration. Their cleanup has historical boot/service effects and needs
 its own authorization on an actual host. It is not covered by the current
 package's passive guarantees. Never delete their evidence to admit the successor.
+
+The published `1.0.0-1` package is also a non-current version for this
+candidate. Direct `1.0.0-1` to `1.0.1-1` replacement is refused: use its owning
+cleanup and removal before clean installation. Do not infer target lifecycle
+acceptance for the patch from the retained historical transition fixtures.
 
 The same rule applies to downgrade: never submit a predecessor archive over an
 installed successor. Version ordering is not rollback. The predecessor preinst

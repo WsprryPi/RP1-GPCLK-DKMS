@@ -48,8 +48,10 @@ engineering test client. Start with [use an installed system](getting-started.md
 ## Software and support limits
 
 The published provider software is **v1.0.0**, Debian package **1.0.0-1**.
-Maintenance branches can retain that version while their source differs from
-the immutable release. WsprryPi verifies exact source and artifact identities;
+This checkout prepares **v1.0.1**, Debian **1.0.1-1**, as an unpublished patch
+candidate. It has distinct source, package, module and route identities.
+Existing `v1.0.0` evidence does not establish qualification for `v1.0.1`.
+WsprryPi verifies exact source and artifact identities;
 matching a version string alone is insufficient.
 
 WsprryPi includes verified scoped evidence for each route with its application.

@@ -12,6 +12,11 @@ There is no separate GitHub qualification release to discover, download or
 refresh. The bundle records accepted evidence independently of provider
 admission, operational readiness and application band/mode policy.
 
+The `1.0.1` source candidate has distinct product and compatibility identities.
+This bundle continues to describe only `v1.0.0`; it must not be relabeled or
+reported as qualification for `v1.0.1`. Any reuse needs an explicit applicability
+assessment and independently bound consumer evidence.
+
 ## Source and scope
 
 The maintained [software binding](../../release/software-1.0.0.json) preserves

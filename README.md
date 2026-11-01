@@ -49,6 +49,11 @@ Use a stock Raspberry Pi kernel with matching eligible headers and the
 supported DKMS/signing configuration. Build success establishes build
 compatibility only. WsprryPi includes scoped route evidence with the application;
 it does not establish every kernel, band, mode or RF setup.
+This checkout prepares **v1.0.1**, Debian **1.0.1-1**. It is unpublished;
+WsprryPi must explicitly accept the new provider before selecting it. Existing
+`v1.0.0` route evidence does not qualify the patch candidate. See the
+[patch release notes](engineering/operations/release-notes-1.0.1.md).
+
 WsprryPi owns application band/mode eligibility and operating policy. See
 [how RP1 support works](docs/about.md) and [read provider status](docs/status.md).
 

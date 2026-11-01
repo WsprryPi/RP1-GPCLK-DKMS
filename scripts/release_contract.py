@@ -11,7 +11,7 @@ import re
 import subprocess
 import tarfile
 
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 DEBIAN = VERSION+'-1'
 PACKAGE = 'rp1-gpclk-dkms'
 SOURCE = f'{PACKAGE}-{VERSION}.tar.gz'

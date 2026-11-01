@@ -90,6 +90,19 @@ class Tests(unittest.TestCase):
         self.assertEqual(status.interpret(None, observed, 'gpio4')['state'], 'Evidence missing')
         self.assertEqual(status.interpret(value, observed, None)['state'], 'No active route')
 
+    def test_patch_identity_does_not_inherit_release_evidence(self):
+        value = fixture()
+        observed = report(value)
+        binding = observed['identities']['installedBinding']['value']
+        binding['productVersion'] = '1.0.1'
+        binding['compatibilityIdentities'] = {
+            route: 'v1.0.1-rp1-' + route for route in ('gpio4', 'gpio20')}
+        # Even identical source/UAPI observations cannot transfer versioned evidence.
+        result = self.interpret(value, observed, 'gpio4')
+        self.assertEqual(result['status'], 'unattributed')
+        self.assertEqual(result['reason'], 'installed source/UAPI/release differs')
+        self.assertFalse(result['permissionGate'])
+
     def test_exact_runtime_attribution(self):
         value = fixture()
         for path in [('sourceCommit', '0'*40), ('productVersion', '2.0.0'),

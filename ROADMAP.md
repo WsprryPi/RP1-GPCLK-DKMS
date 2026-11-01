@@ -9,6 +9,17 @@ qualification release is consumed. See
 [qualification metadata](engineering/operations/qualification-metadata.md)
 for applicability and exclusions.
 
+## Patch candidate
+
+The source candidate is `1.0.1` / Debian `1.0.1-1`. Its
+[release notes](engineering/operations/release-notes-1.0.1.md) describe the
+changes and support boundaries. Build and independently validate the exact
+clean source commit with the [release procedure](engineering/operations/release-candidate.md).
+Retain `v1.0.0` and its assets and evidence unchanged. Target module builds,
+package transitions, WsprryPi acceptance and any evidence reuse require separate
+validation before publication. WsprryPi remains pinned to its accepted provider
+until an explicit consumer update. Publication requires separate authorization.
+
 ## Provider maintenance
 
 Keep the module, UAPIs, route overlays, runtime management, packaging,
