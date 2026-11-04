@@ -104,6 +104,8 @@ plan can accompany a nonzero readiness classification, as described below.
    python3 /usr/lib/rp1-gpclk-dkms/runtime_provider.py inspect
    ```
 
+   Neutral activation creates the `rp1-gpclk-route` system group if absent before starting the socket. Existing group identity and membership are preserved; recovery and removal retain the group. Inspection and planning create no accounts.
+
    A reviewed bundle may also be supplied to `activation-plan` and
    `activation-ensure`; it must match the installed binding exactly. Successful
    inspection reports `neutral_ready`, `administrationCompatible=true`,

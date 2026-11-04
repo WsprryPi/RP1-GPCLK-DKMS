@@ -10,7 +10,7 @@ import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import runtime_activation as activation
@@ -186,6 +186,88 @@ class System:
 
 def lock():
     return contextlib.nullcontext()
+
+
+class SocketGroupTests(unittest.TestCase):
+    def test_missing_group_created_and_verified_before_socket_start(self):
+        events = []
+        group = SimpleNamespace(gr_gid=123)
+        def lookup(name):
+            self.assertEqual(name, activation.SOCKET_GROUP)
+            events.append('lookup')
+            if len(events) == 1:
+                raise KeyError(name)
+            return group
+        with patch.object(activation.grp, 'getgrnam', side_effect=lookup), \
+             patch.object(admin, 'run', side_effect=lambda args: events.append(args)):
+            activation.Linux().start_socket()
+        self.assertEqual(events, ['lookup',
+            ('/usr/sbin/addgroup', '--system', 'rp1-gpclk-route'), 'lookup',
+            ('/usr/bin/systemctl', 'start', activation.SOCKET_UNIT)])
+
+    def test_existing_group_reused_without_modification(self):
+        with patch.object(activation.grp, 'getgrnam', return_value=SimpleNamespace(gr_gid=456)) as lookup, \
+             patch.object(admin, 'run') as command:
+            activation.Linux().start_socket()
+            activation.Linux().start_socket()
+        self.assertEqual(lookup.call_count, 2)
+        self.assertEqual(command.call_args_list, [call(
+            ('/usr/bin/systemctl', 'start', activation.SOCKET_UNIT))] * 2)
+
+    def test_activation_planning_is_read_only_and_repeat_needs_no_account_effect(self):
+        system = System()
+        def command(args):
+            if args[0] == '/usr/bin/systemctl':
+                system.socket_active = True
+        with patch.object(system, 'start_socket', side_effect=activation.Linux().start_socket), \
+             patch.object(activation.grp, 'getgrnam', side_effect=[KeyError(), SimpleNamespace(gr_gid=123)]) as lookup, \
+             patch.object(admin, 'run', side_effect=command) as run:
+            plan = activation.activation_plan(system)
+            lookup.assert_not_called()
+            run.assert_not_called()
+            result = activation.ensure(system, plan, activation.plan_digest(plan), lock)
+            self.assertEqual(result['status'], 'activated-neutral')
+            repeat = activation.activation_plan(system)
+            self.assertEqual(activation.ensure(system, repeat, activation.plan_digest(repeat), lock)
+                             ['status'], 'idempotent-no-change')
+        self.assertEqual(run.call_args_list, [
+            call(('/usr/sbin/addgroup', '--system', activation.SOCKET_GROUP)),
+            call(('/usr/bin/systemctl', 'start', activation.SOCKET_UNIT))])
+        self.assertTrue(system.application_active)
+        self.assertFalse(system.consumer)
+
+    def test_failed_group_creation_retains_inhibition_and_allows_neutral_recovery(self):
+        system = System()
+        plan = activation.activation_plan(system)
+        with patch.object(system, 'start_socket', side_effect=activation.Linux().start_socket), \
+             patch.object(activation.grp, 'getgrnam', side_effect=KeyError), \
+             patch.object(admin, 'run', side_effect=ValueError('group creation failed')):
+            with self.assertRaisesRegex(ValueError, 'group creation failed'):
+                activation.ensure(system, plan, activation.plan_digest(plan), lock)
+        self.assertEqual(system.journal['phase'], 'activation-failed')
+        self.assertTrue(system.inhibited)
+        self.assertFalse(system.application_active)
+        self.assertFalse(system.socket_active)
+        self.assertFalse(system.consumer)
+        recovery = activation.recovery_plan(system)
+        activation.ensure_recovery(system, recovery, activation.plan_digest(recovery), lock)
+        self.assertEqual(system.journal['phase'], 'recovered-inhibited')
+        self.assertFalse(system.controller)
+        self.assertTrue(system.inhibited)
+
+    def test_failed_group_creation_prevents_socket_start(self):
+        with patch.object(activation.grp, 'getgrnam', side_effect=KeyError), \
+             patch.object(admin, 'run', side_effect=ValueError('group creation failed')) as command:
+            with self.assertRaisesRegex(ValueError, 'group creation failed'):
+                activation.Linux().start_socket()
+        command.assert_called_once_with(('/usr/sbin/addgroup', '--system', activation.SOCKET_GROUP))
+
+    def test_group_still_absent_after_creation_prevents_socket_start(self):
+        with patch.object(activation.grp, 'getgrnam', side_effect=KeyError), \
+             patch.object(admin, 'run') as command:
+            with self.assertRaisesRegex(ValueError, 'service group was not created'):
+                activation.Linux().start_socket()
+        command.assert_called_once_with(('/usr/sbin/addgroup', '--system', activation.SOCKET_GROUP))
 
 
 class Tests(unittest.TestCase):
