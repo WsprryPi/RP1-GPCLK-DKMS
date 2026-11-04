@@ -38,8 +38,8 @@ an appropriate RF interface and filtering; follow the
 ## Software and support limits
 
 The published software is
-[v1.0.0](https://github.com/WsprryPi/RP1-GPCLK-DKMS/releases/tag/v1.0.0),
-Debian package **1.0.0-1**. It contains the consumer module, runtime route
+[v1.0.2](https://github.com/WsprryPi/RP1-GPCLK-DKMS/releases/tag/v1.0.2),
+Debian package **1.0.2-1**. It contains the consumer module, runtime route
 controller, canonical userspace interfaces and inactive GPIO4/GPIO20 overlays.
 Package installation does not select a route, load a module, edit boot
 configuration or authorize output. WsprryPi separately establishes its managed
@@ -49,10 +49,11 @@ Use a stock Raspberry Pi kernel with matching eligible headers and the
 supported DKMS/signing configuration. Build success establishes build
 compatibility only. WsprryPi includes scoped route evidence with the application;
 it does not establish every kernel, band, mode or RF setup.
-This checkout prepares **v1.0.1**, Debian **1.0.1-1**. It is unpublished;
-WsprryPi must explicitly accept the new provider before selecting it. Existing
-`v1.0.0` route evidence does not qualify the patch candidate. See the
-[patch release notes](engineering/operations/release-notes-1.0.1.md).
+Neutral activation creates the required route-manager group when absent,
+including installations outside Debian package configuration. WsprryPi must
+explicitly accept the provider before selecting it. Existing `v1.0.0` route
+evidence does not qualify this release. See the
+[patch release notes](engineering/operations/release-notes-1.0.2.md).
 
 WsprryPi owns application band/mode eligibility and operating policy. See
 [how RP1 support works](docs/about.md) and [read provider status](docs/status.md).

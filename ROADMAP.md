@@ -2,30 +2,27 @@
 
 # Current work
 
-The published provider is `1.0.0` / Debian `1.0.0-1`, identified by the immutable
-[`v1.0.0` release](https://github.com/WsprryPi/RP1-GPCLK-DKMS/releases/tag/v1.0.0).
+The published provider is `1.0.2` / Debian `1.0.2-1`, identified by the immutable
+[`v1.0.2` release](https://github.com/WsprryPi/RP1-GPCLK-DKMS/releases/tag/v1.0.2).
 WsprryPi bundles pinned scoped route evidence locally; no separate
 qualification release is consumed. See
 [qualification metadata](engineering/operations/qualification-metadata.md)
 for applicability and exclusions.
 
-## Patch candidate
+## Consumer acceptance
 
-The source candidate is `1.0.1` / Debian `1.0.1-1`. Its
-[release notes](engineering/operations/release-notes-1.0.1.md) describe the
-changes and support boundaries. Build and independently validate the exact
-clean source commit with the [release procedure](engineering/operations/release-candidate.md).
-Retain `v1.0.0` and its assets and evidence unchanged. Target module builds,
-package transitions, WsprryPi acceptance and any evidence reuse require separate
-validation before publication. WsprryPi remains pinned to its accepted provider
-until an explicit consumer update. Publication requires separate authorization.
+The [release notes](engineering/operations/release-notes-1.0.2.md) describe
+provider changes and support boundaries. WsprryPi separately owns acceptance
+and selection of the tagged provider. Target module builds, package transitions
+and any scoped evidence reuse require exact identities and separate validation.
+Keep published tags, assets and their bound evidence unchanged.
 
 ## Provider maintenance
 
 Keep the module, UAPIs, route overlays, runtime management, packaging,
 diagnostics and deterministic tests aligned with their maintained contracts.
 Build or test a maintenance checkout under its own exact source identity; use
-the tagged checkout and published assets when verifying release `1.0.0`.
+the tagged checkout and published assets when verifying release `1.0.2`.
 See the [release procedure](engineering/operations/release-candidate.md).
 
 Retain the selected `0.9.0` lifecycle predecessor and package transition matrix.

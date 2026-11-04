@@ -402,13 +402,13 @@ authorization for their system effects. Output-inhibited administration, live
 GPIO behavior, timing, transmission, and RF are separate evidence classes and
 must not be inferred from one another.
 
-For the `1.0.1` dual-route development identity, structural compatibility also requires
+For the `1.0.2` dual-route development identity, structural compatibility also requires
 the route-specific endpoint node name emitted by the corresponding current
 overlay: `rp1-gpclk-dkms-gpio4` for route `1` or
 `rp1-gpclk-dkms-gpio20` for route `2`. Any other endpoint name is rejected even
 when its remaining properties are otherwise valid.
 
-The development build reports the route-specific `1.0.1` identities in the
+The development build reports the route-specific `1.0.2` identities in the
 [development identity contract](development-identity.md). Its exact RP1
 topology, kernel, architecture, module-version, resource, and route observations
 apply together.
@@ -428,8 +428,8 @@ compatibility, provenance, licensing, and security metadata. The source
 version, tag, Debian version, DKMS version, module version, UAPI, package, and
 release metadata must agree according to the release policy.
 
-Version `1.0.1` / Debian `1.0.1-1` is the current unpublished source candidate.
-The published `v1.0.0` remains bound to its original source and assets. The
+Version `1.0.2` / Debian `1.0.2-1` is the current source release identity.
+Published `v1.0.0` and `v1.0.1` remain bound to their original source and assets. The
 patch uses distinct module, runtime and route compatibility identities while
 retaining both canonical UAPI byte identities and resource behavior. Its
 candidate metadata grants no target, lifecycle, consumer or RF qualification.
@@ -445,9 +445,9 @@ The package bounds native helper compatibility to DKMS 3.2.2 through the 3.2
 series. Other DKMS families and dynamic signing mechanisms require explicit
 review; installation preflight refuses their unsupported configurations.
 
-The installation manifest declares intended stable `v1.0.1` consumer identity.
+The installation manifest declares intended stable `v1.0.2` consumer identity.
 Default builds are explicitly candidates, with no publication identity.
-The explicit `--release` profile declares intended annotated tag `v1.0.1` and its canonical
+The explicit `--release` profile declares intended annotated tag `v1.0.2` and its canonical
 release URL; actual publication requires an independently verified immutable
 GitHub release and downloaded asset comparison. A local profile flag cannot
 establish publication. Qualification fields remain false; compatibility

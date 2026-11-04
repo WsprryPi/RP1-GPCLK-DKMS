@@ -2,7 +2,7 @@
 
 # Debian DKMS packaging
 
-The canonical package is `rp1-gpclk-dkms_1.0.1-1_all.deb`. Use the
+The canonical package is `rp1-gpclk-dkms_1.0.2-1_all.deb`. Use the
 [complete candidate procedure](release-candidate.md) to build and independently
 validate its exact source, package, inventory, checksums and provenance.
 `dpkg-buildpackage --no-sign -b` builds only a local package, without candidate
@@ -10,9 +10,9 @@ identity or publication status.
 
 ## Package contents
 
-One DKMS instance, `rp1-gpclk-dkms/1.0.1`, owns `rp1_gpclk_dkms` and
+One DKMS instance, `rp1-gpclk-dkms/1.0.2`, owns `rp1_gpclk_dkms` and
 `rp1_route_controller`. The package stages their complete source closure below
-`/usr/src/rp1-gpclk-dkms-1.0.1`: Kbuild, Makefile, rendered DKMS configuration,
+`/usr/src/rp1-gpclk-dkms-1.0.2`: Kbuild, Makefile, rendered DKMS configuration,
 consumer/controller sources, internal headers, both canonical UAPIs, both DTS
 sources and the deterministic embedded-overlay generator. DKMS uses the explicit
 runtime-controller profile; the consumer has its controller dependency/interlock
@@ -80,7 +80,7 @@ The authoritative `0.9.0` predecessor is
 `a1cb772107ba46f626b67af0b83a45c7b54ede78`. Its legacy package owns only the
 ordinary consumer and has boot-overlay/systemd lifecycle effects. Direct upgrade
 and downgrade are refused. Use owning predecessor cleanup/removal before clean
-`1.0.1` installation; rollback likewise removes the successor before reinstalling
+`1.0.2` installation; rollback likewise removes the successor before reinstalling
 the exact retained predecessor. Never submit an old archive over an installed
 successor. Debian runs an outgoing prerm before an incoming preinst, so the
 read-only transition preflight must precede dpkg/APT.

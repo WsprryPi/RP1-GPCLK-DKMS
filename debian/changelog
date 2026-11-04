@@ -1,3 +1,13 @@
+rp1-gpclk-dkms (1.0.2-1) UNRELEASED; urgency=medium
+
+  * Create and verify the persistent route-manager group before neutral
+    activation when Debian package configuration has not provisioned it.
+  * Preserve existing group identity and membership and fail closed when
+    group creation fails; cover activation and recovery with offline tests.
+  * Bind source, package, module, runtime and route identities to 1.0.2.
+
+ -- Lee Bussy <lee@bussy.org>  Wed, 04 Nov 2026 00:00:00 +0000
+
 rp1-gpclk-dkms (1.0.1-1) UNRELEASED; urgency=medium
 
   * Add the operator handbook and maintain engineering and release contracts.

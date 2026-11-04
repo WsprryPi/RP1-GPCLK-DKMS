@@ -47,10 +47,11 @@ engineering test client. Start with [use an installed system](getting-started.md
 
 ## Software and support limits
 
-The published provider software is **v1.0.0**, Debian package **1.0.0-1**.
-This checkout prepares **v1.0.1**, Debian **1.0.1-1**, as an unpublished patch
-candidate. It has distinct source, package, module and route identities.
-Existing `v1.0.0` evidence does not establish qualification for `v1.0.1`.
+The provider software is **v1.0.2**, Debian package **1.0.2-1**.
+Neutral activation creates the route-manager group if absent, including when
+Debian package configuration has not run. Existing group membership and numeric
+identity are preserved. This release has distinct source, package, module and
+route identities; existing `v1.0.0` evidence does not qualify it.
 WsprryPi verifies exact source and artifact identities;
 matching a version string alone is insufficient.
 

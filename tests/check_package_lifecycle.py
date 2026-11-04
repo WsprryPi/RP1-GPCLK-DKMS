@@ -29,7 +29,7 @@ def put(root, name, data=b'fixture'):
 
 
 def owned_source(root):
-    source = root/'usr/src/rp1-gpclk-dkms-1.0.1'
+    source = root/'usr/src/rp1-gpclk-dkms-1.0.2'
     path = put(root, str(source.relative_to(root))+'/dkms.conf')
     database = root/'var/lib/dpkg/info'
     database.mkdir(parents=True, exist_ok=True)
@@ -57,7 +57,7 @@ class Tests(unittest.TestCase):
     def test_foreign_unbuilt_registration_and_different_version(self):
         root = self.root
         base = root/'var/lib/dkms/rp1-gpclk-dkms'
-        for version in ('1.0.1', '0.9.0', '9.9.9'):
+        for version in ('1.0.2', '0.9.0', '9.9.9'):
             path = base/version
             path.mkdir(parents=True)
             for operation in ('unpack', 'configure', 'remove'):
@@ -72,11 +72,11 @@ class Tests(unittest.TestCase):
         base = root/'var/lib/dkms/rp1-gpclk-dkms'
         base.mkdir(parents=True)
         metadata = base/'kernel-6.18.50+rpt-rpi-2712-aarch64'
-        metadata.symlink_to('1.0.1/6.18.50+rpt-rpi-2712/aarch64')
+        metadata.symlink_to('1.0.2/6.18.50+rpt-rpi-2712/aarch64')
         with self.assertRaisesRegex(ValueError, 'orphan'):
             guard.check(root, 'remove')
         metadata.unlink()
-        version = base/'1.0.1'
+        version = base/'1.0.2'
         version.mkdir()
         (version/'source').symlink_to(source)
         foreign = put(root, str(version.relative_to(root))+'/foreign.txt', b'preserve')
@@ -157,14 +157,14 @@ class Tests(unittest.TestCase):
     def test_compressed_signed_identity_and_duplicate_refusal(self):
         root = self.root
         source = owned_source(root)
-        base = root/'var/lib/dkms/rp1-gpclk-dkms/1.0.1'
+        base = root/'var/lib/dkms/rp1-gpclk-dkms/1.0.2'
         base.mkdir(parents=True)
         (base/'source').symlink_to(source)
         kernel = '6.18.50+rpt-rpi-2712'
-        (base.parent/('kernel-'+kernel+'-aarch64')).symlink_to('1.0.1/'+kernel+'/aarch64')
+        (base.parent/('kernel-'+kernel+'-aarch64')).symlink_to('1.0.2/'+kernel+'/aarch64')
         put(root, 'lib/modules/'+kernel+'/build/.config', b'# unsigned header fixture\n')
         # Compact bytes test identity mechanics, not ELF/signature validity.
-        elf = b'\x7fELF\x02\x01\0version=1.0.1\0signed-fixture-trailer'
+        elf = b'\x7fELF\x02\x01\0version=1.0.2\0signed-fixture-trailer'
         cache = put(root, str(base.relative_to(root))+'/'+kernel+'/aarch64/module/rp1_gpclk_dkms.ko', elf)
         stem = 'lib/modules/'+kernel+'/updates/dkms/rp1_gpclk_dkms.ko'
         for suffix, encode in (('', lambda x:x), ('.gz', gzip.compress), ('.xz', lzma.compress)):

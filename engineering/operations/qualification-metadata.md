@@ -2,7 +2,7 @@
 
 # Route qualification evidence
 
-The published software is `v1.0.0`, product/module/controller `1.0.0`, Debian
+The software bound to this evidence is `v1.0.0`, product/module/controller `1.0.0`, Debian
 `1.0.0-1`. Its original tag, source and seven assets remain immutable. The
 original compatibility manifest has `defaultState: Unavailable` and no entries;
 qualification evidence does not rewrite it.
@@ -12,9 +12,9 @@ There is no separate GitHub qualification release to discover, download or
 refresh. The bundle records accepted evidence independently of provider
 admission, operational readiness and application band/mode policy.
 
-The `1.0.1` source candidate has distinct product and compatibility identities.
+The `1.0.2` source has distinct product and compatibility identities.
 This bundle continues to describe only `v1.0.0`; it must not be relabeled or
-reported as qualification for `v1.0.1`. Any reuse needs an explicit applicability
+reported as qualification for `v1.0.2`. Any reuse needs an explicit applicability
 assessment and independently bound consumer evidence.
 
 ## Source and scope

@@ -2,7 +2,7 @@
 
 # Development identity and installation transitions
 
-The current source version is `1.0.1`. It includes finite
+The current source version is `1.0.2`. It includes finite
 generic events, fixed-memory DMA chunking, exact `GPIO4`/`GPIO20` selection,
 runtime switching through none, bounded cancellation/drain, and application restoration.
 WsprryPi owns present/future modes and product policy; DKMS enforces resource,
@@ -10,22 +10,22 @@ ownership, capability and cleanup contracts without a product-mode allowlist.
 
 | Identity | Current development contract |
 | --- | --- |
-| Product/upstream, consumer module, DKMS version | `1.0.1` |
-| Debian version | `1.0.1-1` |
+| Product/upstream, consumer module, DKMS version | `1.0.2` |
+| Debian version | `1.0.2-1` |
 | Package/DKMS name | `rp1-gpclk-dkms` |
-| Binary package filename | `rp1-gpclk-dkms_1.0.1-1_all.deb` |
+| Binary package filename | `rp1-gpclk-dkms_1.0.2-1_all.deb` |
 | Consumer module / endpoint | `rp1_gpclk_dkms` / `/dev/rp1-gpclk` |
-| Controller module | `rp1_route_controller`, version `1.0.1`; part of the candidate DKMS package |
-| Source destination | `/usr/src/rp1-gpclk-dkms-1.0.1` |
-| Package schema directory | `/usr/share/rp1-gpclk-dkms/1.0.1` |
+| Controller module | `rp1_route_controller`, version `1.0.2`; part of the candidate DKMS package |
+| Source destination | `/usr/src/rp1-gpclk-dkms-1.0.2` |
+| Package schema directory | `/usr/share/rp1-gpclk-dkms/1.0.2` |
 | Transmission UAPI | exact `include/uapi/linux/rp1_gpclk.h` bytes and SHA-256 |
 | Administrative UAPI | exact `include/uapi/linux/rp1_route_admin.h` bytes |
 | Development manifest | `rp1-gpclk-source-development-manifest` |
 | Route-manager protocols | packaged/source and runtime profiles |
-| `GPIO4` compatibility ID | `v1.0.1-rp1-gpio4` |
-| `GPIO20` compatibility ID | `v1.0.1-rp1-gpio20` |
+| `GPIO4` compatibility ID | `v1.0.2-rp1-gpio4` |
+| `GPIO20` compatibility ID | `v1.0.2-rp1-gpio20` |
 | Classification | `source-development` / `Experimental`; not release-qualified |
-| Release tag convention | `vMAJOR.MINOR.PATCH`; canonical `v1.0.1` |
+| Release tag convention | `vMAJOR.MINOR.PATCH`; canonical `v1.0.2` |
 
 Product, Debian, DKMS, UAPI, and schema identities are distinct. Current
 compatibility IDs identify the RP1 resource contract and route. `Experimental`
@@ -35,7 +35,7 @@ of the compatibility ID and is not a per-release permission list. Exact hashes
 identify each build. Canonical route overlay names and endpoint nodes are stable
 and carry no product-version suffix.
 
-An operator may build `1.0.1` through DKMS for another stock Raspberry Pi kernel
+An operator may build `1.0.2` through DKMS for another stock Raspberry Pi kernel
 on a structurally compatible RP1 system without defining a new compatibility
 ID. The running kernel must still be identified, the module must be built for
 it, and all route, resource, ownership, signing, and cleanup checks still apply.
@@ -49,7 +49,7 @@ identity and no release metadata. The [candidate pipeline](../operations/release
 produces the unpublished package and release-shaped consumer metadata from a
 clean exact commit. Candidate preparation does not freeze or publish the provider.
 The normalized predecessor for package-upgrade validation is `0.9.0-1`;
-`1.0.1` is a patch successor to published `1.0.0`. Neither predecessor has
+`1.0.2` follows published `1.0.0` and `1.0.1`. No predecessor has
 a direct in-place upgrade path into this candidate. Owning removal precedes
 a clean installation; version ordering alone does not establish migration safety.
 
@@ -61,7 +61,7 @@ a clean installation; version ordering alone does not establish migration safety
    does not select a route, install or apply an overlay, enroll, load, edit boot
    configuration, operate a service, or enable output. Its manifest records
    `route: null` and exact installed identities. A route-specific maintainer may
-   instead render the exact `1.0.1` checkout with
+   instead render the exact `1.0.2` checkout with
    `scripts/render-development-tree --source SOURCE --output NEW_TREE`.
    The renderer derives the version from the canonical source header and changes
    only the DKMS placeholder and explicit development kernel filter.
