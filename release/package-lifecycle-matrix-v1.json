@@ -287,6 +287,36 @@
       "operatorAction": "repair prerequisite then repeat owning predecessor purge before successor installation",
       "machineResult": "rp1-gpclk-package-lifecycle-v1",
       "executionAuthorization": false
+    },
+    "preinstall-refused": {
+      "packageManager": "wanted selection may remain; no installed payload",
+      "dkms": "absent",
+      "modulesByKernel": "absent",
+      "sourceTree": "absent",
+      "overlays": "unchanged",
+      "routeRuntime": "retained without interpretation",
+      "services": "unchanged; no lifecycle calls",
+      "bootConfiguration": "unchanged",
+      "ownershipRecords": "foreign and administrator records preserved",
+      "rollbackAvailability": "exact retained predecessor only",
+      "operatorAction": "owning cleanup; no force or deletion of foreign state",
+      "machineResult": "rp1-gpclk-package-preflight-v1",
+      "executionAuthorization": false
+    },
+    "failed-inventory": {
+      "packageManager": "iF  1.0.2-1",
+      "dkms": "both representative kernels installed",
+      "modulesByKernel": "both modules per representative kernel; indices not accepted",
+      "sourceTree": "exact package-owned 1.0.2 closure",
+      "overlays": "inactive package data",
+      "routeRuntime": "absent",
+      "services": "unchanged; no lifecycle calls",
+      "bootConfiguration": "unchanged",
+      "ownershipRecords": "foreign and administrator records preserved",
+      "rollbackAvailability": "exact retained predecessor only",
+      "operatorAction": "remove only injected inventory fault then dpkg --configure rp1-gpclk-dkms; no foreign deletion",
+      "machineResult": "rp1-gpclk-package-lifecycle-v1",
+      "executionAuthorization": false
     }
   },
   "cases": [
@@ -758,7 +788,7 @@
       "operation": "fault-and-diagnose",
       "disposition": "refused",
       "exitStatus": 1,
-      "expectedState": "refused",
+      "expectedState": "preinstall-refused",
       "evidenceClass": "real-dpkg-with-controlled-command-or-archive-stream-fault",
       "checks": [
         "tests/check_package_lifecycle.py",
@@ -982,8 +1012,8 @@
       "operation": "fault-and-diagnose",
       "disposition": "refused",
       "exitStatus": 1,
-      "expectedState": "refused",
-      "evidenceClass": "offline-guard-and-independent-candidate-validator",
+      "expectedState": "failed-inventory",
+      "evidenceClass": "real-dpkg-with-controlled-inventory-validation-fault",
       "checks": [
         "tests/check_package_lifecycle.py",
         "tests/check_debian_packaging.py",

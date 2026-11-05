@@ -11,6 +11,7 @@ from lifecycle_process import (cleanup_owned, run_owned, cancellation_signals,
                                RUN_LABEL, SCENARIO_LABEL)
 from lifecycle_results import (SCENARIOS, accept, context, input_identity,
                                selection, source_identity)
+from lifecycle_coverage import attribute, catalog
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -89,15 +90,15 @@ def execute(cancellation):
         cancelled = cancelled or cancellation.requested
         if cancelled:
             primary = primary or 'cancelled during cleanup'
-        error = primary
+        error, obligations = primary, []
         exit_status = result.returncode if result is not None else None
         try:
-            accept(destination/'result.json', expected, exit_status)
+            obligations = attribute(accept(destination/'result.json', expected, exit_status))
         except (ValueError, OSError, KeyError, TypeError) as failure:
             error = error or str(failure)
         results.append({'scenario': scenario, 'exitStatus': exit_status,
                         'accepted': error is None and cleanup['status'] == 'absent',
-                        'error': error, 'cleanup': cleanup})
+                        'error': error, 'cleanup': cleanup, 'obligations': obligations})
         print(json.dumps(results[-1]), flush=True)
         if not results[-1]['accepted']:
             with (destination/'container.log').open('rb') as stream:
@@ -106,11 +107,16 @@ def execute(cancellation):
         if cancelled:
             break
     passed = len(results) == len(requested) and all(r['accepted'] for r in results)
+    covered = {item['caseId'] for row in results if row['accepted'] for item in row['obligations']}
+    complete = covered == set(catalog())
+    if args.scenario == 'all':
+        passed = passed and complete
     if passed:
         passed = input_identity(args.candidate, args.predecessor, identity['Id'],
                                 source_identity(ROOT)) == inputs
     (output/'result.json').write_text(json.dumps({'status': 'PASS' if passed else 'FAIL',
         'runId': run_id, 'identity': inputs, 'imageId': identity['Id'],
+        'completeMatrix': complete, 'coveredCaseIds': sorted(covered, key=int),
         'scenarios': results, 'targetQualification': False,
         'wsprrypiAcceptance': False, 'rfQualification': False}, indent=2)+'\n')
     raise SystemExit(0 if passed else 1)

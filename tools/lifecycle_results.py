@@ -15,7 +15,8 @@ SCENARIOS = ('packaged-runtime-baseline', 'clean-cycle', 'missing-payload',
              'multi-kernel', 'missing-headers', 'unpack-recovery', 'foreign-state',
              'fault-add', 'fault-build', 'fault-install', 'fault-depmod',
              'fault-remove', 'fault-purge', 'fault-remove-depmod', 'fault-unpack',
-             'fault-gcc', 'fault-signature', 'compression-signing', 'predecessor')
+             'fault-gcc', 'fault-signature', 'compression-signing', 'predecessor',
+             'fault-preinstall', 'fault-inventory', 'fault-configure')
 IDENTITY_KEYS = {'sourceCommit', 'candidatePackageSha256',
                  'predecessorPackageSha256', 'imageId'}
 
