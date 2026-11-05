@@ -26,8 +26,8 @@ be accepted as a successful disposition.
 | 03 | Trustworthy lifecycle execution | Bound provisioning and preserve actionable diagnostics | ✅ Done |
 | 04 | Coverage and deterministic evidence | Prove required dispatch and nonempty execution | ✅ Done |
 | 05 | Coverage and deterministic evidence | Replace brittle process timing with observed state | ✅ Done |
-| 06 | Coverage and deterministic evidence | [Keep runtime bundle fixtures outside the checkout](phase-06-isolated-runtime-bundle-fixtures.md) | ⏳ In progress |
-| 07 | Coverage and deterministic evidence | [Map lifecycle obligations to actual execution](phase-07-lifecycle-obligation-attribution.md) | ▧ Not started |
+| 06 | Coverage and deterministic evidence | Keep runtime bundle fixtures outside the checkout | ✅ Done |
+| 07 | Coverage and deterministic evidence | [Map lifecycle obligations to actual execution](phase-07-lifecycle-obligation-attribution.md) | ⏳ In progress |
 | 08 | Coverage and deterministic evidence | [Strengthen production-sensitive assertions and resolve fixture holds](phase-08-production-sensitive-oracles.md) | ▧ Not started |
 | 09 | Measured efficiency | [Measure and reduce repeated module metadata queries](phase-09-batched-module-metadata.md) | ▧ Not started |
 | 10 | Measured efficiency | [Batch authenticated Git blob reads without weakening validation](phase-10-authenticated-git-batching.md) | ▧ Not started |
