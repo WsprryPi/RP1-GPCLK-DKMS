@@ -156,7 +156,16 @@ def git_blobs(repo, objects):
                 try: os.killpg(process.pid, signal.SIGKILL)
                 except ProcessLookupError: pass
                 process.wait(timeout=10)
-            except (OSError, subprocess.TimeoutExpired) as error:
+                cleanup_deadline = time.monotonic()+10
+                while True:
+                    try: os.killpg(process.pid, 0)
+                    except ProcessLookupError: break
+                    try:
+                        while os.waitpid(-process.pid, os.WNOHANG)[0]: pass
+                    except ChildProcessError: pass
+                    require(time.monotonic() < cleanup_deadline, 'Git batch group cleanup unresolved')
+                    time.sleep(0.02)
+            except (OSError, ValueError, subprocess.TimeoutExpired) as error:
                 if primary is None: raise ValueError('Git batch cleanup unresolved') from error
                 primary.add_note('secondary Git batch cleanup unresolved: '+str(error))
             finally:
