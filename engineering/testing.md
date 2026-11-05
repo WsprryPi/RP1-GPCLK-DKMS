@@ -276,3 +276,21 @@ system bind mounts. Package operations are real; command faults and header
 signing/compression variants are explicitly recorded. Generated results remain
 outside the checkout. Source-development, package, target-loading, application
 and RF evidence remain distinct.
+
+## Process observation boundaries
+
+Inventory process checks synchronize on a real child readiness record before
+exercising the normal five-second timeout guard. They retain partial-I/O,
+output-limit, nonzero-exit, EOF-before-exit, cancellation, and descendant-held
+stdout cases. EOF is not an exit acknowledgement. Inventory owns its direct
+child only; a descriptor-holding descendant causes unknown observation and is
+separately released by its test fixture. Unresolved direct-child cleanup remains
+explicit alongside the original observation failure.
+
+The route client uses one 30-second monotonic transaction budget across connect,
+send, and all response reads. Partial replies do not renew it. A client timeout
+means state requires observation; it does not cancel server-side kernel work or
+prove restoration. Server lock, fixed-command, service-acknowledgement, boot,
+token, PID, and terminal readiness checks remain independent. The application
+acknowledgement loop and its final PID/service acceptance check retain their
+existing contract; a socket deadline does not replace those observations.

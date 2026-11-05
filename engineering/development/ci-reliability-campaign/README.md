@@ -25,8 +25,8 @@ be accepted as a successful disposition.
 | 02 | Trustworthy lifecycle execution | Retain process and container ownership through cleanup | ✅ Done |
 | 03 | Trustworthy lifecycle execution | Bound provisioning and preserve actionable diagnostics | ✅ Done |
 | 04 | Coverage and deterministic evidence | Prove required dispatch and nonempty execution | ✅ Done |
-| 05 | Coverage and deterministic evidence | [Replace brittle process timing with observed state](phase-05-state-based-process-tests.md) | ⏳ In progress |
-| 06 | Coverage and deterministic evidence | [Keep runtime bundle fixtures outside the checkout](phase-06-isolated-runtime-bundle-fixtures.md) | ▧ Not started |
+| 05 | Coverage and deterministic evidence | Replace brittle process timing with observed state | ✅ Done |
+| 06 | Coverage and deterministic evidence | [Keep runtime bundle fixtures outside the checkout](phase-06-isolated-runtime-bundle-fixtures.md) | ⏳ In progress |
 | 07 | Coverage and deterministic evidence | [Map lifecycle obligations to actual execution](phase-07-lifecycle-obligation-attribution.md) | ▧ Not started |
 | 08 | Coverage and deterministic evidence | [Strengthen production-sensitive assertions and resolve fixture holds](phase-08-production-sensitive-oracles.md) | ▧ Not started |
 | 09 | Measured efficiency | [Measure and reduce repeated module metadata queries](phase-09-batched-module-metadata.md) | ▧ Not started |

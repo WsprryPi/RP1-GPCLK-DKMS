@@ -66,7 +66,11 @@ def unknown(reason: str) -> dict:
 def bounded_command(argv: tuple[str, ...], *, timeout: float = TIMEOUT,
                     limit: int = 65536) -> dict:
     """Internal fixed-command runner; test injection is not exposed by CLI."""
-    process = None
+    process, result, primary = None, None, None
+    def unknown_result(reason):
+        nonlocal result
+        result = unknown(reason)
+        return result
     try:
         process = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, env={"PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
@@ -77,32 +81,39 @@ def bounded_command(argv: tuple[str, ...], *, timeout: float = TIMEOUT,
             selector.register(process.stdout, selectors.EVENT_READ)
             while True:
                 remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    return unknown("command-timeout")
-                if not selector.select(remaining):
-                    return unknown("command-timeout")
+                if remaining <= 0 or not selector.select(remaining):
+                    return unknown_result("command-timeout")
                 chunk = os.read(process.stdout.fileno(), min(65536, limit + 1 - len(output)))
                 if not chunk:
                     break
                 output.extend(chunk)
                 if len(output) > limit:
-                    return unknown("command-output-limit")
+                    return unknown_result("command-output-limit")
         code = process.wait(timeout=max(0.001, deadline - time.monotonic()))
-        if code:
-            return {"status": "unknown", "reason": "command-failed", "exitCode": code,
-                    "text": output.decode(errors="replace")}
-        return {"status": "observed", "text": output.decode(errors="replace")}
+        result = {"status": "unknown", "reason": "command-failed", "exitCode": code,
+                  "text": output.decode(errors="replace")} if code else {
+                      "status": "observed", "text": output.decode(errors="replace")}
+        return result
     except (OSError, subprocess.TimeoutExpired) as error:
-        return unknown(type(error).__name__)
+        return unknown_result("command-timeout" if isinstance(error, subprocess.TimeoutExpired) else type(error).__name__)
+    except BaseException as error:
+        primary = error
+        raise
     finally:
         if process is not None:
-            if process.poll() is None:
-                process.kill()
-                try:
-                    process.wait(timeout=1)
-                except subprocess.TimeoutExpired:
-                    pass  # Observation remains unknown; never claim kernel work stopped.
-            process.stdout.close()
+            try:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait(timeout=5)
+            except (OSError, subprocess.TimeoutExpired) as error:
+                if result is not None:
+                    result.update(status="unknown", cleanup={"status": "unresolved", "error": str(error)})
+                elif primary is not None:
+                    primary.add_note('secondary direct-child cleanup unresolved: '+str(error))
+                else:
+                    raise
+            finally:
+                process.stdout.close()
 
 
 class Reader:
