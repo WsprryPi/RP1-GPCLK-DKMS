@@ -109,9 +109,8 @@ risks, licensing/documentation impact, and the next gated step.
 Explicitly state hardware/system/GPIO/transmission/RF effects and Git state.
 Keep run logs, review findings, and completion reports out of the repository.
 
-The present request authorizes commits/pushes of these planning documents only.
-Later implementation commits/pushes require their own authorization and must
-honor the no-CI instruction. Do not merge, rebase, force-push, tag, publish,
+The current session selects implementation under the user's standing authority.
+Commit and push validated work with CI-skip markers, honoring the no-CI instruction. Do not merge, rebase, force-push, tag, publish,
 create a PR, change remote settings, or retire other work.
 After later completion, consolidate durable content and retire this prompt
 with repaired references under the repository's active-prompt lifecycle rule.

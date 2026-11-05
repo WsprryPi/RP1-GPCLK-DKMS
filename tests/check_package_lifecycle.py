@@ -555,6 +555,25 @@ class ResultTests(unittest.TestCase):
                 self.assertEqual(report['scenarios'][0]['cleanup']['error'], 'cleanup refused')
 
 
+class SummaryTests(unittest.TestCase):
+    def test_summary_cannot_turn_empty_or_rejected_work_into_pass(self):
+        import copy
+        summarize = runpy.run_path(str(ROOT/'tools/summarize-lifecycle.py'))['summary']
+        value = {'status': 'PASS', 'completeMatrix': True, 'coveredCaseIds': list(coverage.catalog()),
+                 'scenarios': [{'scenario': name, 'accepted': True, 'exitStatus': 0,
+                                'cleanup': {'status': 'absent'}} for name in results.SCENARIOS]}
+        self.assertEqual(len(summarize(value)), len(results.SCENARIOS))
+        for defect in ('empty', 'duplicate', 'missing', 'rejected', 'cleanup', 'coverage'):
+            changed = copy.deepcopy(value)
+            if defect == 'empty': changed['scenarios'] = []
+            if defect == 'duplicate': changed['scenarios'][1] = changed['scenarios'][0]
+            if defect == 'missing': changed['scenarios'].pop()
+            if defect == 'rejected': changed['scenarios'][0]['accepted'] = False
+            if defect == 'cleanup': changed['scenarios'][0]['cleanup']['status'] = 'unresolved'
+            if defect == 'coverage': changed['coveredCaseIds'].pop()
+            with self.subTest(defect=defect), self.assertRaises(ValueError): summarize(changed)
+
+
 class MetadataTests(unittest.TestCase):
     def test_module_stamp_rejects_unsafe_files_and_detects_substitution(self):
         with tempfile.TemporaryDirectory() as name:
