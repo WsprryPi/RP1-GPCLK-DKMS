@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 """Opt-in real dpkg/DKMS tests in disposable, restricted Linux containers."""
+import sys
+if __name__ == '__main__' and not sys.flags.isolated:
+    import os
+    os.execv(sys.executable, [sys.executable, '-I', __file__, *sys.argv[1:]])
 import argparse
 import json
 from pathlib import Path
 import subprocess
 import uuid
 import time
+if __name__ == '__main__':
+    import tempfile
+    _cache = tempfile.TemporaryDirectory(prefix='rp1-lifecycle-import-', dir='/tmp')
+    sys.pycache_prefix = _cache.name
+    sys.dont_write_bytecode = True
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lifecycle_process import (cleanup_owned, run_owned, cancellation_signals,
                                RUN_LABEL, SCENARIO_LABEL)
 from lifecycle_results import (SCENARIOS, accept, context, input_identity,

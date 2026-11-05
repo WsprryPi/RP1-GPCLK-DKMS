@@ -5,6 +5,10 @@
 Real package operations use the unmodified supplied archives. Fault wrappers
 replace only one command's result and retain native commands for all other work.
 """
+import sys
+if __name__ == '__main__' and not sys.flags.isolated:
+    import os
+    os.execv(sys.executable, [sys.executable, '-I', __file__, *sys.argv[1:]])
 import gzip
 import hashlib
 import json
@@ -13,10 +17,13 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
-import sys
 import time
 import tempfile
 
+if __name__ == '__main__':
+    _cache = tempfile.TemporaryDirectory(prefix='rp1-lifecycle-import-', dir='/tmp')
+    sys.pycache_prefix = _cache.name
+    sys.dont_write_bytecode = True
 sys.path.insert(0, '/source/scripts')
 sys.path.insert(0, '/source/tools')
 from lifecycle_results import (context, decode, envelope, input_identity,

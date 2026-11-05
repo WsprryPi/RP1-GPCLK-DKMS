@@ -257,6 +257,10 @@ Missing, stale, malformed, contradictory or substituted results fail aggregation
 The result envelope establishes attribution and basic completed work; the
 lifecycle matrix and scenario assertions retain ownership of behavioral coverage.
 
+Both entry points restart with isolated Python and use a fresh temporary cache
+before importing local helpers. Ignored bytecode and `PYTHONPATH` cannot supply
+those imports. Cache output stays outside the source tree.
+
 ## Owned cleanup
 
 Each scenario has fresh run/scenario labels and a host-owned, bounded CID file

@@ -574,6 +574,29 @@ class ResultTests(unittest.TestCase):
                 self.assertEqual(report['scenarios'][0]['cleanup']['error'], 'cleanup refused')
 
 
+class ImportTests(unittest.TestCase):
+    def test_real_entrypoint_ignores_poisoned_helper_cache_and_pythonpath(self):
+        import importlib.util
+        import py_compile
+        import shutil
+        import subprocess
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name).resolve();tools = root/'tools'
+            shutil.copytree(ROOT/'tools', tools, ignore=shutil.ignore_patterns('__pycache__'))
+            poison = root/'poison.py';poison.write_text("raise RuntimeError('POISONED HELPER CACHE')\n")
+            cache = Path(importlib.util.cache_from_source(str(tools/'lifecycle_results.py')))
+            cache.parent.mkdir(parents=True)
+            py_compile.compile(str(poison), cfile=str(cache),
+                invalidation_mode=py_compile.PycInvalidationMode.UNCHECKED_HASH, doraise=True)
+            (root/'uuid.py').write_text("raise RuntimeError('POISONED PYTHONPATH')\n")
+            result = subprocess.run([sys.executable, str(tools/'run-package-lifecycle.py'), '--help'],
+                capture_output=True, text=True, timeout=30,
+                env={**os.environ, 'PYTHONPATH': str(root), 'PYTHONPYCACHEPREFIX': str(root/'foreign-cache')})
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('--candidate', result.stdout)
+            self.assertNotIn('POISONED', result.stderr)
+
+
 class SummaryTests(unittest.TestCase):
     def test_summary_cannot_turn_empty_or_rejected_work_into_pass(self):
         import copy
