@@ -294,3 +294,13 @@ prove restoration. Server lock, fixed-command, service-acknowledgement, boot,
 token, PID, and terminal readiness checks remain independent. The application
 acknowledgement loop and its final PID/service acceptance check retain their
 existing contract; a socket deadline does not replace those observations.
+
+Runtime bundle fixtures copy explicit inventory inputs and canonical overlay
+sources into temporary trees. Both real builders and embedded-overlay generation
+use that tree, including lazy generation calls. Determinism checks poison prior
+generated overlays and reject missing embedded overlay bytes before publication.
+Synthetic ELF note/provenance identities exercise bundle formats only; they do
+not establish real compiled module validity, signing, or target qualification.
+The fixture checks content/mode identities for checkout files, including ignored
+outputs, on successful and rejected builds. Bytecode is suppressed and bootstrap
+imports run outside the checkout.

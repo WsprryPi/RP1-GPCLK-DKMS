@@ -10,6 +10,7 @@ from pathlib import Path
 import stat
 import subprocess
 import sys
+sys.dont_write_bytecode = True
 import unittest
 from unittest.mock import patch
 import contextlib
@@ -20,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import runtime_binding as binding
 import build_runtime_binding as build_binding
 import build_runtime_bundle as bundle_builder
+import build_runtime_controller as controller_builder
 import runtime_provider as provider
 from runtime_layout import INVENTORY, MODULES
 
@@ -810,38 +812,49 @@ class Tests(unittest.TestCase):
     def test_runtime_bundle_rebuild_is_byte_deterministic(self):
         import hashlib
         import tempfile
-        bundle_builder.generate(bundle_builder.ROOT/'build/runtime-controller')
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory); modules = root/'modules'; modules.mkdir()
-            prefix = b'\x7fELF\x02\x01'
+        import shutil
+        origin = Path(__file__).resolve().parents[1]
+        def checkout_bytes():
+            return {str(p.relative_to(origin)): (stat.S_IMODE(p.lstat().st_mode),
+                    p.readlink().as_posix() if p.is_symlink() else hashlib.sha256(p.read_bytes()).hexdigest())
+                    for p in origin.rglob('*') if (p.is_file() or p.is_symlink())
+                    and '.git' not in p.relative_to(origin).parts}
+        before = checkout_bytes()
+        with tempfile.TemporaryDirectory() as directory, contextlib.ExitStack() as patches:
+            root = Path(directory).resolve(); source = root/'source'; source.mkdir()
+            inputs = {value for value in INVENTORY.values() if not value.startswith('build/')}
+            inputs.update('overlays/rp1-gpclk-'+route+'.dts' for route in ('gpio4', 'gpio20'))
+            for name in inputs:
+                target = source/name; target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(origin/name, target)
+            for module in (bundle_builder, build_binding, controller_builder):
+                patches.enter_context(patch.object(module, 'ROOT', source))
+            # Synthetic ELF identity fixtures exercise bundle/binding format logic;
+            # module-note decoding and Git provenance have separate real tests.
+            patches.enter_context(patch.object(build_binding, 'module_note', return_value=b'fixture-note'))
+            patches.enter_context(patch.object(build_binding, 'source_commit', return_value='a'*40))
+            controller_builder.generate(source/'build/runtime-controller')
+            modules = root/'modules'; modules.mkdir()
+            prefix = b'\x7fELF\x02\x01\0'
             consumer = (prefix + b'version=1.0.2\0rp1_runtime_controller=1\0' +
                 b'rp1_route_controller\0vermagic=' + KERNEL.encode() + b' ')
             controller_data = prefix + b'version=1.0.2\0vermagic=' + KERNEL.encode() + b' '
             for route in ('gpio4', 'gpio20'):
-                controller_data += (bundle_builder.ROOT/'build/runtime-controller'/
-                                    (route+'.dtbo')).read_bytes()
+                controller_data += (source/'build/runtime-controller'/(route+'.dtbo')).read_bytes()
             (modules/'rp1_gpclk_dkms.ko').write_bytes(consumer)
             (modules/'rp1_route_controller.ko').write_bytes(controller_data)
-            value = exact_binding()
-            for destination, source in INVENTORY.items():
-                data = (bundle_builder.ROOT/source).read_bytes()
-                value['files'][destination] = hashlib.sha256(data).hexdigest()
-            for name, data in (('rp1_gpclk_dkms', consumer),
-                               ('rp1_route_controller', controller_data)):
-                record = value['modules'][name]
-                record.update(path=f'/lib/modules/{KERNEL}/updates/dkms/{name}.ko',
-                    installedFileSha256=hashlib.sha256(data).hexdigest(),
-                    decompressedElfSha256=hashlib.sha256(data).hexdigest(), compression='none')
-            value['uapiSha256'] = {
-                'consumer': value['files']['/usr/lib/rp1-gpclk-dkms/runtime-uapi/rp1_gpclk.h'],
-                'controller': value['files']['/usr/lib/rp1-gpclk-dkms/runtime-uapi/rp1_route_admin.h']}
-            value['artifactSetSha256'] = binding.canonical_digest(
-                {key: item for key, item in value.items() if key != 'artifactSetSha256'})
             companion = root/'route_application.py'; companion.write_text('pass\n')
             first = root/'first'; second = root/'second'
-            with patch.object(bundle_builder, 'build', return_value=value):
-                bundle_builder.bundle(modules, first, companion)
-                bundle_builder.bundle(modules, second, companion)
+            for route in ('gpio4', 'gpio20'):
+                (source/'build/runtime-controller'/(route+'.dtbo')).write_bytes(b'poisoned stale output')
+            value = bundle_builder.bundle(modules, first, companion, KERNEL)
+            bundle_builder.bundle(modules, second, companion, KERNEL)
+            for destination, name in INVENTORY.items():
+                self.assertEqual(value['files'][destination], hashlib.sha256((source/name).read_bytes()).hexdigest())
+            (modules/'rp1_route_controller.ko').write_bytes(prefix+b'version=1.0.2\0vermagic='+KERNEL.encode()+b' ')
+            with self.assertRaisesRegex(ValueError, 'embedded overlay'):
+                bundle_builder.bundle(modules, root/'failed', companion, KERNEL)
+            self.assertFalse((root/'failed').exists())
             first_files = {path.name: path.read_bytes() for path in first.iterdir()}
             second_files = {path.name: path.read_bytes() for path in second.iterdir()}
             self.assertEqual(first_files, second_files)
@@ -864,9 +877,10 @@ class Tests(unittest.TestCase):
                     for module in imports:
                         if module.startswith('runtime_'):
                             self.assertIn(module + '.py', bootstrap, name + ' imports ' + module)
-            subprocess.run([sys.executable, '-c',
+            subprocess.run([sys.executable, '-B', '-c',
                 'import sys; sys.path.insert(0, sys.argv[1]); import runtime_provider, runtime_activation',
                 str(first)], check=True)
+        self.assertEqual(checkout_bytes(), before)
 
     def test_binding_deploys_manager_units_and_only_externalizes_application(self):
         self.assertEqual(binding.EXTERNAL_PATHS, {binding.APPLICATION})
