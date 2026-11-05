@@ -16,6 +16,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'scripts'))
 sys.path.insert(0, str(ROOT/'tools'))
+import lifecycle_coverage as coverage
 import lifecycle_results as results
 import lifecycle_process as processes
 import package_preflight as guard
@@ -373,6 +374,7 @@ class Tests(unittest.TestCase):
         with patch.object(sys, 'argv', arguments), patch('subprocess.run', side_effect=command), \
                 patch('subprocess.check_output', return_value=json.dumps([{'Id': IMAGE}])), \
                 patch.dict(driver['main'].__globals__, {'source_identity': lambda root: COMMIT,
+                    'attribute': lambda value: [], 'catalog': lambda: {},
                     'run_owned': command, 'cleanup_owned': lambda *args: {'status': 'absent'}}):
             with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as result:
                 driver['main']()
@@ -532,6 +534,7 @@ class ResultTests(unittest.TestCase):
                     patch('subprocess.run', side_effect=command), \
                     patch('subprocess.check_output', return_value=json.dumps([{'Id': IMAGE}])), \
                     patch.dict(driver['main'].__globals__, {'source_identity': lambda root: COMMIT,
+                    'attribute': lambda value: [], 'catalog': lambda: {},
                     'run_owned': command, 'cleanup_owned': lambda *args: {
                         'status': 'unresolved' if fault in ('cleanup', 'launch-cleanup') else 'absent',
                         'error': 'cleanup refused'}}), \
@@ -544,6 +547,35 @@ class ResultTests(unittest.TestCase):
             if fault == 'launch-cleanup':
                 self.assertIn('launch refused', report['scenarios'][0]['error'])
                 self.assertEqual(report['scenarios'][0]['cleanup']['error'], 'cleanup refused')
+
+
+class CoverageTests(unittest.TestCase):
+    def test_independent_preinstall_vector_and_adversaries(self):
+        import copy
+        absent = {'packageManager': '', 'modules': [], 'dkms': '', 'sourceTrees': [],
+                  'bootSha256': 'a'*64, 'endpointsAbsent': True, 'modulesUnloaded': True}
+        installed = dict(absent, packageManager='ii  1.0.2-1',
+                         modules=[{'version': '1.0.2'}]*4, dkms='x: installed\ny: installed', sourceTrees=['source'])
+        steps = [
+            {'stage': 'interrupted-preinstall', 'command': ['dpkg', '-i', 'candidate'],
+             'exitStatus': 1, 'before': absent, 'after': absent},
+            {'stage': 'retry-preinstall', 'command': ['dpkg', '-i', 'candidate'],
+             'exitStatus': 0, 'before': absent, 'after': installed},
+            {'stage': 'purge', 'command': ['dpkg', '--purge', 'rp1-gpclk-dkms'],
+             'exitStatus': 0, 'before': installed, 'after': absent}]
+        value = {'scenario': 'fault-preinstall', 'steps': steps}
+        self.assertEqual([row['caseId'] for row in coverage.attribute(value)], ['34', '35'])
+        for defect in ('missing', 'duplicate', 'context', 'command', 'exit', 'state', 'cleanup'):
+            changed = copy.deepcopy(value)
+            if defect == 'missing': changed['steps'].pop(0)
+            if defect == 'duplicate': changed['steps'].insert(0, changed['steps'][0])
+            if defect == 'context': changed['scenario'] = 'fault-inventory'
+            if defect == 'command': changed['steps'][0]['command'] = ['true']
+            if defect == 'exit': changed['steps'][0]['exitStatus'] = 0
+            if defect == 'state': changed['steps'][1]['after']['modules'] = []
+            if defect == 'cleanup': changed['steps'].pop()
+            with self.subTest(defect=defect), self.assertRaises(ValueError): coverage.attribute(changed)
+        self.assertEqual(set(coverage.catalog()), {str(i) for i in range(1, 70)})
 
 
 class ProcessTests(unittest.TestCase):

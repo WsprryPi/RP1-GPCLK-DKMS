@@ -304,3 +304,24 @@ action is installed: temporary runner files expire with the runner, and bounded
 job-log summaries provide diagnostics subject to the service's log retention.
 Cancellation before summary execution can still prevent its publication; it
 cannot establish successful validation.
+
+## Obligation attribution
+
+The lifecycle matrix owns expected transition states and evidence classes.
+`tools/lifecycle_coverage.py` maps each case to a scenario and required stages.
+The host driver derives attribution from actual completed commands, exit codes,
+and before/after observations; the container cannot add case IDs to certify its
+own completeness. Missing or duplicated stages, wrong commands, states, or
+contexts fail acceptance. Every selected scenario must retain its final cleanup
+stage. Both exact headers and both build profiles have separate required stages.
+The aggregate distinguishes a selected subset from complete matrix coverage.
+Shared transitions can exercise several obligations without becoming multiple
+independent fault executions.
+
+Controlled Python-boundary failures exercise incoming pre-install and configure
+interruptions. Inventory failure injects a foreign DKMS-cache member immediately
+before the real inventory validator; the helper must refuse it, retain its
+evidence, and converge only after the fixture removes that exact member.
+Filesystem-only passive-runtime checks have explicit in-process observations,
+not invented external command executions. Their service/endpoint observations
+remain stubs, and they do not qualify live runtime retirement.

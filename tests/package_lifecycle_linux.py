@@ -56,6 +56,22 @@ def raw(command):
         return result
 
 
+def observe(stage, action, expected=0):
+    """Record a real in-process filesystem oracle without inventing a CLI call."""
+    before = snapshot()
+    try:
+        action()
+    except ValueError as error:
+        require(expected == 1, stage+': '+str(error))
+        diagnostic = str(error)
+    else:
+        require(expected == 0, stage+' accepted an invalid fixture')
+        diagnostic = ''
+    STEPS.append({'stage': stage, 'command': ['in-process', 'runtime_deployment.Files.prune_removed_directories'],
+                  'exitStatus': expected, 'before': before, 'after': snapshot(), 'diagnosticTail': diagnostic})
+    neutral()
+
+
 def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -258,7 +274,7 @@ def packaged_runtime_baseline():
     files = deployment.Files()
     # Reproduce the inverse's final filesystem phase against real package
     # inventory. Earlier administrative effects are outside this test class.
-    files.prune_removed_directories()
+    observe('preserve-passive-baseline', files.prune_removed_directories)
     for name, expected in baseline.items():
         require(Path(name).exists() and sha(Path(name)) == expected,
                 'runtime pruning changed passive package data')
@@ -274,16 +290,12 @@ def packaged_runtime_baseline():
     original = overlay.read_bytes()
     overlay.write_bytes(b'changed overlay')
     try:
-        try: files.prune_removed_directories()
-        except ValueError: pass
-        else: raise ValueError('changed package overlay was accepted')
+        observe('refuse-changed-passive-baseline', files.prune_removed_directories, 1)
         require(overlay.read_bytes() == b'changed overlay', 'changed overlay was removed')
     finally: overlay.write_bytes(original)
     foreign = overlay.parent/'foreign.dtbo'; foreign.write_bytes(b'preserve')
     try:
-        try: files.prune_removed_directories()
-        except ValueError: pass
-        else: raise ValueError('foreign package-directory member was accepted')
+        observe('refuse-foreign-passive-baseline', files.prune_removed_directories, 1)
         require(foreign.read_bytes() == b'preserve', 'foreign member was removed')
     finally: foreign.unlink()
     absent(run('purge-after-runtime-retirement', ['dpkg', '--purge', PACKAGE]))
@@ -335,7 +347,49 @@ def package_lock():
     absent(run('purge', ['dpkg', '--purge', PACKAGE]))
 
 
+def python_boundary_fault(stage):
+    marker = Path('/tmp/python-boundary-fault')
+    marker.write_text(stage)
+    cache_fault = Path('/var/lib/dkms', PACKAGE, VERSION, 'foreign-inventory-fault')
+    replace_command('python3', '''#!/bin/sh
+set -eu
+if [ -f /tmp/python-boundary-fault ]; then
+    boundary=$(cat /tmp/python-boundary-fault)
+    case "$boundary:$*" in
+    'preinstall:-I - unpack'|'configure:-I /usr/libexec/rp1-gpclk-dkms/package_preflight.py configure')
+        rm /tmp/python-boundary-fault
+        echo "injected $boundary Python boundary failure (exit 64)" >&2
+        exit 64 ;;
+    'inventory:-I /usr/libexec/rp1-gpclk-dkms/package_indices.py')
+        rm /tmp/python-boundary-fault
+        printf '%s' 'injected inventory fault' > /var/lib/dkms/rp1-gpclk-dkms/1.0.2/foreign-inventory-fault ;;
+    esac
+fi
+exec @REAL@ "$@"
+''')
+    if stage == 'configure':
+        run('unpack-before-configure-fault', ['dpkg', '--unpack', DEB])
+        command = ['dpkg', '--configure', PACKAGE]
+    else:
+        command = ['dpkg', '-i', DEB]
+    state = run('interrupted-'+stage, command, 1)
+    require(not marker.exists(), 'Python boundary injection was not reached')
+    if stage == 'inventory':
+        require('"stage": "inventory"' in STEPS[-1]['diagnosticTail'] and len(state['modules']) == 4,
+                'native installed inventory failure was not diagnosed')
+        require(cache_fault.read_bytes() == b'injected inventory fault', 'inventory fault evidence changed')
+        cache_fault.unlink()
+    else:
+        require('injected '+stage+' Python boundary failure' in STEPS[-1]['diagnosticTail']
+                and not state['modules'] and not state['dkms'], 'boundary fault had unexpected effects')
+    retry = 'retry-configure' if stage == 'configure' else 'retry-'+stage
+    installed(run(retry, ['dpkg', '--configure', PACKAGE] if stage != 'preinstall' else ['dpkg', '-i', DEB]))
+    absent(run('purge', ['dpkg', '--purge', PACKAGE]))
+
+
 def fault(stage):
+    if stage in ('preinstall', 'inventory', 'configure'):
+        return python_boundary_fault(stage)
     if stage == 'signature':
         return signature_failure()
     removing = stage in ('remove', 'purge', 'remove-depmod')
@@ -404,7 +458,8 @@ os.execv('@REAL@', ['@REAL@', *sys.argv[1:]])
 def foreign_state():
     for name in ('var/lib/wsprrypi/rp1-gpclk-dkms-installation.json',
                  'etc/rp1-gpclk-dkms/runtime-controller.json',
-                 'var/lib/rp1-gpclk-dkms/route-transactions/foreign.json'):
+                 'var/lib/rp1-gpclk-dkms/route-transactions/foreign.json',
+                 'usr/src/rp1-gpclk-dkms-1.0.2/DEVELOPMENT_MANIFEST.json'):
         path = Path('/')/name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(b'foreign ownership evidence')
@@ -424,7 +479,18 @@ def foreign_state():
         run('foreign-dkms-'+version, ['dpkg', '-i', DEB], 1)
         require(path.exists(), 'foreign DKMS state deleted')
         path.rmdir()
+    hook = Path('/etc/dkms/rp1-gpclk-dkms.conf')
+    hook.write_text('PRE_BUILD="foreign-hook"\n')
+    run('refuse-unknown-hook', ['dpkg', '-i', DEB], 1)
+    require(hook.read_text() == 'PRE_BUILD="foreign-hook"\n', 'foreign hook changed')
+    hook.unlink()
     installed(run('install-after-foreign-cleanup', ['dpkg', '-i', DEB]))
+    module = Path('/lib/modules', KERNELS[0], 'updates/dkms/rp1_gpclk_dkms.ko')
+    duplicate = module.with_suffix('.ko.xz')
+    duplicate.write_bytes(lzma.compress(module.read_bytes()))
+    run('refuse-duplicate-module', ['dpkg', '-i', DEB], 1)
+    require(lzma.decompress(duplicate.read_bytes()) == module.read_bytes(), 'duplicate changed')
+    duplicate.unlink()
     for name in ('foreign.txt', KERNELS[0]+'/aarch64/module/foreign.txt'):
         foreign = Path('/var/lib/dkms', PACKAGE, VERSION, name)
         foreign.write_bytes(b'foreign cache evidence')
@@ -447,6 +513,9 @@ def multi_kernel():
     shutil.move(str(second), '/tmp/held-kernel')
     state = run('install-nonrunning-kernel', ['dpkg', '-i', DEB])
     require(len(state['modules']) == 2, 'one-kernel module set differs')
+    absent(run('one-kernel-purge', ['dpkg', '--purge', PACKAGE]))
+    state = run('reinstall-one-kernel', ['dpkg', '-i', DEB])
+    require(len(state['modules']) == 2, 'one-kernel reinstall set differs')
     shutil.move('/tmp/held-kernel', str(second))
     installed(run('new-kernel-autoinstall', ['dkms', 'autoinstall', '-k', KERNELS[1]]))
     installed(run('exact-autoinstall-noop', ['dkms', 'autoinstall', '-k', KERNELS[1]]))
