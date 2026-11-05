@@ -1,58 +1,73 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Require every standalone Python check to be registered or classified."""
-
+"""Validate executable dispatch, classifications, and nonempty-suite guards."""
 from pathlib import Path
+import ast
+import io
+import shlex
+import unittest
+from offline_checks import CHECKS
+from nonempty_unittest import NonemptyRunner
 
 ROOT = Path(__file__).resolve().parents[1]
-TESTS = ROOT / "tests"
-RUNNERS = (
-    (ROOT / "tests/run-offline-checks.sh").read_text(encoding="utf-8"),
-    (ROOT / "Makefile").read_text(encoding="utf-8"),
-)
+PARAMETERIZED = {'check_built_module.py', 'check_development_sweep.py'}
+TARGET_C = {'development_fault_client.c', 'development_tone_client.c'}
+TARGET_CPP = {'development_frequency_sweep.cpp'}
 
-# This validator requires an externally supplied module and kernel identity.
-PARAMETERIZED_UTILITIES = {"check_built_module.py"}
-TARGET_ONLY_C_CLIENTS = {"development_fault_client.c",
-                         "development_tone_client.c"}
-HOST_CPP_TESTS = {"uapi_cpp.cpp", "development_sweep_plan.cpp"}
-TARGET_ONLY_CPP_CLIENTS = {"development_frequency_sweep.cpp"}
 
-checks = {path.name for path in TESTS.glob("check_*.py")}
-registered = {
-    name for name in checks
-    if any(name in runner for runner in RUNNERS)
-}
-unclassified = checks - registered - PARAMETERIZED_UTILITIES
-missing_utilities = PARAMETERIZED_UTILITIES - checks
+def validate(checks=CHECKS, shell=None):
+    tests = ROOT/'tests'
+    assert checks and len(checks) == len(set(checks)), 'empty or duplicate dispatch'
+    assert set(checks) | PARAMETERIZED == {p.name for p in tests.glob('check_*.py')}, 'dispatch differs from inventory'
+    assert not set(checks) & PARAMETERIZED, 'parameterized utility dispatched without context'
+    if shell is None:
+        shell = (tests/'run-offline-checks.sh').read_text()
+    lines = [shlex.split(line, comments=True) for line in shell.replace('\\\n', ' ').splitlines()]
+    assert ['python3', '$repo_dir/tests/offline_checks.py'] in lines, 'registry is not executed'
+    compile_commands = [line for line in lines if line and line[0] in ('${CC:-cc}', '${CXX:-c++}')]
+    sources = {Path(token).name for line in compile_commands for token in line if token.startswith('$repo_dir/tests/') and token.endswith(('.c', '.cpp'))}
+    host = {p.name for p in tests.glob('*.c')} - TARGET_C
+    host |= {p.name for p in tests.glob('*.cpp')} - TARGET_CPP
+    assert sources == host, 'compiled source contexts differ'
+    assert ['for', 'client', 'in', 'development_tone_client.c', 'development_fault_client.c;', 'do'] in lines, 'both real planners required'
+    assert any('-DRP1_GPCLK_TEST_CLIENT_SOURCE="$client"' in line for line in compile_commands), 'planner substitution missing'
+    outputs = {line[line.index('-o')+1] for line in compile_commands}
+    executed = {line[0] for line in lines if len(line) == 1}
+    assert outputs <= executed | {'$tmp_dir/sweep_plan'}, 'compiled program not executed'
+    assert ['python3', '$repo_dir/tests/check_development_sweep.py', '$tmp_dir/sweep_plan'] in lines, 'sweep validation missing'
+    for path in tests.glob('check_*.py'):
+        text = path.read_text()
+        if any(isinstance(node, ast.ClassDef) and any(isinstance(base, ast.Attribute) and base.attr == 'TestCase' for base in node.bases) for node in ast.walk(ast.parse(text))):
+            assert '__import__("nonempty_unittest").main()' in text, 'missing nonempty suite guard: '+path.name
+    assert 'tests/nonempty_unittest.py' in (ROOT/'Makefile').read_text()
+    assert 'tests/nonempty_unittest.py' in (ROOT/'.github/workflows/documentation.yml').read_text()
 
-if unclassified:
-    raise SystemExit(f"unregistered standalone checks: {sorted(unclassified)}")
-if missing_utilities:
-    raise SystemExit(f"classified utilities are missing: {sorted(missing_utilities)}")
 
-c_tests = {path.name for path in TESTS.glob("*.c")}
-registered_c = {name for name in c_tests - TARGET_ONLY_C_CLIENTS
-                if name in RUNNERS[0]}
-unclassified_c = c_tests - registered_c - TARGET_ONLY_C_CLIENTS
-missing_clients = TARGET_ONLY_C_CLIENTS - c_tests
-if unclassified_c:
-    raise SystemExit(f"unregistered C tests: {sorted(unclassified_c)}")
-if missing_clients:
-    raise SystemExit(f"classified target clients are missing: {sorted(missing_clients)}")
+def adversaries():
+    shell = (ROOT/'tests/run-offline-checks.sh').read_text()
+    for checks, source in (((), shell), (CHECKS[1:], shell),
+            (CHECKS, shell.replace('python3 "$repo_dir/tests/offline_checks.py"', '# python3 "$repo_dir/tests/offline_checks.py"')),
+            (CHECKS, shell.replace('development_fault_client.c;', ';')),
+            (CHECKS, shell.replace('\n"$tmp_dir/lifecycle_core"\n', '\n# "$tmp_dir/lifecycle_core"\n'))):
+        try:
+            validate(checks, source)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('deliberately missing dispatch was accepted')
+    class Undispatched(unittest.TestSuite):
+        def countTestCases(self): return 1
+        def run(self, result, debug=False): return result
+    for suite in (unittest.TestSuite(), Undispatched()):
+        try:
+            NonemptyRunner(stream=io.StringIO()).run(suite)
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError('empty execution accepted')
 
-cpp_clients = {path.name for path in TESTS.glob("*.cpp")}
-unclassified_cpp = cpp_clients - TARGET_ONLY_CPP_CLIENTS - HOST_CPP_TESTS
-if not HOST_CPP_TESTS <= cpp_clients or any(name not in RUNNERS[0] for name in HOST_CPP_TESTS):
-    raise SystemExit("host C++ test missing or unregistered")
-missing_cpp_clients = TARGET_ONLY_CPP_CLIENTS - cpp_clients
-if unclassified_cpp:
-    raise SystemExit(f"unregistered C++ tests: {sorted(unclassified_cpp)}")
-if missing_cpp_clients:
-    raise SystemExit(f"classified C++ clients are missing: {sorted(missing_cpp_clients)}")
 
-print(f"test inventory: PASS ({len(registered)} registered, "
-      f"{len(PARAMETERIZED_UTILITIES)} parameterized utility, "
-      f"{len(registered_c)} host C tests, {len(HOST_CPP_TESTS)} host C++ tests, "
-      f"{len(TARGET_ONLY_C_CLIENTS)} target C client, "
-      f"{len(TARGET_ONLY_CPP_CLIENTS)} target C++ client)")
+if __name__ == '__main__':
+    validate()
+    adversaries()
+    print(f'test inventory: PASS ({len(CHECKS)} isolated checks; C/C++ and planner dispatch validated)')

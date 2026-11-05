@@ -501,4 +501,4 @@ class Tests(unittest.TestCase):
         self.assertTrue(self.system.inhibited())
 
 
-if __name__ == '__main__': unittest.main()
+if __name__ == '__main__': __import__("nonempty_unittest").main()
