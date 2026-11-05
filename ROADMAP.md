@@ -9,6 +9,16 @@ qualification release is consumed. See
 [qualification metadata](engineering/operations/qualification-metadata.md)
 for applicability and exclusions.
 
+## CI reliability and efficiency
+
+The selected [eleven-phase campaign](engineering/development/ci-reliability-campaign/README.md)
+addresses lifecycle result integrity, cleanup, bounded execution, coverage,
+deterministic fixtures, and measured orchestration efficiency. Its saved prompts
+are ready for explicit selection; implementation has not started. Reliability,
+safety, required coverage, and defect detection take priority over reduction
+targets. Hosted CI, remote policy changes, package effects, and target operations
+retain their separate authorization boundaries.
+
 ## Consumer acceptance
 
 The [release notes](engineering/operations/release-notes-1.0.2.md) describe
