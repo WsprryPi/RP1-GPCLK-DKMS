@@ -77,6 +77,8 @@ format/trust boundaries are distinct contexts. Never remove one to meet a quota.
 
 For each behavioral change, define correct behavior and deliberate defects first.
 Use source/fixture evidence to establish the old oracle's actual sensitivity.
+Inject deliberate defects only into attributable disposable source/fixture copies;
+never reset or overwrite user work or leave fault mutations in accepted source.
 If it has none, state that; do not invent prior efficacy. Define an independent
 replacement oracle and demonstrate preserved or improved detection before retiring
 the old path. Schedule/load variation must preserve correct behavior and reliable
