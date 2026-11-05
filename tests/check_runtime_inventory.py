@@ -8,11 +8,16 @@ import struct
 import sys
 import tempfile
 import time
+import subprocess
+import os
+import signal
+from unittest.mock import patch
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import runtime_inventory as inv
+import runtime_route_client as client
 
 
 def elf():
@@ -172,10 +177,113 @@ class Tests(unittest.TestCase):
     def test_command_bounds_and_errors(self):
         self.assertEqual(inv.bounded_command((sys.executable, "-c", "print('ok')"))["text"], "ok\n")
         self.assertEqual(inv.bounded_command((sys.executable, "-c", "print('x'*1000)"), limit=50)["reason"], "command-output-limit")
-        start = time.monotonic()
-        self.assertEqual(inv.bounded_command((sys.executable, "-c", "import time; time.sleep(10)"), timeout=0.1)["reason"], "command-timeout")
-        self.assertLess(time.monotonic() - start, 2)
         self.assertEqual(inv.bounded_command((sys.executable, "-c", "raise SystemExit(3)"))["exitCode"], 3)
+
+    def test_timeout_starts_after_real_child_readiness(self):
+        native = subprocess.Popen
+        with tempfile.TemporaryDirectory() as name:
+            ready = Path(name)/'ready'
+            children = []
+            def start(*args, **kwargs):
+                child = native(*args, **kwargs)
+                children.append(child)
+                try:
+                    deadline = time.monotonic()+30
+                    while not ready.exists():
+                        self.assertIsNone(child.poll(), 'child exited before readiness')
+                        if time.monotonic() >= deadline: self.fail('child readiness guard exhausted')
+                        time.sleep(0.01)
+                except BaseException:
+                    child.kill(); child.wait(timeout=30); child.stdout.close()
+                    raise
+                return child
+            code = "import pathlib,signal,sys; pathlib.Path(sys.argv[1]).touch(); signal.pause()"
+            with patch.object(inv.subprocess, 'Popen', side_effect=start):
+                value = inv.bounded_command((sys.executable, '-c', code, str(ready)))
+            self.assertTrue(ready.is_file())
+            self.assertEqual(value['reason'], 'command-timeout')
+            self.assertIsNotNone(children[0].poll())
+
+    def test_partial_io_eof_and_cancellation(self):
+        code = "import os; os.write(1,b'part'); os.write(1,b'ial')"
+        self.assertEqual(inv.bounded_command((sys.executable, '-c', code))['text'], 'partial')
+        # Closing stdout is not proof of exit. The wait still has a finite guard.
+        code = "import os,signal; os.close(1); os.close(2); signal.pause()"
+        self.assertEqual(inv.bounded_command((sys.executable, '-c', code))['status'], 'unknown')
+        children = []
+        native = subprocess.Popen
+        def start(*args, **kwargs):
+            child = native(*args, **kwargs); children.append(child); return child
+        with patch.object(inv.subprocess, 'Popen', side_effect=start), \
+                patch.object(inv.selectors, 'DefaultSelector', side_effect=KeyboardInterrupt):
+            with self.assertRaises(KeyboardInterrupt):
+                inv.bounded_command((sys.executable, '-c', 'import signal; signal.pause()'))
+        self.assertIsNotNone(children[0].poll())
+
+    def test_descendant_retaining_stdout_is_not_success(self):
+        native = subprocess.Popen
+        with tempfile.TemporaryDirectory() as name:
+            pidfile = Path(name)/'descendant'
+            code = "import os,pathlib,signal,sys; pathlib.Path(sys.argv[1]).write_text(str(os.getpid())); signal.pause()"
+            parent = "import subprocess,sys; subprocess.Popen([sys.executable,'-c',sys.argv[1],sys.argv[2]])"
+            children = []
+            def start(*args, **kwargs):
+                child = native(*args, **kwargs); children.append(child)
+                deadline = time.monotonic()+30
+                while not pidfile.exists() or not pidfile.read_text():
+                    if time.monotonic() >= deadline: raise RuntimeError('descendant readiness guard')
+                    time.sleep(0.01)
+                return child
+            try:
+                with patch.object(inv.subprocess, 'Popen', side_effect=start):
+                    value = inv.bounded_command((sys.executable, '-c', parent, code, str(pidfile)))
+                self.assertEqual(value['reason'], 'command-timeout')
+                self.assertEqual(children[0].returncode, 0)
+            finally:
+                if pidfile.exists() and pidfile.read_text():
+                    pid = int(pidfile.read_text())
+                    try: os.kill(pid, signal.SIGTERM)
+                    except ProcessLookupError: pass
+                    deadline = time.monotonic()+30
+                    while True:
+                        try: os.kill(pid, 0)
+                        except ProcessLookupError: break
+                        if time.monotonic() >= deadline: self.fail('owned descendant cleanup unresolved')
+                        time.sleep(0.01)
+                for child in children:
+                    if child.poll() is None: child.kill()
+                    child.wait(timeout=30)
+                    child.stdout.close()
+
+    def test_secondary_cleanup_failure_preserves_primary_observation(self):
+        from unittest.mock import Mock
+        child = Mock()
+        child.poll.return_value = None
+        child.wait.side_effect = subprocess.TimeoutExpired(['owned'], 5)
+        with patch.object(inv.subprocess, 'Popen', return_value=child), \
+                patch.object(inv.selectors, 'DefaultSelector', side_effect=PermissionError):
+            value = inv.bounded_command(('owned',))
+        self.assertEqual(value['reason'], 'PermissionError')
+        self.assertEqual(value['cleanup']['status'], 'unresolved')
+        child.kill.assert_called_once()
+        child.stdout.close.assert_called_once()
+
+    def test_socket_partial_progress_cannot_renew_transaction_budget(self):
+        class Stream:
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def settimeout(self, value): self.timeouts.append(value)
+            def connect(self, path): pass
+            def sendall(self, value): pass
+            def shutdown(self, how): pass
+            def recv(self, length): return b'x'
+            timeouts = []
+        stream = Stream()
+        with patch.object(client.socket, 'socket', return_value=stream), \
+                patch.object(client.time, 'monotonic', side_effect=[0, 1, 2, 3, 31]):
+            with self.assertRaisesRegex(TimeoutError, 'transaction timeout'):
+                client.exchange({'operation': 'query'})
+        self.assertEqual(stream.timeouts, [29, 28, 27])
 
     def test_effect_commands_are_not_available(self):
         self.assertEqual(set(inv.COMMANDS), {"kernel", "architecture", "packages", "services", "managerUnit", "installedModule"})

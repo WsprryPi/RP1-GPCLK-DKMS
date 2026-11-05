@@ -5,6 +5,7 @@ import json
 import socket
 import sys
 import uuid
+import time
 import runtime_controller_admin as admin
 
 SOCKET = '/run/rp1-gpclk-dkms/route-manager.sock'
@@ -12,13 +13,21 @@ CONTRACT = 'rp1-gpclk-route-manager-runtime'
 
 
 def exchange(request):
+    deadline = time.monotonic()+30
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as stream:
-        stream.settimeout(30)
+        def budget():
+            remaining = deadline-time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError('route-manager transaction timeout; state requires observation')
+            stream.settimeout(remaining)
+        budget()
         stream.connect(SOCKET)
+        budget()
         stream.sendall(json.dumps(request).encode()+b'\n')
         stream.shutdown(socket.SHUT_WR)
         chunks = bytearray()
         while True:
+            budget()
             data = stream.recv(min(4096, 1048577-len(chunks)))
             if not data: break
             chunks.extend(data)
