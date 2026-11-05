@@ -8,6 +8,11 @@ import io
 import json
 from pathlib import Path, PurePosixPath
 import re
+import os
+import selectors
+import signal
+import tempfile
+import time
 import subprocess
 import tarfile
 
@@ -25,6 +30,9 @@ BEHAVIOR = dict(routeNeutral=True, outputDisabled=True, loadsModule=False,
                 appliesOverlay=False, editsBootConfiguration=False, operatesServices=False)
 MODULES = ['rp1_gpclk_dkms', 'rp1_route_controller']
 LIMIT = 64*1024*1024
+MAX_SOURCE_BYTES = 4*LIMIT
+MAX_SOURCE_MEMBERS = 16384
+GIT_BATCH_TIMEOUT = 120
 
 
 def require(condition, message):
@@ -60,39 +68,122 @@ def safe_path(name):
     return name
 
 
-def command(args, cwd=None, env=None):
+def command_environment():
+    return {'PATH': '/usr/bin:/bin:/usr/sbin:/sbin', 'LC_ALL': 'C', 'LANG': 'C',
+            'TZ': 'UTC', 'GIT_CONFIG_GLOBAL': '/dev/null', 'GIT_CONFIG_NOSYSTEM': '1', 'GIT_OPTIONAL_LOCKS': '0'}
+
+
+def command(args, cwd=None, env=None, timeout=None):
     if env is None:
-        env = {'PATH': '/usr/bin:/bin:/usr/sbin:/sbin', 'LC_ALL': 'C', 'LANG': 'C',
-               'TZ': 'UTC', 'GIT_CONFIG_GLOBAL': '/dev/null', 'GIT_CONFIG_NOSYSTEM': '1', 'GIT_OPTIONAL_LOCKS': '0'}
+        env = command_environment()
     result = subprocess.run(args, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
-                            capture_output=True, check=False)
+                            capture_output=True, check=False, timeout=timeout)
     require(result.returncode == 0, 'command failed: '+str(args[0])+'\n'+
             (result.stdout+result.stderr).decode(errors='replace')[-6000:])
     return result.stdout
 
 
+def git_argv(repo, *args):
+    return ['git', '--no-replace-objects', '-c', 'core.fsmonitor=false',
+            '-c', 'safe.directory='+str(repo), '-C', str(repo), *args]
+
+
 def git(repo, *args):
-    return command(['git', '--no-replace-objects', '-c', 'core.fsmonitor=false',
-                    '-c', 'safe.directory='+str(repo), '-C', str(repo), *args])
+    return command(git_argv(repo, *args), timeout=GIT_BATCH_TIMEOUT)
+
+
+def decode_blobs(payload, objects):
+    require(objects and isinstance(payload, bytes)
+            and len(payload) <= MAX_SOURCE_BYTES+128*len(objects), 'invalid Git batch payload')
+    offset, total, result = 0, 0, []
+    for object_id in objects:
+        end = payload.find(b'\n', offset, offset+128)
+        require(end >= 0, 'missing Git batch header')
+        header = payload[offset:end].split(b' ')
+        require(len(header) == 3 and header[0] == object_id and header[1] == b'blob'
+                and re.fullmatch(rb'0|[1-9][0-9]*', header[2]), 'Git batch identity/type/size differs')
+        size = int(header[2]);total += size
+        require(size <= LIMIT and total <= MAX_SOURCE_BYTES, 'source byte budget exceeded')
+        offset = end+1
+        data = payload[offset:offset+size]
+        require(len(data) == size and payload[offset+size:offset+size+1] == b'\n', 'truncated Git batch object')
+        require(hashlib.sha1(b'blob '+str(size).encode()+b'\0'+data).hexdigest().encode() == object_id,
+                'Git batch object hash differs')
+        result.append(data);offset += size+1
+    require(offset == len(payload), 'unexpected extra Git batch response')
+    return result
+
+
+def git_blobs(repo, objects):
+    require(0 < len(objects) <= MAX_SOURCE_MEMBERS
+            and all(re.fullmatch(b'[0-9a-f]{40}', value) for value in objects), 'invalid batch object selection')
+    with tempfile.TemporaryFile() as requests:
+        requests.write(b'\n'.join(objects)+b'\n');requests.seek(0)
+        process = subprocess.Popen(git_argv(repo, 'cat-file', '--batch'), stdin=requests,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=command_environment(), start_new_session=True)
+        deadline = time.monotonic()+GIT_BATCH_TIMEOUT
+        output, errors = bytearray(), bytearray()
+        primary = None
+        try:
+            with selectors.DefaultSelector() as selector:
+                selector.register(process.stdout, selectors.EVENT_READ, (output, MAX_SOURCE_BYTES+128*len(objects)))
+                selector.register(process.stderr, selectors.EVENT_READ, (errors, 65536))
+                while selector.get_map():
+                    remaining = deadline-time.monotonic()
+                    require(remaining > 0, 'Git batch deadline exceeded')
+                    events = selector.select(remaining)
+                    require(events, 'Git batch deadline exceeded')
+                    for key, mask in events:
+                        target, limit = key.data
+                        chunk = os.read(key.fileobj.fileno(), min(65536, limit+1-len(target)))
+                        if not chunk:
+                            selector.unregister(key.fileobj)
+                        else:
+                            target.extend(chunk)
+                            require(len(target) <= limit, 'Git batch output budget exceeded')
+            remaining = deadline-time.monotonic()
+            require(remaining > 0, 'Git batch deadline exceeded')
+            require(process.wait(timeout=remaining) == 0,
+                    'Git batch failed: '+errors.decode(errors='replace')[-6000:])
+        except subprocess.TimeoutExpired as error:
+            primary = error
+            raise ValueError('Git batch deadline exceeded') from error
+        except BaseException as error:
+            primary = error
+            raise
+        finally:
+            try:
+                try: os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError: pass
+                process.wait(timeout=10)
+            except (OSError, subprocess.TimeoutExpired) as error:
+                if primary is None: raise ValueError('Git batch cleanup unresolved') from error
+                primary.add_note('secondary Git batch cleanup unresolved: '+str(error))
+            finally:
+                process.stdout.close();process.stderr.close()
+    return decode_blobs(bytes(output), objects)
 
 
 def source_files(repo, commit):
     require(re.fullmatch('[0-9a-f]{40}', commit) is not None, 'full exact source commit required')
     require(git(repo, 'rev-parse', commit+'^{commit}').decode().strip() == commit,
             'source commit not found')
-    result = {}
+    entries, names = [], set()
     for entry in git(repo, 'ls-tree', '-rz', '--full-tree', commit).split(b'\0'):
         if not entry:
             continue
         identity, name = entry.split(b'\t', 1)
         mode, kind, blob = identity.decode().split()
         name = safe_path(name.decode())
-        require(mode in ('100644', '100755') and kind == 'blob', 'unsafe Git member: '+name)
-        data = git(repo, 'cat-file', 'blob', blob)
-        require(len(data) <= LIMIT, 'source member too large')
-        require(not re.search(br'-----BEGIN [A-Z ]*PRIVATE KEY-----', data), 'private key in source')
+        require(name not in names and mode in ('100644', '100755') and kind == 'blob', 'unsafe Git member: '+name)
+        names.add(name);entries.append((name, mode, blob.encode()))
+        require(len(entries) <= MAX_SOURCE_MEMBERS, 'source member budget exceeded')
+    data = git_blobs(repo, [entry[2] for entry in entries])
+    result = {}
+    for (name, mode, blob), payload in zip(entries, data):
+        require(not re.search(br'-----BEGIN [A-Z ]*PRIVATE KEY-----', payload), 'private key in source')
         require(not name.endswith(('.pem', '.key', '.p12', '.pfx')), 'unexpected signing material')
-        result[name] = (int(mode[-3:], 8), data)
+        result[name] = (int(mode[-3:], 8), payload)
     require(result, 'empty source tree')
     return result
 
