@@ -61,9 +61,9 @@ def reap(process):
 
 
 @contextmanager
-def owned_process(argv, stdout):
+def owned_process(argv, stdout, env=None):
     process = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=stdout,
-                               stderr=subprocess.STDOUT, start_new_session=True)
+                               stderr=subprocess.STDOUT, start_new_session=True, env=env)
     primary = None
     try:
         yield process
@@ -92,9 +92,23 @@ def owned_process(argv, stdout):
                 raise KeyboardInterrupt('cancelled during process cleanup')
 
 
-def run_owned(argv, stdout, timeout=None):
-    with owned_process(argv, stdout) as process:
-        return subprocess.CompletedProcess(argv, process.wait(timeout=timeout))
+def run_owned(argv, stdout, timeout, env=None, output_limit=64*1024*1024):
+    deadline = time.monotonic()+timeout
+    with owned_process(argv, stdout, env) as process:
+        while True:
+            require(os.fstat(stdout.fileno()).st_size <= output_limit,
+                    'owned command output exceeded byte budget')
+            remaining = deadline-time.monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(argv, timeout)
+            try:
+                code = process.wait(timeout=min(remaining, 0.1))
+                require(os.fstat(stdout.fileno()).st_size <= output_limit,
+                        'owned command output exceeded byte budget')
+                return subprocess.CompletedProcess(argv, code)
+            except subprocess.TimeoutExpired:
+                if time.monotonic() >= deadline:
+                    raise subprocess.TimeoutExpired(argv, timeout)
 
 
 def docker(argv):

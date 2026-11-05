@@ -272,3 +272,35 @@ that group. File-backed output avoids pipe backpressure. Package-lock holds
 are released on every exit. SIGINT/SIGTERM cancel execution; signals received
 during cleanup are deferred until cleanup finishes. This proves harness resource
 cleanup only, without establishing kernel, hardware, or RF safety.
+
+## Failure budgets and diagnostics
+
+The driver uses one monotonic one-hour deadline and a 15-minute guard per
+scenario. Command output never renews those deadlines. Cleanup runs after the
+execution guard and uses 30-second Docker control guards and ten-second process
+reaping guards. Container commands have ten-minute guards; package-lock release
+has a three-minute completion guard. These generous hang guards exceed the
+observed eight-minute complete serial run and are not readiness or product timing
+requirements. Different runner provisioning can still require investigation.
+
+Workflow provisioning, input preparation, and lifecycle steps have separate
+20-, 15-, and 65-minute guards within a 105-minute job guard. Ordinary offline
+and documentation jobs have 45- and 20-minute guards. APT acquisition uses two
+retries and 30-second I/O guards; the pinned key download also has a three-minute
+whole-transfer limit. Pip uses two retries and a 30-second socket guard. The job
+and step guards bound continued slow progress across individual acquisitions.
+Missing tools or exhausted acquisition budgets remain failures.
+
+Owned command output is file-backed, checked during execution, and rejected if
+it exceeds its byte budget (64 MiB for Docker, 4 MiB for container commands).
+The polling interval limits detection delay, not a strict disk quota: a burst can
+exceed that size before termination. Only bounded tails enter failure summaries.
+The harness copies at most eight 64-KiB DKMS logs per recorded step; it does not
+recursively retain the container filesystem. Private signing keys are excluded.
+The always-run workflow summary reads only the bounded aggregate result and
+prints scenario names, statuses, and exit codes. It fails on missing or invalid
+results. Original failing steps retain their failure status. No artifact-upload
+action is installed: temporary runner files expire with the runner, and bounded
+job-log summaries provide diagnostics subject to the service's log retention.
+Cancellation before summary execution can still prevent its publication; it
+cannot establish successful validation.

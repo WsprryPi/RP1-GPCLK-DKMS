@@ -69,7 +69,7 @@ def source_identity(root):
         return subprocess.run(['git', '--no-replace-objects', '-c',
             'core.fsmonitor=false', '-c', 'safe.directory=' + str(root),
             '-C', str(root), *args], env=env, check=True,
-            capture_output=True).stdout
+            capture_output=True, timeout=30).stdout
     commit = git('rev-parse', 'HEAD').decode().strip()
     require(re.fullmatch('[0-9a-f]{40}', commit), 'exact SHA-1 source commit required')
     require(not git('status', '--porcelain=v1', '--untracked-files=all'),

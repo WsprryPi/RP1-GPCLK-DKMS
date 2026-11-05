@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import subprocess
 import uuid
+import time
 from lifecycle_process import (cleanup_owned, run_owned, cancellation_signals,
                                RUN_LABEL, SCENARIO_LABEL)
 from lifecycle_results import (SCENARIOS, accept, context, input_identity,
@@ -35,11 +36,11 @@ def execute(cancellation):
             not output.parent.is_dir() or output.is_relative_to(ROOT)):
         parser.error('new absolute output outside source required')
     checkout = subprocess.run(['git', '-C', str(output.parent), 'rev-parse', '--show-toplevel'],
-                              capture_output=True, env={'PATH': '/usr/bin:/bin',
+                              capture_output=True, timeout=30, env={'PATH': '/usr/bin:/bin',
                               'GIT_CONFIG_GLOBAL': '/dev/null', 'GIT_CONFIG_NOSYSTEM': '1'})
     if checkout.returncode == 0:
         parser.error('lifecycle output must be outside every Git checkout')
-    image = subprocess.check_output(['docker', 'image', 'inspect', args.image], text=True)
+    image = subprocess.check_output(['docker', 'image', 'inspect', args.image], text=True, timeout=30)
     identity = json.loads(image)[0]
     requested = selection(SCENARIOS if args.scenario == 'all' else (args.scenario,))
     inputs = input_identity(args.candidate, args.predecessor, identity['Id'], source_identity(ROOT))
@@ -47,6 +48,7 @@ def execute(cancellation):
     output.mkdir(mode=0o700)
     (output/'image.json').write_text(image)
     results = []
+    deadline = time.monotonic()+3600
     for scenario in requested:
         expected = context(run_id, scenario, inputs)
         destination = output/scenario
@@ -71,7 +73,10 @@ def execute(cancellation):
         result, primary, cancelled = None, None, False
         try:
             with (destination/'container.log').open('w') as stream:
-                result = run_owned(command, stdout=stream)
+                remaining = deadline-time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError('overall lifecycle deadline exhausted')
+                result = run_owned(command, stdout=stream, timeout=min(900, remaining))
         except (Exception, KeyboardInterrupt) as failure:
             primary = str(failure) or type(failure).__name__
             cancelled = isinstance(failure, KeyboardInterrupt)
@@ -95,7 +100,9 @@ def execute(cancellation):
                         'error': error, 'cleanup': cleanup})
         print(json.dumps(results[-1]), flush=True)
         if not results[-1]['accepted']:
-            print((destination/'container.log').read_text()[-8192:], flush=True)
+            with (destination/'container.log').open('rb') as stream:
+                stream.seek(max(0, stream.seek(0, 2)-8192))
+                print(stream.read(8192).decode(errors='replace'), flush=True)
         if cancelled:
             break
     passed = len(results) == len(requested) and all(r['accepted'] for r in results)
