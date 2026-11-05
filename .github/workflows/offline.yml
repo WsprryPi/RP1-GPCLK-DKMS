@@ -6,12 +6,14 @@ permissions:
 jobs:
   offline:
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6, Node 24
         with:
           fetch-depth: 0
       - name: Install build tools
-        run: sudo apt-get update && sudo apt-get install -y build-essential device-tree-compiler shellcheck debhelper dh-dkms python3-jsonschema zstd
+        timeout-minutes: 15
+        run: sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update && sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y build-essential device-tree-compiler shellcheck debhelper dh-dkms python3-jsonschema zstd
       - name: Offline contracts and host C tests
         run: make check
       - name: Validate exact development manifest schema
@@ -37,14 +39,16 @@ jobs:
           dpkg --compare-versions 9.9.9-1 gt 1.0.2-1
   lifecycle:
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 30
+    timeout-minutes: 105
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6, Node 24
         with:
           fetch-depth: 0
       - name: Provision disposable Debian and exact representative headers
+        timeout-minutes: 20
         run: docker build -t rp1-lifecycle -f tools/package-lifecycle.Containerfile .
       - name: Rebuild exact candidate and selected historical predecessor
+        timeout-minutes: 15
         run: |
           mkdir -p /tmp/rp1-lifecycle-inputs
           chmod 0777 /tmp/rp1-lifecycle-inputs
@@ -56,8 +60,13 @@ jobs:
               ./scripts/validate-release-candidate --candidate /output/candidate --source-commit "$SOURCE_COMMIT"
               ./scripts/build-lifecycle-predecessor --source-commit a1cb772107ba46f626b67af0b83a45c7b54ede78 --output /output/predecessor'
       - name: Real package and DKMS lifecycle with controlled faults
+        timeout-minutes: 65
         run: |
           python3 tools/run-package-lifecycle.py --image rp1-lifecycle \
             --candidate /tmp/rp1-lifecycle-inputs/candidate \
             --predecessor /tmp/rp1-lifecycle-inputs/predecessor \
             --output /tmp/rp1-lifecycle-results
+      - name: Bounded lifecycle summary including failures
+        if: always()
+        timeout-minutes: 1
+        run: python3 tools/summarize-lifecycle.py /tmp/rp1-lifecycle-results/result.json

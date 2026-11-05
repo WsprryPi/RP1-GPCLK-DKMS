@@ -601,6 +601,24 @@ class ProcessTests(unittest.TestCase):
                 outcome = processes.run_owned([sys.executable, '-c', 'raise SystemExit(7)'], stream, timeout=30)
                 self.assertEqual(outcome.returncode, 7)
 
+    def test_output_and_overall_deadline_are_failure_guards(self):
+        import contextlib
+        import subprocess
+        with tempfile.TemporaryFile() as stream:
+            stream.write(b'x'*100)
+            stream.flush()
+            with self.assertRaisesRegex(ValueError, 'byte budget'):
+                processes.run_owned([sys.executable, '-c', 'pass'], stream, 30, output_limit=10)
+        class Child:
+            def wait(self, timeout):
+                raise subprocess.TimeoutExpired(['progressing-child'], timeout)
+        with tempfile.TemporaryFile() as stream, \
+                patch.object(processes, 'owned_process', return_value=contextlib.nullcontext(Child())), \
+                patch.object(processes.time, 'monotonic', side_effect=[0, 1, 2, 3, 6]):
+            with self.assertRaises(subprocess.TimeoutExpired) as caught:
+                processes.run_owned(['progressing-child'], stream, timeout=5)
+            self.assertEqual(caught.exception.timeout, 5)
+
     def test_cancellation_is_deferred_only_for_cleanup(self):
         import signal
         with processes.cancellation_signals() as state:

@@ -15,12 +15,13 @@ import shutil
 import subprocess
 import sys
 import time
+import tempfile
 
 sys.path.insert(0, '/source/scripts')
 sys.path.insert(0, '/source/tools')
 from lifecycle_results import (context, decode, envelope, input_identity,
                                source_identity)
-from lifecycle_process import owned_process
+from lifecycle_process import owned_process, run_owned
 from package_preflight import module_elf
 from release_contract import inventory, package_members
 import jsonschema
@@ -43,8 +44,16 @@ def require(condition, message):
 
 
 def raw(command):
-    return subprocess.run(command, capture_output=True, text=True,
-                          env={**os.environ, 'LC_ALL': 'C', 'DEBIAN_FRONTEND': 'noninteractive'})
+    with tempfile.TemporaryFile() as stream:
+        try:
+            result = run_owned(command, stream, timeout=600, output_limit=4*1024*1024,
+                               env={**os.environ, 'LC_ALL': 'C', 'DEBIAN_FRONTEND': 'noninteractive'})
+        except Exception as error:
+            stream.seek(max(0, stream.seek(0, 2)-8192))
+            raise RuntimeError(str(error)+'; command tail: '+stream.read(8192).decode(errors='replace')) from error
+        stream.seek(0)
+        result.stdout, result.stderr = stream.read(4*1024*1024).decode(errors='replace'), ''
+        return result
 
 
 def sha(path):
