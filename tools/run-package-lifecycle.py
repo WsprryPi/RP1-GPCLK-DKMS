@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 import subprocess
 import uuid
+from lifecycle_process import (cleanup_owned, run_owned, cancellation_signals,
+                               RUN_LABEL, SCENARIO_LABEL)
 from lifecycle_results import (SCENARIOS, accept, context, input_identity,
                                selection, source_identity)
 
@@ -13,6 +15,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
+    with cancellation_signals() as cancellation:
+        execute(cancellation)
+
+
+def execute(cancellation):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--image', required=True)
     parser.add_argument('--candidate', type=Path, required=True)
@@ -52,31 +59,45 @@ def main():
                    '--cap-add', 'CHOWN', '--cap-add', 'FOWNER', '--cap-add', 'SETUID',
                    '--cap-add', 'SETGID', '--security-opt', 'no-new-privileges',
                    '--pids-limit', '256', '--cpus', '4', '--memory', '2g',
-                   '--cidfile', str(destination/'container.cid'),
+                   '--cidfile', str(output/(scenario+'.cid')),
+                   '--label', RUN_LABEL+'='+run_id,
+                   '--label', SCENARIO_LABEL+'='+scenario,
                    '-e', 'RP1_LIFECYCLE_CONTEXT='+json.dumps(expected),
                    '-v', str(ROOT)+':/source:ro',
                    '-v', str(args.candidate)+':/candidate:ro',
                    '-v', str(args.predecessor)+':/predecessor:ro',
                    '-v', str(destination)+':/results', identity['Id'],
                    'python3', '/source/tests/package_lifecycle_linux.py', scenario]
+        result, primary, cancelled = None, None, False
         try:
             with (destination/'container.log').open('w') as stream:
-                result = subprocess.run(command, stdout=stream, stderr=subprocess.STDOUT)
+                result = run_owned(command, stdout=stream)
+        except (Exception, KeyboardInterrupt) as failure:
+            primary = str(failure) or type(failure).__name__
+            cancelled = isinstance(failure, KeyboardInterrupt)
         finally:
-            cid = destination/'container.cid'
-            if cid.exists():
-                subprocess.run(['docker', 'rm', '-f', cid.read_text().strip()],
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        error = None
+            cancellation.deferred = True
+            try:
+                cleanup = cleanup_owned(output/(scenario+'.cid'), run_id, scenario, identity['Id'])
+            finally:
+                cancellation.deferred = False
+        cancelled = cancelled or cancellation.requested
+        if cancelled:
+            primary = primary or 'cancelled during cleanup'
+        error = primary
+        exit_status = result.returncode if result is not None else None
         try:
-            accept(destination/'result.json', expected, result.returncode)
+            accept(destination/'result.json', expected, exit_status)
         except (ValueError, OSError, KeyError, TypeError) as failure:
-            error = str(failure)
-        results.append({'scenario': scenario, 'exitStatus': result.returncode,
-                        'accepted': error is None, 'error': error})
+            error = error or str(failure)
+        results.append({'scenario': scenario, 'exitStatus': exit_status,
+                        'accepted': error is None and cleanup['status'] == 'absent',
+                        'error': error, 'cleanup': cleanup})
         print(json.dumps(results[-1]), flush=True)
-        if result.returncode or error:
+        if not results[-1]['accepted']:
             print((destination/'container.log').read_text()[-8192:], flush=True)
+        if cancelled:
+            break
     passed = len(results) == len(requested) and all(r['accepted'] for r in results)
     if passed:
         passed = input_identity(args.candidate, args.predecessor, identity['Id'],

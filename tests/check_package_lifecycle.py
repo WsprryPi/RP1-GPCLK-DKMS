@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'scripts'))
 sys.path.insert(0, str(ROOT/'tools'))
 import lifecycle_results as results
+import lifecycle_process as processes
 import package_preflight as guard
 import package_stage as stage
 import package_indices as indices
@@ -371,7 +372,8 @@ class Tests(unittest.TestCase):
 
         with patch.object(sys, 'argv', arguments), patch('subprocess.run', side_effect=command), \
                 patch('subprocess.check_output', return_value=json.dumps([{'Id': IMAGE}])), \
-                patch.dict(driver['main'].__globals__, {'source_identity': lambda root: COMMIT}):
+                patch.dict(driver['main'].__globals__, {'source_identity': lambda root: COMMIT,
+                    'run_owned': command, 'cleanup_owned': lambda *args: {'status': 'absent'}}):
             with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as result:
                 driver['main']()
         self.assertEqual(result.exception.code, 0)
@@ -506,7 +508,7 @@ class ResultTests(unittest.TestCase):
         candidate, predecessor = result_inputs(self.root)
         driver = runpy.run_path(str(ROOT/'tools/run-package-lifecycle.py'))
         native = subprocess.run
-        for fault in ('none', 'missing', 'empty', 'stale', 'source', 'exit'):
+        for fault in ('none', 'missing', 'empty', 'stale', 'source', 'exit', 'cleanup', 'launch-cleanup', 'cancel'):
             output = self.root/fault
             calls = []
             def command(argv, **kwargs):
@@ -514,6 +516,8 @@ class ResultTests(unittest.TestCase):
                 supplied = json.loads(next(a.split('=', 1)[1] for a in argv
                     if a.startswith('RP1_LIFECYCLE_CONTEXT=')))
                 calls.append(supplied['scenario'])
+                if fault == 'launch-cleanup': raise OSError('launch refused')
+                if fault == 'cancel': raise KeyboardInterrupt('cancelled')
                 value = result_value(supplied)
                 broken = supplied['scenario'] == results.SCENARIOS[0]
                 if broken and fault == 'empty': value['steps'] = []
@@ -527,13 +531,85 @@ class ResultTests(unittest.TestCase):
             with self.subTest(fault=fault), patch.object(sys, 'argv', args), \
                     patch('subprocess.run', side_effect=command), \
                     patch('subprocess.check_output', return_value=json.dumps([{'Id': IMAGE}])), \
-                    patch.dict(driver['main'].__globals__, {'source_identity': lambda root: COMMIT}), \
+                    patch.dict(driver['main'].__globals__, {'source_identity': lambda root: COMMIT,
+                    'run_owned': command, 'cleanup_owned': lambda *args: {
+                        'status': 'unresolved' if fault in ('cleanup', 'launch-cleanup') else 'absent',
+                        'error': 'cleanup refused'}}), \
                     contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as caught:
                 driver['main']()
             self.assertEqual(caught.exception.code, 0 if fault == 'none' else 1)
-            self.assertEqual(tuple(calls), results.SCENARIOS)
+            self.assertEqual(tuple(calls), results.SCENARIOS[:1] if fault == 'cancel' else results.SCENARIOS)
             report = json.loads((output/'result.json').read_text())
-            self.assertEqual(len(report['scenarios']), len(results.SCENARIOS))
+            self.assertEqual(len(report['scenarios']), 1 if fault == 'cancel' else len(results.SCENARIOS))
+            if fault == 'launch-cleanup':
+                self.assertIn('launch refused', report['scenarios'][0]['error'])
+                self.assertEqual(report['scenarios'][0]['cleanup']['error'], 'cleanup refused')
+
+
+class ProcessTests(unittest.TestCase):
+    def test_engine_observation_and_ownership(self):
+        cid, run, scenario = 'c'*64, 'd'*32, 'clean-cycle'
+        with tempfile.TemporaryDirectory() as name:
+            path = Path(name)/'owned.cid'
+            for fault in ('absent', 'normal', 'rm-race', 'daemon', 'foreign', 'stale', 'remains', 'symlink'):
+                with self.subTest(fault=fault):
+                    path.unlink(missing_ok=True)
+                    if fault == 'symlink': path.symlink_to(Path(name)/'unknown')
+                    else: path.write_text(('e'*64 if fault == 'stale' else cid)+'\n')
+                    remaining = fault != 'absent'
+                    removed = []
+                    def docker(args):
+                        nonlocal remaining
+                        if fault == 'daemon': raise ValueError('daemon unavailable')
+                        if args[0] == 'ps': return cid+'\n' if remaining else ''
+                        if args[0] == 'inspect':
+                            return json.dumps([{'Id': cid, 'Image': IMAGE,
+                                'Config': {'Labels': {processes.RUN_LABEL: 'other' if fault == 'foreign' else run,
+                                    processes.SCENARIO_LABEL: scenario}}}])
+                        self.assertEqual(args, ['rm', '-f', cid])
+                        removed.append(cid)
+                        remaining = fault == 'remains'
+                        if fault == 'rm-race': raise ValueError('already removed')
+                        return ''
+                    with patch.object(processes, 'docker', side_effect=docker):
+                        outcome = processes.cleanup_owned(path, run, scenario, IMAGE)
+                    self.assertEqual(outcome['status'], 'absent' if fault in ('absent', 'normal', 'rm-race') else 'unresolved')
+                    if fault in ('foreign', 'stale', 'symlink', 'daemon'): self.assertFalse(removed)
+                    if fault == 'rm-race': self.assertTrue(outcome['diagnostics'])
+
+    def test_real_process_reaped_on_failure_with_bounded_file_output(self):
+        import time
+        import subprocess
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            ready = root/'ready'
+            code = ("import pathlib, signal, sys; sys.stdout.write('x'*100000); sys.stdout.flush(); "
+                    "pathlib.Path(sys.argv[1]).touch(); signal.pause()")
+            with (root/'output').open('w') as stream:
+                with self.assertRaisesRegex(RuntimeError, 'initiating failure'):
+                    with processes.owned_process([sys.executable, '-c', code, str(ready)], stream) as child:
+                        deadline = time.monotonic()+30
+                        while not ready.exists():
+                            self.assertIsNone(child.poll())
+                            if time.monotonic() >= deadline: self.fail('child readiness watchdog')
+                            time.sleep(0.01)
+                        raise RuntimeError('initiating failure')
+                self.assertIsNotNone(child.poll())
+                self.assertFalse(processes.group_exists(child.pid))
+            self.assertEqual((root/'output').stat().st_size, 100000)
+            with (root/'output').open('w') as stream:
+                outcome = processes.run_owned([sys.executable, '-c', 'raise SystemExit(7)'], stream, timeout=30)
+                self.assertEqual(outcome.returncode, 7)
+
+    def test_cancellation_is_deferred_only_for_cleanup(self):
+        import signal
+        with processes.cancellation_signals() as state:
+            handler = signal.getsignal(signal.SIGTERM)
+            state.deferred = True
+            handler(signal.SIGTERM, None)
+            self.assertTrue(state.requested)
+            state.deferred = False
+            with self.assertRaises(KeyboardInterrupt): handler(signal.SIGINT, None)
 
 
 if __name__ == '__main__':
