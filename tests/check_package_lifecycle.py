@@ -16,6 +16,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'scripts'))
 sys.path.insert(0, str(ROOT/'tools'))
+import lifecycle_metadata as module_metadata
 import lifecycle_coverage as coverage
 import lifecycle_results as results
 import lifecycle_process as processes
@@ -552,6 +553,42 @@ class ResultTests(unittest.TestCase):
             if fault == 'launch-cleanup':
                 self.assertIn('launch refused', report['scenarios'][0]['error'])
                 self.assertEqual(report['scenarios'][0]['cleanup']['error'], 'cleanup refused')
+
+
+class MetadataTests(unittest.TestCase):
+    def test_module_stamp_rejects_unsafe_files_and_detects_substitution(self):
+        with tempfile.TemporaryDirectory() as name:
+            path = Path(name)/'module.ko';path.write_bytes(b'fixture')
+            before = module_metadata.module_stamp(path)
+            replacement = path.with_name('replacement');replacement.write_bytes(b'fixture')
+            replacement.replace(path)
+            self.assertNotEqual(module_metadata.module_stamp(path), before)
+            link = path.with_name('link');link.symlink_to(path)
+            with self.assertRaises(ValueError): module_metadata.module_stamp(link)
+            link.unlink();os.link(path, link)
+            with self.assertRaises(ValueError): module_metadata.module_stamp(path)
+            link.unlink()
+            with path.open('wb') as stream: stream.truncate(64*1024*1024+1)
+            with self.assertRaises(ValueError): module_metadata.module_stamp(path)
+
+    def test_independent_native_record_and_refusals(self):
+        from types import SimpleNamespace
+        record = ('filename: /fixture.ko\0version=1.0.2\0vermagic=kernel SMP\0'
+                  'alias=first\0alias=second\0depends=controller\0'
+                  'signature: AA:BB:\n CC:DD\0')
+        def parse(text=record, code=0):
+            return module_metadata.metadata(SimpleNamespace(returncode=code, stdout=text))
+        value = parse()
+        self.assertEqual(value, {'version': '1.0.2', 'vermagic': 'kernel SMP', 'aliases': 'first\nsecond',
+            'depends': 'controller', 'signer': '', 'signatureKey': '', 'signatureAlgorithm': '',
+            'signatureHash': '', 'controllerInterlock': ''})
+        signed = record+'signer: Test signer\0sig_key: AB:CD\0sig_id: PKCS#7\0sig_hashalgo: sha256\0'
+        self.assertEqual(parse(signed)['signer'], 'Test signer')
+        for text, code in ((record, 1), (record[:-1], 0), ('bad\0', 0),
+                (record.replace('version=1.0.2\0',''), 0),
+                (record+'version=9.9.9\0', 0), (record+'depends=other\0', 0),
+                (record+'signer=bad\nvalue\0', 0), (record+'x='+'x'*65536+'\0', 0)):
+            with self.subTest(code=code, text=text[:60]), self.assertRaises(ValueError): parse(text, code)
 
 
 class CoverageTests(unittest.TestCase):

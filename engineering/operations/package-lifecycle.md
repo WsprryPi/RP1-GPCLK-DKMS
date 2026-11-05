@@ -327,3 +327,19 @@ evidence, and converge only after the fixture removes that exact member.
 Filesystem-only passive-runtime checks have explicit in-process observations,
 not invented external command executions. Their service/endpoint observations
 remain stubs, and they do not qualify live runtime retirement.
+
+## Snapshot metadata
+
+Each installed module is queried once with native `modinfo --null`. The bounded
+parser accepts raw `key=value` and generated `key: value` records, preserves
+repeated alias ordering, requires one nonempty version and vermagic, rejects
+duplicate scalar fields, and permits absent optional signing/interlock fields.
+Multiline signature material is outside the projected field set; projected
+scalar fields cannot contain line breaks. Nonzero status, malformed framing,
+missing identity, and oversized output fail the snapshot.
+
+Snapshots retain installed-file and decompressed-ELF digests. Regular-file,
+link-count, size, inode, mode, and timestamp checks bracket metadata collection,
+and file digests must remain equal. Native compression and independent PKCS#7
+verification remain separate checks; metadata is not cryptographic evidence.
+Before/after observation frequency and all header/profile contexts are retained.

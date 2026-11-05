@@ -22,6 +22,7 @@ sys.path.insert(0, '/source/tools')
 from lifecycle_results import (context, decode, envelope, input_identity,
                                source_identity)
 from lifecycle_process import owned_process, run_owned
+from lifecycle_metadata import metadata, module_stamp
 from package_preflight import module_elf
 from release_contract import inventory, package_members
 import jsonschema
@@ -81,18 +82,17 @@ def snapshot():
     for path in sorted(Path('/lib/modules').rglob('rp1*.ko*')):
         if path.name.split('.ko')[0] not in NAMES:
             continue
-        version = raw(['modinfo', '-F', 'version', str(path)]).stdout.strip()
+        stamp_before = module_stamp(path)
+        identity_before = sha(path)
+        fields = metadata(raw(['modinfo', '--null', str(path)]))
+        version = fields['version']
         modules.append({'path': str(path), 'installedFileSha256': sha(path),
-                        'version': version,
+                        **fields,
                         'decompressedElfSha256': hashlib.sha256(module_elf(path.resolve(), version)).hexdigest(),
-                        'signer': raw(['modinfo', '-F', 'signer', str(path)]).stdout.strip(),
-                        'signatureKey': raw(['modinfo', '-F', 'sig_key', str(path)]).stdout.strip(),
-                        'signatureAlgorithm': raw(['modinfo', '-F', 'sig_id', str(path)]).stdout.strip(),
-                        'signatureHash': raw(['modinfo', '-F', 'sig_hashalgo', str(path)]).stdout.strip(),
-                        'controllerInterlock': raw(['modinfo', '-F', 'rp1_runtime_controller', str(path)]).stdout.strip(),
-                        'depends': raw(['modinfo', '-F', 'depends', str(path)]).stdout.strip(),
-                        'aliases': raw(['modinfo', '-F', 'alias', str(path)]).stdout.strip(),
-                        'vermagic': raw(['modinfo', '-F', 'vermagic', str(path)]).stdout.strip()})
+                        })
+        require(module_stamp(path) == stamp_before
+                and sha(path) == identity_before == modules[-1]['installedFileSha256'],
+                'module changed during snapshot')
     package = raw(['dpkg-query', '-W', '-f=${db:Status-Abbrev} ${Version}', PACKAGE])
     dkms = raw(['dkms', 'status', '-m', PACKAGE])
     return {'packageManager': package.stdout.strip(), 'packageQueryExit': package.returncode,
