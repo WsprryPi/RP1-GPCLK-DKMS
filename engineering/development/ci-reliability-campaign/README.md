@@ -30,8 +30,8 @@ be accepted as a successful disposition.
 | 07 | Coverage and deterministic evidence | Map lifecycle obligations to actual execution | ✅ Done |
 | 08 | Coverage and deterministic evidence | Strengthen production-sensitive assertions and resolve fixture holds | ✅ Done |
 | 09 | Measured efficiency | Measure and reduce repeated module metadata queries | ✅ Done |
-| 10 | Measured efficiency | [Batch authenticated Git blob reads without weakening validation](phase-10-authenticated-git-batching.md) | ⏳ In progress |
-| 11 | Measured efficiency | [Establish integrated assurance and honest reduction verdicts](phase-11-integrated-acceptance-and-feasibility.md) | ▧ Not started |
+| 10 | Measured efficiency | Batch authenticated Git blob reads without weakening validation | ✅ Done |
+| 11 | Measured efficiency | [Establish integrated assurance and honest reduction verdicts](phase-11-integrated-acceptance-and-feasibility.md) | ⏳ In progress |
 
 ## Cohesive execution order
 
