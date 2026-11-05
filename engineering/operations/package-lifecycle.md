@@ -300,8 +300,10 @@ exceed that size before termination. Only bounded tails enter failure summaries.
 The harness copies at most eight 64-KiB DKMS logs per recorded step; it does not
 recursively retain the container filesystem. Private signing keys are excluded.
 The always-run workflow summary reads only the bounded aggregate result and
-prints scenario names, statuses, and exit codes. It fails on missing or invalid
-results. Original failing steps retain their failure status. No artifact-upload
+prints scenario names, statuses, and exit codes. Empty, duplicated, rejected,
+or unresolved summaries fail; complete-matrix summaries require all scenarios
+and case IDs. Selected subsets are identified explicitly. Missing or invalid
+results fail. Original failing steps retain their failure status. No artifact-upload
 action is installed: temporary runner files expire with the runner, and bounded
 job-log summaries provide diagnostics subject to the service's log retention.
 Cancellation before summary execution can still prevent its publication; it
