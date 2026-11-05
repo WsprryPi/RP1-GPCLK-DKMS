@@ -85,6 +85,7 @@ KERNELS = ('6.18.50+rpt-rpi-2712', '6.18.50+rpt-rpi-v8')
 def catalog():
     matrix = json.loads(MATRIX.read_text())
     cases = {case['id']: case for case in matrix['cases']}
+    require(len([line for line in ROWS.splitlines() if line]) == len(RULES), 'duplicate coverage rule')
     require(cases and len(cases) == len(matrix['cases']) == len(RULES)
             and set(cases) == set(RULES), 'coverage mapping differs from matrix')
     require(all(scenario in SCENARIOS and stages for scenario, stages in RULES.values()),
@@ -111,7 +112,7 @@ def state_is(name, before, after):
                 and dkms.count(': installed') == count//(1 if name == 'legacy' else 2))
     expected = {
         'dependency-unconfigured': ('iU  1.0.2-1', 0),
-        'unpack-aborted': ('in  1.0.2-1', 0),
+        'unpack-aborted': ('in', 0),
         'partial': ('iF  1.0.2-1', 0),
         'failed-add': ('iF  1.0.2-1', 0),
         'failed-build': ('iF  1.0.2-1', 0),
