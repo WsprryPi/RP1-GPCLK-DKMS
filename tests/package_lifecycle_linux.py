@@ -20,6 +20,7 @@ sys.path.insert(0, '/source/scripts')
 sys.path.insert(0, '/source/tools')
 from lifecycle_results import (context, decode, envelope, input_identity,
                                source_identity)
+from lifecycle_process import owned_process
 from package_preflight import module_elf
 from release_contract import inventory, package_members
 import jsonschema
@@ -304,22 +305,23 @@ def package_lock():
     installed(run('initial-install', ['dpkg', '-i', DEB]))
     hold = Path('/tmp/lifecycle-hold')
     hold.touch()
-    process = subprocess.Popen(['dpkg', '-i', str(DEB)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                               text=True, env={**os.environ, 'LC_ALL': 'C'})
     try:
-        deadline = time.monotonic()+30
-        while not Path('/tmp/lifecycle-ready').exists() and time.monotonic() < deadline:
-            require(process.poll() is None, 'first replacement exited before lock boundary')
-            time.sleep(0.05)
-        require(Path('/tmp/lifecycle-ready').exists(), 'package lock synchronization timed out')
-        before = snapshot()
-        state = run('refuse-concurrent-same-version', ['dpkg', '-i', DEB], 2)
-        require(state == before and 'lock' in STEPS[-1]['diagnosticTail'], 'concurrent operation changed state')
+        with (OUT/'first-replacement.log').open('w') as stream, \
+                owned_process(['dpkg', '-i', str(DEB)], stream) as process:
+            try:
+                deadline = time.monotonic()+30
+                while not Path('/tmp/lifecycle-ready').exists() and time.monotonic() < deadline:
+                    require(process.poll() is None, 'first replacement exited before lock boundary')
+                    time.sleep(0.05)
+                require(Path('/tmp/lifecycle-ready').exists(), 'package lock synchronization timed out')
+                before = snapshot()
+                state = run('refuse-concurrent-same-version', ['dpkg', '-i', DEB], 2)
+                require(state == before and 'lock' in STEPS[-1]['diagnosticTail'], 'concurrent operation changed state')
+            finally:
+                hold.unlink(missing_ok=True)
+            require(process.wait(timeout=180) == 0, 'first same-version replacement did not finish')
     finally:
         hold.unlink(missing_ok=True)
-    output, _ = process.communicate(timeout=180)
-    (OUT/'first-replacement.log').write_text(output)
-    require(process.returncode == 0, 'first same-version replacement did not finish')
     installed(snapshot())
     absent(run('purge', ['dpkg', '--purge', PACKAGE]))
 

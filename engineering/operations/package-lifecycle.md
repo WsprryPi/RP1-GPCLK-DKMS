@@ -256,3 +256,19 @@ command exits; scenario success requires their existing independent oracles.
 Missing, stale, malformed, contradictory or substituted results fail aggregation.
 The result envelope establishes attribution and basic completed work; the
 lifecycle matrix and scenario assertions retain ownership of behavioral coverage.
+
+## Owned cleanup
+
+Each scenario has fresh run/scenario labels and a host-owned, bounded CID file
+outside the container-writable result directory. Cleanup inspects matching
+containers and their image/labels before removal. A fresh successful engine
+query must prove their absence; daemon errors and ambiguous ownership fail
+acceptance. An auto-removal race can succeed only with this absence evidence.
+The aggregate keeps the initiating error separate from cleanup diagnostics.
+
+Docker clients and package-lock children use dedicated process groups. Their
+owner reaps them on exit, exceptions, or cancellation, escalating only within
+that group. File-backed output avoids pipe backpressure. Package-lock holds
+are released on every exit. SIGINT/SIGTERM cancel execution; signals received
+during cleanup are deferred until cleanup finishes. This proves harness resource
+cleanup only, without establishing kernel, hardware, or RF safety.

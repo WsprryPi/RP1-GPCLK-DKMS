@@ -22,8 +22,8 @@ be accepted as a successful disposition.
 | Phase | Batch | Saved prompt | Implementation |
 | --- | --- | --- | --- |
 | 01 | Trustworthy lifecycle execution | Require complete attributable lifecycle results | ✅ Done |
-| 02 | Trustworthy lifecycle execution | [Retain process and container ownership through cleanup](phase-02-owned-cleanup-and-cancellation.md) | ⏳ In progress |
-| 03 | Trustworthy lifecycle execution | [Bound provisioning and preserve actionable diagnostics](phase-03-finite-budgets-and-diagnostics.md) | ▧ Not started |
+| 02 | Trustworthy lifecycle execution | Retain process and container ownership through cleanup | ✅ Done |
+| 03 | Trustworthy lifecycle execution | [Bound provisioning and preserve actionable diagnostics](phase-03-finite-budgets-and-diagnostics.md) | ⏳ In progress |
 | 04 | Coverage and deterministic evidence | [Prove required dispatch and nonempty execution](phase-04-dispatch-and-nonempty-discovery.md) | ▧ Not started |
 | 05 | Coverage and deterministic evidence | [Replace brittle process timing with observed state](phase-05-state-based-process-tests.md) | ▧ Not started |
 | 06 | Coverage and deterministic evidence | [Keep runtime bundle fixtures outside the checkout](phase-06-isolated-runtime-bundle-fixtures.md) | ▧ Not started |
