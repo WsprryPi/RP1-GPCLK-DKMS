@@ -10,14 +10,13 @@ weakening detection of a specific required defect.
 
 ## Authority and scope
 
-The current authoring task prepares, reviews, saves, commits, and pushes planning
-documents only. It does not execute any implementation phase, test campaign,
-candidate build, provisioning, package operation, or target operation.
-A saved prompt is pending work, not an implementation-completion record.
-
-Execute a phase only after the user explicitly selects it. Selection does not
-authorize later phases, remote settings changes, hosted CI, publication, or
-operations separately gated below. Reinspect source and authorization at entry.
+Saved prompts do not themselves authorize execution. Current explicit user
+instructions select the phases and govern operational and Git authority.
+The user has selected sequential execution in this session. Honor granted
+standing authority without repeating routine permission requests, while retaining
+the explicit no-CI instruction and the repository's safety boundaries.
+Reinspect source and authorization at each entry. This campaign does not itself
+authorize remote settings, publication, or hardware operations.
 Follow [AGENTS.md](../../../AGENTS.md), the
 [module contract](../../contracts/rp1-gpclk-dkms-module-contract.md), and applicable
 nested instructions. Preserve all user work and staging. Do not merge, amend,
@@ -120,10 +119,10 @@ be improved, but weakened frequency/gating is not an efficiency saving.
 
 ## Phase handoff and lifecycle
 
-Stop at the selected phase boundary. Report changes, exact checks/results,
+At each phase boundary, report changes, exact checks/results,
 skipped/pending contexts, sensitivity evidence, risks, remaining gates, source
 identities, licensing/documentation impact, and Git state in chat.
-Commit/push implementation only when separately authorized; honor no-CI markers.
+Use current session Git authority for implementation commits/pushes; honor no-CI markers.
 Never report skipped hosted CI as passed.
 
 An accepted prerequisite means its required assurance gates passed, or the user

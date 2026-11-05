@@ -5,12 +5,11 @@ import argparse
 import json
 from pathlib import Path
 import subprocess
+import uuid
+from lifecycle_results import (SCENARIOS, accept, context, input_identity,
+                               selection, source_identity)
 
 ROOT = Path(__file__).resolve().parents[1]
-SCENARIOS = ('packaged-runtime-baseline', 'clean-cycle', 'missing-payload', 'package-lock', 'dependency-recovery', 'header-profiles', 'multi-kernel', 'missing-headers', 'unpack-recovery', 'foreign-state',
-             'fault-add', 'fault-build', 'fault-install', 'fault-depmod',
-             'fault-remove', 'fault-purge', 'fault-remove-depmod', 'fault-unpack',
-             'fault-gcc', 'fault-signature', 'compression-signing', 'predecessor')
 
 
 def main():
@@ -35,10 +34,14 @@ def main():
         parser.error('lifecycle output must be outside every Git checkout')
     image = subprocess.check_output(['docker', 'image', 'inspect', args.image], text=True)
     identity = json.loads(image)[0]
+    requested = selection(SCENARIOS if args.scenario == 'all' else (args.scenario,))
+    inputs = input_identity(args.candidate, args.predecessor, identity['Id'], source_identity(ROOT))
+    run_id = uuid.uuid4().hex
     output.mkdir(mode=0o700)
     (output/'image.json').write_text(image)
     results = []
-    for scenario in SCENARIOS if args.scenario == 'all' else (args.scenario,):
+    for scenario in requested:
+        expected = context(run_id, scenario, inputs)
         destination = output/scenario
         destination.mkdir()
         # Linux bind mounts retain the runner's uid. Container root deliberately
@@ -50,6 +53,7 @@ def main():
                    '--cap-add', 'SETGID', '--security-opt', 'no-new-privileges',
                    '--pids-limit', '256', '--cpus', '4', '--memory', '2g',
                    '--cidfile', str(destination/'container.cid'),
+                   '-e', 'RP1_LIFECYCLE_CONTEXT='+json.dumps(expected),
                    '-v', str(ROOT)+':/source:ro',
                    '-v', str(args.candidate)+':/candidate:ro',
                    '-v', str(args.predecessor)+':/predecessor:ro',
@@ -63,13 +67,23 @@ def main():
             if cid.exists():
                 subprocess.run(['docker', 'rm', '-f', cid.read_text().strip()],
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        results.append({'scenario': scenario, 'exitStatus': result.returncode})
+        error = None
+        try:
+            accept(destination/'result.json', expected, result.returncode)
+        except (ValueError, OSError, KeyError, TypeError) as failure:
+            error = str(failure)
+        results.append({'scenario': scenario, 'exitStatus': result.returncode,
+                        'accepted': error is None, 'error': error})
         print(json.dumps(results[-1]), flush=True)
-        if result.returncode:
+        if result.returncode or error:
             print((destination/'container.log').read_text()[-8192:], flush=True)
-    passed = all(r['exitStatus'] == 0 for r in results)
+    passed = len(results) == len(requested) and all(r['accepted'] for r in results)
+    if passed:
+        passed = input_identity(args.candidate, args.predecessor, identity['Id'],
+                                source_identity(ROOT)) == inputs
     (output/'result.json').write_text(json.dumps({'status': 'PASS' if passed else 'FAIL',
-        'imageId': identity['Id'], 'scenarios': results, 'targetQualification': False,
+        'runId': run_id, 'identity': inputs, 'imageId': identity['Id'],
+        'scenarios': results, 'targetQualification': False,
         'wsprrypiAcceptance': False, 'rfQualification': False}, indent=2)+'\n')
     raise SystemExit(0 if passed else 1)
 

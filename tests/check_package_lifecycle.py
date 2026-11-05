@@ -15,6 +15,8 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/'scripts'))
+sys.path.insert(0, str(ROOT/'tools'))
+import lifecycle_results as results
 import package_preflight as guard
 import package_stage as stage
 import package_indices as indices
@@ -353,23 +355,185 @@ class Tests(unittest.TestCase):
         import stat
         driver = runpy.run_path(str(ROOT/'tools/run-package-lifecycle.py'))
         output = self.root/'results'
-        arguments = ['run-package-lifecycle', '--image', 'unused', '--candidate', str(self.root),
-                     '--predecessor', str(self.root), '--output', str(output),
+        candidate, predecessor = result_inputs(self.root)
+        arguments = ['run-package-lifecycle', '--image', 'unused', '--candidate', str(candidate),
+                     '--predecessor', str(predecessor), '--output', str(output),
                      '--scenario', 'missing-headers']
         native = subprocess.run
 
         def command(argv, **kwargs):
             if argv[0] == 'docker':
+                supplied = json.loads(next(a.split('=', 1)[1] for a in argv
+                    if a.startswith('RP1_LIFECYCLE_CONTEXT=')))
+                (output/'missing-headers/result.json').write_text(json.dumps(result_value(supplied)))
                 return subprocess.CompletedProcess(argv, 0)
             return native(argv, **kwargs)
 
         with patch.object(sys, 'argv', arguments), patch('subprocess.run', side_effect=command), \
-                patch('subprocess.check_output', return_value='[{"Id":"fixture"}]'):
+                patch('subprocess.check_output', return_value=json.dumps([{'Id': IMAGE}])), \
+                patch.dict(driver['main'].__globals__, {'source_identity': lambda root: COMMIT}):
             with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as result:
                 driver['main']()
         self.assertEqual(result.exception.code, 0)
         self.assertEqual(stat.S_IMODE(output.stat().st_mode), 0o700)
         self.assertEqual(stat.S_IMODE((output/'missing-headers').stat().st_mode), 0o777)
+        report = json.loads((output/'result.json').read_text())
+        self.assertTrue(report['scenarios'][0]['accepted'])
+
+
+COMMIT = 'a' * 40
+IMAGE = 'sha256:' + 'b' * 64
+
+
+def result_inputs(root):
+    candidate, predecessor = root/'candidate', root/'predecessor'
+    candidate.mkdir(); predecessor.mkdir()
+    for directory in (candidate, predecessor):
+        (directory/'package.deb').write_bytes(b'package fixture, never installed')
+    digest = hashlib.sha256((candidate/'package.deb').read_bytes()).hexdigest()
+    (candidate/'rp1-gpclk-dkms-installation-manifest-v1.json').write_text(json.dumps({
+        'sourceCommit': COMMIT, 'package': {'filename': 'package.deb', 'sha256': digest}}))
+    (predecessor/'predecessor.json').write_text(json.dumps({
+        'package': 'package.deb', 'packageSha256': digest}))
+    return candidate, predecessor
+
+
+def result_value(expected):
+    # Independent wire fixture: do not derive its contract/keys from the producer.
+    observed = {'endpointsAbsent': True, 'modulesUnloaded': True}
+    return {'contract': 'rp1-gpclk-package-lifecycle-v2', 'schemaVersion': 2,
+        **expected, 'status': 'PASS', 'error': None,
+        'steps': [{'stage': 'checked-boundary', 'command': ['fixture'], 'exitStatus': 0,
+                   'before': observed.copy(), 'after': observed.copy(), 'diagnosticTail': ''}],
+        'realPackageManager': True, 'hardwareQualification': False, 'rfQualification': False}
+
+
+class ResultTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name).resolve()
+        self.identity = {'sourceCommit': COMMIT, 'imageId': IMAGE,
+            'candidatePackageSha256': 'c'*64, 'predecessorPackageSha256': 'd'*64}
+        self.expected = results.context('e'*32, 'clean-cycle', self.identity)
+        self.path = self.root/'result.json'
+
+    def accept(self, value, code=0):
+        self.path.write_text(json.dumps(value))
+        return results.accept(self.path, self.expected, code)
+
+    def test_positive_wire_and_producer_contract(self):
+        value = result_value(self.expected)
+        self.assertEqual(self.accept(value), value)
+        self.assertEqual(results.envelope(self.expected, 'PASS', None, value['steps']), value)
+
+    def test_attribution_types_safety_and_completed_work(self):
+        import copy
+        base = result_value(self.expected)
+        mutations = [lambda v: v.update(schemaVersion=True),
+            lambda v: v.update(schemaVersion=1), lambda v: v.update(contract='old'),
+            lambda v: v.update(runId='f'*32), lambda v: v.update(scenario='foreign-state'),
+            lambda v: v['identity'].update(sourceCommit='f'*40),
+            lambda v: v['identity'].update(imageId='sha256:'+'f'*64),
+            lambda v: v['identity'].update(candidatePackageSha256='f'*64),
+            lambda v: v['identity'].update(predecessorPackageSha256='f'*64),
+            lambda v: v.update(status='FAIL'), lambda v: v.update(error='failed'),
+            lambda v: v.update(steps=[]), lambda v: v.update(realPackageManager=1),
+            lambda v: v.update(hardwareQualification=True),
+            lambda v: v.update(rfQualification=True), lambda v: v.update(extra=True),
+            lambda v: v['steps'][0].update(exitStatus=True),
+            lambda v: v['steps'][0]['after'].update(modulesUnloaded=1),
+            lambda v: v['steps'][0]['before'].update(endpointsAbsent=False)]
+        for change in mutations:
+            value = copy.deepcopy(base); change(value)
+            with self.subTest(change=change), self.assertRaises(ValueError): self.accept(value)
+        for code in (1, -15, True):
+            with self.subTest(code=code), self.assertRaises(ValueError): self.accept(base, code)
+
+    def test_missing_unsafe_and_malformed_results(self):
+        with self.assertRaises(OSError): results.accept(self.path, self.expected, 0)
+        for data in ('{}', '{', '{"x":1,"x":2}', 'NaN'):
+            self.path.write_text(data)
+            with self.subTest(data=data), self.assertRaises(ValueError):
+                results.accept(self.path, self.expected, 0)
+        self.path.unlink(); self.path.symlink_to(self.root/'missing')
+        with self.assertRaises(OSError): results.accept(self.path, self.expected, 0)
+        self.path.unlink(); self.path.write_bytes(b'x'*(results.LIMIT+1))
+        with self.assertRaises(ValueError): results.accept(self.path, self.expected, 0)
+
+    def test_changed_result_during_read(self):
+        self.path.write_text(json.dumps(result_value(self.expected)))
+        real = results.os.fstat
+        count = 0
+        def observation(fd):
+            nonlocal count
+            count += 1
+            if count == 2: self.path.write_bytes(b'changed')
+            return real(fd)
+        with patch.object(results.os, 'fstat', side_effect=observation):
+            with self.assertRaisesRegex(ValueError, 'changed'): results.accept(self.path, self.expected, 0)
+
+    def test_selection_context_and_package_substitution(self):
+        for selected in ((), ('clean-cycle', 'clean-cycle'), ('unknown',)):
+            with self.assertRaises(ValueError): results.selection(selected)
+        self.assertEqual(results.selection(('clean-cycle',)), ('clean-cycle',))
+        with self.assertRaises(ValueError): results.context('bad', 'clean-cycle', self.identity)
+        candidate, predecessor = result_inputs(self.root)
+        identity = results.input_identity(candidate, predecessor, IMAGE, COMMIT)
+        self.assertEqual(identity['sourceCommit'], COMMIT)
+        (candidate/'package.deb').write_bytes(b'changed')
+        with self.assertRaises(ValueError): results.input_identity(candidate, predecessor, IMAGE, COMMIT)
+
+    def test_source_rejects_hidden_worktree_changes(self):
+        import subprocess
+        source = self.root/'source'; source.mkdir()
+        (source/'input').write_text('reviewed')
+        def git(*args):
+            return subprocess.run(['git', '-C', str(source), *args], check=True,
+                                  capture_output=True, text=True).stdout.strip()
+        git('init', '-q'); git('add', 'input')
+        git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+            'commit', '-qm', 'fixture')
+        self.assertEqual(results.source_identity(source), git('rev-parse', 'HEAD'))
+        git('update-index', '--assume-unchanged', 'input')
+        (source/'input').write_text('substituted')
+        with self.assertRaisesRegex(ValueError, 'differs'): results.source_identity(source)
+
+    def test_driver_rejects_false_success_and_collects_all_requested_results(self):
+        import contextlib
+        import io
+        import subprocess
+        candidate, predecessor = result_inputs(self.root)
+        driver = runpy.run_path(str(ROOT/'tools/run-package-lifecycle.py'))
+        native = subprocess.run
+        for fault in ('none', 'missing', 'empty', 'stale', 'source', 'exit'):
+            output = self.root/fault
+            calls = []
+            def command(argv, **kwargs):
+                if argv[0] != 'docker': return native(argv, **kwargs)
+                supplied = json.loads(next(a.split('=', 1)[1] for a in argv
+                    if a.startswith('RP1_LIFECYCLE_CONTEXT=')))
+                calls.append(supplied['scenario'])
+                value = result_value(supplied)
+                broken = supplied['scenario'] == results.SCENARIOS[0]
+                if broken and fault == 'empty': value['steps'] = []
+                if broken and fault == 'stale': value['runId'] = '0'*32
+                if broken and fault == 'source': value['identity'] = dict(value['identity'], sourceCommit='0'*40)
+                if not (broken and fault == 'missing'):
+                    (output/supplied['scenario']/'result.json').write_text(json.dumps(value))
+                return subprocess.CompletedProcess(argv, 1 if broken and fault == 'exit' else 0)
+            args = ['driver', '--image', 'fixture', '--candidate', str(candidate),
+                    '--predecessor', str(predecessor), '--output', str(output)]
+            with self.subTest(fault=fault), patch.object(sys, 'argv', args), \
+                    patch('subprocess.run', side_effect=command), \
+                    patch('subprocess.check_output', return_value=json.dumps([{'Id': IMAGE}])), \
+                    patch.dict(driver['main'].__globals__, {'source_identity': lambda root: COMMIT}), \
+                    contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as caught:
+                driver['main']()
+            self.assertEqual(caught.exception.code, 0 if fault == 'none' else 1)
+            self.assertEqual(tuple(calls), results.SCENARIOS)
+            report = json.loads((output/'result.json').read_text())
+            self.assertEqual(len(report['scenarios']), len(results.SCENARIOS))
 
 
 if __name__ == '__main__':

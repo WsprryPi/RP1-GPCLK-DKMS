@@ -3,9 +3,8 @@
 # CI reliability and efficiency campaign
 
 This active plan selects eleven bounded phases for RP1-GPCLK-DKMS.
-The prompts are ready for explicit phase selection; implementation has not started.
-Creating this campaign does not execute its phases or authorize tests, builds,
-provisioning, package operations, target activity, or hosted CI.
+The eleven phases are selected for sequential execution under the current session authority.
+Execution remains subject to the campaign safety boundaries and standing no-CI instruction.
 
 Read the [campaign contract](campaign-contract.md) before selecting a phase.
 Reliability, safety, required coverage, and defect detection take priority over
@@ -15,25 +14,24 @@ current accounting before claiming savings.
 
 ## Phase list
 
-Prompt readiness and implementation status are separate. Each linked prompt is
-ready; every implementation phase below is not started. Dependencies follow the
+Status: ✅ done, ⏳ in progress, and ▧ not started. Dependencies follow the
 campaign contract's accepted-prerequisite rule, including honest no-change/HOLD
 dispositions for optional optimizations. A failed required reliability gate cannot
 be accepted as a successful disposition.
 
 | Phase | Batch | Saved prompt | Implementation |
 | --- | --- | --- | --- |
-| 01 | Trustworthy lifecycle execution | [Require complete attributable lifecycle results](phase-01-lifecycle-result-integrity.md) | Not started |
-| 02 | Trustworthy lifecycle execution | [Retain process and container ownership through cleanup](phase-02-owned-cleanup-and-cancellation.md) | Not started |
-| 03 | Trustworthy lifecycle execution | [Bound provisioning and preserve actionable diagnostics](phase-03-finite-budgets-and-diagnostics.md) | Not started |
-| 04 | Coverage and deterministic evidence | [Prove required dispatch and nonempty execution](phase-04-dispatch-and-nonempty-discovery.md) | Not started |
-| 05 | Coverage and deterministic evidence | [Replace brittle process timing with observed state](phase-05-state-based-process-tests.md) | Not started |
-| 06 | Coverage and deterministic evidence | [Keep runtime bundle fixtures outside the checkout](phase-06-isolated-runtime-bundle-fixtures.md) | Not started |
-| 07 | Coverage and deterministic evidence | [Map lifecycle obligations to actual execution](phase-07-lifecycle-obligation-attribution.md) | Not started |
-| 08 | Coverage and deterministic evidence | [Strengthen production-sensitive assertions and resolve fixture holds](phase-08-production-sensitive-oracles.md) | Not started |
-| 09 | Measured efficiency | [Measure and reduce repeated module metadata queries](phase-09-batched-module-metadata.md) | Not started |
-| 10 | Measured efficiency | [Batch authenticated Git blob reads without weakening validation](phase-10-authenticated-git-batching.md) | Not started |
-| 11 | Measured efficiency | [Establish integrated assurance and honest reduction verdicts](phase-11-integrated-acceptance-and-feasibility.md) | Not started |
+| 01 | Trustworthy lifecycle execution | Require complete attributable lifecycle results | ✅ Done |
+| 02 | Trustworthy lifecycle execution | [Retain process and container ownership through cleanup](phase-02-owned-cleanup-and-cancellation.md) | ⏳ In progress |
+| 03 | Trustworthy lifecycle execution | [Bound provisioning and preserve actionable diagnostics](phase-03-finite-budgets-and-diagnostics.md) | ▧ Not started |
+| 04 | Coverage and deterministic evidence | [Prove required dispatch and nonempty execution](phase-04-dispatch-and-nonempty-discovery.md) | ▧ Not started |
+| 05 | Coverage and deterministic evidence | [Replace brittle process timing with observed state](phase-05-state-based-process-tests.md) | ▧ Not started |
+| 06 | Coverage and deterministic evidence | [Keep runtime bundle fixtures outside the checkout](phase-06-isolated-runtime-bundle-fixtures.md) | ▧ Not started |
+| 07 | Coverage and deterministic evidence | [Map lifecycle obligations to actual execution](phase-07-lifecycle-obligation-attribution.md) | ▧ Not started |
+| 08 | Coverage and deterministic evidence | [Strengthen production-sensitive assertions and resolve fixture holds](phase-08-production-sensitive-oracles.md) | ▧ Not started |
+| 09 | Measured efficiency | [Measure and reduce repeated module metadata queries](phase-09-batched-module-metadata.md) | ▧ Not started |
+| 10 | Measured efficiency | [Batch authenticated Git blob reads without weakening validation](phase-10-authenticated-git-batching.md) | ▧ Not started |
+| 11 | Measured efficiency | [Establish integrated assurance and honest reduction verdicts](phase-11-integrated-acceptance-and-feasibility.md) | ▧ Not started |
 
 ## Cohesive execution order
 
@@ -58,9 +56,9 @@ remain unauthorized under the standing no-CI instruction.
 
 ## Selection and completion
 
-Start with phase 01 after explicit implementation selection. Reorient to actual
-source and preserve unexpected user work at every entry; no prompt grants
-automatic progression to its successor.
+Execute the selected phases in order. Reorient to actual source and preserve
+unexpected user work at every entry. Report, update, and reprint this list after
+each accepted phase; unresolved required gates remain visible.
 
 Keep execution and adversarial-review results in chat. Update active planning
 status only from actual accepted evidence. After completion, consolidate durable
