@@ -169,6 +169,29 @@ class FormatTests(unittest.TestCase):
             c.git_blobs(Path('/unused'), [oid])
         self.assertIsNotNone(children[-1].poll())
 
+    def test_success_requires_owned_descendant_group_absence(self):
+        import signal
+        oid = hashlib.sha1(b'blob 1\0x').hexdigest().encode()
+        frame = oid+b' blob 1\nx\n'
+        with tempfile.TemporaryDirectory() as name:
+            pidfile = Path(name)/'descendant'
+            descendant = "import os,pathlib,signal,sys;pathlib.Path(sys.argv[1]).write_text(str(os.getpid()));signal.pause()"
+            parent = ("import pathlib,subprocess,sys,time;"
+                "child=subprocess.Popen([sys.executable,'-c',sys.argv[1],sys.argv[2]],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL);"
+                "path=pathlib.Path(sys.argv[2]);deadline=time.monotonic()+30\n"
+                "while not path.exists() or not path.read_text():\n"
+                " if child.poll() is not None or time.monotonic() >= deadline: raise RuntimeError('descendant readiness guard')\n"
+                " time.sleep(0.01)\n"
+                "sys.stdout.buffer.write("+repr(frame)+")")
+            try:
+                with patch.object(c, 'git_argv', return_value=[sys.executable, '-c', parent, descendant, str(pidfile)]):
+                    self.assertEqual(c.git_blobs(Path('/unused'), [oid]), [b'x'])
+                with self.assertRaises(ProcessLookupError): os.kill(int(pidfile.read_text()), 0)
+            finally:
+                if pidfile.exists() and pidfile.read_text():
+                    try: os.kill(int(pidfile.read_text()), signal.SIGKILL)
+                    except ProcessLookupError: pass
+
     def test_batch_eof_before_exit_is_not_completion(self):
         oid = hashlib.sha1(b'blob 1\0x').hexdigest().encode()
         native = subprocess.Popen

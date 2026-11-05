@@ -66,3 +66,19 @@ technical content, repair references, and retire completed prompts under
 [repository instructions](../../../AGENTS.md); do not create a completion archive.
 Published tags/assets, canonical interfaces, qualification metadata, and recovery
 resources retain their independent ownership and evidence requirements.
+
+## Remaining acceptance gates
+
+Integrated acceptance requires native Windows documentation discovery and the
+batch entry point, including invalid-builder failure propagation, on the selected
+revision. A host substitute or an older source revision cannot supply it.
+
+Fresh lifecycle-image provisioning must obtain both exact
+`1:6.18.50-1+rpt1` representative-header packages and their dependencies from a
+verifiable source. An identified cached image supports local execution but does
+not establish fresh provisioning. Do not silently replace the pinned headers.
+
+Hosted workflow validation and remote enforcement changes remain separate,
+unauthorized operations under the standing no-CI and read-only-policy boundaries.
+Keep their unexecuted status visible. Do not mark integrated acceptance complete
+while a required environment or assurance gate remains unavailable.
