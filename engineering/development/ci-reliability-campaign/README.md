@@ -28,8 +28,8 @@ be accepted as a successful disposition.
 | 05 | Coverage and deterministic evidence | Replace brittle process timing with observed state | ✅ Done |
 | 06 | Coverage and deterministic evidence | Keep runtime bundle fixtures outside the checkout | ✅ Done |
 | 07 | Coverage and deterministic evidence | Map lifecycle obligations to actual execution | ✅ Done |
-| 08 | Coverage and deterministic evidence | [Strengthen production-sensitive assertions and resolve fixture holds](phase-08-production-sensitive-oracles.md) | ⏳ In progress |
-| 09 | Measured efficiency | [Measure and reduce repeated module metadata queries](phase-09-batched-module-metadata.md) | ▧ Not started |
+| 08 | Coverage and deterministic evidence | Strengthen production-sensitive assertions and resolve fixture holds | ✅ Done |
+| 09 | Measured efficiency | [Measure and reduce repeated module metadata queries](phase-09-batched-module-metadata.md) | ⏳ In progress |
 | 10 | Measured efficiency | [Batch authenticated Git blob reads without weakening validation](phase-10-authenticated-git-batching.md) | ▧ Not started |
 | 11 | Measured efficiency | [Establish integrated assurance and honest reduction verdicts](phase-11-integrated-acceptance-and-feasibility.md) | ▧ Not started |
 
