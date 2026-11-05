@@ -32,7 +32,7 @@ docs:
 	$(MAKE) -C engineering/documentation html SPHINXBUILD="$(DOCS_PYTHON) -m sphinx" BUILDDIR="$(DOCS_BUILDDIR)"
 
 docs-check:
-	$(DOCS_PYTHON) -m unittest discover -s tests -p 'test_documentation*.py'
+	$(DOCS_PYTHON) tests/nonempty_unittest.py
 	$(MAKE) -C engineering/documentation html epub latex htmlhelp man texinfo SPHINXBUILD="$(DOCS_PYTHON) -m sphinx" BUILDDIR="$(DOCS_BUILDDIR)" SPHINXOPTS="-n -W --keep-going"
 	$(DOCS_PYTHON) tests/check_doc_links.py
 	$(DOCS_PYTHON) tests/check_spdx.py

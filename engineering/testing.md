@@ -68,9 +68,18 @@ environment; ordinary module tests remain independent of them. See
 `make check` runs every standalone `tests/check_*.py` program except
 `check_built_module.py`. The latter is a parameterized build validator: it
 requires a caller-supplied `.ko` and exact kernel release and never loads the
-module. `check_test_inventory.py` fails when a new standalone Python check is
-neither registered by a standard runner nor explicitly classified as a
-parameterized utility.
+module. `tests/offline_checks.py` owns the ordered Python registry and directly launches
+each standalone check in its own process. `check_test_inventory.py` compares this
+registry with the filesystem, validates active C/C++ compiler and execution
+commands, and requires both real client planners. Comments do not register tests.
+The module validator and compiled sweep validator retain parameterized callers.
+Missing ShellCheck fails in CI; local absence is reported as a skip.
+
+Unittest entry points use `tests/nonempty_unittest.py`: an empty discovered suite
+or zero executed cases fails. Documentation discovery additionally requires every
+matching module to contribute cases. Standalone programs retain their own
+assertion and exit contracts; their launches are reported individually. No
+lexical assertion count is presented as a case count.
 
 `make package-check` repeats the package-specific subset. Repetition there is
 intentional because package validation is also a separately usable gate.

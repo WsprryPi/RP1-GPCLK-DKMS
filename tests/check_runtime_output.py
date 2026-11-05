@@ -120,4 +120,4 @@ class Tests(unittest.TestCase):
                       dict(schemaVersion=3,operation='idle',route='gpio20',execute=True)):
             with self.assertRaises(ValueError): manager._dispatch(value, Machine)
 
-if __name__ == '__main__': unittest.main()
+if __name__ == '__main__': __import__("nonempty_unittest").main()

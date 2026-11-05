@@ -631,4 +631,4 @@ class ProcessTests(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    __import__("nonempty_unittest").main()
