@@ -304,3 +304,37 @@ not establish real compiled module validity, signing, or target qualification.
 The fixture checks content/mode identities for checkout files, including ignored
 outputs, on successful and rejected builds. Bytecode is suppressed and bootstrap
 imports run outside the checkout.
+
+## Oracle scope and overlay fixtures
+
+`check_route_uapi_contract.py` enforces source-shape, overlay-text, canonical
+header identity, and schema vocabulary constraints. It does not simulate route
+ownership. `lifecycle_core.c` executes the production core, including repeated
+GPIO4/GPIO20 acquisition/release, foreign and same-owner refusal without writes,
+cleanup latches, stale generations, and dead-state admission refusal.
+The controller ioctl harness compiles actual controller code with aborting or
+controlled host stubs. `resource_policy.c` executes production route/target
+arithmetic; its unwind/reference/dead-lifetime section is an independent model.
+These host oracles do not qualify Linux concurrency, device removal, DMA, or
+physical GPIO/RF behavior.
+
+All DTS fixtures are retained. Generic text discovery is not semantic probe or
+resource-conflict execution. The invalid-route and GPIO20 route-mismatch fixtures
+have named static assertions. The following fixtures require a separately
+identified semantic target consumer and its expected refusal/cleanup oracle
+before their qualification role or retirement can be resolved:
+
+| Retained fixture | Intended challenge | Disposition |
+| --- | --- | --- |
+| `rp1-gpclk-gpio4-bad-dma.dts` | Missing GPIO4 DMA binding | HOLD |
+| `rp1-gpclk-gpio20-bad-dma.dts` | Missing GPIO20 DMA binding | HOLD |
+| `rp1-gpclk-gpio4-conflict.dts` | Second GPIO4 resource consumer | HOLD |
+| `rp1-gpclk-gpio20-conflict.dts` | Second GPIO20 resource consumer | HOLD |
+| `rp1-gpclk-gpio4-dma-conflict.dts` | GPIO4 composite ownership with empty safe states | HOLD |
+| `rp1-gpclk-gpio20-dma-conflict.dts` | GPIO20 composite ownership with empty safe states | HOLD |
+| `rp1-gpclk-gpio4-missing-active.dts` | Missing GPIO4 active pinctrl state | HOLD |
+| `rp1-gpclk-gpio20-missing-active.dts` | Missing GPIO20 active pinctrl state | HOLD |
+
+Neither text discovery nor absence of a named repository caller establishes that
+these fixtures are unused. Target operations retain their separate authorization
+and safety requirements.

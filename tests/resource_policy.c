@@ -123,6 +123,6 @@ int main(void)
 
 	if (failures)
 		return 1;
-	puts("resource policy: PASS (routes, derivation, unwind, dead lifetime)");
+	puts("resource policy: PASS (production route/target derivation; independent unwind/lifetime model)");
 	return 0;
 }

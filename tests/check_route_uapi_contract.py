@@ -99,17 +99,7 @@ if SCHEMA["properties"]["schemaVersion"]["const"] != 1:
 if SCHEMA["$defs"]["route"]["enum"] != ["GPIO4", "GPIO20"]:
     raise SystemExit("manifest route vocabulary changed")
 
-# Model the administrative ownership invariant across repeated route changes.
-for sequence in ((1, 2, 1) * 3, (2, 1, 2) * 3):
-    owner = None
-    for route in sequence:
-        if owner is not None:
-            raise SystemExit("modeled route applied without absent transition")
-        owner = route
-        if owner not in (1, 2):
-            raise SystemExit("modeled invalid route acquired endpoint")
-        owner = None
-    if owner is not None:
-        raise SystemExit("modeled route sequence leaked endpoint ownership")
+# Behavioral ownership is exercised by lifecycle_core.c and the controller's
+# compiled ioctl harness. This program enforces source/format boundaries only.
 
 print("route injection and interface freeze: PASS")

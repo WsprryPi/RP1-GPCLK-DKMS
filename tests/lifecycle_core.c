@@ -113,6 +113,34 @@ static void test_initial_and_acquire(void)
     CHECK(memcmp(&before, &core, sizeof(core)) == 0);
 }
 
+static void test_repeated_route_ownership(void)
+{
+    struct rp1_gpclk_core core;
+    struct rp1_gpclk_core before;
+    __u64 lease, refused, previous = 0;
+    unsigned int iteration;
+
+    rp1_gpclk_core_init(&core);
+    for (iteration = 0; iteration < 12; iteration++) {
+        __u32 route = iteration % 2 ? RP1_GPCLK_ROUTE_GPIO20 : RP1_GPCLK_ROUTE_GPIO4;
+        __u32 other = iteration % 2 ? RP1_GPCLK_ROUTE_GPIO4 : RP1_GPCLK_ROUTE_GPIO20;
+
+        CHECK(rp1_gpclk_core_acquire(&core, OWNER_A, route, 0, &lease) == RP1_GPCLK_CORE_OK);
+        CHECK(lease > previous && core.value.route == route);
+        previous = lease;
+        before = core;
+        refused = 0xfeed;
+        CHECK(rp1_gpclk_core_acquire(&core, OWNER_B, other, 0, &refused) == RP1_GPCLK_CORE_BUSY);
+        CHECK(refused == 0xfeed && memcmp(&before, &core, sizeof(core)) == 0);
+        CHECK(rp1_gpclk_core_acquire(&core, OWNER_A, other, 0, &refused) == RP1_GPCLK_CORE_BUSY);
+        CHECK(refused == 0xfeed && memcmp(&before, &core, sizeof(core)) == 0);
+        CHECK(rp1_gpclk_core_release(&core, OWNER_B, lease) == RP1_GPCLK_CORE_STALE);
+        CHECK(memcmp(&before, &core, sizeof(core)) == 0);
+        CHECK(rp1_gpclk_core_release(&core, OWNER_A, lease) == RP1_GPCLK_CORE_OK);
+        CHECK(core.value.owner_id == 0 && core.value.lease_id == 0);
+    }
+}
+
 static void test_passive_retained_terminal_state(void)
 {
     struct rp1_gpclk_core core;
@@ -731,6 +759,7 @@ static void test_fault_points(void)
 int main(void)
 {
     RUN(test_initial_and_acquire);
+    RUN(test_repeated_route_ownership);
     RUN(test_passive_retained_terminal_state);
     RUN(test_passive_inspection_does_not_mutate_owner);
     RUN(test_routes_capabilities_and_wrap);
