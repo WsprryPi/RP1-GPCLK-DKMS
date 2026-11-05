@@ -198,3 +198,27 @@ Provider publication precedes application release. WsprryPi separately owns
 acceptance of each selected published provider identity and migration to it.
 Provider publication does not perform that migration or extend conducted
 acceptance into calibrated or general RF qualification.
+
+## Authenticated source enumeration
+
+Each builder, independent validator, and predecessor renderer enumerates its
+exact full commit independently. Source reads use fresh `git cat-file --batch`
+processes with replacement objects disabled and the fixed Git environment.
+Every reply must match the requested blob ID, type, declared length, delimiter,
+and independently recomputed Git object hash. Missing, extra, or reordered
+responses fail. Repeated requested IDs at different paths are valid and retain
+separate path/mode entries. Unsafe paths/modes, private-key contents, and signing
+material suffixes remain refused.
+
+Enumeration accepts at most 16,384 regular source members, 64 MiB per member,
+and 256 MiB total source bytes. Standard output and error have separate byte
+budgets. Git control calls and the batch use 120-second guards; output progress
+does not renew the batch deadline. EOF must be followed by successful process
+exit. Timeout, cancellation, or failure kills and reaps the owned Git process
+group; unresolved cleanup fails the operation.
+
+These source-map reads do not reuse a builder cache as validator evidence.
+Independent clean package rebuilds, poisoned-cache/environment rejection,
+classification checks, and final candidate snapshot/drift validation remain
+required. The candidate in its final output directory must still pass the
+independent validator before consumption.

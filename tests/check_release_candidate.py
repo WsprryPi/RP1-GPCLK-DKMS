@@ -3,6 +3,8 @@
 """Offline release normal, malformed, substitution and reproducibility coverage."""
 import copy
 import gzip
+import hashlib
+import time
 import io
 import json
 import os
@@ -111,6 +113,84 @@ class FormatTests(unittest.TestCase):
             (root/'text').write_bytes(b'-----BEGIN '+b'RSA PRIVATE KEY-----')
             with self.assertRaises(ValueError):
                 c.source_files(root, commit())
+
+    def test_batch_framing_authentication_and_repeated_objects(self):
+        data = b'binary\0body\n'
+        oid = hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest().encode()
+        frame = oid+b' blob '+str(len(data)).encode()+b'\n'+data+b'\n'
+        self.assertEqual(c.decode_blobs(frame+frame, [oid, oid]), [data, data])
+        for payload, requested in ((frame[:-1], [oid]), (frame[:-2], [oid]),
+                (frame+frame, [oid]), (frame, [oid, oid]),
+                (frame.replace(b' blob ', b' tree ', 1), [oid]),
+                (frame.replace(oid, b'f'*40, 1), [oid]),
+                (frame.replace(data, b'B'+data[1:]), [oid]),
+                (oid+b' missing\n', [oid]), (oid+b' blob -1\n', [oid]),
+                (oid+b' blob 999999999\n', [oid]), (b'', [])):
+            with self.subTest(payload=payload[:70]), self.assertRaises(ValueError): c.decode_blobs(payload, requested)
+        with patch.object(c, 'MAX_SOURCE_BYTES', 1), self.assertRaises(ValueError): c.decode_blobs(frame, [oid])
+
+    def test_real_git_repeated_blobs_modes_and_replacement_refusal(self):
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name).resolve()
+            run('git', 'init', '-q', cwd=root)
+            for path in ('first', 'second'):
+                (root/path).write_bytes(b'independent golden bytes\n')
+            (root/'second').chmod(0o755)
+            run('git', 'add', '.', cwd=root)
+            run('git', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'fixture', cwd=root)
+            revision = run('git', 'rev-parse', 'HEAD', cwd=root).stdout.strip()
+            expected = {'first': (0o644, b'independent golden bytes\n'), 'second': (0o755, b'independent golden bytes\n')}
+            self.assertEqual(c.source_files(root, revision), expected)
+            oid = run('git', 'rev-parse', revision+':first', cwd=root).stdout.strip()
+            (root/'substitution').write_bytes(b'wrong replacement bytes')
+            other = run('git', 'hash-object', '-w', 'substitution', cwd=root).stdout.strip()
+            run('git', 'replace', oid, other, cwd=root)
+            self.assertEqual(c.source_files(root, revision), expected)
+
+    def test_batch_process_failure_output_guard_and_cancellation(self):
+        oid = hashlib.sha1(b'blob 1\0x').hexdigest().encode()
+        frame = oid+b' blob 1\nx\n'
+        children = []
+        native = subprocess.Popen
+        def start(*args, **kwargs):
+            child = native(*args, **kwargs);children.append(child);return child
+        for code in ("import sys;sys.stdout.buffer.write("+repr(frame)+");sys.exit(7)", 'pass'):
+            with patch.object(c, 'git_argv', return_value=[sys.executable, '-c', code]), \
+                    patch.object(c.subprocess, 'Popen', side_effect=start), self.assertRaises(ValueError):
+                c.git_blobs(Path('/unused'), [oid])
+            self.assertIsNotNone(children[-1].poll())
+        with patch.object(c, 'MAX_SOURCE_BYTES', 8), \
+                patch.object(c, 'git_argv', return_value=[sys.executable, '-c', "print('x'*1000)"]), \
+                self.assertRaisesRegex(ValueError, 'output budget'):
+            c.git_blobs(Path('/unused'), [oid])
+        with patch.object(c, 'git_argv', return_value=[sys.executable, '-c', 'import signal;signal.pause()']), \
+                patch.object(c.subprocess, 'Popen', side_effect=start), \
+                patch.object(c.selectors, 'DefaultSelector', side_effect=KeyboardInterrupt), self.assertRaises(KeyboardInterrupt):
+            c.git_blobs(Path('/unused'), [oid])
+        self.assertIsNotNone(children[-1].poll())
+
+    def test_batch_eof_before_exit_is_not_completion(self):
+        oid = hashlib.sha1(b'blob 1\0x').hexdigest().encode()
+        native = subprocess.Popen
+        with tempfile.TemporaryDirectory() as name:
+            ready = Path(name)/'ready';children = []
+            code = "import os,pathlib,signal,sys;os.close(1);os.close(2);pathlib.Path(sys.argv[1]).touch();signal.pause()"
+            def start(*args, **kwargs):
+                child = native(*args, **kwargs);children.append(child)
+                try:
+                    deadline = time.monotonic()+30
+                    while not ready.exists():
+                        self.assertIsNone(child.poll(), 'batch child exited before readiness')
+                        if time.monotonic() >= deadline: self.fail('batch child readiness guard')
+                        time.sleep(0.01)
+                except BaseException:
+                    child.kill();child.wait(timeout=30);child.stdout.close();child.stderr.close();raise
+                return child
+            with patch.object(c, 'git_argv', return_value=[sys.executable, '-c', code, str(ready)]), \
+                    patch.object(c.subprocess, 'Popen', side_effect=start), patch.object(c, 'GIT_BATCH_TIMEOUT', 5), \
+                    self.assertRaisesRegex(ValueError, 'deadline'):
+                c.git_blobs(Path('/unused'), [oid])
+            self.assertIsNotNone(children[0].poll())
 
     def test_exact_identity_and_predecessor_rejection(self):
         files = {p.relative_to(ROOT).as_posix(): (0o644, p.read_bytes())
