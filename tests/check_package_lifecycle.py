@@ -310,6 +310,25 @@ class Tests(unittest.TestCase):
                     signatures.verify(signed, certificate, '/fixture/module.ko')
                 self.assertEqual(caught.exception.result['exitStatus'], status)
 
+    def test_exact_header_archive_inventory_is_consumed_by_provisioning(self):
+        import re
+        manifest = ROOT/'tools/lifecycle-headers.sha256'
+        rows = [line.split() for line in manifest.read_text().splitlines() if line and not line.startswith('#')]
+        expected = {'linux-base-6.18.50+rpt-rpi-2712', 'linux-base-6.18.50+rpt-rpi-v8',
+                    'linux-base-rpi-2712', 'linux-base-rpi-v8', 'linux-headers-6.18.50+rpt-common-rpi',
+                    'linux-headers-6.18.50+rpt-rpi-2712', 'linux-headers-6.18.50+rpt-rpi-v8',
+                    'linux-headers-rpi-2712', 'linux-headers-rpi-v8', 'linux-kbuild-6.18.50+rpt'}
+        self.assertEqual(len(rows), len(expected))
+        self.assertEqual({name.split('_')[0] for digest, name in rows}, expected)
+        self.assertEqual(len({name for digest, name in rows}), len(rows))
+        for digest, name in rows:
+            self.assertRegex(digest, r'^[0-9a-f]{64}$')
+            self.assertRegex(name, r'^[a-z0-9.+-]+_6\.18\.50-1\+rpt1_(arm64|all)\.deb$')
+        recipe = (ROOT/'tools/package-lifecycle.Containerfile').read_text()
+        self.assertIn('COPY tools/lifecycle-headers.sha256 /opt/lifecycle-headers/SHA256SUMS', recipe)
+        self.assertIn('sha256sum -c SHA256SUMS', recipe)
+        self.assertIn('apt-get install -y --no-install-recommends ./*.deb', recipe)
+
     def test_lifecycle_matrix_resolves_complete_expected_states(self):
         matrix = json.loads((ROOT/'release/package-lifecycle-matrix-v1.json').read_text())
         fields = {'packageManager', 'dkms', 'modulesByKernel', 'sourceTree', 'overlays',

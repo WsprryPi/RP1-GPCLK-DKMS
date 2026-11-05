@@ -288,8 +288,8 @@ requirements. Different runner provisioning can still require investigation.
 Workflow provisioning, input preparation, and lifecycle steps have separate
 20-, 15-, and 65-minute guards within a 105-minute job guard. Ordinary offline
 and documentation jobs have 45- and 20-minute guards. APT acquisition uses two
-retries and 30-second I/O guards; the pinned key download also has a three-minute
-whole-transfer limit. Pip uses two retries and a 30-second socket guard. The job
+retries and 30-second I/O guards; the pinned key and exact header-archive downloads also have three-minute
+whole-transfer limits. Pip uses two retries and a 30-second socket guard. The job
 and step guards bound continued slow progress across individual acquisitions.
 Missing tools or exhausted acquisition budgets remain failures.
 
@@ -345,3 +345,15 @@ link-count, size, inode, mode, and timestamp checks bracket metadata collection,
 and file digests must remain equal. Native compression and independent PKCS#7
 verification remain separate checks; metadata is not cryptographic evidence.
 Before/after observation frequency and all header/profile contexts are retained.
+
+## Exact header provisioning
+
+The lifecycle image downloads the exact ten representative header/base/kbuild
+archives listed in `tools/lifecycle-headers.sha256` from the official Raspberry Pi
+package pool. It verifies every SHA-256 before installing local archives, then
+checks both header metapackage versions. The selected kernels and their matching
+dependencies remain pinned even when the moving APT index omits older versions.
+Download size, retries, connection, and total-transfer guards are finite; missing
+or substituted archives fail provisioning. Replacing a pin requires review of
+the actual archive identity and dependency closure. Header archives are build
+inputs only and confer no target or RF qualification.
