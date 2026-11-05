@@ -11,13 +11,16 @@ for applicability and exclusions.
 
 ## CI reliability and efficiency
 
-The selected [eleven-phase campaign](engineering/development/ci-reliability-campaign/README.md)
-addresses lifecycle result integrity, cleanup, bounded execution, coverage,
-deterministic fixtures, and measured orchestration efficiency. Its saved prompts
-are selected for execution under the linked status and gates. Reliability,
-safety, required coverage, and defect detection take priority over reduction
-targets. Hosted CI, remote policy changes, package effects, and target operations
-retain their separate authorization boundaries.
+Review the proposed required-check policy for `main`: require `offline`,
+`lifecycle`, `documentation`, and `windows-documentation` from GitHub Actions,
+require branches to be up to date, and apply these checks to administrators.
+Preserve force-push and branch-deletion protections. Remote policy changes
+require separate maintainer authorization.
+
+The maintained [CI phase list](engineering/development/ci-reliability-campaign/README.md)
+organizes the selected assurance and efficiency work. Current procedures are in
+[testing guidance](engineering/testing.md). Reliability, safety, required
+coverage, and defect detection take priority over reduction targets.
 
 ## Consumer acceptance
 

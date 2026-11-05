@@ -34,6 +34,41 @@ external URLs. Check changed fragments and command examples separately.
 Documentation regressions and Sphinx exports are a separate target, described
 below. None of these commands runs the disposable package-install harness.
 
+## CI assurance and measurement
+
+The push and pull-request workflows retain four separate jobs: Ubuntu AMD64
+`offline`, Ubuntu ARM64 `lifecycle`, Ubuntu `documentation`, and native Windows
+`windows-documentation`. Language, header, profile, route, artifact, and platform
+contexts retain their independent obligations. Workflow success and required
+merge-check enforcement are separate properties.
+
+Reliability, safety, required coverage, and defect detection take priority over
+speed and maintenance targets. Readiness requires observed state. A finite
+watchdog detects failure; elapsed time or a fixed sleep cannot establish
+readiness. Preserve the initiating error and secondary cleanup diagnostics.
+Unknown ownership, incomplete results, and unresolved cleanup block acceptance.
+
+Before changing or retiring an oracle, demonstrate its actual sensitivity and
+the replacement's detection of deliberate defects in disposable source/fixture
+copies. Retain independent expected values, real subprocess and cryptographic
+boundaries, source/artifact identities, and required no-write and recovery cases.
+A model or source-shape check supports its stated scope without establishing
+kernel concurrency or hardware behavior.
+
+Compare exact source, environment, coverage, and cold/warm conditions. Account
+for all replacement helpers, regressions, dependencies, and newly activated
+coverage. Separate code, physical files, process and compiler/linker invocations,
+contexts, and elapsed time. Allocate mixed fixture/assertion roles before claiming
+orchestration reductions. Unused fixtures and retired execution prompts receive
+no orchestration-saving credit. Local launch-count reductions cannot establish
+whole-CI savings. Record failed attempts, retries, queue delay, and overlapping
+job spans separately; aggregate spans are not billed cost.
+
+Parallel scenario execution requires a separately reviewed resource/ownership
+plan and an equivalent serial reference. Preserve per-scenario isolation, finite
+budgets, source/artifact attribution, full aggregation, failure propagation, and
+verified cleanup. Contention or lost defect detection invalidates a speed gain.
+
 ## Representative kernel builds
 
 Build in a separate disposable source tree on an identified Linux host with
