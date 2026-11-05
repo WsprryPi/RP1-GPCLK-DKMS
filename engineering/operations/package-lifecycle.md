@@ -235,3 +235,24 @@ signing trust, target binding, GPIO, WsprryPi and RF validation remain separate.
 WsprryPi owns application acceptance of exact provider identities. The existing
 target rollback exclusion remains in force; these procedures and offline
 regressions do not establish target rollback qualification.
+
+## Attributable scenario results
+
+The disposable runner requires a nonempty explicit scenario selection and one
+accepted result per requested scenario. Single-scenario execution is not full
+lifecycle acceptance. The `rp1-gpclk-package-lifecycle-v2` result binds a fresh
+host run ID, scenario, source commit, candidate and predecessor package SHA-256,
+and immutable container image ID. The container verifies source/package inputs
+before and after scenario execution; the host rechecks them before final success.
+Source checks compare tracked bytes and executable modes with Git objects,
+including changes hidden by index flags.
+
+Acceptance requires a bounded stable single-linked regular result file, unique
+JSON keys, exact envelope fields and integer version, matching attribution,
+zero container exit, PASS without an error, nonempty completed steps, and
+explicit absent endpoints/unloaded modules in each step observation. Hardware
+and RF qualification remain false. Expected refusal steps can have nonzero
+command exits; scenario success requires their existing independent oracles.
+Missing, stale, malformed, contradictory or substituted results fail aggregation.
+The result envelope establishes attribution and basic completed work; the
+lifecycle matrix and scenario assertions retain ownership of behavioral coverage.

@@ -17,6 +17,9 @@ import sys
 import time
 
 sys.path.insert(0, '/source/scripts')
+sys.path.insert(0, '/source/tools')
+from lifecycle_results import (context, decode, envelope, input_identity,
+                               source_identity)
 from package_preflight import module_elf
 from release_contract import inventory, package_members
 import jsonschema
@@ -651,14 +654,23 @@ def main():
 
 if __name__ == '__main__':
     status, error = 'PASS', None
+    expected = None
     try:
+        supplied = decode(os.environ['RP1_LIFECYCLE_CONTEXT'])
+        require(set(supplied) == {'runId', 'scenario', 'identity'}, 'context fields differ')
+        expected = context(supplied['runId'], sys.argv[1], input_identity(
+            Path('/candidate'), Path('/predecessor'), supplied['identity']['imageId'],
+            source_identity(Path('/source'))))
+        require(supplied == expected, 'container input identity differs')
         main()
+        require(input_identity(Path('/candidate'), Path('/predecessor'),
+                supplied['identity']['imageId'], source_identity(Path('/source')))
+                == expected['identity'], 'inputs changed during scenario')
     except Exception as exception:
         status, error = 'FAIL', str(exception)
     finally:
-        (OUT/'result.json').write_text(json.dumps({'contract': 'rp1-gpclk-package-lifecycle-v1',
-            'status': status, 'error': error,
-            'steps': STEPS, 'realPackageManager': True, 'hardwareQualification': False,
-            'rfQualification': False}, indent=2)+'\n')
+        if expected is not None:
+            (OUT/'result.json').write_text(json.dumps(envelope(expected, status, error, STEPS),
+                                                    indent=2)+'\n')
     print(json.dumps({'status': status, 'error': error}), flush=True)
     raise SystemExit(0 if status == 'PASS' else 1)
