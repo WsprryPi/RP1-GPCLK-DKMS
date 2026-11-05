@@ -260,7 +260,9 @@ lifecycle matrix and scenario assertions retain ownership of behavioral coverage
 ## Owned cleanup
 
 Each scenario has fresh run/scenario labels and a host-owned, bounded CID file
-outside the container-writable result directory. Cleanup inspects matching
+outside the container-writable result directory. Docker output logs also stay
+outside that directory, preventing substituted container paths from redirecting
+host diagnostic reads. Cleanup inspects matching
 containers and their image/labels before removal. A fresh successful engine
 query must prove their absence; daemon errors and ambiguous ownership fail
 acceptance. An auto-removal race can succeed only with this absence evidence.

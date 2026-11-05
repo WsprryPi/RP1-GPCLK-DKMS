@@ -30,7 +30,7 @@ ROWS = '''
 21 multi-kernel purge
 22 compression-signing remove-.ko remove-.ko.xz remove-.ko.zst
 23 compression-signing remove-.ko remove-.ko.xz remove-.ko.zst
-24 clean-cycle purge
+24 clean-cycle remove purge
 25 clean-cycle remove
 26 clean-cycle purge
 27 multi-kernel install-nonrunning-kernel
@@ -90,6 +90,7 @@ def catalog():
             and set(cases) == set(RULES), 'coverage mapping differs from matrix')
     require(all(scenario in SCENARIOS and stages for scenario, stages in RULES.values()),
             'unsupported coverage context')
+    require({owner for owner, stages in RULES.values()} | {'header-profiles', 'unpack-recovery'} == set(SCENARIOS), 'scenario lacks an execution contract')
     return cases
 
 
@@ -130,6 +131,32 @@ def state_is(name, before, after):
 
 
 
+
+def starting_context(case_id, step):
+    number = int(case_id)
+    groups = {
+        0: (1, 6, 7, 8, 9, 10, 11, 12, 15, 16, 18, 27, 32, 33, 34, 35, 36,
+            37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 50, 56, 57, 58, 62, 26, 65, 67),
+        2: (17, 20, 28, 29, 66),
+        3: (5,),
+        4: (2, 3, 4, 13, 19, 21, 22, 23, 25, 30, 31, 49, 51, 52, 53,
+            54, 55, 60, 61, 63, 64, 68, 69),
+        5: (14,),
+    }
+    if number == 24:
+        return len(step['before']['modules']) == (4 if step['stage'] == 'remove' else 0)
+    if number == 59:
+        return step['before'] == step['after'] and 'lock' in step['diagnosticTail']
+    expected = [count for count, members in groups.items() if number in members]
+    require(len(expected) == 1, 'missing starting context rule')
+    before = step['before']
+    if len(before.get('modules', [])) != expected[0]:
+        return False
+    if number in (22, 23):
+        suffix = step['stage'].removeprefix('remove-')
+        return all(m.get('path', '').endswith(suffix) and m.get('signer') for m in before['modules'])
+    return True
+
 def command_is(case_id, step):
     number = int(case_id)
     if number in (17, 19):
@@ -142,7 +169,9 @@ def command_is(case_id, step):
         prefix = ['dkms', 'remove' if number == 31 else 'autoinstall']
     elif number == 61:
         prefix = ['dpkg', '--remove' if 'removal' in step['stage'] else '-i']
-    elif number in (20, 21, 22, 23, 24, 26, 54, 55, 66):
+    elif number == 24:
+        prefix = ['dpkg', '--remove' if step['stage'] == 'remove' else '--purge']
+    elif number in (20, 21, 22, 23, 26, 54, 55, 66):
         prefix = ['dpkg', '--purge']
     elif number in (25, 52, 53, 64, 65):
         prefix = ['dpkg', '--remove']
@@ -166,6 +195,7 @@ def attribute(value):
             count = 2 if case_id == '61' else 1
             require(len(matched) == count, 'missing/duplicate obligation stage: '+case_id+' '+stage)
             for index, step in matched:
+                require(starting_context(case_id, step), 'obligation starting context differs: '+case_id)
                 require(command_is(case_id, step), 'obligation command differs: '+case_id)
                 require(step['exitStatus'] == case['exitStatus'], 'obligation exit differs: '+case_id)
                 require(state_is(case['expectedState'], step['before'], step['after']),

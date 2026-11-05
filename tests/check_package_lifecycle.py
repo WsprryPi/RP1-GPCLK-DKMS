@@ -510,7 +510,7 @@ class ResultTests(unittest.TestCase):
         candidate, predecessor = result_inputs(self.root)
         driver = runpy.run_path(str(ROOT/'tools/run-package-lifecycle.py'))
         native = subprocess.run
-        for fault in ('none', 'missing', 'empty', 'stale', 'source', 'exit', 'cleanup', 'launch-cleanup', 'cancel'):
+        for fault in ('none', 'missing', 'empty', 'stale', 'source', 'exit', 'cleanup', 'launch-cleanup', 'cancel', 'log-symlink', 'coverage-omission'):
             output = self.root/fault
             calls = []
             def command(argv, **kwargs):
@@ -522,28 +522,33 @@ class ResultTests(unittest.TestCase):
                 if fault == 'cancel': raise KeyboardInterrupt('cancelled')
                 value = result_value(supplied)
                 broken = supplied['scenario'] == results.SCENARIOS[0]
+                if broken and fault == 'log-symlink':
+                    secret = self.root/'secret'; secret.write_text('PRIVATE DIAGNOSTIC MUST NOT LEAK')
+                    (output/supplied['scenario']/'container.log').symlink_to(secret)
                 if broken and fault == 'empty': value['steps'] = []
                 if broken and fault == 'stale': value['runId'] = '0'*32
                 if broken and fault == 'source': value['identity'] = dict(value['identity'], sourceCommit='0'*40)
                 if not (broken and fault == 'missing'):
                     (output/supplied['scenario']/'result.json').write_text(json.dumps(value))
-                return subprocess.CompletedProcess(argv, 1 if broken and fault == 'exit' else 0)
+                return subprocess.CompletedProcess(argv, 1 if broken and fault in ('exit', 'log-symlink') else 0)
             args = ['driver', '--image', 'fixture', '--candidate', str(candidate),
                     '--predecessor', str(predecessor), '--output', str(output)]
+            diagnostic = io.StringIO()
             with self.subTest(fault=fault), patch.object(sys, 'argv', args), \
                     patch('subprocess.run', side_effect=command), \
                     patch('subprocess.check_output', return_value=json.dumps([{'Id': IMAGE}])), \
                     patch.dict(driver['main'].__globals__, {'source_identity': lambda root: COMMIT,
-                    'attribute': lambda value: [], 'catalog': lambda: {},
+                    'attribute': lambda value: [], 'catalog': lambda: {'missing': {}} if fault == 'coverage-omission' else {},
                     'run_owned': command, 'cleanup_owned': lambda *args: {
                         'status': 'unresolved' if fault in ('cleanup', 'launch-cleanup') else 'absent',
                         'error': 'cleanup refused'}}), \
-                    contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as caught:
+                    contextlib.redirect_stdout(diagnostic), self.assertRaises(SystemExit) as caught:
                 driver['main']()
             self.assertEqual(caught.exception.code, 0 if fault == 'none' else 1)
             self.assertEqual(tuple(calls), results.SCENARIOS[:1] if fault == 'cancel' else results.SCENARIOS)
             report = json.loads((output/'result.json').read_text())
             self.assertEqual(len(report['scenarios']), 1 if fault == 'cancel' else len(results.SCENARIOS))
+            self.assertNotIn('PRIVATE DIAGNOSTIC MUST NOT LEAK', diagnostic.getvalue())
             if fault == 'launch-cleanup':
                 self.assertIn('launch refused', report['scenarios'][0]['error'])
                 self.assertEqual(report['scenarios'][0]['cleanup']['error'], 'cleanup refused')
@@ -565,7 +570,7 @@ class CoverageTests(unittest.TestCase):
              'exitStatus': 0, 'before': installed, 'after': absent}]
         value = {'scenario': 'fault-preinstall', 'steps': steps}
         self.assertEqual([row['caseId'] for row in coverage.attribute(value)], ['34', '35'])
-        for defect in ('missing', 'duplicate', 'context', 'command', 'exit', 'state', 'cleanup'):
+        for defect in ('missing', 'duplicate', 'context', 'command', 'exit', 'state', 'starting', 'cleanup'):
             changed = copy.deepcopy(value)
             if defect == 'missing': changed['steps'].pop(0)
             if defect == 'duplicate': changed['steps'].insert(0, changed['steps'][0])
@@ -573,6 +578,7 @@ class CoverageTests(unittest.TestCase):
             if defect == 'command': changed['steps'][0]['command'] = ['true']
             if defect == 'exit': changed['steps'][0]['exitStatus'] = 0
             if defect == 'state': changed['steps'][1]['after']['modules'] = []
+            if defect == 'starting': changed['steps'][0]['before']['modules'] = [{'version': '0.9.0'}]
             if defect == 'cleanup': changed['steps'].pop()
             with self.subTest(defect=defect), self.assertRaises(ValueError): coverage.attribute(changed)
         self.assertEqual(set(coverage.catalog()), {str(i) for i in range(1, 70)})

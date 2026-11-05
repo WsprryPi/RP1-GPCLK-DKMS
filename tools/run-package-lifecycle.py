@@ -72,8 +72,9 @@ def execute(cancellation):
                    '-v', str(destination)+':/results', identity['Id'],
                    'python3', '/source/tests/package_lifecycle_linux.py', scenario]
         result, primary, cancelled = None, None, False
+        log = output/(scenario+'.log')
         try:
-            with (destination/'container.log').open('w') as stream:
+            with log.open('x') as stream:
                 remaining = deadline-time.monotonic()
                 if remaining <= 0:
                     raise TimeoutError('overall lifecycle deadline exhausted')
@@ -101,7 +102,7 @@ def execute(cancellation):
                         'error': error, 'cleanup': cleanup, 'obligations': obligations})
         print(json.dumps(results[-1]), flush=True)
         if not results[-1]['accepted']:
-            with (destination/'container.log').open('rb') as stream:
+            with log.open('rb') as stream:
                 stream.seek(max(0, stream.seek(0, 2)-8192))
                 print(stream.read(8192).decode(errors='replace'), flush=True)
         if cancelled:
